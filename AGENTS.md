@@ -212,7 +212,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - `next build` ok; audit 0.
 - **Adam:** review `worker/src/spacetime/adapters.ts`. **CS:** generated bindings must include the new view and the new `commit_nudge` args.
 
-### 2026-10-24T09:30Z | Cyber → CS, AI, DS | Product renamed to dor (D036)
-- **What changed:** the product name is **dor** (lowercase), replacing Kinetic/Closer. Packages `@kinetic/*` → `@dor/*`, env vars `KINETIC_*` → `DOR_*`, module/audience defaults `dor` / `dor-spacetimedb`, vault labels `dor-vault`, payload domain `dor-payload-v1`. D001 is kept as history; D036 supersedes it.
+### 2026-10-24T09:30Z | Cyber → CS, AI, DS | Product renamed to dor (D037)
+- **What changed:** the product name is **dor** (lowercase), replacing Kinetic/Closer. Packages `@kinetic/*` → `@dor/*`, env vars `KINETIC_*` → `DOR_*`, module/audience defaults `dor` / `dor-spacetimedb`, vault labels `dor-vault`, payload domain `dor-payload-v1`. D001 and CS's D036 (capitalised "Dor", copy only) are kept as history; D037 completes the rename in lowercase.
 - **Evidence:** `check:all` and `ai:check` exit 0; `next build` ok; audit 0.
 - **Everyone next:** merge main, `npm install`, replace any `@kinetic/` imports or `KINETIC_` env names on your branch (`git grep -l '@kinetic/\|KINETIC_'`), and update local `.env` files.
