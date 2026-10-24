@@ -12,7 +12,7 @@ Read root AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md and your 
 
 ## Droid hardening (`DroidAckProposer`)
 - `--only-tools TodoWrite`: the one allowlisted tool is a planning list with no file, shell, network or web access. Default read-only autonomy; never `--auto` or `--skip-permissions-unsafe`.
-- `--disable-builtin-skills`; `--cwd` is one private `mkdtemp` directory per proposer, emptied before every call and removed by `close()`.
+- `--disable-builtin-skills`; `--cwd` is one private `mkdtemp` directory per runner slot, emptied before every call and removed by `close()`.
 - The subprocess env is allowlisted (`PATH`, `HOME`, locale/proxy vars, `FACTORY_API_KEY`). Claude, Cartesia, Clerk and worker secrets are withheld.
 - The prompt contains only approved enums and pre-filtered option enums: no signal, pair, user or consent IDs. stderr is discarded; stdout is capped at 64 KiB.
 - **Known:** Factory persists a session transcript per call (locally under `~/.factory/sessions`, one directory per temp cwd, and per Factory's own retention). Audit of 15 live sessions: enum prompt only; zero IDs, keys or repo paths. A deployed worker needs session pruning or an ephemeral `HOME` (possible with `FACTORY_API_KEY` auth).
@@ -41,19 +41,35 @@ Each benchmark ran 3 × (partners, friends, family, and a two-option friends cas
 
 `runCoordinationJob(job, deps)` keeps only schema-valid envelopes from the job's pair whose IDs were requested, coordinates, then calls `commit.commit(result, job)`.
 
-**CS must supply** (`worker/src/jobs.ts`, `src/agents` `CoordinatorDeps`):
-- `ApprovedSignalSource.approvedSignals(pairId, signalIds)`: worker-identity SpacetimeDB read.
-- `RecipientPreferencesPort.current(pairId, recipientId)`
-- `CoordinationCommitPort.commit(result, job)`: a version-checked reducer that revalidates.
-- `DeliveryStatePort.current(pairId, recipientId)` → `{ delivery: RecipientDelivery, lastNudgeAt }`, from the reducer that backs D017/D018.
+## Database-backed adapters (AI-R1)
+`spacetimeWorkerPorts(source, preferences?)` (`src/spacetime/adapters.ts`) builds every port `createLiveWorker` needs from one `WorkerStateSource`. That source is two reads plus one call, made as the allow-listed worker identity:
 
-**Live wiring:** `createLiveWorker({ authToken, policyState, signals, preferences, delivery, commit, rank?, droid? })` builds Cyber's real `DisclosurePolicy` over `policyState: PolicyStateReader`, the authoritative signal and pair/assignment/preset rows. There is no parameter for a policy object, so a fake cannot be wired in. It returns `{ handler, coordinator, close }`.
-- Tested with a stubbed authoritative reader: approved work reaches Droid; revoked work and altered envelopes are denied with no Droid call.
-- **Still missing:** a process entrypoint (`http.createServer(handler)`), which waits on CS's SpacetimeDB worker-identity adapters.
+| Port | Backed by | Behavior |
+|---|---|---|
+| `policyState` (`PolicyStateReader`) | `worker_signal_context` view | Mirrors `policy_state.ts`; Cyber's real `DisclosurePolicy` runs over it |
+| `signals` (`ApprovedSignalSource`) | `worker_signal_context` view | Envelopes come from the view, never from the job request |
+| `delivery` (`DeliveryStatePort`) | `worker_delivery` view | No row means not opted in (D017) |
+| `commit` (`CoordinationCommitPort`) | `commit_nudge` reducer | Guard refusals (`stale`, `quiet_hours`, `cooldown`, …) become recorded outcomes; transport faults and `worker only` throw so the job retries |
+| `preferences` | **none yet** | `UnavailableRecipientPreferences` fails closed (no nudge, 0 model calls) until CYBER-R1 adds an authoritative consent view |
+
+Rows are mapped by `src/spacetime/rows.ts`, which accepts snake_case harness rows and camelCase generated rows, as well as tagged options. A row that does not map is dropped, so drift fails closed. `SpacetimeWorkerConnection` (`src/spacetime/connection.ts`) is the live source over generated client bindings.
+
+**Live wiring:** `createLiveWorker({ authToken, policyState, signals, preferences, delivery, commit, rank?, droid? })` builds Cyber's real `DisclosurePolicy` over `policyState`. It has no parameter for a policy object, so a fake cannot be wired in. It returns `{ handler, runJob, coordinator, close }`; `runJob` shares the handler's `JobLedger`.
+
+## Process (`src/main.ts`, `npm start -w @kinetic/worker`)
+- One SpacetimeDB connection as the worker identity, plus `SignalWatcher`: every `KINETIC_WORKER_SWEEP_MS` (default 5 s) it starts one job per newly visible approved signal, with `requestId = signalId`. Nudge IDs are therefore stable across restarts, `commit_nudge` dedupes them, and the cooldown pre-check skips Droid for a pair it already nudged.
+- `POST /jobs` (above) and `GET /healthz`. Logs are JSON codes and counts only.
+- Env: `KINETIC_WORKER_AUTH_TOKEN`, `KINETIC_SPACETIME_URI`, `KINETIC_SPACETIME_MODULE`, `KINETIC_SPACETIME_WORKER_TOKEN`, `PORT`, `KINETIC_DROID_{MODEL,PATH,TIMEOUT_MS,CONCURRENCY}`, `FACTORY_API_KEY`.
+- **Refuses to start** until the module is published and bindings are generated into `src/module_bindings` (`spacetime generate --lang typescript --out-dir worker/src/module_bindings --module-path spacetimedb`). The admin then runs `set_worker_identity` for the worker token's identity.
+
+## Droid concurrency
+`DroidRunner` owns a fixed pool of private slot directories (`concurrency`, default 2). Each slot holds its directory for the whole run, so concurrent jobs never empty each other's directory, and reused slots keep Factory's prompt cache warm. Waiting calls queue up to `maxQueue` (default 16) and fail fast with `rate_limited` beyond that. `DroidAckProposer`, `DroidIntroProposer` and `DroidPlanProposer` share one runner, giving the worker a single concurrency budget.
 
 ## Commands
 ```sh
-npm run ai:check                                   # offline tests
+npm run ai:check                                   # offline tests + dry run over the in-process module
+npm run ai:dryrun                                  # full five-journey trace (KINETIC_DRYRUN_REPORT=out.md to save)
+KINETIC_DRYRUN_LIVE_DROID=1 npm run ai:dryrun      # same, with real droid (spends Factory credits)
 node worker/scripts/live-droid.mjs --runs 4        # live Droid; policy and preferences are labeled offline stand-ins
 ```
 
