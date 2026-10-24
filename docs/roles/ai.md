@@ -12,10 +12,10 @@ Deliver a useful voice reflection loop and a real bounded agent workflow that ac
 Sumedh supplies authoritative policy; your workflow rechecks it and cannot replace it. Nimisha supplies ranking; CS supplies catalogue, shared-state adapters and result reducers. Private reflection receives only selected disclosed text; Factory receives approved enums/data, not journals, private quiz extras, identity details or provider keys.
 
 ## Current starting point
-Remote `role/ai-voice` at 5ccd4ba reports M1 adapters, worker and D016 contract proposals, offline tests and limited live Droid checks. These are branch-reported and not yet merged into the inspected main. Preserve this work; do not recreate it. The branch log reports Claude/Cartesia missing credentials and variable Droid latency. Review latest branch log/handoff before following these phases.
+Remote `role/ai-voice` at 5ccd4ba reports M1 adapters, worker and contract proposals, offline tests and limited live Droid checks. These are branch-reported and not yet merged into the inspected main. Preserve this work; do not recreate it. The branch log reports Claude/Cartesia missing credentials and variable Droid latency. Review latest branch log/handoff before following these phases.
 
 ## Your first action
-Compare your branch to latest main and preserve D016 work. Resolve shared ReflectionPort/PrivateReflection response and worker ports with CS, get Sumedh’s review of policy/recipient-preference consent, then complete authenticated routes and browser voice loop. Publish remaining credential/runtime blockers without secrets.
+Compare your branch to latest main and preserve AI-branch proposal work. Resolve shared ReflectionPort/PrivateReflection response and worker ports with CS, get Sumedh’s review of policy/recipient-preference consent, then complete authenticated routes and browser voice loop. Publish remaining credential/runtime blockers without secrets.
 
 ## How to use these phases
 Times are targets relative to the original 36-hour start, not a new 36-hour allocation. Check current main, your remote role branch, the shared dashboard and your existing handoff first. Preserve completed work and evidence; skip a phase only when its exit conditions are met. If the sprint is already underway, start at the first unmet gate. Report schedule risk rather than silently moving deadlines. Planning remains capped at the original 30 minutes.
@@ -24,9 +24,9 @@ Each phase has a named artifact, a check, and a consumer. Open small PRs every 2
 
 ## P0 · T+0–0:30 · Agree interfaces and claim work
 
-- **Build:** Inspect existing branch, logs and D016 rather than respiking completed work. Claim route/port files and map what is implemented, fixture-tested, live-tested and missing.
+- **Build:** Inspect existing branch, logs and AI-branch proposal rather than respiking completed work. Claim route/port files and map what is implemented, fixture-tested, live-tested and missing.
 - **Exit evidence:** Consumers know which proposed interfaces are branch-only and which require review.
-- **Hand off:** CS/Sumedh/Nimisha: exact D016 changes and required ACKs, no silent merge assumption.
+- **Hand off:** CS/Sumedh/Nimisha: exact AI-branch proposal changes and required ACKs, no silent merge assumption.
 
 ## P1 · T+0:30–3 · Unblock the other three owners
 
@@ -92,3 +92,6 @@ Each phase has a named artifact, a check, and a consumer. Open small PRs every 2
 Update `docs/updates/ai.md` and `docs/handoffs/ai.md` at each meaningful handoff with task ID (`AI-P#`), UTC timestamp, branch/commit, files/contracts, actual verification, next named consumer action and blockers. Log a consumer ACK when integration succeeds. Read all four update logs hourly and before shared interface changes. Refresh shared status only from verified or clearly attributed evidence. Do not overwrite another role’s history.
 
 Read [the shared dependency plan](../PLAN.md) and [the Apify feature plan](../features/ACTIVITY_DISCOVERY.md). Demo/video production remains separate in docs/DEMO.md.
+
+## Latest main flow baseline — preserve this work
+Main through d4cc763 includes `contracts/src/disclosure.ts` and `contracts/specs/FLOWS.md`: reuse/review `previewDisclosure`, `nudgeDelivery`, `SignalCandidateSchema` and `templateForSignal`. Main D016–D020 are the canonical flow decisions; Adam's branch independently used D016 for different proposed contracts, so reconcile by schema/commit. Preview is device-only; opt-in defaults off per connection; quiet hours/cooldown apply at coordination and commit. Space/no need yields no candidate; availability-only approval produces no nudge. These helpers are drafted/offline-tested, not yet wired authoritative guards. Sumedh ACK remains pending.

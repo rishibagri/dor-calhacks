@@ -38,7 +38,7 @@ flowchart LR
 - `spacetimedb/src/schema.ts`, module exports and client bindings: CS coordinates. Sumedh claims approval/guard/suppression tests and files; neither edits another claimed file concurrently.
 - `src/app/api/reflections/` and voice route: Adam owns provider handler after file claim; CS supplies identity/session wiring. Both review logging and token exposure with Sumedh.
 - `src/server/discovery/` and discovery route: CS owns; Nimisha defines consumed fields; Sumedh reviews inputs/source handling.
-- Contracts: producer plus affected consumer review, and Sumedh for privacy. D016 on Adam’s branch remains a proposal until reviewed/merged.
+- Contracts: producer plus affected consumer review, and Sumedh for privacy. AI-branch proposal on Adam’s branch remains a proposal until reviewed/merged.
 
 ## Shared acceptance gates
 - **G1, P1 end:** every adapter has a consumer-facing signature/fixture and an owner; runtime/credential blockers logged.

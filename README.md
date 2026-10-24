@@ -26,20 +26,23 @@ Quiz answers personalize communication, support, social bandwidth and draft shar
 
 ## Current implementation state — read before coding
 
-This repository has active work; it is no longer just a planning scaffold. The inspected shared baseline is main through `8e208df`. Status below separates code on main from branch-reported work; verify newer branch heads before relying on it.
+This repository has active work; it is no longer just a planning scaffold. The inspected shared baseline is main through `d4cc763`. Status below separates code on main from branch-reported work; verify newer branch heads before relying on it.
 
 | Component | Current evidence | Next owner/action |
 |---|---|---|
-| Next.js app, navigation, onboarding/connection/journal/privacy/nudge pages | CS M1 merged; offline build/typecheck and unconfigured route smoke reported | CS: wire real adapters, complete live flow |
+| Next.js app, navigation, onboarding/connection/journal/privacy/nudge pages | CS M1 plus core flow draft merged; offline build/typecheck and unconfigured route smoke reported | CS: wire real adapters, complete live flow |
 | SpacetimeDB private module and client adapter | CS M1 merged; 16 in-process module tests reported; generated bindings still placeholder in inspected handoff | CS: publish/generate and verify authenticated two-user path |
 | Signal approval | Intentionally refuses until real privacy guard lands | Sumedh: implement exact guarded approval with CS |
 | Local vault | Locked placeholder on inspected main | Sumedh: real VaultPort, keys/lock/profile/extras |
-| AI providers/worker and D016 contracts | Adam’s remote role branch reports adapters, tests and limited Droid live checks; not merged into inspected main | Adam: preserve work, request consumer review and integrate routes/real policy |
+| AI providers/worker and AI-branch proposal contracts | Adam’s remote role branch reports adapters, tests and limited Droid live checks; not merged into inspected main | Adam: preserve work, request consumer review and integrate routes/real policy |
 | Quiz semantics | Eight questions and D015 fixture fixes merged; review ACKs still needed | Nimisha: review/own mapping and rank/evaluation |
 | Apify source/activity plans | Approved scope, documentation only; Actor/source and paid-run limits not selected | CS owns ingestion; Nimisha ranks; Adam coordinates; Sumedh guards |
 | Production deployment / real end-to-end privacy | Not established by this documentation | All: publish reproducible live evidence before claims |
 
 The AI branch’s reported timings are not full production evidence: its log notes missing Claude/Cartesia credentials and variable Droid latency. Never relabel an offline harness, fixture policy, placeholder or isolated provider call as the complete live application.
+
+## Latest core-flow decisions to preserve
+Main now includes [FLOWS.md](contracts/specs/FLOWS.md), `previewDisclosure`, `nudgeDelivery` and flow tests (CS draft of Sumedh-owned semantics; ACK pending). Main D016–D020 specify device-only preview, per-connection recipient opt-in default off, quiet hours 22:00–08:00 using the saved UTC offset, a 24-hour pair cooldown, no candidate for space/no need, and no nudge for availability-only approval. Draft helpers are not yet authoritative reducer wiring. Adam's branch also used the label D016 for a different proposal; reconcile by schema/commit, not the duplicate label.
 
 ## End-to-end system
 
@@ -86,7 +89,7 @@ T+0 is the original agreed start. Planning takes only 30 minutes. These targets 
 |---|---|
 | CS · `CS-P0` | Inspect merged shell/module; publish app adapter paths; claim Apify source integration. |
 | Nimisha · `DS-P0` | Confirm quiz/profile mapping and three scenario expectations; identify rank inputs/outputs. |
-| Adam · `AI-P0` | Inspect existing AI branch/D016; identify provider/worker interfaces needing review. |
+| Adam · `AI-P0` | Inspect existing AI branch/AI-branch proposal; identify provider/worker interfaces needing review. |
 | Sumedh · `CYBER-P0` | Define local vault and authoritative consent inputs; claim guard files with CS. |
 
 **Exit evidence:** Every surface has one implementer, named consumers and an explicit private/shared boundary. No one repeats completed M1 work.
@@ -245,7 +248,7 @@ No private journal, quiz answer, detailed schedule, pair identity or relationshi
 | C6 | Real policy port and offline test boundary | Authoritative guards → consumers | Sumedh; all consume |
 | C7 (planned) | Public activity catalogue + shared proposal | CS source → rank/worker/UI | CS; Nimisha/Adam consume; Sumedh consent review |
 
-The full [contract index](contracts/README.md) distinguishes executable schemas from planned interfaces. `contracts/src/schemas.ts` is the shared runtime schema source; generated schema files and fixtures change together. The app adapter seam is `src/lib/backend/ports.ts`; shared wire definitions must not fork there. Adam’s D016 branch proposal needs review; do not overwrite it or claim it merged from a planning document.
+The full [contract index](contracts/README.md) distinguishes executable schemas from planned interfaces. `contracts/src/schemas.ts` is the shared runtime schema source; generated schema files and fixtures change together. The app adapter seam is `src/lib/backend/ports.ts`; shared wire definitions must not fork there. Adam’s AI-branch proposal branch proposal needs review; do not overwrite it or claim it merged from a planning document.
 
 ## Privacy and safety model
 - Default deny; accepted connection plus confirmed preset plus named item approval plus current versions/expiry are required.
