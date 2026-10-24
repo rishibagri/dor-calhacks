@@ -32,3 +32,10 @@ export const spacetimeConfig: SpacetimeConfig = {
  * every card as synthetic. Defaults to true: a real-people launch must opt out explicitly with "false".
  */
 export const isDiscoverySynthetic: boolean = clean(process.env.NEXT_PUBLIC_DISCOVERY_SYNTHETIC) !== 'false';
+
+/**
+ * Core-first release (README "Current direction"): Discover and Events are preserved extensions, hidden unless this is
+ * exactly "true". The core journey must work with it off, without location permission or an event source.
+ * Hiding is presentation only; the module's discovery flag and guards remain the authority.
+ */
+export const areExtensionsEnabled: boolean = clean(process.env.NEXT_PUBLIC_DOR_EXTENSIONS) === 'true';

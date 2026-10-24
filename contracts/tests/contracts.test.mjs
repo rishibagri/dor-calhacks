@@ -89,6 +89,20 @@ test('private reflection candidates are enum-only and never carry journal text',
     sourceJournalId: 'local-1' }).success, false);
 });
 
+test('D040 private assessment: optional, bounded, names only, never both excluded and preferred', async () => {
+  const { PrivateReflectionSchema, PrivateAssessmentSchema } = await import('../dist/index.js');
+  const base = { schemaVersion: 1, reflection: 'r', candidate: { supportMode: 'short_call' } };
+  const a = (over = {}) => ({ intent: 'wants_connection', excludedNames: [], preferredNames: [], ...over });
+  assert.equal(PrivateReflectionSchema.safeParse(base).success, true, 'assessment is optional (additive)');
+  assert.equal(PrivateReflectionSchema.safeParse({ ...base, assessment: a({ excludedNames: ['Alex'], preferredNames: ['Sam'] }) }).success, true);
+  for (const bad of [
+    a({ intent: 'send_now' }), a({ excludedNames: ['A', 'B', 'C', 'D', 'E', 'F'] }), a({ preferredNames: ['A', 'B', 'C', 'D'] }),
+    a({ excludedNames: ['Alex', 'alex'] }), a({ excludedNames: ['Alex'], preferredNames: ['ALEX'] }),
+    a({ excludedNames: [' Alex'] }), a({ excludedNames: ['x'.repeat(41)] }), a({ excludedNames: ['Al\u202Eex'] }),
+    a({ reason: 'they lied about being sick' }), a({ excludedNames: [''] }),
+  ]) assert.equal(PrivateAssessmentSchema.safeParse(bad).success, false, JSON.stringify(bad));
+});
+
 test('recipient preferences and coordination jobs reject duplicates and free text', async () => {
   const { RecipientSupportPreferencesSchema, CoordinationJobSchema } = await import('../dist/index.js');
   const fixtures = JSON.parse(await readFile(new URL('../fixtures/interfaces.json', import.meta.url), 'utf8'));

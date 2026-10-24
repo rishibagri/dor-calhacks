@@ -7,14 +7,15 @@
  * projection bug fails visibly instead of ranking.
  *
  * Fields the projection does not carry are filled conservatively, never invented:
- * - `avatarMediaId: null` (initials avatar) and `eventIntents: []` (no C8 event-intent producer yet);
+ * - `avatarMediaId: null` (initials avatar) and `sharedEventIds: []`: mutual events are joined only from the D039
+ *   `event_companions` view (src/evaluation/events.ts), never inferred here;
  * - `publicationExpiresAt: null`: expiry is enforced by the view and its sweep, not visible to peers;
  * - `withdrawn`/`blocked: false`: the view already drops those rows (guardDiscoveryVisibility);
  * - `alreadyConnected: false`: nothing computes it for discovery yet (open gap, raised to CS/Cyber).
  */
 import { looksLikeContactOrId, MAX_INTEREST_TAGS, MAX_PUBLIC_NAME, type DiscoveryCardProjection } from '@dor/contracts/policy';
 import { rankNearby, type NearbyInput } from '../../evaluation/nearby.ts';
-import type { DiscoveryCandidate, DiscoveryShortlist } from './types.ts';
+import type { DiscoveryCandidate, DiscoveryShortlist, ShortlistEntry } from './types.ts';
 
 const ROW_KEYS = new Set<string>(['cardRef', 'displayName', 'interestTags', 'sharedTags', 'revision'] satisfies (keyof DiscoveryCardProjection)[]);
 const TAG_RE = /^[a-z][a-z0-9-]{1,31}$/;
@@ -55,7 +56,7 @@ export function fromDiscoveryCard(row: unknown, viewerTags: readonly string[], a
   const overlap = tags.filter(t => viewer.has(t)).sort();
   if (overlap.join() !== [...(r.sharedTags as string[])].sort().join()) return 'shared_tags_mismatch';
   return {
-    ref, displayName: name, avatarMediaId: null, tags: [...tags], eventIntents: [], publicationVersion: r.revision as number,
+    ref, displayName: name, avatarMediaId: null, tags: [...tags], sharedEventIds: [], publicationVersion: r.revision as number,
     publicationExpiresAt: null, withdrawn: false, blocked: false, alreadyConnected: false,
   };
 }
@@ -84,4 +85,24 @@ export function rankDiscoveryCards(input: Omit<NearbyInput, 'candidates'> & { ro
   const ranked = rankNearby({ ...rest, candidates });
   const shortlist = { ...ranked, excluded: [...rejected.map(r => ({ ref: r.ref, reason: 'invalid_card' as const })), ...ranked.excluded] };
   return { shortlist, candidates, rejected };
+}
+
+/** D038(e): the server's `commit_introduction_proposal` accepts at most this many shared tags. */
+export const MAX_PROPOSAL_TAGS = 3;
+
+/**
+ * D038(e) gate for the AI introduction step: the server commits proposals for `shared_interest` only, with 1–3 tags
+ * both people publish, and refuses `same_event` (guardIntroductionProposalCommit). An entry whose only overlap is an
+ * event is therefore withheld, never sent for a model call that would be refused. Event companions stay visible on the
+ * Discover page; only the proposal input is narrowed. Tags keep the ranker's sorted order.
+ */
+export function forIntroductionProposals(entries: readonly ShortlistEntry[]):
+  { ready: { ref: string; reasons: ['shared_interest']; sharedTags: string[]; sharedEventId: null }[]; withheld: string[] } {
+  const ready: { ref: string; reasons: ['shared_interest']; sharedTags: string[]; sharedEventId: null }[] = [];
+  const withheld: string[] = [];
+  for (const e of entries) {
+    if (!e.reasons.includes('shared_interest') || e.sharedTags.length === 0) { withheld.push(e.ref); continue; }
+    ready.push({ ref: e.ref, reasons: ['shared_interest'], sharedTags: e.sharedTags.slice(0, MAX_PROPOSAL_TAGS), sharedEventId: null });
+  }
+  return { ready, withheld };
 }

@@ -46,7 +46,7 @@ export const send_introduction_request = spacetimedb.reducer(
   (ctx, { card_ref, client_request_id }) => {
     requireDiscovery(ctx);
     if (!validClientRequestId(client_request_id)) fail('invalid', 'client_request_id');
-    const prior = [...ctx.db.introduction.iter()].find(r => r.sender.isEqual(ctx.sender) && r.client_request_id === client_request_id);
+    const prior = [...ctx.db.introduction.sender.filter(ctx.sender)].find(r => r.client_request_id === client_request_id);
     if (prior) {
       const target = ctx.db.discovery_publication.publication_id.find(card_ref);
       if (target && prior.recipient.isEqual(target.owner)) return;
@@ -55,7 +55,7 @@ export const send_introduction_request = spacetimedb.reducer(
     const target = visibleCardOwner(ctx, card_ref);
     const nowMs = toMs(ctx.timestamp);
     const sender = loadDiscoveryParty(ctx.db, ctx.sender), recipient = loadDiscoveryParty(ctx.db, target.owner);
-    const pendingOut = [...ctx.db.introduction.iter()].filter(r => r.sender.isEqual(ctx.sender) && r.status === 'pending' &&
+    const pendingOut = [...ctx.db.introduction.sender.filter(ctx.sender)].filter(r => r.status === 'pending' &&
       toMs(r.expires_at) > nowMs).length;
     const g = guardIntroductionRequest({
       sender, recipient, blockedEitherWay: false, enabled: true, nowMs,
@@ -88,7 +88,7 @@ function respond(ctx: Ctx, introId: string, action: 'accept' | 'decline' | 'canc
     sender_closed: g.status === 'cancelled', // a decline stays "pending" to the sender until it lapses
   });
   if (g.status === 'accepted') {
-    for (const p of [...ctx.db.introduction_proposal.iter()]) {
+    for (const p of [...ctx.db.introduction_proposal.viewer.filter(row.sender), ...ctx.db.introduction_proposal.viewer.filter(row.recipient)]) {
       const pair = (p.viewer.isEqual(row.sender) && p.candidate.isEqual(row.recipient)) ||
         (p.viewer.isEqual(row.recipient) && p.candidate.isEqual(row.sender));
       if (pair) ctx.db.introduction_proposal.proposal_id.delete(p.proposal_id);

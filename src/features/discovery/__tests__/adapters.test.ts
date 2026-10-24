@@ -34,7 +34,7 @@ test('adapter: reason codes are the shared contract list', () => {
 test('adapter: a real projection row maps field-for-field, filling only conservative defaults', () => {
   const c = fromDiscoveryCard(row('pub-a', 'Sam', ['coffee', 'board-games'], 3), viewer.tags, allowed);
   assert.deepEqual(c, {
-    ref: 'pub-a', displayName: 'Sam', avatarMediaId: null, tags: ['coffee', 'board-games'], eventIntents: [],
+    ref: 'pub-a', displayName: 'Sam', avatarMediaId: null, tags: ['coffee', 'board-games'], sharedEventIds: [],
     publicationVersion: 3, publicationExpiresAt: null, withdrawn: false, blocked: false, alreadyConnected: false,
   });
 });
@@ -47,7 +47,7 @@ test('adapter: every visible fixture person survives the projection round-trip',
 });
 
 test('adapter: ranking projection rows equals ranking the same people as DS cards (no intents, server-side expiry)', () => {
-  const same = visible.map(c => ({ ...c, eventIntents: [], publicationExpiresAt: null }));
+  const same = visible.map(c => ({ ...c, sharedEventIds: [], publicationExpiresAt: null }));
   const direct = rankNearby({ viewer, candidates: same, mode: { kind: 'nearby' }, allowedTags: pool.allowedTags, now });
   const viaRows = rankDiscoveryCards({ viewer, rows, mode: { kind: 'nearby' }, allowedTags: pool.allowedTags, now });
   assert.equal(viaRows.shortlist.kind, 'shortlist');

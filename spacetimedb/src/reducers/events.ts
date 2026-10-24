@@ -10,7 +10,7 @@ import { spacetimedb } from '../schema';
 import { fail, type Ctx } from '../errors';
 import { requireAcceptedPair, requireAccount, otherMember } from '../guards';
 import { newId } from '../ids';
-import { blockedEitherWay, discoveryList, fromMs, hex, toMs } from '../policy_state';
+import { blockedEitherWay, discoveryList, findAssignment, fromMs, hex, toMs } from '../policy_state';
 import { consumeRate, requireDiscovery } from '../discovery_effects';
 import {
   approvalsStand, basisParticipants, findIntentRow, loadActivityPreset, loadCatalogueEvent, loadIntent, loadPlanCheck,
@@ -67,6 +67,29 @@ export const upsert_catalogue_event = spacetimedb.reducer(
   }
 );
 
+const FEED_KEY_RE = /^[a-z][a-z0-9-]{2,63}$/;
+const MAX_RUN_RECORDS = 10_000;
+
+/**
+ * Ingester-only run record (CS-R3): one row per configured feed, so the Events page can show "source unavailable"
+ * or the age of the last good fetch honestly. A failed run keeps the previous success time.
+ */
+export const record_catalogue_run = spacetimedb.reducer(
+  { feed_key: t.string(), ok: t.bool(), record_count: t.u32() },
+  (ctx, { feed_key, ok, record_count }) => {
+    requireIngester(ctx);
+    if (!FEED_KEY_RE.test(feed_key) || !discoveryList(ctx.db, 'areas').includes(feed_key)) fail('invalid', 'feed_key');
+    if (record_count > MAX_RUN_RECORDS) fail('invalid', 'record_count');
+    const cur = ctx.db.catalogue_source.feed_key.find(feed_key);
+    const row = {
+      feed_key, last_attempt_at: ctx.timestamp, last_success_at: ok ? ctx.timestamp : cur?.last_success_at,
+      last_status: ok ? 'ok' : 'failed', record_count: ok ? record_count : (cur?.record_count ?? 0),
+    };
+    if (cur) ctx.db.catalogue_source.feed_key.update(row);
+    else ctx.db.catalogue_source.insert(row);
+  }
+);
+
 /**
  * Explicitly publish (or update) "interested"/"going" for one current catalogue event. Expires with the event.
  * expected_version is optimistic concurrency (0 = first). Every change bumps the version, so plans bound to
@@ -113,14 +136,14 @@ export const approve_activity_interest = spacetimedb.reducer(
     requireAccount(ctx);
     const pair = requireAcceptedPair(ctx, a.pair_id);
     if (!validClientRequestId(a.client_request_id)) fail('invalid', 'client_request_id');
-    const prior = [...ctx.db.activity_approval.iter()].find(r => r.owner.isEqual(ctx.sender) && r.client_request_id === a.client_request_id);
+    const prior = [...ctx.db.activity_approval.owner.filter(ctx.sender)].find(r => r.client_request_id === a.client_request_id);
     if (prior) {
       if (prior.pair_id === a.pair_id && JSON.stringify(prior.topics) === JSON.stringify(a.topics)) return;
       fail('invalid', 'request_id_reused');
     }
     const other = otherMember(pair, ctx.sender)!;
     const preset = loadActivityPreset(ctx.db, ctx.sender, a.pair_id);
-    const asg = [...ctx.db.preset_assignment.iter()].find(r => r.pair_id === a.pair_id && r.owner.isEqual(ctx.sender));
+    const asg = findAssignment(ctx.db, ctx.sender, a.pair_id);
     const g = guardActivityApproval({
       ownerId: hex(ctx.sender), recipientId: asg && asg.recipient.isEqual(other) ? hex(other) : null, pairAccepted: true,
       preset, topics: a.topics, allowedTopics: discoveryList(ctx.db, 'tags'), expectedPolicyVersion: a.expected_policy_version,
@@ -199,8 +222,8 @@ export const commit_plan_proposal = spacetimedb.reducer(
     } else if (a.approval_ids.length !== 0) refuse('invalid_schema');
     const timing = guardPlanTiming(event, Date.parse(a.expires_at), nowMs);
     if (!timing.ok) refuse(timing.reason);
-    const dup = [...ctx.db.shared_plan.iter()].some(p => p.event_id === a.event_id && LIVE.has(p.status) &&
-      p.participant_a.isEqual(pa) && p.participant_b.isEqual(pb));
+    const dup = [...ctx.db.shared_plan.participant_a.filter(pa)].some(p => p.event_id === a.event_id && LIVE.has(p.status) &&
+      p.participant_b.isEqual(pb));
     if (dup) fail('stale', 'already_planned');
     ctx.db.shared_plan.insert({
       plan_id: a.plan_id, revision: 1, basis_kind: a.basis_kind, basis_ref: a.basis_ref, participant_a: pa, participant_b: pb,

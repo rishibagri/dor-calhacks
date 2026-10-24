@@ -4,6 +4,70 @@ Read `docs/roles/ai.md` and README **R0–R6** for current assignments. The hist
 
 ---
 
+# AI handoff — Core 1/2 private assessment (2026-10-24 ~19:10Z)
+
+- **What:** Claude's reflection now also returns an owner-only `assessment` (D040): `wants_connection`, `unclear` or `wants_space`, plus explicit excluded and preferred names. CS's `DecisionLoop` applies it through `src/features/voice/assessment.ts`. It can only stop, skip the company question, leave named people out or order people first. It never chooses or sends. Spec: `docs/features/PRIVATE_ASSESSMENT.md`.
+- **Evidence:** offline only.
+  - `check:all`: contracts 117, module 143, app 273 + 1 todo
+  - `ai:check`: agents 69, worker 42, integration 36
+  - build OK; 4/4 mutations caught
+- **Asks:**
+  - **CS:** review the edits in `decision-loop.tsx`, `journal/page.tsx` and `src/lib/setup/plan.ts`.
+  - **Sumedh:** durable pause per `docs/features/RECIPIENT_PAUSE.md` (D041).
+  - **Nimisha:** evaluate the assessment cases.
+- **Next (Adam):** live Claude run on the synthetic cases (needs `ANTHROPIC_API_KEY` + go-ahead). After D041 lands: worker integration cases (pause before, during, and pause → resume).
+- **Team post:** `docs/team-messages/core2-private-assessment.md`.
+
+# AI handoff — core-first checkpoint (2026-10-24 ~18:20Z)
+
+The README now puts the partner/friend/family journey first (Core 1–4) and lists the sponsor targets. For AI:
+- **Factory:** the SDK call path is the worker default (`worker/src/droid-sdk.ts`). The CLI is only the `DOR_DROID_TRANSPORT=cli` fallback. Evidence so far is offline tests plus an isolated live run with synthetic stand-ins; deployed proof is still open.
+- **Anthropic/Cartesia:** live runs on the core journey wait for Core 3 and Adam's go-ahead.
+- **Next AI work (Core 1):** propose the private assessment/clarification seam (`no_action` / `needs_clarification` / `ready_for_preview`, at most two private questions; invalid/refused/timeout → no delivery). Agree it with Nimisha (paired fixtures) and Sumedh (pause semantics) before changing contracts. Gate the coordinator fallback on the future pause check.
+- Plan and introduction worker paths below are **extensions**, not core gates.
+
+---
+
+# AI handoff — R2–R4 worker paths (2026-10-24 ~16:45Z)
+
+**Branch:** `role/ai-voice`, working tree on main `59f917e` (not yet committed or in a PR). **Status:** implemented and offline-verified only; no provider call, no published module.
+
+| Piece | Files | Evidence kind |
+|---|---|---|
+| Shared-plan worker: `worker_plan_candidates` → `PlanCoordinator` → `commit_plan_proposal` | `worker/src/plans.ts`, `worker/src/main.ts` | Real module in-process, 11 cases, 2 mutations caught |
+| Introduction commit: shortlist → `IntroductionCoordinator` → `commit_introduction_proposal` | `worker/src/introductions.ts` | Real reducer in-process, 6 cases (shortlist/eligibility synthetic), 2 mutations caught |
+| Aggregate job deadline (25 s, slot wait + rounds) | `worker/src/{droid-proposer,live}.ts` | Unit, 4 cases + integration fallback case |
+| Reflection in-flight dedupe + usage metadata | `src/agents/src/{http/routes,reflection/claude}.ts`, `src/app/api/reflections/route.ts` | Unit, 3 cases; app build |
+
+Checks: `ai:check` agents 67, worker 32, integration 36; `check:all` exit 0 (contracts 116, module 137, app 207 + 1 known todo); `build:app --webpack` OK.
+
+## Exact asks
+- **CS:** regenerate the client and worker bindings after D039, because the plan path stays disabled until `worker_plan_candidates` and `commit_plan_proposal` are present. Worker runbook additions are in `worker/README.md` (Shared plans, Job deadline).
+- **Sumedh:**
+  1. A worker-readable introduction source: a request view or table with the viewer ref/revision and ≤ 3 visible candidates. Alternatively, decide the app owns the trigger.
+  2. Confirm the per-event intent binding versus D034's per-person `intentVersion`.
+  3. Decide fallback on or off.
+- **Nimisha:** an importable `rankEvents` for `runPlanJob`.
+
+## Droid transport (2026-10-24 ~17:55Z, uncommitted)
+- The worker now defaults to the `@factory/droid-sdk` warm-session transport and needs `FACTORY_API_KEY`. `DOR_DROID_TRANSPORT=cli` restores `droid exec`.
+- Live (synthetic stand-ins): 4/4 agent-decided, call median 1.8 s versus 4.1 s on the CLI record.
+- Credits read 256 per call versus about 14 on the CLI record. This is unexplained (unit or prompt size); see `worker/README.md`.
+- Pending: Cyber review of the dependency.
+
+## Token safety (for every teammate and agent)
+- Keys stay in the gitignored `.env.local`; do not open, print or log it.
+- Offline checks spend nothing: the full dry run (inside `ai:check`) reads `.env.local` only after a shell `DOR_DRYRUN_LIVE_*` opt-in (commit `67915b4`).
+- For certainty, run with keys stripped: `env -u ANTHROPIC_API_KEY -u CARTESIA_API_KEY -u FACTORY_API_KEY npm run ai:check`.
+- Paid runs (`ai:live`, `live -w @dor/agents`, `live-droid.mjs`, live dry run) happen only with Adam's go-ahead, stating the expected call count.
+
+## Not done
+- Introductions are not wired into `main.ts` (no source).
+- `max_tokens` right-sizing and every live run wait for keys and the go-ahead.
+- Browser mic/TTS check.
+
+---
+
 # AI handoff — R1–R3 implementation (2026-10-24 ~06:10Z)
 
 **Branch:** `role/ai-voice` @ `ba354ef`+docs, based on main `4fe469a`. Pushed; not yet in a PR. **Status:** implemented and offline-verified only. No provider was called and no module is published. Budget used: B = 30 h from 05:45Z (deadline ≈ 11:45Z Oct 25).

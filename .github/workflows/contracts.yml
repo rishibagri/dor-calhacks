@@ -1,15 +1,52 @@
-name: Shared contracts
+name: CI
 on: [push, pull_request]
 permissions:
   contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Offline checks only: no provider keys, no deployed database, no paid calls. Passing CI is not live evidence.
+# Node 24: app and DS tests run .ts directly through Node's built-in type stripping.
 jobs:
-  contracts:
+  checks:
+    name: Contracts, module, typecheck, app tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: npm run check
+      - run: npm run check:all
+      - name: Generated schemas are current
+        run: npm run contracts:schema && git diff --exit-code -- contracts
+
+  ai:
+    name: Agents and worker (offline)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run ai:check
+
+  build:
+    name: Production build (unconfigured mode)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build -w @dor/contracts && npm run build -w @dor/agents
+      - run: npx next build --webpack

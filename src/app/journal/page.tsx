@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import type { SignalCandidate } from '@dor/contracts';
+import type { PrivateAssessment, SignalCandidate } from '@dor/contracts';
 import { SavedJournals } from '@/components/feature/saved-journals';
-import { ShareReview } from '@/components/feature/share-review';
+import { DecisionLoop } from '@/components/feature/decision-loop';
 import { useBackendUserId, useReflection, useVault, type VaultPort } from '@/lib/backend';
 import { VoiceReflection } from '@/features/voice/voice-reflection';
 import { VaultControls } from '@/features/privacy/vault-controls';
@@ -15,17 +15,21 @@ import { VaultControls } from '@/features/privacy/vault-controls';
  */
 function JournalWorkspace({ vault }: { vault: VaultPort }) {
   const reflection = useReflection();
-  const [candidate, setCandidate] = useState<SignalCandidate | null>(null);
-  // Clear synchronously on pagehide so a back/forward-cached page never holds the candidate (Cyber review).
+  // One private decision episode per reflection: `episode` remounts the loop so no answer or exclusion carries over.
+  const [episode, setEpisode] = useState<{ id: number; candidate: SignalCandidate | null; assessment?: PrivateAssessment } | null>(null);
+  // Clear synchronously on pagehide so a back/forward-cached page never holds the candidate or answers (Cyber review).
   useEffect(() => {
-    const clear = () => setCandidate(null);
+    const clear = () => setEpisode(null);
     window.addEventListener('pagehide', clear);
     return () => window.removeEventListener('pagehide', clear);
   }, []);
   return (
     <div className="space-y-8">
-      <VoiceReflection vault={vault} reflect={reflection.reflect} onCandidate={(c) => setCandidate(c)} />
-      {candidate && <ShareReview candidate={candidate} onClose={() => setCandidate(null)} />}
+      <VoiceReflection vault={vault} reflect={reflection.reflect}
+        onCandidate={(c, _entry, assessment) => setEpisode((e) => ({ id: (e?.id ?? 0) + 1, candidate: c, assessment }))} />
+      {episode?.candidate && (
+        <DecisionLoop key={episode.id} candidate={episode.candidate} assessment={episode.assessment} onDone={() => setEpisode(null)} />
+      )}
       <SavedJournals vault={vault} version={vault.getVersion()} />
     </div>
   );

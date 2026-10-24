@@ -8,7 +8,7 @@ Next.js provider-facing routes use JSON and authenticated sessions. Shared-state
 | POST /api/voice/session | {} | `VoiceSession` (C1): 60 s Cartesia access token with stt+tts grants, model/voice/version settings; never the master key |
 | Local vault: saveJournal | {text, localId} | encrypted owner-only IndexedDB entry; no server persistence |
 | Local vault: listJournals | local cursor | decrypted only within the unlocked owner session |
-| POST /api/reflections | {selectedText, clientRequestId} | `PrivateReflection` (C1): transient Claude processing; private reflection plus nullable enum-only candidate returned to local vault; no body logging or server persistence |
+| POST /api/reflections | {selectedText, clientRequestId} | `PrivateReflection` (C1): transient Claude processing; private reflection plus nullable enum-only candidate and optional owner-only `assessment` (D040; in memory only, narrows the private decision loop, never persisted or sent) returned to the device; only the reflection text goes to the local vault; no body logging or server persistence |
 | Local device: previewDisclosure | candidate + accepted pair + preset/assignment snapshot | exact named-recipient preview; no API call or server-visible candidate; reducer rechecks authoritative state at approval |
 | POST /api/signals/approve | {proposedSignal,pairId,payloadRevision,recipientPolicyVersion,presetAssignmentVersion,consentVersion,clientRequestId} | approved signal ID; validate displayed revision, recipient, expiry, membership |
 | POST /api/signals/:id/revoke | {} | revoked; cancel queued uses, invalidate derived cached nudges |

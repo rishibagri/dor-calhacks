@@ -11,9 +11,17 @@ export const DROID_ALLOWED_TOOLS = ['TodoWrite'] as const;
 /** Picking among pre-approved enum options needs no frontier model; measured ~14 credits/call when cached. */
 export const DEFAULT_DROID_MODEL = 'claude-haiku-5-5';
 const MAX_STDOUT_BYTES = 64 * 1024;
+/** Less remaining JOB budget than this cannot fit a model call: fail with `timeout` instead of starting one to kill it. */
+export const MIN_CALL_BUDGET_MS = 250;
 /** Variables the subprocess may inherit. Provider keys for Claude/Cartesia and worker secrets are withheld. */
 const INHERITED_ENV = ['PATH', 'HOME', 'USER', 'LOGNAME', 'SHELL', 'LANG', 'TMPDIR', 'XDG_CONFIG_HOME',
   'FACTORY_API_KEY', 'HTTPS_PROXY', 'HTTP_PROXY', 'NO_PROXY', 'NODE_EXTRA_CA_CERTS'];
+
+/** The CLI subprocess environment allowlist applied to `source`; `withKey: false` drops FACTORY_API_KEY. */
+export function droidEnv(source: NodeJS.ProcessEnv, { withKey = true } = {}): Record<string, string> {
+  return Object.fromEntries(INHERITED_ENV.flatMap(k => source[k] === undefined || (!withKey && k === 'FACTORY_API_KEY')
+    ? [] : [[k, source[k]!]]));
+}
 
 const count = z.number().int().nonnegative().optional();
 const DroidExecResultSchema = z.object({
@@ -29,6 +37,8 @@ export interface DroidUsage {
   factoryCredits: number | null;
   cacheReadTokens: number | null;
   cacheCreationTokens: number | null;
+  /** Transport path: `ok`, or the ProviderError code the call failed with. */
+  outcome?: string;
 }
 
 export interface DroidAckProposerOptions {
@@ -45,7 +55,33 @@ export interface DroidAckProposerOptions {
   concurrency?: number;
   /** Calls allowed to wait for a slot; beyond this a call fails fast with `rate_limited`. Default 16. */
   maxQueue?: number;
+  /**
+   * Runs each call instead of spawning `droid exec` (e.g. the SDK warm-session transport in droid-sdk.ts). The
+   * runner still owns slots, the queue, deadlines and usage reporting; `spawn`, `env` and `droidPath` are unused.
+   */
+  transport?: DroidTransport;
 }
+
+/** One model call inside a slot's private, freshly emptied directory. */
+export interface DroidTransportCall {
+  slot: number;
+  cwd: string;
+  prompt: string;
+  /** Already clipped to the job deadline. */
+  timeoutMs: number;
+}
+export interface DroidTransport {
+  /** Resolves to the untrusted reply (parsed JSON when possible) plus numbers-only usage; rejects with ProviderError. */
+  call(request: DroidTransportCall): Promise<{ reply: unknown; usage: Omit<DroidUsage, 'model' | 'durationMs'> }>;
+  close(): Promise<void>;
+}
+
+export interface DroidRunOptions {
+  /** Aggregate job deadline (epoch ms) covering slot wait and the call. */
+  deadlineAt?: number;
+}
+/** A proposer bound to the worker's shared runner and, optionally, one job's deadline. */
+export type DroidProposerOptions = DroidAckProposerOptions & { runner?: DroidRunner; deadlineAt?: number };
 
 /**
  * Runs bounded, tool-less `droid exec` prompts for the worker's agents. Each concurrent run gets one of a fixed
@@ -61,20 +97,39 @@ export class DroidRunner {
     this.slots = Array.from({ length: Math.max(1, options.concurrency ?? 2) }, () => ({ dir: undefined, busy: false }));
   }
 
-  /** Runs one prompt and returns the model's reply as untrusted, best-effort parsed JSON. */
-  async run(prompt: string): Promise<unknown> {
-    const slot = await this.acquire();
+  /**
+   * Runs one prompt and returns the model's reply as untrusted, best-effort parsed JSON. `deadlineAt` (epoch ms)
+   * bounds the slot wait and the call together: past it the call fails with `timeout` and never spawns.
+   */
+  async run(prompt: string, { deadlineAt }: DroidRunOptions = {}): Promise<unknown> {
+    const slot = await this.acquire(deadlineAt);
     try {
-      return await this.runIn(slot, prompt);
+      return await this.runIn(slot, prompt, deadlineAt);
     } finally {
       this.release(slot);
     }
   }
 
-  private async runIn(slot: number, prompt: string): Promise<unknown> {
+  private async runIn(slot: number, prompt: string, deadlineAt: number | undefined): Promise<unknown> {
     const cwd = await this.emptyWorkdir(slot);
+    const remaining = deadlineAt === undefined ? Infinity : deadlineAt - Date.now();
+    if (remaining < MIN_CALL_BUDGET_MS) throw new ProviderError('factory', 'timeout');
+    const timeoutMs = Math.min(this.options.timeoutMs ?? 8000, remaining);
     const started = Date.now();
-    const stdout = await this.exec(cwd, prompt);
+    if (this.options.transport) {
+      let outcome;
+      try {
+        outcome = await this.options.transport.call({ slot, cwd, prompt, timeoutMs });
+      } catch (error) {
+        this.options.onUsage?.({ model: this.model, durationMs: Date.now() - started, factoryCredits: null,
+          cacheReadTokens: null, cacheCreationTokens: null,
+          outcome: error instanceof ProviderError ? error.code : 'unknown' });
+        throw error;
+      }
+      this.options.onUsage?.({ model: this.model, durationMs: Date.now() - started, ...outcome.usage, outcome: 'ok' });
+      return outcome.reply;
+    }
+    const stdout = await this.exec(cwd, prompt, timeoutMs);
     let envelope;
     try {
       envelope = DroidExecResultSchema.parse(JSON.parse(stdout));
@@ -91,6 +146,7 @@ export class DroidRunner {
 
   /** Removes the slot directories. Safe to call more than once; call after in-flight runs finish. */
   async close(): Promise<void> {
+    await this.options.transport?.close();
     await Promise.all(this.slots.map(async slot => {
       const pending = slot.dir;
       slot.dir = undefined;
@@ -98,7 +154,8 @@ export class DroidRunner {
     }));
   }
 
-  private acquire(): Promise<number> {
+  private acquire(deadlineAt?: number): Promise<number> {
+    if (deadlineAt !== undefined && deadlineAt <= Date.now()) return Promise.reject(new ProviderError('factory', 'timeout'));
     const free = this.slots.findIndex(s => !s.busy);
     if (free !== -1) {
       this.slots[free]!.busy = true;
@@ -107,7 +164,19 @@ export class DroidRunner {
     if (this.waiting.length >= (this.options.maxQueue ?? 16)) {
       return Promise.reject(new ProviderError('factory', 'rate_limited'));
     }
-    return new Promise(resolve => this.waiting.push(resolve));
+    return new Promise((resolve, reject) => {
+      let timer: NodeJS.Timeout | undefined;
+      const waiter = (slot: number) => { clearTimeout(timer); resolve(slot); };
+      if (deadlineAt !== undefined) {
+        // Leave the queue at the deadline, so a release never hands a slot to a job that has given up.
+        timer = setTimeout(() => {
+          const at = this.waiting.indexOf(waiter);
+          if (at !== -1) this.waiting.splice(at, 1);
+          reject(new ProviderError('factory', 'timeout'));
+        }, deadlineAt - Date.now());
+      }
+      this.waiting.push(waiter);
+    });
   }
 
   /** Hands the slot straight to the next waiter, so it never looks free in between. */
@@ -136,10 +205,9 @@ export class DroidRunner {
       '--cwd', sandbox, prompt];
   }
 
-  private exec(sandbox: string, prompt: string): Promise<string> {
+  private exec(sandbox: string, prompt: string, timeoutMs: number): Promise<string> {
     const spawn = this.options.spawn ?? nodeSpawn;
-    const source = this.options.env ?? process.env;
-    const env = Object.fromEntries(INHERITED_ENV.flatMap(k => source[k] === undefined ? [] : [[k, source[k]!]]));
+    const env = droidEnv(this.options.env ?? process.env);
     return new Promise((resolve, reject) => {
       let stdout = '', bytes = 0, settled = false;
       const child = spawn(this.options.droidPath ?? 'droid', this.args(sandbox, prompt),
@@ -154,8 +222,7 @@ export class DroidRunner {
         child.kill('SIGTERM');
         setTimeout(() => child.kill('SIGKILL'), 1000).unref();
       };
-      const timer = setTimeout(() => { kill(); settle(new ProviderError('factory', 'timeout')); },
-        this.options.timeoutMs ?? 8000);
+      const timer = setTimeout(() => { kill(); settle(new ProviderError('factory', 'timeout')); }, timeoutMs);
       child.stdout!.on('data', (chunk: Buffer) => {
         bytes += chunk.length;
         if (bytes > MAX_STDOUT_BYTES) { kill(); settle(new ProviderError('factory', 'invalid_output')); }
@@ -175,12 +242,14 @@ export class DroidRunner {
  */
 export class DroidAckProposer implements AckProposerPort {
   readonly runner: DroidRunner;
-  constructor(options: DroidAckProposerOptions & { runner?: DroidRunner } = {}) {
+  private readonly deadlineAt: number | undefined;
+  constructor(options: DroidProposerOptions = {}) {
     this.runner = options.runner ?? new DroidRunner(options);
+    this.deadlineAt = options.deadlineAt;
   }
 
   propose(input: AckProposalInput, _requestId: string): Promise<unknown> {
-    return this.runner.run(buildAckPrompt(input));
+    return this.runner.run(buildAckPrompt(input), { deadlineAt: this.deadlineAt });
   }
 
   close(): Promise<void> {
@@ -195,12 +264,14 @@ export class DroidAckProposer implements AckProposerPort {
  */
 export class DroidIntroProposer implements IntroProposerPort {
   readonly runner: DroidRunner;
-  constructor(options: DroidAckProposerOptions & { runner?: DroidRunner } = {}) {
+  private readonly deadlineAt: number | undefined;
+  constructor(options: DroidProposerOptions = {}) {
     this.runner = options.runner ?? new DroidRunner(options);
+    this.deadlineAt = options.deadlineAt;
   }
 
   propose(input: IntroProposalInput, _requestId: string): Promise<unknown> {
-    return this.runner.run(buildIntroPrompt(input));
+    return this.runner.run(buildIntroPrompt(input), { deadlineAt: this.deadlineAt });
   }
 
   close(): Promise<void> {
@@ -214,12 +285,14 @@ export class DroidIntroProposer implements IntroProposerPort {
  */
 export class DroidPlanProposer implements PlanProposerPort {
   readonly runner: DroidRunner;
-  constructor(options: DroidAckProposerOptions & { runner?: DroidRunner } = {}) {
+  private readonly deadlineAt: number | undefined;
+  constructor(options: DroidProposerOptions = {}) {
     this.runner = options.runner ?? new DroidRunner(options);
+    this.deadlineAt = options.deadlineAt;
   }
 
   propose(input: PlanProposalInput, _requestId: string): Promise<unknown> {
-    return this.runner.run(buildPlanPrompt(input));
+    return this.runner.run(buildPlanPrompt(input), { deadlineAt: this.deadlineAt });
   }
 
   close(): Promise<void> {

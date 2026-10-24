@@ -1,5 +1,5 @@
-import { DEFAULT_RECIPIENT_DELIVERY, type ApprovedSignal, type PolicySnapshot, type RecipientDelivery,
-  type RecipientSupportPreferences, type StoredSignal } from '@dor/contracts';
+import { DEFAULT_RECIPIENT_DELIVERY, DiscoveryTagSchema, type ApprovedSignal, type CatalogueEventRef, type PolicySnapshot,
+  type RecipientDelivery, type RecipientSupportPreferences, type StoredSignal } from '@dor/contracts';
 
 /**
  * Pure mappers from the worker-only views (spacetimedb/src/views.ts: worker_signal_context, worker_delivery)
@@ -169,6 +169,50 @@ export function toSupportPreferences(row: Row): RecipientSupportPreferences {
     supportModes: strings(row, 'support_modes') as RecipientSupportPreferences['supportModes'],
     availability: strings(row, 'availability') as RecipientSupportPreferences['availability'],
     expiresAt: new Date(epochMs(field(row, 'expires_at'), 'expires_at')).toISOString(), revokedAt: null,
+  };
+}
+
+function ints(row: Row, name: string): number[] {
+  const v = field(row, name);
+  if (!Array.isArray(v)) throw new RowShapeError(name);
+  return v.map(x => int(x, name));
+}
+
+/**
+ * One worker_plan_candidates row (D039): a current basis plus one event both people currently intend, with the
+ * exact intent (and C7 approval) ids and versions commit_plan_proposal binds. The view lists only usable
+ * catalogue records, so the event maps as scheduled; the plan coordinator still checks age and lead time.
+ */
+export interface PlanCandidate {
+  basisKind: 'introduction' | 'existing_connection';
+  basisRef: string;
+  eventId: string;
+  /** [participant_a's intent, participant_b's intent], as the view orders them. */
+  intentIds: [string, string];
+  intentVersions: [number, number];
+  approvalIds: string[];
+  event: CatalogueEventRef;
+}
+
+export function toPlanCandidate(row: Row): PlanCandidate {
+  const basisKind = str(row, 'basis_kind');
+  if (basisKind !== 'introduction' && basisKind !== 'existing_connection') throw new RowShapeError('basis_kind');
+  const eventId = str(row, 'event_id');
+  const intentIds = strings(row, 'intent_ids'), intentVersions = ints(row, 'intent_versions');
+  if (intentIds.length !== 2 || intentVersions.length !== 2) throw new RowShapeError('intent_ids');
+  const format = str(row, 'format');
+  if (format !== 'in_person' && format !== 'online') throw new RowShapeError('format');
+  const topics = strings(row, 'topics');
+  if (topics.length > 5 || topics.some(t => !DiscoveryTagSchema.safeParse(t).success)) throw new RowShapeError('topics');
+  return {
+    basisKind, basisRef: str(row, 'basis_ref'), eventId,
+    intentIds: [intentIds[0]!, intentIds[1]!], intentVersions: [intentVersions[0]!, intentVersions[1]!],
+    approvalIds: strings(row, 'approval_ids'),
+    event: {
+      eventId, startsAt: new Date(epochMs(field(row, 'event_starts_at'), 'event_starts_at')).toISOString(),
+      status: 'scheduled', fetchedAt: new Date(epochMs(field(row, 'fetched_at'), 'fetched_at')).toISOString(),
+      topics, format,
+    },
   };
 }
 

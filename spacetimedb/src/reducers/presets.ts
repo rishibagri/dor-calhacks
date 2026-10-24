@@ -4,10 +4,11 @@ import { fail, type Ctx } from '../errors';
 import { otherMember, parseCategories, parseFuture, parseKind, requireAccount, requireAcceptedPair } from '../guards';
 import { newId } from '../ids';
 import { suppressPairWork } from '../suppress';
+import { findAssignment } from '../policy_state';
 
 function findPreset(ctx: Ctx, kind: string) {
-  for (const p of ctx.db.relationship_preset.iter()) {
-    if (p.owner.isEqual(ctx.sender) && p.preset_kind === kind) return p;
+  for (const p of ctx.db.relationship_preset.owner.filter(ctx.sender)) {
+    if (p.preset_kind === kind) return p;
   }
   return undefined;
 }
@@ -35,8 +36,8 @@ export const set_relationship_preset = spacetimedb.reducer(
       ...cur, allowed_categories: cats, expires_at: expires, revoked_at: undefined, version: cur.version + 1,
     });
     if (tightened) {
-      for (const a of [...ctx.db.preset_assignment.iter()]) {
-        if (a.owner.isEqual(ctx.sender) && a.preset_kind === kind) suppressPairWork(ctx, a.pair_id, ctx.sender);
+      for (const a of [...ctx.db.preset_assignment.owner.filter(ctx.sender)]) {
+        if (a.preset_kind === kind) suppressPairWork(ctx, a.pair_id, ctx.sender);
       }
     }
   }
@@ -52,8 +53,7 @@ export const assign_relationship_preset = spacetimedb.reducer(
     if (!recipient) fail('invalid', 'pair has no recipient');
     const preset = findPreset(ctx, kind);
     if (!preset || preset.revoked_at) fail('not_found', 'set a preset of this kind first');
-    const cur = [...ctx.db.preset_assignment.iter()]
-      .find(a => a.pair_id === args.pair_id && a.owner.isEqual(ctx.sender));
+    const cur = findAssignment(ctx.db, ctx.sender, args.pair_id);
     if ((cur?.assignment_version ?? 0) !== args.expected_assignment_version) fail('stale', 'assignment version changed');
     if (!cur) {
       ctx.db.preset_assignment.insert({

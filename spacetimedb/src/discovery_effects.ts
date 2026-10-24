@@ -41,6 +41,19 @@ export function toIntroductionState(r: IntroRow): IntroductionState {
 const between = (r: { sender: Identity; recipient: Identity }, a: Identity, b: Identity) =>
   (r.sender.isEqual(a) && r.recipient.isEqual(b)) || (r.sender.isEqual(b) && r.recipient.isEqual(a));
 
+/** Every introduction the identity is part of (sender or recipient index), each once. */
+function introductionsOf(db: ReadDb, who: Identity) {
+  const seen = new Set<string>();
+  return [...db.introduction.sender.filter(who), ...db.introduction.recipient.filter(who)].filter(r => !seen.has(r.intro_id) && seen.add(r.intro_id));
+}
+
+/** Every proposal naming the identity as viewer or candidate, each once. */
+function proposalsOf(db: ReadDb, who: Identity) {
+  const seen = new Set<string>();
+  return [...db.introduction_proposal.viewer.filter(who), ...db.introduction_proposal.candidate.filter(who)]
+    .filter(p => !seen.has(p.proposal_id) && seen.add(p.proposal_id));
+}
+
 export function introductionsBetween(db: ReadDb, a: Identity, b: Identity): IntroRow[] {
   return [...db.introduction.sender.filter(a), ...db.introduction.sender.filter(b)].filter(r => between(r, a, b));
 }
@@ -51,7 +64,7 @@ export function introductionsBetween(db: ReadDb, a: Identity, b: Identity): Intr
  * person as viewer or candidate are deleted. Accepted introductions survive a plain withdrawal.
  */
 export function closeDiscoveryLinks(ctx: Ctx, who: Identity, other?: Identity): void {
-  for (const r of [...ctx.db.introduction.iter()]) {
+  for (const r of introductionsOf(ctx.db, who)) {
     const involved = other ? between(r, who, other) : r.sender.isEqual(who) || r.recipient.isEqual(who);
     if (!involved) continue;
     if (r.status === 'pending') {
@@ -60,7 +73,7 @@ export function closeDiscoveryLinks(ctx: Ctx, who: Identity, other?: Identity): 
       ctx.db.introduction.intro_id.update({ ...r, status: 'ended', sender_closed: true });
     }
   }
-  for (const p of [...ctx.db.introduction_proposal.iter()]) {
+  for (const p of proposalsOf(ctx.db, who)) {
     const involved = other ? between({ sender: p.viewer, recipient: p.candidate }, who, other)
       : p.viewer.isEqual(who) || p.candidate.isEqual(who);
     if (involved) ctx.db.introduction_proposal.proposal_id.delete(p.proposal_id);
@@ -81,12 +94,12 @@ export function applyBlock(ctx: Ctx, target: Identity, alreadyBlocked: boolean):
  * Incoming requests stay: they were made from the other person's profile.
  */
 export function stalePublicationDependents(ctx: Ctx, owner: Identity): void {
-  for (const r of [...ctx.db.introduction.iter()]) {
-    if (r.status === 'pending' && r.sender.isEqual(owner)) {
+  for (const r of [...ctx.db.introduction.sender.filter(owner)]) {
+    if (r.status === 'pending') {
       ctx.db.introduction.intro_id.update({ ...r, status: 'cancelled', sender_closed: true, responded_at: ctx.timestamp });
     }
   }
-  for (const p of [...ctx.db.introduction_proposal.iter()]) {
+  for (const p of proposalsOf(ctx.db, owner)) {
     if (p.viewer.isEqual(owner) || p.candidate.isEqual(owner)) ctx.db.introduction_proposal.proposal_id.delete(p.proposal_id);
   }
 }

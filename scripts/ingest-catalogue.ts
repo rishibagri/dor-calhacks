@@ -5,7 +5,7 @@
  *   node scripts/ingest-catalogue.ts --fetch                  # call Apify (costs credits), print report
  *   ... [--commit <database>] [--force]                       # also upsert via `spacetime call` as the ingester
  *
- * Env for --fetch: APIFY_TOKEN, APIFY_TASK_ID. The Apify *task* holds the developer-reviewed regional source
+ * Env for --fetch: APIFY_API_TOKEN, APIFY_TASK_ID. The Apify *task* holds the developer-reviewed regional source
  * configuration (D028/D031: never device-derived); this script only overrides the generic, guarded query
  * (topic, limit, locale). The token goes in a header and is never printed.
  * --commit requires the CLI to be logged in as an identity registered with set_worker_identity (or the owner).
@@ -27,8 +27,8 @@ const value = (name: string) => { const i = args.indexOf(name); return i >= 0 ? 
 const allow = { tags: DISCOVERY_TAGS, areas: AREA_KEYS, hosts: SOURCE_HOSTS };
 
 async function runTask(query: PublicCatalogueQuery): Promise<unknown[]> {
-  const token = process.env.APIFY_TOKEN, task = process.env.APIFY_TASK_ID;
-  if (!token || !task) throw new Error('APIFY_TOKEN and APIFY_TASK_ID are required for --fetch');
+  const token = process.env.APIFY_API_TOKEN, task = process.env.APIFY_TASK_ID;
+  if (!token || !task) throw new Error('APIFY_API_TOKEN and APIFY_TASK_ID are required for --fetch');
   const res = await fetch(`https://api.apify.com/v2/actor-tasks/${encodeURIComponent(task)}/run-sync-get-dataset-items?clean=true&limit=${query.limit}`, {
     method: 'POST',
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
@@ -47,6 +47,12 @@ const opt = (v: string | null) => (v === null ? { none: [] } : { some: v });
 function commit(db: string, u: UpsertArgs): void {
   const positional = [u.event_id, u.title, u.starts_at, opt(u.ends_at), u.status, u.fetched_at, u.topics, u.format, opt(u.area_key), opt(u.source_url)];
   execFileSync('spacetime', ['call', db, 'upsert_catalogue_event', ...positional.map((p) => JSON.stringify(p))], { stdio: ['ignore', 'ignore', 'inherit'] });
+}
+
+/** Health row for the Events page: ok with the count, or failed (the module keeps the last success). */
+function recordRun(db: string, feedKey: string, ok: boolean, count: number): void {
+  execFileSync('spacetime', ['call', db, 'record_catalogue_run', JSON.stringify(feedKey), JSON.stringify(ok), JSON.stringify(count)],
+    { stdio: ['ignore', 'ignore', 'inherit'] });
 }
 
 async function main(): Promise<void> {
@@ -76,9 +82,14 @@ async function main(): Promise<void> {
       const report = ingest(datasets, { sourceKey: SOURCE_KEY, feed, map: FIELD_MAP, allow, fetchedAtMs, nowMs: Date.now() });
       const db = value('--commit');
       if (db) report.upserts.forEach((u) => commit(db, u));
+      if (db) recordRun(db, feed.areaKey, true, report.upserts.length);
       if (!fixture) writeFileSync(cacheFile, JSON.stringify({ fetchedAtMs, count: report.upserts.length }));
       console.log(JSON.stringify({ feed: feed.areaKey, fetchedAt: new Date(fetchedAtMs).toISOString(), committed: Boolean(db),
         upserts: report.upserts.length, rejected: report.rejected, events: db ? undefined : report.upserts }, null, 2));
+    } catch (e) {
+      const db = value('--commit');
+      if (db) { try { recordRun(db, feed.areaKey, false, 0); } catch { /* the original failure is the one to report */ } }
+      throw e;
     } finally {
       rmSync(lock, { force: true });
     }

@@ -8,7 +8,7 @@ Read root AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md and your 
 
 | Export | Implements | Consumer | Status |
 |---|---|---|---|
-| `ClaudeReflectionAdapter` | C1 `PrivateReflectionPort` → `PrivateReflection` | CS `POST /api/reflections` | Implemented, offline-tested. **Not live-verified** (no `ANTHROPIC_API_KEY`). |
+| `ClaudeReflectionAdapter` | C1 `PrivateReflectionPort` → `PrivateReflection` (reflection, enum candidate and the D040 owner-only `assessment`; see docs/features/PRIVATE_ASSESSMENT.md) | CS `POST /api/reflections` | Implemented, offline-tested. **Not live-verified** (no `ANTHROPIC_API_KEY`). |
 | `CartesiaVoiceAdapter` | C1 `VoicePort` (`createSession`, `transcribe`, `synthesize`) | CS `POST /api/voice/session` (+ optional clip proxy) | Implemented, offline-tested. **Not live-verified** (no `CARTESIA_API_KEY`). |
 | `BoundedCoordinator` | C4 `CoordinationPort` | `worker/` | Implemented, offline-tested; live with Factory Droid using offline policy stand-ins. |
 | `eligibleOptions`, `intersectWindow` | Deterministic C4 intersection | DS ranking, evaluation | Implemented. |
@@ -75,4 +75,4 @@ Availability intersection: `no_preference` defers to the other side, equal windo
 npm run ai:check   # build contracts + agents + worker, run offline tests (no network)
 npm run live -w @dor/agents   # live Claude/Cartesia checks; SKIPPED_MISSING_CREDENTIAL without keys
 ```
-Live checks read `ANTHROPIC_API_KEY` and `CARTESIA_API_KEY` from the environment or the repo-root `.env.local`. They print statuses, latencies and candidate enums, never keys or tokens.
+Live checks read `ANTHROPIC_API_KEY` and `CARTESIA_API_KEY` from the environment or the repo-root `.env.local`. They print statuses, latencies and candidate enums, never keys or tokens. Only the live commands read `.env.local`. Offline tests never load it, and the missing-credential tests remove the key from the process first. `/api/reflections` coalesces duplicate in-flight requests (`InFlightRequests`) and logs `reflection_call` usage lines with metadata only: model, duration, token counts, outcome and a candidate flag. They never contain text, user IDs or keys.
