@@ -1,10 +1,14 @@
 # Decision log
-- D001: Working name Closer; can rename before publication.
+- D001: Product name Kinetic; existing GitHub repository URL remains stable.
 - D002: Planning capped at first 30 minutes; 36-hour schedule uses relative time.
 - D003: Include partners, friends, and family as equal supported scenario instances.
 - D004: No automatic sharing of inferred state. Explicit per-signal approval precedes any agent exchange.
 - D005: Shared agent communication uses bounded enums and templates, not journal summaries.
 - D006: Initial delivery is in-app. People initiate actual personal messages.
 - D007: Private repository preferred initially; user will distribute access themselves. No collaborator invitations authorized by this scaffold.
-- D008: Proposed TypeScript/React/Postgres stack; freeze exact host/providers during minute 10–20.
+- D008: Superseded: user selected Next.js/React/TypeScript, Tailwind/shadcn, SpacetimeDB, Claude, Factory, Cartesia, Zod, local IndexedDB/Web Crypto, .ics/optional Google Calendar and Vercel plus compatible worker.
 - D009: Keep video/presentation production in docs/DEMO.md, separate from the core engineering plan and contracts. All major contracts are shared on main and synchronized to every role branch; repository visibility remains private.
+- D010: Raw journals/private candidates persist locally; selected provider processing is disclosed; no raw context in SpacetimeDB or Factory coordination sessions.
+- D011: User confirmed quiz personalizes all four dimensions, uses 6–8 skippable questions, and suggests relationship presets only. Sharing still requires explicit named-recipient item confirmation.
+- D012: Authentication/authorization cannot be skipped for real private data; production account polish remains deferrable.
+- D013: ApprovedSignal schema v2 binds recipient policy/preset version and connection assignment version. Future event/bandwidth fields require versioned consent contracts.

@@ -1,10 +1,18 @@
-# Architecture contract v1
-Proposed stack: TypeScript monorepo; responsive React web app; server API; Postgres with row ownership policies; provider adapters for Cartesia and an LLM. Hosting/provider specifics are implementation decisions at the minute-20 freeze.
+# Architecture contract v2 — Kinetic
+Selected technologies: see docs/TECH_STACK.md. This supersedes the server-stored Postgres journal design.
 
-Trust zones: browser → authenticated server → owner-only journal store/private agent → deterministic disclosure policy → approved signal store → bounded coordinator/recipient agent → recipient nudge inbox.
+## Trust zones and data flow
+1. Next.js browser: owner unlocks a local IndexedDB/Web Crypto vault. Raw audio, transcripts, quiz responses, detailed calendar entries and private candidate drafts remain local at rest.
+2. Explicitly disclosed provider processing: owner-selected content can be sent transiently through an authenticated, non-logging API to Cartesia or Claude. Store returned private reflection/candidate locally. No persistent journal/candidate endpoint or raw-context SpacetimeDB table.
+3. Owner reviews an exact disclosure preview for a named recipient. TypeScript/Zod validates the envelope. An authoritative SpacetimeDB reducer verifies authenticated sender, accepted relationship, current assigned relationship-preset policy, category, purpose, expiry and exact approved payload; commits consent and signal atomically.
+4. Factory worker receives content-free work IDs and approved signals only. It executes bounded coordination with Claude-backed reasoning as configured, never vault access. Before each use and before committing a nudge, revalidate current consent versions. Model output never grants authority.
+5. SpacetimeDB private tables hold only necessary account/pair metadata, policies, approved signals, coordination jobs, nudges and sanitized receipts. Caller-filtered views expose only authorized rows/columns; live subscriptions never expose raw private tables. Quiz types and raw answers are absent from shared state.
+6. Connected users receive authorized live updates. Revocation/unlink invalidates eligible source records, pending jobs, and derived nudges. Clear client caches on invalidation/reconnect; previously seen information cannot be recalled.
 
-Private agent has only its owner's journal access. Coordinator and recipient agent have no journal-store credentials or tools. Their inputs are validated signals and recipient-approved preferences. Separate modules and database permissions enforce this; separate prompts alone do not.
+## Identity and worker boundary
+CS and Cyber verify Clerk/OIDC mapping to SpacetimeDB caller identity during the first spike. Never trust client-supplied owner/sender IDs. Worker identity may read approved work and propose results; it cannot create owner consent or impersonate an approval. Reducers independently enforce guards even when API/worker validation is bypassed. No provider requests inside reducers; external work runs in the compatible worker and returns through version-checked reducers.
 
-Private tables: journals(owner_id, encrypted_content, created_at, delete_state); candidates(owner_id, private_journal_id, candidate_payload). Shared table: approved_signals(id, pair_id, sender_id, recipient_id, allowed_payload, consent_version, expires_at, revoked_at). Others: users, accepted pairs, consents, nudges, feedback, content-free audit events. Private foreign keys stay server-side.
+## Local vault requirements
+Cyber owns key lifecycle: AES-GCM with fresh unique IV per encryption, authenticated metadata/version, explicit unlock/lock behavior, and an agreed key derivation/recovery design before implementation. Do not save plaintext keys beside ciphertext and call that protection. A nonextractable persisted browser key alone does not create a meaningful unlock boundary. XSS and an unlocked browser can still expose decrypted data; keep the UI isolated from untrusted markup. Initial vault is single-device; account login does not restore its key. No silent upload/recovery or cross-device sync. Show data-loss implications before clearing storage; define export/recovery separately if implemented.
 
-Each read/write derives identity from authenticated session. Never trust owner_id supplied by a browser. Pair invitation requires acceptance. Unlink invalidates pair-scoped consent and suppresses queued nudges. No raw journal embeddings or vectors in shared stores. TLS and storage encryption are required; key management and provider processing disclosures remain explicit implementation tasks.
+Client-side vault encryption protects persisted data, not data during authorized cloud processing. Receipt and consent metadata are minimized but still personal data with restricted views. No global embeddings, journal summaries or quiz answer subscriptions.

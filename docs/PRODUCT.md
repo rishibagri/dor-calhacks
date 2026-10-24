@@ -1,11 +1,13 @@
 # Product and ambitious scope
 ## Promise
-Help people show up for each other without requiring them to share every private detail. Distance creates missing context; Closer proposes small, timely acts of care.
+Help people show up for each other without requiring them to share every private detail. Distance creates missing context; Kinetic proposes small, timely acts of care.
 
 ## Committed 36-hour experience
+- Skippable 6–8-question onboarding personalizes communication, support, social bandwidth and draft sharing preferences; editable owner-only connection profile.
+- Owner-confirmed partner/friend/family sharing presets, explicit assignment to each connection, and named-recipient disclosure previews. No individual category overrides or quiz-based automatic consent.
 - Responsive, polished web app: pair onboarding, two authenticated accounts, invite acceptance, journal, consent review, nudges, settings.
 - Live voice reflection through a Cartesia adapter, visible recording state, interruption/stop, transcript correction, and typed fallback.
-- Owner-only journal history and useful reflection. Raw audio defaults to transient processing; persistent recording requires separate explicit consent.
+- Encrypted local IndexedDB/Web Crypto journal history and useful reflection via disclosed transient Claude processing. Raw audio defaults to transient processing; persistent recording requires separate explicit consent.
 - A private agent proposes a coarse sharing signal; the owner previews its exact recipient-visible meaning and approves or declines it. No signal is shared by default.
 - Two agents coordinate through structured, bounded signal exchange. Sender agent proposes; policy service validates; recipient agent ACKs compatible support modes and availability from its own approved preferences; coordinator proposes a nudge. Maximum two exchange rounds, no unrestricted agent chat.
 - Nudge inbox with rationale limited to approved context, dismiss/snooze/helpful feedback, quiet hours, cooldown, and one action the person can choose.

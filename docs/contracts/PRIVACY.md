@@ -1,4 +1,4 @@
-# Privacy contract v1 — Cyber owns acceptance
+# Privacy contract v2 — Cyber owns acceptance
 ## Disclosure policy
 Default: no sharing. Approval is per recipient/pair, exact signal revision, purpose (support nudge), and expiry; default lifetime 24 hours. The owner sees the same semantic preview the other person may receive. No hidden inferred mood export. Recipient must opt into nudges too.
 
@@ -18,3 +18,9 @@ Audio transient by default; visibly disclose provider processing. Owner can corr
 “Your journal is not shared with your connection. You choose which limited signals can be used for nudges. Our processing providers handle audio/text to provide the service. A nudge may still let someone infer that you would welcome support.”
 
 This is data minimization and access control, not a mathematical privacy guarantee or end-to-end encrypted inference.
+
+## Recipient rules and quiz
+See ONBOARDING_SHARING.md. Owner-confirmed relationship-preset/category/purpose policy bound to the named recipient and exact per-item consent are both required. Quiz answers and inferred connection styles remain local; they cannot grant sharing, change recipients, or modify active permissions. An allowed category never bypasses an item approval. All aura/card/matching outputs are disclosures subject to the same audience checks.
+
+## Storage and processing update
+Journals, raw quiz answers, detailed schedules and private candidates persist only in the encrypted IndexedDB vault. Selected content may be processed transiently by the disclosed Cartesia/Claude pipeline. Next.js must suppress request-body logging and caching for these routes. Factory sees approved structured signals only. SpacetimeDB stores minimized consent/shared-state metadata with caller-filtered views, never a journal table. Cyber must verify provider retention and runtime logging behavior; local deletion cannot promise provider deletion without a verified provider mechanism.

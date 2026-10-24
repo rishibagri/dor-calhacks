@@ -3,7 +3,7 @@
     "scenario": "partners",
     "synthetic": true,
     "approvedSignal": {
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "signalId": "partners-signal",
       "pairId": "partners-pair",
       "senderId": "partners-a",
@@ -12,7 +12,10 @@
       "supportMode": "short_call",
       "availability": "this_week",
       "consentVersion": 1,
-      "expiresAt": "2099-01-01T00:00:00Z"
+      "expiresAt": "2099-01-01T00:00:00Z",
+      "recipientPolicyId": "partners-policy",
+      "recipientPolicyVersion": 1,
+      "presetAssignmentVersion": 1
     },
     "expectedTemplate": "offer_short_call"
   },
@@ -20,7 +23,7 @@
     "scenario": "friends",
     "synthetic": true,
     "approvedSignal": {
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "signalId": "friends-signal",
       "pairId": "friends-pair",
       "senderId": "friends-a",
@@ -29,7 +32,10 @@
       "supportMode": "shared_activity",
       "availability": "this_week",
       "consentVersion": 1,
-      "expiresAt": "2099-01-01T00:00:00Z"
+      "expiresAt": "2099-01-01T00:00:00Z",
+      "recipientPolicyId": "friends-policy",
+      "recipientPolicyVersion": 1,
+      "presetAssignmentVersion": 1
     },
     "expectedTemplate": "offer_shared_activity"
   },
@@ -37,7 +43,7 @@
     "scenario": "family",
     "synthetic": true,
     "approvedSignal": {
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "signalId": "family-signal",
       "pairId": "family-pair",
       "senderId": "family-a",
@@ -46,7 +52,10 @@
       "supportMode": "encouraging_note",
       "availability": "no_preference",
       "consentVersion": 1,
-      "expiresAt": "2099-01-01T00:00:00Z"
+      "expiresAt": "2099-01-01T00:00:00Z",
+      "recipientPolicyId": "family-policy",
+      "recipientPolicyVersion": 1,
+      "presetAssignmentVersion": 1
     },
     "expectedTemplate": "offer_note"
   }

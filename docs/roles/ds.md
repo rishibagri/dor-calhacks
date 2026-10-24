@@ -4,10 +4,10 @@ Branch: `role/ds-context`
 
 Ownership: src/evaluation/, scenario fixtures, ranking module, src/evaluation/fixtures/
 
-Implement transparent matching/scoring on allowed enums, cooldown/quiet-hour behavior, 30 synthetic evaluation cases, usefulness feedback.
+Design the eight-question skippable preference quiz and deterministic editable connection profile; suggest draft partner/friend/family presets without granting consent. Implement enum matching, .ics sample analysis, evaluation cases for different presets, and relevance feedback.
 
 ## Deliverables
-Hour 3: partners/friends/family fixtures. Hour 7: ranking adapter. Hour 17: full scenarios. Hour 22: scored evaluation. Hour 31: final regression results and quality report.
+Hour 3: quiz/profile fixture and three relationship scenarios. Hour 7: deterministic quiz mapping and ranking adapter. Hour 17: scenario and preset combinations. Hour 22: 30-case evaluation. Hour 31: regression report.
 
 ## Dependencies
 AI supplies candidate outputs; Cyber signs off safe fixture boundaries; CS supplies the integrated application. DS never receives raw real journals for analytics.

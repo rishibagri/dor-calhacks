@@ -1,4 +1,4 @@
-# Closer — CalHacks working name
+# Kinetic — CalHacks
 Private reflection. Thoughtful connection.
 
 A voice journal for people separated by distance. Each person has a private agent. Only explicitly approved, bounded signals reach a shared coordination service; that service proposes considerate nudges without exposing journal content. People retain control over whether to act.
@@ -24,4 +24,7 @@ All major contracts live on `main` in [docs/contracts](docs/contracts) and [pack
 Video production and presentation details are kept separately in [docs/DEMO.md](docs/DEMO.md); they are not part of the engineering contracts or role deliverables.
 
 ## Status
-Planning and interface scaffold only. No running app, vendor credentials, deployed service yet. Proposed stack: TypeScript web app, server API, Postgres with enforced ownership policies, server-side model calls, Cartesia voice adapter. Validate vendor capabilities in the first implementation spike. Never describe a privacy guarantee as shipped until tested.
+Planning and interface scaffold only; no running application yet. The selected stack is documented in [TECH_STACK.md](docs/TECH_STACK.md): Next.js, React, TypeScript, Tailwind/shadcn, SpacetimeDB, Claude, Factory Droid, Cartesia, Zod, and an encrypted local vault. The GitHub repository keeps its existing name to preserve shared links.
+
+## Onboarding and sharing
+See the [onboarding and recipient-sharing contract](docs/contracts/ONBOARDING_SHARING.md). Quiz answers personalize suggestions; only explicit, named-recipient consent under a confirmed relationship preset authorizes sharing. Unanswered product choices are marked provisional.

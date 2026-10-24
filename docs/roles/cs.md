@@ -4,10 +4,10 @@ Branch: `role/cs-app`
 
 Ownership: src/app/, src/server/, deployment, API implementation
 
-Polished responsive app, authentication, invites/pairs, private storage integration, consent preview UI, nudge inbox, privacy center. Own deployment and integration cadence.
+Next.js/React/TypeScript with Tailwind/shadcn; onboarding quiz UI, connection profile, preset confirmation and named-recipient preview. Own Clerk identity integration, SpacetimeDB reducers/views/subscriptions, Vercel deployment and worker API integration.
 
 ## Deliverables
-Hour 3: deployed shell and API stubs. Hour 7: journal/review UI. Hour 12: real two-account path. Hour 22: all screens integrated.
+Hour 3: deployed Next.js shell and authenticated SpacetimeDB identity spike. Hour 7: quiz, local journal/review UI and accepted pair. Hour 12: live two-account path. Hour 22: integrated preset/receipt/revoke screens.
 
 ## Dependencies
 Cyber supplies policy checks; AI supplies voice/candidate adapter; DS supplies ranking/fixtures. Do not implement around missing policy by bypassing it.

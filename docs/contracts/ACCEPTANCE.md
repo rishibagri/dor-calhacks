@@ -3,7 +3,7 @@
 ## Product checks
 - Two authenticated users can accept a pair invite; a third user cannot access it.
 - Voice record/stop/reflection works; denied mic and provider errors offer typed entry.
-- Journal is visible only to its owner, including through direct API requests.
+- Journal is visible only to its owner, including through direct provider/API requests and database subscriptions.
 - User sees exact allowed signal before approval. Declining creates no shared state.
 - Bounded agent exchange produces a useful inbox nudge from approved inputs.
 - Dismiss, snooze, cooldown, quiet hours, and unlink behave consistently.
@@ -21,3 +21,11 @@ packages/contracts/approved-signal.schema.json is a strict boundary schema propo
 
 ## Evidence
 Each role logs commands/results or reproducible manual steps. No claim of implemented protection from the existence of this checklist.
+
+## Kinetic stack and onboarding acceptance
+- Local vault locks/unlocks, ciphertext persists without plaintext transcript, and clearing storage/recovery behavior is explicit.
+- SpacetimeDB direct reducer calls and subscriptions cannot bypass API checks; caller identity and policy versions are enforced.
+- Different assigned presets produce different permissions for the same source input; same-preset connections share category rules, while item approvals remain recipient-bound. Quiz selection/skip does not create or broaden consent.
+- Factory executes a real event-triggered bounded workflow in its deployed compatible worker; no private journal content in sessions, work queues or logs.
+- Cartesia transcription and voice are exercised live; provider-processing notices accurately describe the tested path.
+- No source-ID leakage from local vault; receipts link only approved signal IDs.

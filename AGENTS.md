@@ -2,10 +2,13 @@
 Read this file before working, including after resuming. Human owners and their coding agents follow the same contracts.
 
 ## Read order
-README.md → docs/PLAN.md → docs/PRODUCT.md → all docs/contracts/*.md → packages/contracts/index.ts → your docs/roles/*.md → current coordination updates.
+README.md → docs/PLAN.md → docs/PRODUCT.md → docs/TECH_STACK.md → all docs/contracts/*.md → packages/contracts/index.ts → your docs/roles/*.md → current coordination updates.
 
 ## Shared contract visibility
 All architecture, API, agent protocol, privacy, acceptance, and data contracts are shared on `main` and available to every teammate and agent. `main` is authoritative; do not maintain branch-specific private contracts. Merge shared contract updates from `main` into each role branch before dependent work. Separate video/presentation planning lives in docs/DEMO.md and is not required engineering-contract reading.
+
+## Selected stack
+Kinetic uses Next.js/React/TypeScript, Tailwind/shadcn, SpacetimeDB reducers/private tables/caller-filtered views, Claude, Factory Droid, Cartesia, TypeScript/Zod, and IndexedDB/Web Crypto. Read docs/TECH_STACK.md before choosing dependencies. Never reintroduce server-stored journals or assume a quiz grants disclosure consent.
 
 ## Operating rules
 - Work only on your role branch. Sync main before integration. Small PRs every 2–3 hours; CS owns integration and does not become the sole implementer.
