@@ -17,6 +17,10 @@
     "./fakes": {
       "types": "./dist/fakes.d.ts",
       "import": "./dist/fakes.js"
+    },
+    "./plan-lifecycle": {
+      "types": "./dist/plan-lifecycle.d.ts",
+      "import": "./dist/plan-lifecycle.js"
     }
   },
   "engines": {

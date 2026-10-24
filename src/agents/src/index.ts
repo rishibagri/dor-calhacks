@@ -5,6 +5,12 @@ export { CartesiaVoiceAdapter, CARTESIA_API_VERSION, DEFAULT_VOICE, MAX_AUDIO_BY
   sniffAudioExtension, type CartesiaVoiceOptions } from './voice/cartesia.js';
 export { BoundedCoordinator, AckProposalSchema, MAX_ROUNDS, type AckProposal, type AckProposalInput,
   type AckProposerPort, type CoordinatorDeps, type DeliveryStatePort, type RecipientPreferencesPort } from './coordination/coordinator.js';
+export { IntroductionCoordinator, IntroProposalReplySchema, InvalidShortlistError, INTRO_MAX_ROUNDS, INTRO_PROPOSAL_TTL_MS,
+  type DiscoveryEligibilityPort, type IntroductionCoordinatorDeps, type IntroductionResult, type IntroProposalInput,
+  type IntroProposalReply, type IntroProposerPort } from './introductions/coordinator.js';
+export { PlanCoordinator, PlanProposalReplySchema, InvalidPlanRequestError, PLAN_MAX_OPTIONS, PLAN_MAX_ROUNDS,
+  type PlanCoordinatorDeps, type PlanCurrentStatePort, type PlanProposalInput, type PlanProposerPort, type PlanResult }
+  from './plans/coordinator.js';
 export { eligibleOptions, intersectWindow, type AckOption } from './coordination/eligibility.js';
 export { ProviderError, httpStatusFor, toProviderError, type Provider, type ProviderErrorCode } from './errors.js';
 export { PROVIDER_PROCESSING } from './disclosure.js';
