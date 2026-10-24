@@ -7,17 +7,28 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MultiChoice, Question, SingleChoice } from '@/components/feature/quiz-fields';
+import { Input } from '@/components/ui/input';
 import {
-  CATEGORY_LABELS, EMPTY_ANSWERS, SUPPORT_LABELS, buildProfile, countAnswered, toggle,
-  type QuizAnswers, type SupportMode,
+  ACTIVITY_LABELS, CATEGORY_LABELS, EMPTY_ANSWERS, LONG_DAY_LABELS, QUESTION_COUNT, buildProfile,
+  buildQuizExtras, countAnswered, toggle, type LongDayChoice, type QuizAnswers, type SupportMode,
 } from '@/components/feature/quiz-model';
 import type { SharingCategory } from '@kinetic/contracts';
+import type { ConnectActivity } from '@/lib/backend/ports';
 
-const supportOptions = (Object.keys(SUPPORT_LABELS) as SupportMode[]).map((v) => ({ value: v, label: SUPPORT_LABELS[v] }));
+const longDayOptions = (Object.keys(LONG_DAY_LABELS) as LongDayChoice[]).map((v) => ({ value: v, label: LONG_DAY_LABELS[v] }));
+const activityOptions = (Object.keys(ACTIVITY_LABELS) as ConnectActivity[]).map((v) => ({ value: v, label: ACTIVITY_LABELS[v] }));
 const categoryOptions = (Object.keys(CATEGORY_LABELS) as SharingCategory[]).map((v) => ({ value: v, label: CATEGORY_LABELS[v] }));
 const quietOptions: { value: SupportMode; label: string }[] = [
   { value: 'encouraging_note', label: 'A light check-in note' },
   { value: 'shared_activity', label: 'An invitation to do something' },
+];
+const scheduleOptions = [
+  { value: 'only_after_review' as const, label: 'Only suggest times after I review them' },
+  { value: 'keep_private' as const, label: 'Keep my schedule out of suggestions' },
+];
+const reviewOptions = [
+  { value: 'review_everything' as const, label: 'Show me everything in detail' },
+  { value: 'quick_review' as const, label: 'A quick summary is enough' },
 ];
 
 export default function OnboardingPage() {
@@ -33,6 +44,7 @@ export default function OnboardingPage() {
     if (!parsed.success) { setMessage(`Invalid profile: ${parsed.error.message}`); return; }
     try {
       await vault.saveProfile(parsed.data);
+      await vault.saveQuizExtras(buildQuizExtras(a));
       setMessage('Saved to your local vault.');
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Could not save profile.');
@@ -58,41 +70,56 @@ export default function OnboardingPage() {
         </AlertDescription>
       </Alert>
       <div className="space-y-2" role="group" aria-label="Quiz progress">
-        <p className="text-sm text-muted-foreground" aria-live="polite">{answered} of 6 answered</p>
-        <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Questions answered" aria-valuemin={0} aria-valuemax={6} aria-valuenow={answered}>
+        <p className="text-sm text-muted-foreground" aria-live="polite">{answered} of {QUESTION_COUNT} answered</p>
+        <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Questions answered" aria-valuemin={0} aria-valuemax={QUESTION_COUNT} aria-valuenow={answered}>
           <div className="h-full origin-left rounded-full bg-primary transition-transform duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
-            style={{ transform: `scaleX(${answered / 6})` }} />
+            style={{ transform: `scaleX(${answered / QUESTION_COUNT})` }} />
         </div>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Six optional questions</CardTitle>
+          <CardTitle>Eight optional questions</CardTitle>
           <CardDescription>Leave any blank. Answers stay in this tab&apos;s memory unless saved to the local vault.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <Question legend="1. After a long day, what helps?">
-            <MultiChoice name="q1" options={supportOptions} value={a.afterLongDay}
+          <Question legend="1. After a long day, what helps?" hint="Choosing space means Kinetic suggests nothing for that moment.">
+            <MultiChoice name="q1" options={longDayOptions} value={a.afterLongDay}
               onChange={(v, on) => set({ afterLongDay: toggle(a.afterLongDay, v, on) })} />
           </Question>
           <Question legend="2. When a friend goes quiet, what do you prefer?">
             <MultiChoice name="q2" options={quietOptions} value={a.friendQuiet}
               onChange={(v, on) => set({ friendQuiet: toggle(a.friendQuiet, v, on) })} />
           </Question>
-          <Question legend="3. Which tone feels right?">
-            <SingleChoice name="q3" value={a.tone} onChange={(tone) => set({ tone })}
+          <Question legend="3. Which tone and rhythm feel right?">
+            <SingleChoice name="q3-tone" value={a.tone} onChange={(tone) => set({ tone })}
               options={[{ value: 'direct', label: 'Direct' }, { value: 'gentle', label: 'Gentle' }, { value: 'playful', label: 'Playful' }]} />
-          </Question>
-          <Question legend="4. Which rhythm feels right?">
-            <SingleChoice name="q4" value={a.rhythm} onChange={(rhythm) => set({ rhythm })}
+            <SingleChoice name="q3-rhythm" value={a.rhythm} onChange={(rhythm) => set({ rhythm })}
               options={[{ value: 'spontaneous', label: 'Spontaneous' }, { value: 'planned', label: 'Planned' }, { value: 'flexible', label: 'Flexible' }]} />
           </Question>
-          <Question legend="5. When overwhelmed, how should suggestions behave?">
-            <SingleChoice name="q5" value={a.overwhelmed} onChange={(overwhelmed) => set({ overwhelmed })}
+          <Question legend="4. When overwhelmed, how should suggestions behave?">
+            <SingleChoice name="q4" value={a.overwhelmed} onChange={(overwhelmed) => set({ overwhelmed })}
               options={[{ value: 'fewer', label: 'Fewer' }, { value: 'quiet', label: 'Quieter' }, { value: 'paused', label: 'Paused' }]} />
           </Question>
-          <Question legend="6. Which categories might you consider sharing? (nominates drafts only)">
-            <MultiChoice name="q6" options={categoryOptions} value={a.categories}
+          <Question legend="5. Which activities make connecting easy?" hint="Stays in your local vault only.">
+            <MultiChoice name="q5" options={activityOptions} value={a.activities}
+              onChange={(v, on) => set({ activities: toggle(a.activities, v, on) })} />
+            {a.activities.includes('other') && (
+              <Input aria-label="Other activity" maxLength={200} value={a.activitiesNote}
+                placeholder="Anything else (kept local)" onChange={(e) => set({ activitiesNote: e.target.value })} />
+            )}
+          </Question>
+          <Question legend="6. How should the app approach schedule suggestions?">
+            <SingleChoice name="q6" value={a.scheduleSuggestions} options={scheduleOptions}
+              onChange={(scheduleSuggestions) => set({ scheduleSuggestions })} />
+          </Question>
+          <Question legend="7. Which categories might you consider sharing? (nominates drafts only)">
+            <MultiChoice name="q7" options={categoryOptions} value={a.categories}
               onChange={(v, on) => set({ categories: toggle(a.categories, v, on) })} />
+          </Question>
+          <Question legend="8. Before connecting someone, how much review feels comfortable?"
+            hint="Either way, you still approve each item before anything is shared.">
+            <SingleChoice name="q8" value={a.reviewComfort} options={reviewOptions}
+              onChange={(reviewComfort) => set({ reviewComfort })} />
           </Question>
         </CardContent>
       </Card>

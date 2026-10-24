@@ -2,6 +2,30 @@
   {
     "scenario": "partners",
     "synthetic": true,
+    "presetConfirmation": "matches_suggestion",
+    "confirmedPreset": {
+      "schemaVersion": 1,
+      "policyId": "partners-policy",
+      "ownerId": "partners-a",
+      "presetKind": "partner",
+      "purpose": "support_nudge",
+      "allowedCategories": [
+        "support_preference",
+        "coarse_availability"
+      ],
+      "approvalMode": "each_item",
+      "version": 1,
+      "expiresAt": "2099-01-01T00:00:00Z",
+      "revokedAt": null
+    },
+    "presetAssignment": {
+      "schemaVersion": 1,
+      "ownerId": "partners-a",
+      "recipientId": "partners-b",
+      "pairId": "partners-pair",
+      "presetId": "partners-policy",
+      "assignmentVersion": 1
+    },
     "approvedSignal": {
       "schemaVersion": 2,
       "signalId": "partners-signal",
@@ -22,6 +46,29 @@
   {
     "scenario": "friends",
     "synthetic": true,
+    "presetConfirmation": "matches_suggestion",
+    "confirmedPreset": {
+      "schemaVersion": 1,
+      "policyId": "friends-policy",
+      "ownerId": "friends-a",
+      "presetKind": "friend",
+      "purpose": "support_nudge",
+      "allowedCategories": [
+        "support_preference"
+      ],
+      "approvalMode": "each_item",
+      "version": 1,
+      "expiresAt": "2099-01-01T00:00:00Z",
+      "revokedAt": null
+    },
+    "presetAssignment": {
+      "schemaVersion": 1,
+      "ownerId": "friends-a",
+      "recipientId": "friends-b",
+      "pairId": "friends-pair",
+      "presetId": "friends-policy",
+      "assignmentVersion": 1
+    },
     "approvedSignal": {
       "schemaVersion": 2,
       "signalId": "friends-signal",
@@ -30,7 +77,6 @@
       "recipientId": "friends-b",
       "purpose": "support_nudge",
       "supportMode": "shared_activity",
-      "availability": "this_week",
       "consentVersion": 1,
       "expiresAt": "2099-01-01T00:00:00Z",
       "recipientPolicyId": "friends-policy",
@@ -42,6 +88,30 @@
   {
     "scenario": "family",
     "synthetic": true,
+    "presetConfirmation": "owner_selected_beyond_suggestion",
+    "confirmedPreset": {
+      "schemaVersion": 1,
+      "policyId": "family-policy",
+      "ownerId": "family-a",
+      "presetKind": "family",
+      "purpose": "support_nudge",
+      "allowedCategories": [
+        "support_preference",
+        "coarse_availability"
+      ],
+      "approvalMode": "each_item",
+      "version": 1,
+      "expiresAt": "2099-01-01T00:00:00Z",
+      "revokedAt": null
+    },
+    "presetAssignment": {
+      "schemaVersion": 1,
+      "ownerId": "family-a",
+      "recipientId": "family-b",
+      "pairId": "family-pair",
+      "presetId": "family-policy",
+      "assignmentVersion": 1
+    },
     "approvedSignal": {
       "schemaVersion": 2,
       "signalId": "family-signal",

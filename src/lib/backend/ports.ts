@@ -118,6 +118,26 @@ export interface SharedStatePort {
   subscribe(listener: () => void): () => void;
 }
 
+/**
+ * Raw quiz answers with no LocalConnectionProfile field (ONBOARDING_SHARING.md Q1 "space",
+ * Q5, Q6, Q8). LOCAL VAULT ONLY: never a wire type, never sent to SpacetimeDB, providers or
+ * peer agents, and never an authorization input. Promoting any field into the shared
+ * profile schema needs a versioned contract change reviewed by Cyber/AI (docs/DECISIONS.md D015).
+ */
+export type ConnectActivity = 'talking' | 'games' | 'watching_together' | 'creating' | 'other';
+export interface LocalQuizExtras {
+  /** Q1 "space": prefers no outreach; maps to no support mode (natural no-action case). */
+  prefersSpace: boolean;
+  /** Q5 */
+  activities: ConnectActivity[];
+  /** Q5 "other" free text; capped, stays local. */
+  activitiesNote: string | null;
+  /** Q6 */
+  scheduleSuggestions: 'only_after_review' | 'keep_private' | null;
+  /** Q8: comfort only; every disclosure is still approved per item regardless. */
+  reviewComfort: 'review_everything' | 'quick_review' | null;
+}
+
 /** Local encrypted vault. Cyber owns key lifecycle (PRIVACY.md, API.md "Local vault"). */
 export interface JournalEntrySummary {
   localId: string;
@@ -134,6 +154,8 @@ export interface VaultPort {
   deleteJournal(localId: string): Promise<void>;
   saveProfile(profile: LocalConnectionProfile): Promise<void>;
   loadProfile(): Promise<LocalConnectionProfile | null>;
+  saveQuizExtras(extras: LocalQuizExtras): Promise<void>;
+  loadQuizExtras(): Promise<LocalQuizExtras | null>;
 }
 
 /** Transient provider reflection via authenticated Next.js route (AI owns). */
