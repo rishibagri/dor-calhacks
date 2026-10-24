@@ -264,10 +264,10 @@ export function guardApproval(req: ApprovalRequest, s: PolicySnapshot): Approval
     recipientPolicyVersion: req.recipientPolicyVersion, presetAssignmentVersion: req.presetAssignmentVersion,
     consentVersion: req.consentVersion,
   });
-  // Versions were already checked above (a changed preset/assignment/notice is stale_policy). A revision mismatch here can
-  // only mean the payload or recipient differs from what the owner previewed: they never consented to it, so no_consent
-  // (intentional; Core 3 audit item 4). DS: altered payload → no_consent, changed versions → stale_policy.
-  if (req.payloadRevision !== expected) return deny('stale_policy'); // preview no longer matches what is approved
+  // Versions were already checked above. A revision mismatch here means the payload or recipient differs from what the
+  // owner previewed. Refused as stale_policy (CS #40, Cyber ACK): the approval no longer matches its preview, so the
+  // owner must preview again. Either label refuses; DS asserts stale_policy for both changed versions and altered payloads.
+  if (req.payloadRevision !== expected) return deny('stale_policy');
   return {
     ...ALLOW, recipientId, recipientPolicyId: preset.policyId, categories: ev.shared,
     expiresAtMs: Math.min(s.nowMs + SIGNAL_LIFETIME_MS, preset.expiresAtMs),
