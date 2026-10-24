@@ -1,6 +1,6 @@
 # DS evaluation results
 
-Revision `af2fb9b`, clock `2026-10-24T00:00:00Z`, deterministic (no seed or provider). All inputs are synthetic; policy
+Revision `b077a1e`, clock `2026-10-24T00:00:00Z`, deterministic (no seed or provider). All inputs are synthetic; policy
 decisions come from the offline C6 fake, which is not security evidence. Relevance labels are DS author labels written before
 the runs. Teammate 1–5 usefulness ratings have **not** been collected, so no usefulness mean is reported.
 
@@ -43,6 +43,35 @@ Mismatches:
 | ac10-friends-support-only-no-window | act-trivia-tonight, act-injection-text, act-board-game-thu | act-starts-in-10min, act-trivia-tonight, act-trivia-tonight-dup (**false:** act-starts-in-10min, act-trivia-tonight-dup) |
 | ac11-family-duplicate-listing | act-trivia-tonight | act-trivia-tonight, act-trivia-tonight-dup (**false:** act-trivia-tonight-dup) |
 | ac12-partners-today-mutual-games | act-trivia-tonight, act-injection-text, act-drawing-ondemand | act-starts-in-10min, act-trivia-tonight, act-trivia-tonight-dup (**false:** act-starts-in-10min, act-trivia-tonight-dup) |
+
+## Nearby/event shortlist, 15 labeled cases (6 positive, 9 no-action)
+| Metric | ds_nearby_v1 | baseline_most_tags |
+|---|---|---|
+| Top-1 relevant (positive cases) | 6/6 | 4/6 |
+| Mean precision@3 (positive cases) | 1.00 | 0.89 |
+| Missed positives | 0 | 0 |
+| Cases with a false match | 0/15 | 8/15 |
+| False matches (total suggested people) | 0 | 16 |
+| Correct no-action | 9/9 | 3/9 |
+| No-action with the expected reason | 9/9 | 1/9 |
+
+| Case | ds_nearby_v1 | baseline_most_tags |
+|---|---|---|
+| n1-nearby-overlap | c-01, c-03, c-14 | c-08, c-01, c-03 (**false:** c-08) |
+| n2-event-companions | c-01, c-03, c-14 | c-08, c-01, c-03 (**false:** c-08) |
+| n3-cold-start | none: viewer_has_nothing_published | none: no_fit |
+| n4-viewer-not-published | none: not_published | c-01, c-05, c-07 (**false:** c-01, c-05, c-07) |
+| n5-empty-area | none: empty_area | none: no_fit |
+| n6-only-ineligible | none: empty_area | c-08, c-05, c-06 (**false:** c-08, c-05, c-06) |
+| n7-no-fit | none: no_fit | none: no_fit |
+| n8-viewer-no-event-intent | none: viewer_no_event_intent | c-08, c-01, c-03 (**false:** c-08, c-01, c-03) |
+| n9-one-sided-event | none: empty_area | c-13 (**false:** c-13) |
+| n10-duplicate-row | c-01 | c-01, c-01 |
+| n11-injection-name | c-10, c-13 | c-10, c-13 |
+| n12-over-cap | g-000, g-001, g-002 | g-000, g-001, g-002 |
+| n13-location-fields-rejected | none: empty_area | c-11, c-15 (**false:** c-11, c-15) |
+| n14-sparse-area | c-03 | c-03 |
+| n15-blocked-only-overlap | none: no_fit | c-08, c-05 (**false:** c-08, c-05) |
 
 ## Chained: shared_activity nudges from the 30 cases → ds_rules_v1 (no approved interests)
 | Support case | Agreed window | Suggestions |
