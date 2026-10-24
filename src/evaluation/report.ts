@@ -8,6 +8,8 @@ import { buildPreview, matchSignal } from './matching.ts';
 import { NEARBY_RANKERS, RANKERS, evaluate, evaluateNearby, type CaseFile, type CatalogueFile, type NearbyCaseFile, type NearbyPoolFile } from './metrics.ts';
 import { rankActivities } from './rank.ts';
 import { resolveCases, scoreCase } from './decision-loop.ts';
+import { DECISION_SYSTEMS } from './decision-baselines.ts';
+import { RATERS, aggregateRatings, fixtureHash, parseSheet, renderRatingSummary, type RatingKey } from './ratings.ts';
 
 const load = async (f: string) => JSON.parse(await readFile(new URL(`./fixtures/${f}`, import.meta.url), 'utf8'));
 const support = await load('evaluation-cases.json');
@@ -15,8 +17,9 @@ const cases: CaseFile = await load('activity-cases.json');
 const catalogue: CatalogueFile = await load('activity-catalogue.json');
 const nearbyCases: NearbyCaseFile = await load('nearby-cases.json');
 const nearbyPool: NearbyPoolFile = await load('nearby-candidates.json');
-const decisions = resolveCases(await load('decision-cases.json'),
-  JSON.parse(await readFile(new URL('../agents/fixtures/reflection.synthetic.json', import.meta.url), 'utf8')));
+const decisionsText = await readFile(new URL('./fixtures/decision-cases.json', import.meta.url), 'utf8');
+const reflectionsText = await readFile(new URL('../agents/fixtures/reflection.synthetic.json', import.meta.url), 'utf8');
+const decisions = resolveCases(JSON.parse(decisionsText), JSON.parse(reflectionsText));
 let revision = 'unknown';
 try {
   revision = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim();
@@ -29,7 +32,7 @@ let correct = 0, nudges = 0, falseNudges = 0, noActionExpected = 0, noActionCorr
 const shared: { id: string; availability?: string }[] = [];
 for (const c of support.cases) {
   const preset = RelationshipPresetSchema.parse(c.preset), assignment = RecipientPresetAssignmentSchema.parse(c.assignment);
-  buildPreview({ candidate: c.candidate, preset, assignment, recipientId: c.deliverTo, prefersSpace: c.ownerLocal.prefersSpace });
+  buildPreview({ candidate: c.candidate, preset, assignment, recipientId: c.deliverTo });
   const policy = c.submittedSignal === null ? null : await new FakeDisclosurePolicy({ clock: new FakeClock(support.clock),
     linked: c.state.linked, revoked: c.state.revoked, preset, assignment, approved: c.approvedSignal }).check(c.submittedSignal, c.deliverTo);
   const m = matchSignal({ signal: c.submittedSignal, policy, ack: c.ack, now: new Date(support.clock),
@@ -63,6 +66,26 @@ const scored = decisions.cases.map(c => ({ c, s: scoreCase(decisions, c) }));
 const outcomeOf = (o: ReturnType<typeof scoreCase>['outcome']) =>
   o.kind === 'no_action' ? `no_action: ${o.reason}` : o.kind === 'ready_for_preview' ? `ready_for_preview: ${o.recipient.pairId}` : `needs_clarification: ${o.question}`;
 const expectedNoAction = scored.filter(x => x.c.expected.kind === 'no_action');
+
+// 6. Core 3: the same cases through the deterministic comparison systems, then teammate ratings if present.
+const expectedPreview = decisions.cases.filter(c => c.expected.kind === 'ready_for_preview').length;
+const systemRows = Object.entries(DECISION_SYSTEMS).map(([name, sys]) => {
+  const r = decisions.cases.map(c => scoreCase(decisions, c, sys));
+  return `| ${name} | ${pct(r.filter(x => x.matches).length, r.length)} | ${pct(r.filter(x => x.silence).length, expectedNoAction.length)} | ${pct(r.filter(x => x.missed).length, expectedPreview)} | ${r.filter(x => x.unsafe).length} | ${r.filter(x => x.excludedSurfaced.length).length} | ${r.filter(x => x.leaks.length).length} / ${r.reduce((n, x) => n + x.leaks.length, 0)} |`;
+});
+const replayArtifacts = decisions.cases.filter(c => scoreCase(decisions, c, DECISION_SYSTEMS.loop_without_assessment!).missed
+  && !c.steps.some(st => 'company' in st)).map(c => c.id);
+const ratingsDir = new URL('./results/ratings/', import.meta.url);
+let ratingsText = 'Status: **not collected (0 of 2 raters)**. Generate sheets with `node src/evaluation/rate.ts --sheets`.\n';
+try {
+  const key: RatingKey = JSON.parse(await readFile(new URL('key.json', ratingsDir), 'utf8'));
+  const sheets = [];
+  for (const r of RATERS) {
+    try { const s = parseSheet(await readFile(new URL(`${r}.md`, ratingsDir), 'utf8')); if (Object.keys(s.ratings).length || s.errors.length) sheets.push(s); } catch { /* sheet not present */ }
+  }
+  ratingsText = (key.fixtureHash !== fixtureHash(decisionsText, reflectionsText) ? '**Warning:** fixtures changed since the sheets were generated.\n\n' : '')
+    + renderRatingSummary(aggregateRatings(decisions, key, sheets));
+} catch (e) { if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e; /* no key: sheets not generated */ }
 
 const out = `# DS evaluation results
 
@@ -118,7 +141,7 @@ ${nearbyCases.cases.map((c, i) => `| ${c.id} | ${nearby.map(s => {
 }).join(' | ')} |`).join('\n')}
 
 ## Core 1/2 decision loop (D040 assessment → CS decide()), ${scored.length} labeled cases (${scored.filter(x => (x.c as { reflectionRef?: string }).reflectionRef).length} from AI's reflection fixture)
-Pipeline: \`initialLoopState(candidate, assessment)\` → owner steps → \`decide(state, assessedRecipients(recipients, assessment))\`. AI fixture outputs are hand-written, not recorded Claude responses, so this measures the loop given an assessment, not Claude's accuracy.
+Pipeline (as CS's \`DecisionLoop\` composes it): \`initialLoopState(candidate, assessment)\` → \`failClosedWithoutAssessment\` (D042) → owner steps; recipients → \`withoutPaused\` (D041) → \`applyUnnamedExclusionGuard\` → \`assessedRecipients\` → \`decide\`. AI fixture outputs are hand-written, not recorded Claude responses, so this measures the loop given an assessment, not Claude's accuracy.
 
 | Metric | Actual |
 |---|---|
@@ -131,8 +154,17 @@ Pipeline: \`initialLoopState(candidate, assessment)\` → owner steps → \`deci
 
 | Case | Pair | Expected | Actual | Note |
 |---|---|---|---|---|
-${scored.map(({ c, s }) => `| ${c.id} | ${c.pair} | ${c.expected.kind}${c.expected.reason ? `: ${c.expected.reason}` : ''} | ${outcomeOf(s.outcome)}${s.leaks.length ? ` (**leak:** ${s.leaks.map(l => `${l.label}/${l.surface}`).join(', ')})` : ''} | ${s.matches ? '' : c.knownGap ? 'known gap' : '**mismatch**'}${(c as { labelHistory?: unknown[] }).labelHistory ? ' relabeled by DS owner (v1 label in labelHistory)' : ''} |`).join('\n')}
+${scored.map(({ c, s }) => `| ${c.id} | ${c.pair} | ${c.expected.kind}${c.expected.reason ? `: ${c.expected.reason}` : ''} | ${outcomeOf(s.outcome)}${s.leaks.length ? ` (**leak:** ${s.leaks.map(l => `${l.label}/${l.surface}`).join(', ')})` : ''} | ${s.matches ? '' : c.knownGap ? 'known gap' : '**mismatch**'}${(c as { labelHistory?: unknown[] }).labelHistory ? ' relabeled by DS owner (earlier label in labelHistory)' : ''} |`).join('\n')}
 
+## Core 3: deterministic baselines vs the D040 loop (same ${decisions.cases.length} cases and DS labels)
+\`loop_without_assessment\` is CS's loop with the assessment dropped and without the D042 fail-closed guard (the pre-D040 path, historical comparison only); \`preview_on_candidate\` is DS's \`matching.ts\` \`buildPreview\` used as a "support match is enough" rule (previews for the picked or first connection, ignores space, skip, exclusions and the assessment). Excluded people are judged against the D040 episode for every system. Every system replays the same recorded owner taps; where D040 skipped the company question (\`wants_connection\`), the no-assessment loop stops at that question, so its missed suggestions in ${replayArtifacts.join(', ') || 'no case'} reflect the replayed taps rather than a design choice. Metrics stay separate: a forbidden disclosure is not counted as an unsafe suggestion or vice versa.
+
+| System | Expected outcome | Appropriate silence | Missed suggestions | Unsafe suggestions | Excluded person surfaced (cases) | Forbidden disclosures (cases / terms) |
+|---|---|---|---|---|---|---|
+${systemRows.join('\n')}
+
+### Teammate ratings (two independent raters)
+${ratingsText}
 ## Chained: shared_activity nudges from the 30 cases → ds_rules_v1 (no approved interests)
 | Support case | Agreed window | Suggestions |
 |---|---|---|

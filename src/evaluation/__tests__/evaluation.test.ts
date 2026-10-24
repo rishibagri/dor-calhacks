@@ -20,8 +20,7 @@ function leaks(payloads: unknown[], terms: string[]): string[] {
 async function runCase(c: any): Promise<{ preview: PreviewResult; policy: PolicyResult | null; match: MatchResult; crossed: unknown[] }> {
   const preset = RelationshipPresetSchema.parse(c.preset);
   const assignment = RecipientPresetAssignmentSchema.parse(c.assignment);
-  const preview = buildPreview({ candidate: c.candidate, preset, assignment, recipientId: c.deliverTo,
-    prefersSpace: c.ownerLocal.prefersSpace });
+  const preview = buildPreview({ candidate: c.candidate, preset, assignment, recipientId: c.deliverTo });
   const policy = c.submittedSignal === null ? null : await new FakeDisclosurePolicy({
     clock: new FakeClock(data.clock), linked: c.state.linked, revoked: c.state.revoked, preset, assignment,
     approved: c.approvedSignal,
@@ -115,4 +114,41 @@ test('nudge expiry is capped at 24h and at the signal expiry', async () => {
   assert.equal(buildNudge(signal, ack, match, { id: 'n', now }).expiresAt, '2026-10-25T00:00:00.000Z');
   const early = { ...signal, expiresAt: '2026-10-24T06:00:00Z' };
   assert.equal(buildNudge(early, ack, match, { id: 'n', now }).expiresAt, '2026-10-24T06:00:00.000Z');
+});
+
+// f4 relabel (core3-audit.md item 3, CS 427cd3f): quiz "space" is neither a standing suppressor nor an authorization.
+const f4 = data.cases.find((c: any) => c.id === 'f4-friends-owner-prefers-space');
+
+test('quiz space: a later eligible candidate reaches an owner-only preview, and nothing is sent', async () => {
+  assert.equal(f4.ownerLocal.prefersSpace, true);
+  const r = await runCase(f4);
+  assert.deepEqual(r.preview, { kind: 'preview', fields: { supportMode: 'encouraging_note' } });
+  // Owner-only: without the owner's approval there is no envelope, no policy check and no nudge.
+  assert.equal(r.policy, null);
+  assert.deepEqual(r.match, { outcome: 'no_nudge', reason: 'no_signal' });
+  assert.deepEqual(r.crossed, [r.preview]);
+});
+
+test('quiz space alone never authorizes a nudge', async () => {
+  // No candidate: the quiz answer contributes nothing to a preview.
+  assert.deepEqual((await runCase({ ...f4, candidate: null })).preview, { kind: 'no_signal', reason: 'no_candidate' });
+  // An envelope built from the preview but never approved is denied, so quiz space cannot stand in for approval.
+  const unapproved = { schemaVersion: 2, signalId: 'sig-f4', pairId: 'friends-pair', senderId: 'friends-a',
+    recipientId: 'friends-b', purpose: 'support_nudge', supportMode: 'encouraging_note', consentVersion: 1,
+    recipientPolicyId: 'friends-policy', recipientPolicyVersion: 1, presetAssignmentVersion: 1, expiresAt: '2026-10-25T00:00:00Z' };
+  const ack = { schemaVersion: 1, signalId: 'sig-f4', recipientConsentId: 'consent-f4', recipientConsentVersion: 1,
+    decision: 'compatible', supportMode: 'encouraging_note' };
+  const r = await runCase({ ...f4, submittedSignal: unapproved, approvedSignal: null, ack });
+  assert.equal(r.policy?.reason, 'no_consent');
+  assert.equal(r.match.outcome, 'no_nudge');
+  // Approved but no recipient consent on the ACK: still no nudge.
+  const noAck = await runCase({ ...f4, submittedSignal: unapproved, approvedSignal: unapproved, ack: null });
+  assert.equal(noAck.match.outcome, 'no_nudge');
+});
+
+test('quiz space is not a buildPreview input: an extra prefersSpace field changes nothing', () => {
+  const input = { candidate: f4.candidate, preset: RelationshipPresetSchema.parse(f4.preset),
+    assignment: RecipientPresetAssignmentSchema.parse(f4.assignment), recipientId: f4.deliverTo };
+  for (const prefersSpace of [true, false])
+    assert.deepEqual(buildPreview({ ...input, prefersSpace } as typeof input), buildPreview(input));
 });

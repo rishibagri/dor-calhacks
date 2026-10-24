@@ -38,7 +38,7 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 | Role / person | Current status | Next handoff |
 |---|---|---|
 | CS — you | **CS core work complete on role/cs-app** (offline-verified unless noted): decision loop + D040 narrowing + D041 pause controls; fail closed on missing assessment (r4m), malformed candidate (i2), unnamed connections under exclusions; installable PWA (static-only service worker, no push); README status + RUNBOOK demo/reset + hosted-deploy checklist. Live: local smoke 26/26, sweep 30/30. Not verified: worker nudge delivery, browser/phone, hosted deploy | Owner: hosted deploy decision (maincloud + Vercel?). Sumedh: narrow `my_nudges`, sender-only receipts, reason code. Adam: required assessment with candidate, worker reconnect, nicknames, paid Stage C. Nimisha: eval replay + r4m fixtures (docs/team-messages/core3-audit.md) |
-| DS — Nimisha | On main: DS-R0–R3 extension work (PRs #9/#13/#17/#25; `/discover` + `/events` consume DS rankers; offline/synthetic). PR #32 open: Core 1/2 decision-loop eval, now v2 through D040 (`initialLoopState` → `assessedRecipients` → `decide`): 44 labeled cases (19 from AI's reflection fixture), 42/44, appropriate silence 18/19, missed 0/8, 1 unsafe suggestion (i2), 1 forbidden-disclosure case (r4m), 0 excluded surfaced; r5 resolved to `no_action` | Adam + CS: missing-assessment refusal (r4m). CS: validate candidate in the loop (i2). Sumedh: labels vs D041 pause; a3. DS next: Core 3 ratings + baseline |
+| DS — Nimisha | On main: DS-R0–R3 extension work and Core 1/2 eval (PR #32 @ 76a9592). PR #36 (open) from role/ds-context, main 4135082 merged (CS #37 D042, AI #38 nickname exclusions + D042 contract): evaluator follows CS's DecisionLoop composition incl. `failClosedWithoutAssessment`; 55 labeled cases: **55/55**, silence 23/23, missed 0/9, unsafe 0, excluded 0, forbidden 0; no known gaps left in the decision loop (nn1/nn2 closed by AI #38, labels unchanged); r4m → `no_action: assessment_missing` and f4 → owner-only preview (DS owner relabels, earlier labels in `labelHistory`); quiz-profiles checked against CS's quiz functions; blinded two-rater workflow (114 items); ratings NOT collected | Team: 2 raters (not DS) fill `src/evaluation/results/ratings/rater-{a,b}.md`. Sumedh: a3; confirm the D043 `my_nudges` row DS mirrors. DS next: mirror D043 in `matching.ts` `buildNudge` (closes the timing todo), score ratings, Core 4 |
 | Cyber — Sumedh | role/cyber-privacy (on main 126f072): **Core 2 D041 durable recipient pause** implemented offline: `pause_recipient` / `resume_recipient` / `my_recipient_pauses`, enforced at approve, worker view, commit (same refusal as revocation) and `my_nudges`; revokes pre-pause approvals so nothing resurrects. Reviews: #30 ACK (no leak), D040 ACK-with-conditions. check:all + ai:check green (keys stripped); 16/16 mutations | CS: bindings + pause controls/copy. Adam: no worker change; add 4 integration pause cases. Nimisha: paired pause evals. Cyber next: Core 3 live two-account + denied-third run |
 | AI — Adam | On main: Droid SDK worker default (#27), D040 private assessment (#31). role/ai-voice (PR pending): worker **auto-reconnect + event-driven sweeps, fail closed while disconnected**, exit-for-restart, `/healthz` 503 (audit HIGH); 5 D041 pause + 2 mid-job disconnect integration cases; nickname exclusions + `unmatchedExclusions` (audit MEDIUM). Stage A live: Claude 10/10 safety on Opus 5.5 (~$0.01/call), Cartesia token/TTS/STT pass. Offline otherwise | CS: optional `unmatchedExclusions` note/question. D042 (r4m) done: contract requires assessment with a candidate. Adam next: Stage B browser voice; Stage C paid nudge delivery with the published DB |
 
@@ -375,6 +375,38 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **Run:** `node --test src/evaluation/__tests__/decision-loop.test.ts`; `node src/evaluation/report.ts --write`.
 - **Details:** `docs/updates/ds.md`, `docs/handoffs/ds.md`, `src/evaluation/results/latest.md`.
 
+### 2026-10-24T21:15Z | DS → Team, AI, CS, Cyber | Core 3: baseline comparison + two-rater workflow (decision loop)
+- **Branch/commit:** `role/ds-context`; this goes into the open PR #32 once the owner approves the commit (not merged).
+- **Status:** implemented and offline-verified, synthetic only, NOT live. **Teammate ratings have NOT been collected (0 of 2).**
+- **Interfaces (DS-owned, evaluation only, no contract change; no AI, CS or Cyber file touched):**
+  - `src/evaluation/decision-baselines.ts`: `DECISION_SYSTEMS` with three systems:
+    - `d040_loop`: the current pipeline;
+    - `loop_without_assessment`: CS's loop without the D040 assessment;
+    - `preview_on_candidate`: DS's `matching.ts` `buildPreview` as a "support match is enough" strawman.
+  - `scoreCase(file, case, system)` defaults to `d040Loop`; Core 1/2 scoring is unchanged.
+  - `src/evaluation/ratings.ts` + `rate.ts`: blinded sheets, a hidden key holding a fixture hash, a strict parser, per-system aggregation, Cohen's κ, and each rater's agreement with the DS labels.
+  - The generated blank sheets and `key.json` (85 items) are in `src/evaluation/results/ratings/`.
+- **Evidence (same 44 cases and labels; metrics kept separate):**
+
+  | System | Expected | Silence | Missed | Unsafe | Excluded surfaced | Forbidden (cases / terms) |
+  |---|---|---|---|---|---|---|
+  | `d040_loop` | 42/44 | 18/19 | 0/8 | 1 | 0 | 1 / 1 |
+  | `loop_without_assessment` | 29/44 | 13/19 | 3/8* | 4 | 6 | 10 / 15 |
+  | `preview_on_candidate` | 13/44 | 5/19 | 0/8 | 31 | 8 | 15 / 30 |
+
+  *The 3 missed cases partly come from replaying D040's taps.
+  - Ratings tests 13/13; rating-workflow mutations 5/5 caught.
+  - `npm run check:all` exit 0; `npm run ai:check` exit 0.
+- **Team next:**
+  1. Two teammates who didn't write the labels each take one sheet (`rater-a.md` / `rater-b.md`, ~85 items, about 45–60 min). Rate independently, without discussing, and don't open `key.json`, the fixtures or the report first.
+  2. Return the filled sheets to the same paths.
+- **DS next:** run `node src/evaluation/rate.ts --score` and `node src/evaluation/report.ts --write`, then report usefulness/safety per system, inter-rater κ and rater vs DS-label agreement. After that, Core 4 examples and the sample size.
+- **Unchanged open items:**
+  - r4m: todo, pending D042 (Adam + CS).
+  - i2: todo, pending CS's candidate validation.
+  - The AI fixture outputs are hand-written (no live Claude run).
+- **Run:** `node --test src/evaluation/__tests__/ratings.test.ts`; `node src/evaluation/rate.ts --sheets|--score`; `node src/evaluation/report.ts --write`.
+
 ### 2026-10-24T23:30Z | Cyber → CS, AI, DS | Core 2: D041 durable recipient pause (implemented offline) + #30/D040 reviews
 - **Interfaces:** `pause_recipient({pair_id, expires_at, expected_version})`, `resume_recipient({pair_id, expected_version})`, owner-only view `my_recipient_pauses {pair_id, version, expires_at, active, created_at}`.
   - `approve_signal` refuses with `unauthorized: recipient_paused`.
@@ -387,3 +419,93 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - Adam: integration cases only.
   - Nimisha: paired evals.
   - Details: `docs/handoffs/cyber.md`, `docs/features/RECIPIENT_PAUSE.md`.
+
+### 2026-10-25T00:30Z | DS → Team, AI, CS, Cyber | Core 1–3: evaluation on CS's current loop + core3-audit cases + baselines/ratings (new PR)
+- **Branch/commit:** `role/ds-context` with main `e5796db` merged; new PR (not merged). PR #32 merged at `76a9592`; the Core 3 commit `342a800` was not in it and is included here.
+- **Status:** implemented and offline-verified, synthetic only, NOT live. **Teammate ratings have NOT been collected.**
+- **Interfaces (DS-owned, evaluation only, no AI, CS, Cyber or contract file changed):**
+  - The evaluator mirrors CS's `DecisionLoop`: recipients → `withoutPaused` (D041) → `applyUnnamedExclusionGuard` → `assessedRecipients` → `decide`.
+  - Cases may carry the owner's `pauses` rows, and people may be `unnamed`.
+  - Core 3 adds `decision-baselines.ts`, plus `ratings.ts` / `rate.ts` (blinded two-rater workflow with a hidden key).
+- **core3-audit.md DS items:**
+  1. Unnamed, duplicate-name and pause cases added (u1–u3, d1–d2, pz1–pz4), all labeled before the run, all passing.
+  2. Nickname cases in both directions (nn1, nn2), labeled before the run. They fail open as the audit said and stay todo with AI as owner.
+  3. Quiz "space": support case f4 still assumes the old global promise. Flagged for the DS owner's decision; not relabeled.
+  4. Timing:
+     - Recipient copy does not depend on approval time (passes).
+     - The nudge row encoding approval time is a todo pending Cyber's narrow `my_nudges`.
+     - Recipient delivery state in sender receipts is outside the DS offline loop and covered by Cyber's `my_receipts` fix.
+  5. No DS assertion on the wrong-`payloadRevision` reason code until Sumedh confirms.
+- **Evidence:**
+  - 55 cases: 52/55; appropriate silence 22/22; missed 0/9; unsafe suggestions 0; excluded surfaced 0; forbidden-disclosure findings 3 (r4m, nn1, nn2).
+  - Baselines: `loop_without_assessment` 34/55, unsafe 3, excluded 8, forbidden 14 / 21; `preview_on_candidate` 14/55, unsafe 41, excluded 12, forbidden 21 / 42.
+  - Pause noninterference: a paused third person changes nothing about the chosen person's preview.
+  - `npm run check:all` exit 0: contracts 124, module 175, app 370 pass / 0 fail / 5 todo.
+  - `npm run ai:check` exit 0: agents 69, worker 42, integration 36.
+- **AI (Adam) next:**
+  1. Close the nickname exclusions (nn1/nn2): core3-audit option (a) `unmatchedExclusions` → CS asks "Who did you mean?", or (b) a prefix/diminutive match is ambiguous and is left out.
+  2. D042 with CS (r4m).
+- **Cyber (Sumedh) next:**
+  1. Narrow the `my_nudges` row; the timing todo flips when it lands.
+  2. Confirm the reason code for a wrong revision.
+  3. a3.
+- **Team next:** two teammates who didn't write the labels each fill one sheet (113 items, roughly 60–75 min), independently, without opening `key.json`, the fixtures or the report first.
+- **DS next:** decide f4; score the ratings (`node src/evaluation/rate.ts --score`); Core 4 examples and the sample size.
+- **Run:** `node --test "src/evaluation/__tests__/*.test.ts"`; `node src/evaluation/rate.ts --sheets|--score`; `node src/evaluation/report.ts --write`.
+
+### 2026-10-24T19:55Z | DS → CS, AI, Cyber | f4 quiz-space relabel (core3-audit item 3), added to PR #36
+- **Branch/commit:** `role/ds-context`, for the existing PR #36 (not merged). Main `9481350` (#37, D042) is not merged into this branch yet.
+- **Status:** implemented and offline-verified, synthetic only, NOT live. DS-owned evaluation files only; no AI, CS, Cyber or contract file changed.
+- **Decision (DS owner):** f4's expected preview goes from `no_signal: owner_prefers_space` to `preview {supportMode: encouraging_note}`; the match label stays `no_nudge: no_signal` (nothing approved, nothing sent). The v1 label is kept in `labelHistory` with a `labelNote` citing CS `427cd3f` (onboarding copy), core3-audit.md item 3 and the README consent rules (the quiz never grants consent; permission is never inferred from quiz answers).
+- **Interfaces:** `matching.ts` `buildPreview` no longer takes `prefersSpace` and `NoSignalReason` drops `owner_prefers_space`. Per-entry `wants_space`, explicit refusals, pauses, approval and recipient consent are unchanged. The `quiz.json` Q1 "space" note is corrected.
+- **Evidence:**
+  - New regression tests: quiz space with a later eligible candidate → owner-only preview, no envelope, no nudge; quiz space alone never authorizes (no candidate → `no_candidate`; unapproved envelope → `no_consent`; approved without a consent ACK → no nudge); an extra `prefersSpace` field changes nothing; per-entry space cases (a11, a12, c1) still end in `no_action`.
+  - DS suite 237 tests: 232 pass / 0 fail / 5 todo. Support baseline still 29/30 (a3 known gap); decision loop unchanged at 52/55.
+  - `npm run check:all` exit 0: contracts 124, module 175, app 379 = 374 pass / 0 fail / 5 todo.
+  - `npm run ai:check` exit 0: agents 69, worker 42, integration 36.
+- **Open for DS:** `quiz-profiles.json` notes for `space-only` / `space-with-other-modes` (and `supportAction: none` derived in `quiz-fixtures.test.ts`) still describe the old suppression; flagged, not changed. Merge main #37 (D042) and re-decide r4m.
+- **CS / AI / Cyber:** nothing new is required. Nothing in the app read `prefersSpace` for suppression.
+
+### 2026-10-24T20:05Z | DS → CS, AI, Cyber, Team | D042 compatibility (r4m), quiz "space" profile fixtures, main 2624fbd merged (PR #36 update)
+- **Branch/commit:** `role/ds-context` with main `2624fbd` (CS PR #37, `9481350`) merged, for the existing PR #36 (not merged). Merge conflict only in this dashboard: CS row taken from main, DS row from the branch.
+- **Status:** implemented and offline-verified, synthetic only, NOT live. DS-owned files only; no AI, CS, Cyber or contract file changed.
+- **D042 (as implemented by CS, `failClosedWithoutAssessment`):**
+  - `replay()` now applies the guard exactly as `decision-loop.tsx` does, so a candidate with no assessment ends in `no_action: assessment_missing` before any question.
+  - 25 DS cases that carried a candidate and were labeled under "missing assessment = ask normally" now state that input as the neutral assessment `{intent: unclear, excludedNames: [], preferredNames: []}`. A test proves this reproduces the old path exactly; their labels are unchanged.
+  - **r4m relabeled by the DS owner:** `needs_clarification` (who, [p-sam]) → `no_action: assessment_missing`; the earlier label is in `labelHistory`. Alex is never offered at any step.
+  - `loop_without_assessment` stays the pre-D040 path without the guard (historical comparison only).
+- **Quiz "space" (core3-audit item 3, CS `427cd3f`):** `quiz-profiles.json` `expected.supportAction` (a DS-only label that encoded "space suggests nothing") is replaced by `expected.presetDrafts` (CS `draftCategoriesFor`: suggestions, never consent). The two space cases keep `supportAction: none` in `labelHistory`. The tests now check every case against CS's `buildProfile` / `buildQuizExtras` / `draftCategoriesFor` (8/8 match), that space alongside modes changes neither the profile nor the drafts, and that a saved preset is never overridden. Per-entry space (a11, a12, c1) still ends in `no_action`.
+- **Evidence:**
+  - Decision loop: 53/55; appropriate silence 23/23; missed 0/9; unsafe 0; excluded surfaced 0; forbidden-disclosure findings 2 (nn1, nn2, known gaps owned by AI). Baselines unchanged: `loop_without_assessment` 34/55, `preview_on_candidate` 14/55.
+  - The rater sheets were blank, so they were regenerated (114 items) to clear the stale-fixture warning.
+  - DS suites: 250 tests, 246 pass / 0 fail / 4 todo (a3, nn1, nn2, timing row).
+  - `npm run check:all` exit 0: contracts 124, module 175, app 395 = 391 pass / 0 fail / 4 todo.
+  - `npm run ai:check` exit 0: agents 69, worker 42, integration 36.
+- **Open:**
+  - D042 is not recorded in `docs/DECISIONS.md` (CS/team).
+  - `PrivateReflectionSchema.assessment` is still optional in contracts, with a comment that contradicts D042 (Adam, per the core3-audit follow-up).
+  - nn1/nn2 (Adam); `my_nudges` timing row and a3 (Sumedh).
+- **Team next:** two raters fill the regenerated sheets. **DS next:** score the ratings, then Core 4.
+
+### 2026-10-24T20:08Z | DS → AI, Cyber, Team | PR #36 CI fix: main 4135082 (AI #38) merged; nn1/nn2 closed
+- **What failed:** the PR #36 `pull_request` CI run (PR merged into the newer main) failed 2 DS tests; the `push` run on `1b0adc4` had passed. AI PR #38 landed after that push and closed the nickname gaps. The "known gaps still fail as labeled" guard then broke as designed, and `ratings.test.ts` used nn1 as its leak example.
+- **Fix (DS files only):**
+  - Merged main `4135082` (no conflicts).
+  - Removed `knownGap` from nn1/nn2; their pre-run labels are unchanged and now met (Sam only, no leak).
+  - The gaps assertion is now `[]`, with a new nickname test.
+  - The ratings example is r4 under the frozen `loop_without_assessment` baseline.
+  - Report and blank sheets regenerated.
+- **Evidence:**
+  - Decision loop 55/55; silence 23/23; missed 0/9; unsafe 0; excluded 0; forbidden 0.
+  - Baselines: `loop_without_assessment` 34/55, excluded 10; `preview_on_candidate` 14/55, excluded 14. Excluded rose by 2 each because the D040 episode now also leaves out the nickname variants.
+  - DS suites 251 = 249 pass / 0 fail / 2 todo.
+  - `check:all` exit 0: contracts 124, module 175, app 398 = 396 pass / 0 fail / 2 todo.
+  - `ai:check` exit 0: agents 69, worker 49, integration 43.
+- **Resolved upstream:** D042 is now in `docs/DECISIONS.md`, and the contract requires the assessment whenever there is a candidate (AI #38).
+- **Open:** Sumedh: narrow the `my_nudges` row (timing todo) and a3. Team: ratings.
+
+### 2026-10-24T20:12Z | DS → Cyber, Team | ACK D043 (Cyber PR #39, main f0f722c); PR #36 CI green against it
+- **Verified:** PR #36's `pull_request` CI tested merge `356ccfc` (`02fa03b` into main `f0f722c`) and passed, as did the push CI. A local reproduction of the same merge gave `check:all` exit 0 (contracts 124, module 182, app 396 pass / 0 fail / 2 todo) and `ai:check` exit 0 (69/49/43). DS results are unchanged.
+- **Correction to the 20:08Z entry:** Sumedh's narrow `my_nudges` row has landed (D043). The approval-timing todo stays a todo because it tests DS's own row model (`matching.ts` `buildNudge`). Closing it is now DS work: mirror D043's `{id, pair_id, template_id, visible_until}`.
+- **Sumedh:** a3; confirm the D043 projection DS should mirror.
+

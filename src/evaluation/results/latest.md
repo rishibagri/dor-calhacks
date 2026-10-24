@@ -1,6 +1,6 @@
 # DS evaluation results
 
-Revision `c92fd96+dirty`, clock `2026-10-24T00:00:00Z`, deterministic (no seed or provider). All inputs are synthetic; policy
+Revision `1b0adc4+dirty`, clock `2026-10-24T00:00:00Z`, deterministic (no seed or provider). All inputs are synthetic; policy
 decisions come from the offline C6 fake, which is not security evidence. Relevance labels are DS author labels written before
 the runs. Teammate 1–5 usefulness ratings have **not** been collected, so no usefulness mean is reported.
 
@@ -73,17 +73,17 @@ Mismatches:
 | n14-sparse-area | c-03 | c-03 |
 | n15-blocked-only-overlap | none: no_fit | c-08, c-05 (**false:** c-08, c-05) |
 
-## Core 1/2 decision loop (D040 assessment → CS decide()), 44 labeled cases (19 from AI's reflection fixture)
-Pipeline: `initialLoopState(candidate, assessment)` → owner steps → `decide(state, assessedRecipients(recipients, assessment))`. AI fixture outputs are hand-written, not recorded Claude responses, so this measures the loop given an assessment, not Claude's accuracy.
+## Core 1/2 decision loop (D040 assessment → CS decide()), 55 labeled cases (19 from AI's reflection fixture)
+Pipeline (as CS's `DecisionLoop` composes it): `initialLoopState(candidate, assessment)` → `failClosedWithoutAssessment` (D042) → owner steps; recipients → `withoutPaused` (D041) → `applyUnnamedExclusionGuard` → `assessedRecipients` → `decide`. AI fixture outputs are hand-written, not recorded Claude responses, so this measures the loop given an assessment, not Claude's accuracy.
 
 | Metric | Actual |
 |---|---|
-| Expected outcome reproduced | 43/44 |
-| Appropriate silence (no_action expected → no_action) | 19/19 |
-| Missed suggestions (preview expected, none offered) | 0/8 |
+| Expected outcome reproduced | 55/55 |
+| Appropriate silence (no_action expected → no_action) | 23/23 |
+| Missed suggestions (preview expected, none offered) | 0/9 |
 | Unsafe suggestions (preview not expected, or wrong person) | 0 |
 | Excluded person offered or previewed | 0 |
-| Forbidden-disclosure findings (cases / terms) | 1 / 1 |
+| Forbidden-disclosure findings (cases / terms) | 0 / 0 |
 
 | Case | Pair | Expected | Actual | Note |
 |---|---|---|---|---|
@@ -94,8 +94,8 @@ Pipeline: `initialLoopState(candidate, assessment)` → owner steps → `decide(
 | r2-refused-person-cannot-be-chosen-or-fallen-through | explicit-refusal | no_action: no_eligible_recipient | no_action: no_eligible_recipient |  |
 | r3-refusal-survives-changed-company-answer | explicit-refusal | needs_clarification | needs_clarification: who |  |
 | r4-refusal-stated-only-in-entry | explicit-refusal | needs_clarification | needs_clarification: who |  |
-| r4m-refusal-in-entry-assessment-missing | explicit-refusal | needs_clarification | needs_clarification: who (**leak:** unapproved_recipient/offered) | known gap |
-| r5-refusal-via-assessment | explicit-refusal | no_action: no_recipient | no_action: no_recipient |  relabeled by DS owner (v1 label in labelHistory) |
+| r4m-refusal-in-entry-assessment-missing | explicit-refusal | no_action: assessment_missing | no_action: assessment_missing |  relabeled by DS owner (earlier label in labelHistory) |
+| r5-refusal-via-assessment | explicit-refusal | no_action: no_recipient | no_action: no_recipient |  relabeled by DS owner (earlier label in labelHistory) |
 | t1-ambiguous-timing-asks-first | ambiguous-timing | needs_clarification | needs_clarification: company |  |
 | t2-ambiguous-timing-skip-is-silence | ambiguous-timing | no_action: skipped | no_action: skipped |  |
 | t3-clear-timing-partner | ambiguous-timing | ready_for_preview | ready_for_preview: p-riley |  |
@@ -131,6 +131,29 @@ Pipeline: `initialLoopState(candidate, assessment)` → owner steps → `decide(
 | a17-partners-exam-seed | assessment:seed | ready_for_preview | ready_for_preview: p-riley |  |
 | a18-friends-disconnected-seed | assessment:seed | needs_clarification | needs_clarification: who |  |
 | a19-family-tiring-week-seed | assessment:seed | ready_for_preview | ready_for_preview: p-robin |  |
+| u1-exclusion-leaves-out-unnamed | audit:unnamed | needs_clarification | needs_clarification: who |  |
+| u2-exclusion-only-unnamed-left | audit:unnamed | no_action: no_eligible_recipient | no_action: no_eligible_recipient |  |
+| u3-unnamed-offered-without-exclusion | audit:unnamed | needs_clarification | needs_clarification: who |  |
+| d1-duplicate-names-never-auto-chosen | audit:duplicate-names | needs_clarification | needs_clarification: who |  |
+| d2-duplicate-names-owner-picks-second | audit:duplicate-names | ready_for_preview | ready_for_preview: p-sam2 |  |
+| pz1-paused-never-offered | audit:pause | needs_clarification | needs_clarification: who |  |
+| pz2-paused-only-candidate | audit:pause | no_action: no_eligible_recipient | no_action: no_eligible_recipient |  |
+| pz3-paused-picked-anyway | audit:pause | no_action: no_recipient | no_action: no_recipient |  |
+| pz4-expired-pause-new-episode | audit:pause | needs_clarification | needs_clarification: who |  |
+| nn1-nickname-alexander-excludes-alex | audit:nickname | needs_clarification | needs_clarification: who |  |
+| nn2-nickname-alex-excludes-alexander | audit:nickname | needs_clarification | needs_clarification: who |  |
+
+## Core 3: deterministic baselines vs the D040 loop (same 55 cases and DS labels)
+`loop_without_assessment` is CS's loop with the assessment dropped and without the D042 fail-closed guard (the pre-D040 path, historical comparison only); `preview_on_candidate` is DS's `matching.ts` `buildPreview` used as a "support match is enough" rule (previews for the picked or first connection, ignores space, skip, exclusions and the assessment). Excluded people are judged against the D040 episode for every system. Every system replays the same recorded owner taps; where D040 skipped the company question (`wants_connection`), the no-assessment loop stops at that question, so its missed suggestions in a2-positive-sam-owner-picks, a17-partners-exam-seed, a19-family-tiring-week-seed, d2-duplicate-names-owner-picks-second reflect the replayed taps rather than a design choice. Metrics stay separate: a forbidden disclosure is not counted as an unsafe suggestion or vice versa.
+
+| System | Expected outcome | Appropriate silence | Missed suggestions | Unsafe suggestions | Excluded person surfaced (cases) | Forbidden disclosures (cases / terms) |
+|---|---|---|---|---|---|---|
+| d040_loop | 55/55 | 23/23 | 0/9 | 0 | 0 | 0 / 0 |
+| loop_without_assessment | 34/55 | 16/23 | 4/9 | 3 | 10 | 14 / 21 |
+| preview_on_candidate | 14/55 | 5/23 | 0/9 | 41 | 14 | 21 / 42 |
+
+### Teammate ratings (two independent raters)
+Status: **not collected (0 of 2 raters)**. 114 blinded items (one per distinct case outcome across systems). No usefulness or rater-safety numbers are reported until both sheets are filled.
 
 ## Chained: shared_activity nudges from the 30 cases → ds_rules_v1 (no approved interests)
 | Support case | Agreed window | Suggestions |

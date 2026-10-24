@@ -83,6 +83,50 @@ Status: PR #25 (open), `role/ds-context` merged with main `71c3b6a` (README core
 - **r5 resolved by the DS owner:** an owner tap on an assessment-excluded person → `no_action: no_recipient` (v1 label `needs_clarification` kept in `labelHistory`). Preferred because the excluded person must not be contacted or substituted automatically and re-asking would invite a second choice; verified against PRIVATE_ASSESSMENT.md §3, README 'Deterministic exclusion', CS `decide()` and AI's assessment test. No other label changed.
 - **Limits:** the AI fixture outputs are hand-written, not Claude, so a live run is still needed (Core 3).
 
+## Core 3 status (2026-10-24T21:15Z, uncommitted; PR #32 open)
+- **Baselines** (`decision-baselines.ts`), on the same 44 cases and labels:
+
+  | System | Expected | Silence | Missed | Unsafe | Excluded surfaced | Forbidden (cases / terms) |
+  |---|---|---|---|---|---|---|
+  | `d040_loop` | 42/44 | 18/19 | 0/8 | 1 | 0 | 1 / 1 |
+  | `loop_without_assessment` | 29/44 | 13/19 | 3/8* | 4 | 6 | 10 / 15 |
+  | `preview_on_candidate` | 13/44 | 5/19 | 0/8 | 31 | 8 | 15 / 30 |
+
+  *The 3 missed cases partly come from replaying D040's taps; see the report.
+- **Ratings:** the workflow is ready (`rate.ts --sheets` / `--score`, blinded, 85 items, κ and DS-label agreement). **No ratings have been collected yet (0 of 2 raters).**
+- **Team ask:** two teammates who didn't write the labels each fill one sheet in `src/evaluation/results/ratings/`, independently. DS then runs `node src/evaluation/rate.ts --score` and the report.
+- **Unchanged:** r4m stays a todo pending D042; i2 stays a todo pending CS's candidate validation.
+
+## Core 1–3 status (2026-10-25T00:30Z, PR pending)
+- **Pipeline:** the evaluator replays CS's current `DecisionLoop` composition: pauses (D041) → unnamed-exclusion guard → assessment → `decide`. i2 was closed by CS (`1c452b9`).
+- **Cases:** 55 (+11 audit cases: unnamed, duplicate names, pause, nickname).
+- **Results:** 55 cases: 52/55, appropriate silence 22/22, missed 0/9, unsafe suggestions 0 (i2 closed by CS 1c452b9), excluded surfaced 0, forbidden-disclosure findings 3 cases (r4m, nn1, nn2).
+- **Baselines:** `loop_without_assessment` 34/55, unsafe 3, excluded surfaced 8; `preview_on_candidate` 14/55, unsafe 41, excluded surfaced 12. Ratings are not collected (113 blinded items).
+- **Open:**
+  - **r4m:** resolved under D042 (see below).
+  - **nn1/nn2:** nickname exclusions fail open (AI).
+  - **Approval-timing row:** todo pending Cyber's `my_nudges` fix.
+  - **f4 quiz "space":** resolved, see below.
+  - **a3:** Cyber.
+
+## f4 quiz-space relabel (2026-10-24T19:55Z, added to PR #36; not merged)
+- **Decision (DS owner):** quiz Q1 "space" only leaves support out of the preset drafts (CS `427cd3f`, core3-audit.md item 3). It is neither a standing suppressor nor an authorization (README: the quiz never grants consent).
+- **f4:** expected preview is now `preview {supportMode: encouraging_note}` (owner-only). The match stays `no_nudge: no_signal`. The v1 label is in `labelHistory`.
+- **`matching.ts`:** `buildPreview` has no `prefersSpace` input and no `owner_prefers_space` reason. Per-entry `wants_space`, refusals, pauses, approval and recipient consent are unchanged; regression tests cover each path.
+- **Results:** support baseline 29/30 (a3); decision loop 52/55; check:all and ai:check exit 0.
+- **Follow-up:** the `quiz-profiles.json` space notes and the D042/r4m re-decision are done (see the next section).
+
+## D042 + quiz profiles (2026-10-24T20:05Z, main 2624fbd merged; for PR #36, not merged)
+- **D042:** the evaluator applies CS's `failClosedWithoutAssessment`, as `decision-loop.tsx` does. r4m was relabeled by the DS owner to `no_action: assessment_missing` (earlier label in `labelHistory`). The 25 DS cases written under "missing = ask normally" carry the neutral assessment `{unclear, [], []}`; their labels are unchanged, and a test proves the input is equivalent.
+- **Quiz profiles:** `presetDrafts` (CS `draftCategoriesFor`) replaces the DS-only `supportAction`. The cases are checked against CS's real quiz functions.
+- **Results:** decision loop 53/55; forbidden 2 (nn1, nn2); check:all and ai:check exit 0. The rater sheets were regenerated (114 items, blank).
+- **Open:** D042 is not in `docs/DECISIONS.md`; the contract still marks `assessment` optional (Adam); nn1/nn2 (Adam); timing row and a3 (Sumedh).
+
+## CI fix after AI #38 (2026-10-24T20:08Z, main 4135082 merged; PR #36 not merged)
+- AI #38 closed the nickname exclusions, so nn1/nn2 meet their pre-run labels. Their `knownGap` markers are removed and the labels are unchanged.
+- D042 is now in `docs/DECISIONS.md`, and the contract requires the assessment whenever there is a candidate.
+- **Results:** decision loop 55/55; forbidden 0. Remaining todos: a3 (Sumedh) and the timing row. D043 (Cyber #39, main `f0f722c`) narrowed the real `my_nudges` row, so the timing todo now needs DS to mirror that row in `matching.ts` `buildNudge`. PR #36 CI passes against `f0f722c`.
+
 ## Next for DS: core-first (README "Current direction", Core 1–4)
 Discovery/event ranking work is paused. Don't expand it until the core passes live verification. The earlier "D038/D039 metrics cases" and "first-session recommendations" items are dropped.
 1. **Core 1:** before any model evaluation, define the expected owner-side outcome (`no_action` / `needs_clarification` / `ready_for_preview`, still a proposed vocabulary) for support, avoid and uncertain recipient intent, plus the forbidden-disclosure labels (unapproved party, activity, location, excuse, tension, timing). Co-define them with Adam (assessment output) and Sumedh (recipient restriction).

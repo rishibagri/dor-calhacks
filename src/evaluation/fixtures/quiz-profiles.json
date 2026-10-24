@@ -2,7 +2,7 @@
   "fixtureVersion": 2,
   "owner": "DS",
   "synthetic": true,
-  "note": "CS-consumable quiz fixtures. answers is a complete QuizAnswers object (src/components/feature/quiz-model.ts); expected.profile must equal buildProfile(answers).data and satisfy LocalConnectionProfileSchema; expected.extras must equal buildQuizExtras(answers) (LocalQuizExtras, vault only). expected.supportAction is DS matching semantics: 'none' means no support candidate is offered (prefersSpace). No case creates consent, a preset, an assignment or a signal. invalidAnswers[].answers are patches over the skip-all answers.",
+  "note": "CS-consumable quiz fixtures. answers is a complete QuizAnswers object (src/components/feature/quiz-model.ts); expected.profile must equal buildProfile(answers).data and satisfy LocalConnectionProfileSchema; expected.extras must equal buildQuizExtras(answers) (LocalQuizExtras, vault only). expected.presetDrafts is the unsaved preset draft CS derives from the profile (draftCategoriesFor with no saved preset): suggestions the owner must still confirm, never consent. Quiz \"space\" only leaves support_preference out of the drafts when no other mode is chosen (CS 427cd3f, core3-audit.md item 3); it is not a standing no-action rule, and per-entry space (wants_space) still ends in no_action. v1 had expected.supportAction ('none' when prefersSpace), which encoded the old 'space means dor suggests nothing' promise; it was replaced on 2026-10-24 by the DS owner and the two space cases keep it in labelHistory. No case creates consent, a preset, an assignment or a signal. invalidAnswers[].answers are patches over the skip-all answers.",
   "cases": [
     {
       "id": "partner-leaning",
@@ -14,7 +14,7 @@
           "draftSharingCategories": ["support_preference", "coarse_availability"], "rhythm": "flexible", "suggestionIntensity": "quiet" },
         "extras": { "prefersSpace": false, "activities": ["talking", "watching_together"], "activitiesNote": null,
           "scheduleSuggestions": "only_after_review", "reviewComfort": "quick_review" },
-        "supportAction": "eligible"
+        "presetDrafts": ["support_preference", "coarse_availability"]
       }
     },
     {
@@ -27,7 +27,7 @@
           "draftSharingCategories": ["support_preference"], "rhythm": "spontaneous", "suggestionIntensity": "fewer" },
         "extras": { "prefersSpace": false, "activities": ["games"], "activitiesNote": null,
           "scheduleSuggestions": "keep_private", "reviewComfort": "review_everything" },
-        "supportAction": "eligible"
+        "presetDrafts": ["support_preference"]
       }
     },
     {
@@ -41,12 +41,13 @@
           "draftSharingCategories": [], "rhythm": "planned", "suggestionIntensity": "quiet" },
         "extras": { "prefersSpace": false, "activities": ["other"], "activitiesNote": "SYNTHETIC local activity note",
           "scheduleSuggestions": "keep_private", "reviewComfort": "review_everything" },
-        "supportAction": "eligible"
+        "presetDrafts": []
       }
     },
     {
       "id": "space-only",
-      "note": "No support mode; a nominated draft category does not override the space preference.",
+      "note": "No support mode, so the nominated support_preference category is left out of the preset drafts. This changes no consent and suppresses nothing later: a later eligible candidate can still reach an owner-only preview (evaluation-cases.json f4).",
+      "labelHistory": [{ "version": 1, "expected": { "supportAction": "none" } }],
       "answers": { "afterLongDay": ["space"], "friendQuiet": [], "tone": null, "rhythm": null,
         "overwhelmed": "paused", "activities": [], "activitiesNote": "",
         "scheduleSuggestions": null, "categories": ["support_preference"], "reviewComfort": null },
@@ -54,12 +55,13 @@
         "profile": { "schemaVersion": 1, "communicationStyle": null, "preferredSupportModes": [],
           "draftSharingCategories": ["support_preference"], "rhythm": null, "suggestionIntensity": "paused" },
         "extras": { "prefersSpace": true, "activities": [], "activitiesNote": null, "scheduleSuggestions": null, "reviewComfort": null },
-        "supportAction": "none"
+        "presetDrafts": []
       }
     },
     {
       "id": "space-with-other-modes",
-      "note": "App allows space alongside modes. Profile keeps the contract modes; DS matching still suppresses support candidates while prefersSpace is true.",
+      "note": "App allows space alongside modes. Profile keeps the contract modes, and space changes neither the profile nor the drafts (the test checks this against the same answers without space). No draft categories were nominated, so the drafts are empty.",
+      "labelHistory": [{ "version": 1, "expected": { "supportAction": "none" } }],
       "answers": { "afterLongDay": ["space", "short_call"], "friendQuiet": ["encouraging_note"], "tone": null, "rhythm": null,
         "overwhelmed": null, "activities": [], "activitiesNote": "",
         "scheduleSuggestions": null, "categories": [], "reviewComfort": null },
@@ -67,7 +69,7 @@
         "profile": { "schemaVersion": 1, "communicationStyle": null, "preferredSupportModes": ["short_call", "encouraging_note"],
           "draftSharingCategories": [], "rhythm": null, "suggestionIntensity": null },
         "extras": { "prefersSpace": true, "activities": [], "activitiesNote": null, "scheduleSuggestions": null, "reviewComfort": null },
-        "supportAction": "none"
+        "presetDrafts": []
       }
     },
     {
@@ -80,7 +82,7 @@
         "profile": { "schemaVersion": 1, "communicationStyle": null, "preferredSupportModes": [],
           "draftSharingCategories": [], "rhythm": null, "suggestionIntensity": null },
         "extras": { "prefersSpace": false, "activities": [], "activitiesNote": null, "scheduleSuggestions": null, "reviewComfort": null },
-        "supportAction": "eligible"
+        "presetDrafts": []
       }
     },
     {
@@ -93,7 +95,7 @@
         "profile": { "schemaVersion": 1, "communicationStyle": "gentle", "preferredSupportModes": [],
           "draftSharingCategories": [], "rhythm": null, "suggestionIntensity": null },
         "extras": { "prefersSpace": false, "activities": [], "activitiesNote": null, "scheduleSuggestions": null, "reviewComfort": null },
-        "supportAction": "eligible"
+        "presetDrafts": []
       }
     },
     {
@@ -106,7 +108,7 @@
         "profile": { "schemaVersion": 1, "communicationStyle": null, "preferredSupportModes": ["encouraging_note"],
           "draftSharingCategories": [], "rhythm": null, "suggestionIntensity": null },
         "extras": { "prefersSpace": false, "activities": ["games"], "activitiesNote": null, "scheduleSuggestions": null, "reviewComfort": null },
-        "supportAction": "eligible"
+        "presetDrafts": []
       }
     }
   ],
