@@ -151,3 +151,16 @@ Conditions:
 - **Item 2 (HIGH, timing to the recipient):** `my_nudges` now returns `{id, pair_id, template_id, visible_until}`, with `visible_until` rounded up to the hour. Tests: exact row keys; no signal or consent ids; an hour-aligned `visible_until` within one hour after the exact expiry. A mutation restoring the exact expiry is caught.
 - **Item 3 (HIGH, recipient state to the sender):** `my_receipts` filters to `approved` and `revoked`. Owner-caused invalidation is recorded as `revoked`. Noninterference test: recipient opt-out, consent revoke and unlink leave the sender's receipts byte-identical. 3 mutations caught.
 - **Residual:** nudge arrival time for a live subscriber (see D043).
+
+## 2026-10-25: DS forbidden-disclosure labels vs D041/D043 (asked by DS since the 18:45Z handoff)
+Verdict: **ACK the six labels, with three additions recommended.** The six (`unapproved_recipient`, `private_activity`, `location`, `excuse`, `relationship_tension`, `timing_detail`) cover *content*: what words appear on a screen or in recipient copy. D041 and D043 add disclosure through *structure*, which those labels don't name:
+1. **`restriction_signal`:** anything recipient-visible that reveals an exclusion or pause exists, such as a badge, status, receipt, a count change, or a nudge vanishing at a telling moment. D041 keeps the server silent; this label lets DS check the client and copy too. (`relationship_tension` covers *wording* like "they avoided you", not structural tells.)
+2. **`approval_timing`:** the sender's approval or journaling moment reaching the recipient. This was the D043 leak. DS's own timing todo tests it against its row model; keep it separate from `timing_detail`, which means story timing ("Friday night").
+3. **`recipient_state`:** the recipient's opt-in, quiet hours, cooldown, accepted modes or consent changes reaching the sender. This was the D043 receipts leak.
+
+The pause cases pz1–pz4 are correct: never offered, only-candidate → no_action, picked anyway → no_recipient, expired → offered again in a new episode, plus pause noninterference.
+
+**Still missing:** a **change of mind mid-episode** case. The owner is at the preview step with Alex chosen when a pause on Alex becomes active. Expected: the loop does not proceed to approval (or approval is refused, `unauthorized: recipient_paused`), and nothing reaches Alex. The server side (a pause between approval and commit) is covered by `spacetimedb/tests/pause.test.ts` and Adam's worker cases.
+
+## 2026-10-25: a3 status (semantic signal IDs) → proposed D044
+On the real path a3 is mitigated twice: the module mints UUID v4 ids, and D043 removed source signal ids from the recipient's nudge row. The remaining gap is the shared contract, the fake and `DisclosurePolicy` accepting readable ids. `isServerMintedId` is added (unused, with tests). Enforcement needs DS and AI to migrate their fixtures, so it waits for their ACK (D044).
