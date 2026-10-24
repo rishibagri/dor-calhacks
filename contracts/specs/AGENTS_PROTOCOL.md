@@ -9,3 +9,8 @@
 Timeout: proposed 8 seconds per model call, one retry with same idempotency key. Fall back to an approved fixed template only when all policy conditions hold; otherwise return no suggestion. Record only sanitized outcome codes. These are initial engineering targets, not measured performance.
 
 Before each exchange and result commit, enforce both current assigned relationship-preset policy version and item consent version in SpacetimeDB. Trigger jobs carry IDs, not raw transcripts; Factory persistent sessions/logs must never contain private vault data.
+
+## C8 proposed discovery coordination and efficiency
+Logical agents for opted-in Kinetic users compare explicitly published interest/event cards after deterministic eligibility and shortlist. No radio/device scan, raw journal, exact location, habit history or private personality labels. At most two proposal rounds; a model may select an allowed option or decline. The proposal never sends a personal message or grants consent. Recheck publication, event intent, expiry and blocks before commit. Public-profile visibility does not require mutual invitation acceptance; contact actions do.
+
+No calls for denied/empty candidates; feed rendering and filtering are deterministic. Evaluate a single-option deterministic path and invoke reasoning only where it adds value. Coalesce change-triggered jobs, use bounded worker concurrency and an aggregate deadline so retries do not multiply indefinitely. Reused Droid workdirs require serialization or isolated pool slots; no shared mutable cleanup across concurrent calls. Cache reusable public/static data only under a reviewed policy; do not cache private journals for savings. Keep final authorization rechecks even on cache hits.

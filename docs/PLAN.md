@@ -1,58 +1,44 @@
-# Shared dependencies, integration gates and coordination
+# Shared execution and handoffs — revised R phases
 
-The detailed master phases are in [README.md](../README.md). Every person has a full phase plan with the same P0–P9 clock: [CS](roles/cs.md), [Nimisha/DS](roles/ds.md), [Adam/AI](roles/ai.md), [Sumedh/Cyber](roles/cyber.md). Times are relative to the original sprint start, not an instruction to restart completed work. Planning is only the first 30 minutes.
+[README](../README.md) is the detailed master plan. [CS](roles/cs.md), [Nimisha](roles/ds.md), [Adam](roles/ai.md) and [Sumedh](roles/cyber.md) each have concrete R0–R6 artifacts/checks/consumers. R IDs supersede P scheduling; preserve P history. The original 36-hour deadline remains. Assign the actual remaining time before resuming; do not assume another full sprint.
 
-## Critical path
-```mermaid
-flowchart LR
-  A[CS identity and module] --> D[Cyber guarded approval]
-  B[Cyber local vault] --> C[AI private reflection]
-  C --> D
-  E[DS explicit profile and expected outcomes] --> D
-  D --> F[AI bounded worker plus DS ranking]
-  F --> G[CS live nudge UI]
-  H[CS Apify public catalogue] --> I[DS activity ranking]
-  J[Cyber reviewed activity contracts] --> I
-  I --> K[AI proposal workflow]
-  K --> L[CS two-person acceptance]
-```
+## Critical paths
 
-## Exactly who hands what to whom
-| Producer | Artifact | Consumer | Required by | Consumer ACK |
-|---|---|---|---|---|
-| CS | Identity/caller mapping, module rows/views, app adapter ports | Sumedh, Adam | P1 | Can validate real caller and identify permitted data |
-| Sumedh | VaultPort incl. profiles/extras; unlock/key behavior | CS | P2 | Existing UI saves/loads without plaintext fallback |
-| Adam | Private reflection/voice adapter and reviewed response shape | CS, Sumedh | P2 | Authenticated route renders/persists only locally |
-| Nimisha | Quiz/profile fixtures, no-action semantics | CS, Adam, Sumedh | P1/P2 | Skip/space/D015 handled consistently |
-| Sumedh | Real policy guards and exact approval/version rules | CS, Adam | P2/P3 | Direct calls cannot bypass consent |
-| CS | Guarded signal read, job store/claim/result API | Adam | P3 | Worker uses limited identity and cannot self-approve |
-| Nimisha | Pure rank hook and expected outcomes | Adam | P2/P3 | Coordinator uses matching without private-state access |
-| Adam | Bounded outcome, recheck, retry/cancel semantics | CS, Sumedh | P3 | Real result commits once under current consent |
-| CS | Normalized Apify catalogue, stable IDs/freshness | Nimisha, Adam | P3/P4 | Missing/expired records handled explicitly |
-| CS + Sumedh | Reviewed C7 proposal and new activity consent rules | Nimisha, Adam | Before P6 sharing | Schemas/fixtures/guards agreed; no C3 overloading |
-| All | Three scenario traces and final verification | CS release integrator | P5/P7 | Current revision and evidence recorded |
+Existing connection: CS identity/bindings + Cyber real vault/recipient consent → AI provider component and worker adapters → CS app composition → Cyber guarded commit → real two-account verification.
 
-## Shared-file edit ownership
-- `src/lib/backend/ports.ts`: CS coordinates; Adam proposes reflection/voice additions; Sumedh proposes vault/policy additions. Shared wire types belong in contracts, not duplicate app-only definitions.
-- `src/components/feature/quiz-model.ts`: starter by CS; Nimisha claims semantic changes with CS, who owns rendering.
-- `spacetimedb/src/schema.ts`, module exports and client bindings: CS coordinates. Sumedh claims approval/guard/suppression tests and files; neither edits another claimed file concurrently.
-- `src/app/api/reflections/` and voice route: Adam owns provider handler after file claim; CS supplies identity/session wiring. Both review logging and token exposure with Sumedh.
-- `src/server/discovery/` and discovery route: CS owns; Nimisha defines consumed fields; Sumedh reviews inputs/source handling.
-- Contracts: producer plus affected consumer review, and Sumedh for privacy. AI-branch proposal on Adam’s branch remains a proposal until reviewed/merged.
+New connection: reviewed C7/C8 → CS coarse-area/profile/indexed state + DS rank/discovery component + Cyber publication/block/expiry guards → AI bounded proposal → human invitation acceptance → public event source + explicit intent → guarded shared-plan acceptance.
 
-## Shared acceptance gates
-- **G1, P1 end:** every adapter has a consumer-facing signature/fixture and an owner; runtime/credential blockers logged.
-- **G2, P2 end:** private journal/reflection and exact named approval work with real guards; no sharing from skipped quiz.
-- **G3, P3 end:** deployed two-account flow reaches a nudge using a real bounded worker; wrong/expired/revoked input denied.
-- **G4, P4 end:** partners/friends/family all work and receipts show only approved fields; catalogue source returns clean records independently.
-- **G5, P5 end:** fixed privacy cases pass, quality results are measured, failure paths work. This gate controls stretch; it does not waive known failures.
-- **G6, P6 end:** source-backed activity proposal can be accepted by both users only if reviewed activity contracts/guards landed; otherwise catalogue remains read-only and core path stays intact.
-- **G7, P7/P8:** stable revision, real deployment smoke evidence, source/provider limitations and rollback documented.
+These tracks run in parallel, but neither may bypass identity/consent. New discovery does not require journaling. Event source failure must not break existing connections.
 
-## If a dependency slips
-Work on independent tests/UI with explicit fixtures; record what remains non-live. If core integration misses P3, cancel stretch and focus all owners on their specific missing boundary. Apify failure must not block journaling, consent or existing nudges. New activity sharing waits for contract/guard review; show catalogue only rather than bypassing permission. Provider failure offers typed entry or no suggestion, never fabricated live output. Known privacy failure blocks real-user mode.
+## Exact producer → consumer map
 
-## Communication and safe syncing
-Use task IDs CS-P#, DS-P#, AI-P#, CYBER-P#. Each meaningful handoff includes branch/commit, files/contracts, evidence, next named consumer action and blocker. Consumers ACK usable handoffs; shared dashboard is for cross-role next actions. Read logs hourly, raise blockers within 15 minutes, hold at most a short handoff every 3 hours.
+| Producer | Artifact / current starting point | Consumer | Due / consumer ACK |
+|---|---|---|---|
+| CS | Real generated module bindings, Clerk/worker identity mapping | Adam, Sumedh | R1: imports/build and authenticated mapping verified |
+| Sumedh | LocalVault exists; lifecycle privacy component and per-account wiring contract | CS | R1: UI create/unlock/recovery/save without plaintext fallback |
+| Adam | Existing private reflection client + voice helpers; new feature component | CS | R1: candidate in memory, reflection text only persisted; mic failure typed fallback |
+| Sumedh | Missing support-preference consent row/view and commit-time version binding | Adam, CS | R1: revoke during generation blocks actual commit |
+| Adam | Worker-side adapters over worker_signal_context, worker_delivery, new preference view and commit_nudge | CS, Sumedh | R1/R2: real policy backed by authoritative rows, no production fake |
+| CS + Sumedh | Proposed C7/C8 schemas and publication/area/invitation/event rules | Nimisha, Adam | R0 proposal, R1 reviewed schema/fixtures before runtime delivery |
+| Nimisha | Canonical nearby/event rank port and discover-results component | CS, Adam | R1/R2: authorized props only; zero model call for filtering |
+| CS | Indexed authorized candidate query and coarse area state | Nimisha, Adam | R2: bounded rows/cursor, no exact location or global dump |
+| Sumedh | Profile withdrawal/block/expiry/invitation guards | CS, Adam | R2: direct calls and stale generation denied |
+| CS | One normalized Apify catalogue/cache | Nimisha, Adam | R3: stable IDs, source/freshness and actual failure handling |
+| Adam + Sumedh | Versioned proposal state and current-consent finalization | CS, Nimisha | R3: two independent acceptances, no automatic external action |
+| All | Five scenario traces, quality and call budgets | Release integrator | R4/R5: current revision, synthetic vs live evidence separated |
 
-Fetch and merge origin/main into your role branch; preserve local work and resolve conflicts with the relevant owner. Do not reset/force-update another person’s branch or overwrite their handoff history. This planning update is pushed to main; active roles consume it by merging main themselves. Small role PRs reach main every 2–3 hours. Video planning stays separate in docs/DEMO.md.
+## File ownership for balanced implementation
+- CS retains shared app layout/navigation, composition root, identity/client bindings, module exports/schema integration, deploy and public source adapter.
+- Nimisha owns `src/evaluation/` and new `src/features/discovery/` component internals; CS composes the page. Quiz semantics require a claim on the existing shared file.
+- Adam owns `src/agents/`, `worker/`, existing provider route files and new `src/features/voice/`. Worker-side bindings mapping is Adam's implementation; CS supplies generated bindings and connection configuration.
+- Sumedh owns `src/vault/`, `src/privacy/`, new `src/features/privacy/`, and previously claimed policy/delivery/coordination reducers and worker views. He implements new preference/expiry/audience guards in claimed files, not merely reviews CS work.
+- Shared `schema.ts`, `views.ts`, `admin.ts`, exports and `src/lib/backend/ports.ts` need exact section/file claims before edits. One person integrates a shared file at a time; agree the patch rather than editing concurrently.
+- Production cross-workstream types come from `@kinetic/contracts`. DS's current ActivityItem is a consumer proposal; do not export it as a second wire schema. Package the pure rank port deliberately before AI imports it.
+
+## Gates and fallback
+R0: owners/seams agreed; R1: existing-flow adapter implementations plus new reviewed contracts; R2: nearby public-profile introduction; R3: source-backed same-event plan; R4: measured quality/efficiency and adversarial checks; R5: real providers/identity/database/browser; R6: stable release/reset/runbook.
+
+Keep R5 verification and R6 buffer when reducing scope. Cut extra sources, groups, calendar OAuth, venue-history inference and cosmetic polish first. Never fabricate live users/events or weaken permission checks. If keys are absent, ship tested adapters and synthetic fixtures, then label live checks pending.
+
+## Communication
+Use CS-R#, DS-R#, AI-R#, CYBER-R#. Append own role log with UTC timestamp, branch/commit, exact files/interface, evidence, next named consumer and blocker. Read all role logs hourly and before shared changes; raise blocked interfaces within 15 minutes. Teammates merge main into existing branches without reset/force push. Small PRs every 2–3 hours. New scope does not erase ACK conditions in src/privacy/REVIEWS.md. The user's personal assessment report stays local; team implementation evidence belongs in the repository.

@@ -2,7 +2,7 @@
 ## Disclosure policy
 Default: no sharing. Approval is per recipient/pair, exact signal revision, purpose (support nudge), and expiry; default lifetime 24 hours. The owner sees the same semantic preview the other person may receive. No hidden inferred mood export. Recipient must opt into nudges too.
 
-Allowed shared fields are only those in ApprovedSignal in contracts/src/index.ts. Use enumerated support preferences and coarse availability. No free text, source journal ID, quote, explanation, timestamp of journaling, precise schedule/location, medical/financial/sexual facts, third-party names, or embeddings. Even availability is disclosed only with explicit approval. A private candidate may be freely worded internally, but only the schema-constrained form can cross the boundary.
+For existing pair support, allowed shared fields are only those in ApprovedSignal in contracts/src/index.ts. Use enumerated support preferences and coarse availability. No free text, source journal ID, quote, explanation, timestamp of journaling, precise schedule/location, medical/financial/sexual facts, third-party names, or embeddings. Even availability is disclosed only with explicit approval. The private reflection may be freely worded; a candidate is enum-only, held in memory, and never consent. Only an explicitly approved schema-constrained signal may cross the pair boundary.
 
 Deterministic code validates schema, membership, current consent version, exact approved payload, expiry, revocation, and allowed purpose before storage, each exchange, nudge generation, and delivery. Agents cannot self-approve consent. No summarization-based workaround. Reject unknown fields and nested payloads. Journal instructions are untrusted input.
 
@@ -24,3 +24,8 @@ See ONBOARDING_SHARING.md. Owner-confirmed relationship-preset/category/purpose 
 
 ## Storage and processing update
 Journals, raw quiz answers, detailed schedules and private candidates persist only in the encrypted IndexedDB vault. Selected content may be processed transiently by the disclosed Cartesia/Claude pipeline. Next.js must suppress request-body logging and caching for these routes. Factory sees approved structured signals only. SpacetimeDB stores minimized consent/shared-state metadata with caller-filtered views, never a journal table. Cyber must verify provider retention and runtime logging behavior; local deletion cannot promise provider deletion without a verified provider mechanism.
+
+## Separate discovery publication (proposed C8)
+The user chose opted-in public profiles before mutual invitation acceptance. Support this with explicit publication of chosen fields/audience/purpose/expiry, not by making private tables public or applying pair presets to strangers. Public profile consent never releases journals, emotional inferences, raw quiz answers, contact details, exact location or habitual routines. Coarse area membership is private eligibility, not a live location indicator. Models cannot expand publication.
+
+Withdraw, block, expire and profile edits invalidate pending derived discovery; rate-limit invitations and repeated probes. Only approved nonsensitive overlap reasons can be displayed. Event intention is separately published and self-declared; catalogue scraping must not infer attendees. Authentication/caller-filtered views and timed expiry need direct tests before rollout. Previously viewed published information cannot be recalled. Detailed proposed records/guards are in DISCOVERY.md.

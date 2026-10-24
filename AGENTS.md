@@ -5,6 +5,8 @@ Read this file before working, including after resuming. Human owners and their 
 README.md → PRD.md → PROJECT_KNOWLEDGE.md → contracts/README.md → docs/PLAN.md → docs/TECH_STACK.md → contracts/specs/*.md → your docs/roles/<role>.md and docs/handoffs/<role>.md → all role update logs.
 
 ## Contract-first development
+C7 includes executable catalogue-input/link guards but shared activity types remain pending; C8 discovery publication/area/event-intent is proposed in contracts/specs/DISCOVERY.md. New scope never silently broadens C3 or D028.
+
 C1 local profile/reflection; C2 presets/recipient assignment; C3 approved disclosure; C4 agent ACK/coordination; C5 nudge/receipt; C6 policy and offline test boundary. Producer/consumer ownership is in contracts/README.md. Import only @kinetic/contracts across workstream boundaries. Do not reach into another owner's internals or duplicate wire types. Build against explicit fixtures/fakes until real adapters exist; never import fakes into production mode.
 
 ## Setup and evidence
@@ -33,12 +35,12 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 
 | Role / person | Current status | Next handoff |
 |---|---|---|
-| CS — you | M1/D015 plus core flow draft merged through d4cc763; disclosure.ts and FLOWS.md exist, not reducer/UI-wired; live bindings/auth pending | CS-P1/P2: wire reviewed F3/F4/F5/F7 flow: device-only preview, guarded approval, per-pair opt-in/delivery gate and commit; own Apify source/catalogue per docs/features/ACTIVITY_DISCOVERY.md |
-| DS — Nimisha | role/ds-context: rank hook `rankAckOptions` + activity ranker `rankActivities` (src/evaluation/rank.ts), 12 labeled activity cases + baseline report; DS-Q2/DS-Q3 resolved (D027). Offline/synthetic only | Adam: pass `rank: rankAckOptions`; CS: Q2 copy edit + C7 `ActivityCatalogueItem` vs DS `ActivityItem`; Sumedh: review D027(d) and activity-interest consent; team: 1–5 usefulness ratings |
-| Cyber — Sumedh | role/cyber-privacy @ 34e70f7 (merged main 982cfb0; PR #6). One policy (D026): disclosure.ts delegates to zod-free policy.ts; guarded approve_signal, set_nudge_delivery (opt-in default off), worker-only commit_nudge + worker views; real LocalVault (VaultPort incl. profile/extras); Apify input/link guards (D028); D016–D021 reviewed. Offline only: contracts 63, module 52, app 79, ai 40; not published | CS: ACK D026/D028 + VaultPort additions; wire LocalVault + create/unlock/recovery UI; publish module and run live two-account smoke. Adam: worker uses DisclosurePolicy over worker_signal_context; commit via commit_nudge; never show outcomes to sender. Cyber next: recipient-preferences consent table, expiry sweep, aud check |
-| AI — Adam | M1/D021 adapters and worker merged via PR #4; limited Droid tests, full policy/app integration pending | AI-P1/P2: preserve branch, review merged D021 interfaces against main SignalCandidateSchema and D016–D020 flows, authenticated provider routes, real policy/worker ports; note missing keys/latency |
+| CS — you | App/quiz/client adapter implemented; app composition still uses placeholders; actual bindings/auth/deployment unverified | CS-R1: compose real vault/voice features and generate bindings; CS-R2/R3: coarse-area discovery state and one Apify catalogue |
+| DS — Nimisha | PR #8 merged: ACK/activity rankers, 30 support + 12 activity cases, synthetic report | DS-R1/R2: canonical C7/C8 rank port, nearby/event fixtures and discovery-results component |
+| Cyber — Sumedh | d7285eb includes real vault, unified guards, opt-in, worker-only commit/views and Apify guards; offline only | CYBER-R1: recipient preference consent + commit binding, expiry/audience and privacy component; R2: publication/block guards |
+| AI — Adam | PR #7 merged: routes/browser helpers, real-policy worker factory, replay ledger and cheaper Droid; isolated Droid evidence only | AI-R1: voice component + worker database adapters; R2/R3: bounded introduction/event workflow; R4: call budgets |
 
-Detailed shared phases are in README.md; per-owner phases in docs/roles/*.md; exact producer/consumer dependencies in docs/PLAN.md. These are current planning assignments, not completion evidence. Merge main into your active role branch; do not reset or force-update other roles.
+R0–R6 replace the old P-phase schedule without resetting code or the original deadline. Detailed shared phases are in README.md; per-owner phases in docs/roles/*.md; exact producer/consumer dependencies in docs/PLAN.md. These are current planning assignments, not completion evidence. Merge main into your active role branch; do not reset or force-update other roles.
 
 ## Ownership and handoffs
 Use the ownership table in README.md. CS owns SpacetimeDB module plumbing; Cyber owns reusable authorization semantics and reviews the boundary. Shared contract edits need affected producer/consumer review. Before pausing or handing off, update docs/handoffs/<role>.md and your role log with branch/commit, exact interface, evidence, next consumer action and blocker. Refresh PROJECT_KNOWLEDGE.md after significant merges.

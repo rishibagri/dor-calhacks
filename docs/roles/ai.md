@@ -1,97 +1,129 @@
-# AI — Adam: voice, private reflection and bounded coordination
+# Adam — AI — revised implementation plan
 
-Branch: `role/ai-voice`
+**Branch:** `role/ai-voice`. **Baseline:** main `d7285eb`. **Task IDs:** `AI-R0` through `AI-R6`.
 
-## Your outcome
-Deliver a useful voice reflection loop and a real bounded agent workflow that acts only on approved signals. Integrate Nimisha’s matching and CS’s public activity catalogue without leaking private journal context or granting agent authority.
+## Your outcome and owned files
 
-## Owned implementation
-`src/agents/`, `worker/`, provider adapters, mic/streaming client helpers, model prompts and orchestration tests. Claim authenticated Next.js reflection/voice route files with CS before writing in `src/app/api/`; CS owns session middleware and application wiring.
+Voice/reflection experience, bounded agent workflows, worker adapters and provider efficiency.
 
-## Boundaries with other people
-Sumedh supplies authoritative policy; your workflow rechecks it and cannot replace it. Nimisha supplies ranking; CS supplies catalogue, shared-state adapters and result reducers. Private reflection receives only selected disclosed text; Factory receives approved enums/data, not journals, private quiz extras, identity details or provider keys.
+**Owned implementation:** src/agents/, worker/; existing provider routes; proposed src/features/voice/; worker-side database adapter mapping against CS bindings. New `src/features/` folders are assignments, not shipped components. Claim exact files in your own update log before editing shared surfaces.
 
-## Current starting point
-Remote `role/ai-voice` at 5ccd4ba reports M1 adapters, worker and contract proposals, offline tests and limited live Droid checks. M1 and additive D021 contracts are now merged into main through c4315e3; tests/live measurements remain attributed to Adam’s handoff. Preserve this work; do not recreate it. The branch log reports Claude/Cartesia missing credentials and variable Droid latency. Review latest branch log/handoff before following these phases.
+## Already implemented — preserve it
 
-## Your first action
-Compare your branch to latest main and preserve AI-branch proposal work. Resolve shared ReflectionPort/PrivateReflection response and worker ports with CS, get Sumedh’s review of policy/recipient-preference consent, then complete authenticated routes and browser voice loop. Publish remaining credential/runtime blockers without secrets.
+Authenticated routes, browser helpers, real-policy worker factory, JobLedger and cheaper Droid path are on main through PR #7. The existing app has not wired these helpers. Full worker adapters, recipient-preference consent backing and live Claude/Cartesia/browser checks remain.
 
-## How to use these phases
-Times are targets relative to the original 36-hour start, not a new 36-hour allocation. Check current main, your remote role branch, the shared dashboard and your existing handoff first. Preserve completed work and evidence; skip a phase only when its exit conditions are met. If the sprint is already underway, start at the first unmet gate. Report schedule risk rather than silently moving deadlines. Planning remains capped at the original 30 minutes.
+## Product reset
 
-Each phase has a named artifact, a check, and a consumer. Open small PRs every 2–3 hours. Log blockers within 15 minutes; continue independent work with explicit synthetic fixtures, never a production bypass. Each person owns their implementation, tests and run instructions. CS integrates the pieces; CS does not implement everyone else's logic.
+Kinetic now supports existing relationships, nearby introductions and meeting people through local events. Use one-time approximate location and explicitly published public profiles visible before an invitation is accepted. No journal is required for discovery. Existing support signals/presets never grant stranger access. Read [LOCAL_CONNECTIONS](../features/LOCAL_CONNECTIONS.md), [C8 discovery](../../contracts/specs/DISCOVERY.md) and [README](../../README.md).
 
-## P0 · T+0–0:30 · Agree interfaces and claim work
+R phases replace old P scheduling only. Keep old commit-specific handoff history. Use the actual time remaining in the original 36-hour sprint; percentages are estimates, not a reset of the clock. Each person owns code, tests and a usable feature component so CS is not the sole implementer.
 
-- **Build:** Inspect existing branch, logs and AI-branch proposal rather than respiking completed work. Claim route/port files and map what is implemented, fixture-tested, live-tested and missing.
-- **Exit evidence:** Consumers know which proposed interfaces are branch-only and which require review.
-- **Hand off:** CS/Sumedh/Nimisha: exact AI-branch proposal changes and required ACKs, no silent merge assumption.
+## AI-R0 · Reconcile the latest build and freeze the new seams
 
-## P1 · T+0:30–3 · Unblock the other three owners
+**Shared allocation:** 3% of remaining time, at most 30 minutes.
 
-- **Build:** Prove Cartesia input/output and transient Claude structured reflection when keys exist; document Factory deployed runtime/auth. Reuse existing Droid results but do not call them full live pipeline evidence.
-- **Exit evidence:** Actual tested provider endpoints/versions identified; missing keys are explicit; sanitized provider processing map.
-- **Hand off:** CS: service adapter and config needs. Sumedh: content/log/session boundary. Nimisha: candidate examples.
+**Implement:** Keep the Haiku/reused-directory Droid path and existing routes/browser helpers. Claim the voice feature component and worker-side adapters. Propose an aggregate deadline, concurrency cap and call budget.
 
-## P2 · T+3–7 · Build the private-to-approved path
+**Your exit evidence:** A list of real vs fake dependencies, no new provider spend, and current exact adapter names.
 
-- **Build:** Finish authenticated reflection/voice routes with CS and browser mic/start/stop/permission/error behavior. Return private reflection/candidate to vault; schema-validate all output.
-- **Exit evidence:** No raw persistence in API/Factory; mic denied/network loss offers typed input; cancellation stops work/playback.
-- **Hand off:** CS: working service factory and UI hooks. Sumedh: provider/error/log tests.
+**Next consumer:** CS: component/route interface; Sumedh: worker authority and preference consent requirements.
 
-## P3 · T+7–12 · Join the real two-user flow
+**Shared gate:** Every missing interface has a producer, consumer and file claim. No one repeats completed bootstrap work.
 
-- **Build:** Wire real approved signals and current recipient preferences into bounded Factory workflow, Nimisha rank hook, and guarded result commit. Add dedupe, version recheck and timeout outcomes.
-- **Exit evidence:** A real job completes at most two rounds; stale/revoked input cannot commit; no duplicate nudge on retry.
-- **Hand off:** CS: traceable job outcome with sanitized status. Nimisha: observed decision vs expected result.
+**When blocked:** If a shared schema is unresolved, continue UI/rank/adapter work on explicitly synthetic fixtures; shared delivery remains disabled.
 
-## P4 · T+12–17 · Complete all three relationship scenarios
+## AI-R1 · Finish the existing connection path and implement new discovery contracts
 
-- **Build:** Handle partner/friend/family differences, support-only signals, missing time, no compatible action and quiet hours. Use templates limited to approved reasons; respect recipient consent for ACK data.
-- **Exit evidence:** No hidden-cause explanation or journal quote appears in shared output; no-action is an ordinary successful outcome.
-- **Hand off:** Nimisha: failures and outputs for frozen evaluation. Sumedh: audited shared prompt/tool examples.
+**Shared allocation:** 18% of remaining time.
 
-## P5 · T+17–22 · Validate quality, privacy and recovery
+**Implement:** Build the voice/reflection feature component using current clients: record, stop, correction, cancel, typed fallback. Implement worker adapters for worker_signal_context, worker_delivery and commit_nudge with CS-generated bindings. Wire DS rank via reviewed shared port. Serialize the reused Droid directory or use isolated pool slots before enabling concurrent jobs.
 
-- **Build:** Measure >=10 representative runs, median/p95 voice/nudge latency, retries and failure categories. Compare with targets honestly; fix injection/unsafe text and cap token/tool/time budgets.
-- **Exit evidence:** Publish actual measured timing and skipped providers; do not present an 8-second target as reliable when measurements disagree.
-- **Hand off:** Team: performance report and concrete integration failures.
+**Your exit evidence:** No production fake; reflected text persists locally, candidate stays in memory; missing recipient consent returns no result.
 
-## P6 · T+22–27 · Finish activity discovery and selected depth
+**Next consumer:** CS: drop-in voice component; Cyber: exact read/commit mapping and version bindings.
 
-- **Build:** Consume CS’s normalized public activities and Nimisha’s ranking only after activity-consent contract review. Let agents propose bounded options/counters, then require human acceptance.
-- **Exit evidence:** No arbitrary URL/tool execution from scraped content; no auto-booking; approved shared context only.
-- **Hand off:** CS: activity proposal IDs/state; Sumedh: consent source/version links; Nimisha: ranking feedback.
+**Shared gate:** Existing typed reflection-to-nudge flow has all real adapter implementations; C7/C8 schema, fixtures and guards are reviewed before shared discovery is enabled.
 
-## P7 · T+27–31 · Stabilize the release candidate
+**When blocked:** Credentials can defer live execution, not implementation of identity/consent checks. Keep all data synthetic until the real boundary passes.
 
-- **Build:** Harden runtime restart/replay, credentials, rate limits and cancellation against the release candidate. Maintain explicit fixture fallback labels.
-- **Exit evidence:** Worker authenticates and has limited tools; restart/retry does not duplicate or resurrect work.
-- **Hand off:** CS: deployment/runbook and tested health check, without secrets.
+## AI-R2 · Ship the nearby introduction vertical slice
 
-## P8 · T+31–34 · Freeze and document
+**Shared allocation:** 22% of remaining time.
 
-- **Build:** Freeze prompts and tested model/Actor-independent adapter settings; exercise real provider flow on deployed revision with CS/Sumedh.
-- **Exit evidence:** Provider credentials/availability and result provenance are documented; no untested path described as live.
-- **Hand off:** Team: final tested workflow, latency and remaining constraints.
+**Implement:** Implement bounded logical agent exchange over C8-approved cards after deterministic eligibility. Produce an introduction suggestion or no action, never an unsolicited message. Skip model calls for zero choices; benchmark deterministic single-choice mode; recheck profiles/blocks before commit.
 
-## P9 · T+34–36 · Release buffer and support
+**Your exit evidence:** At most one initial call plus one permitted repair for a shortlisted proposal; zero raw journals/coordinates in prompts; stale opt-out cannot publish.
 
-- **Build:** Support only release-blocking provider/worker defects; preserve logs without content and help reproduce failures.
-- **Exit evidence:** Same reviewed workflow remains running; no last-minute unbounded agent capabilities.
-- **Hand off:** Team: final provider status and follow-up bugs.
+**Next consumer:** CS: proposal/result state; Sumedh: generation-race cases; Nimisha: outcome vs ranking evidence.
 
-## Verification you own
-- `npm run ai:check` is available on main after PR #4; inspect package.json for current scripts. Main also has contract/module/app checks.
-- Selected-text-only provider requests, malicious-output rejection, typed fallback and stop/cancel behavior.
-- Worker authenticated requests, no private-session data, bounded rounds/tools, replay/idempotency and live consent rechecks.
-- Record current median/p95 and timeout/no-action rates; distinguish fixture-policy Droid tests from real end-to-end privacy validation.
+**Shared gate:** A newcomer sees opted-in public profiles before sending an invite, receives a concrete reason to connect, and can decline, withdraw or block. Direct interaction requires recipient acceptance.
 
-## Completion and communication
-Update `docs/updates/ai.md` and `docs/handoffs/ai.md` at each meaningful handoff with task ID (`AI-P#`), UTC timestamp, branch/commit, files/contracts, actual verification, next named consumer action and blockers. Log a consumer ACK when integration succeeds. Read all four update logs hourly and before shared interface changes. Refresh shared status only from verified or clearly attributed evidence. Do not overwrite another role’s history.
+**When blocked:** If density is low, show a truthful empty state plus public events. Never invent real nearby users or silently widen location precision.
 
-Read [the shared dependency plan](../PLAN.md) and [the Apify feature plan](../features/ACTIVITY_DISCOVERY.md). Demo/video production remains separate in docs/DEMO.md.
+## AI-R3 · Connect people through local events and shared plans
 
-## Latest main flow baseline — preserve this work
-Main through d4cc763 includes `contracts/src/disclosure.ts` and `contracts/specs/FLOWS.md`: reuse/review `previewDisclosure`, `nudgeDelivery`, `SignalCandidateSchema` and `templateForSignal`. Main D016–D020 are the canonical flow decisions; Adam's branch independently used D016 for different proposed contracts, so reconcile by schema/commit. Preview is device-only; opt-in defaults off per connection; quiet hours/cooldown apply at coordination and commit. Space/no need yields no candidate; availability-only approval produces no nudge. These helpers are drafted/offline-tested, not yet wired authoritative guards. Sumedh ACK remains pending.
+**Shared allocation:** 22% of remaining time.
+
+**Implement:** Add bounded event-based introduction and shared-plan proposals selected only from normalized catalogue IDs. Distinguish discovery opt-in from pair activity approval. Implement expiry/cancel/retry handling and human acceptance of the same proposal revision.
+
+**Your exit evidence:** No web/tool action from scraped titles; no automatic RSVP, booking, message or external purchase; profile/event changes suppress stale proposals.
+
+**Next consumer:** CS/Cyber: exact proposal state and guarded finalization; Nimisha: decision traces without private content.
+
+**Shared gate:** Two users discover the same source-backed local event, explicitly choose to connect, and accept a current shared plan. Existing partner/friend/family journeys still work.
+
+**When blocked:** If the source is unavailable, keep cached age visible or show unavailable. Synthetic events remain labeled; never claim a live Apify integration from fixtures.
+
+## AI-R4 · Improve usefulness, efficiency and failure behavior
+
+**Shared allocation:** 15% of remaining time.
+
+**Implement:** Measure 10+ eligible provider runs when keys arrive. Right-size reflection output/model using quality checks; add request dedupe without persistent private-result cache, total deadlines/cancellation, retry policy and worker concurrency bounds. Track all usage/fallback outcomes. Verify token expiry and stateful audio resampling across small microphone frames; bound browser TTS input.
+
+**Your exit evidence:** Cost per successful useful result, median/p95 including failures, model/cache/attempt counts; retained safety checks; no unsupported savings claim.
+
+**Next consumer:** CS: tested runtime budget; Cyber: dedupe/retention boundaries; DS: quality regression cases.
+
+**Shared gate:** All three experiences have useful outcomes, measured call budgets and passing current privacy gates. Known failures remain visible; targets are not reported as achievements.
+
+**When blocked:** Cut extra feeds, animations or free-form agent negotiation first. Never cut consent checks, explicit public-profile opt-in or block/withdraw behavior.
+
+## AI-R5 · Morning live verification and release candidate
+
+**Shared allocation:** 12% of remaining time.
+
+**Implement:** Verify direct Claude reflection, Cartesia STT/TTS, deployed Factory worker and database-backed commit. Test mic denial, stop/cancel, token expiry, cold/warm calls and upstream failure with total budget limits.
+
+**Your exit evidence:** Provider-by-provider success and end-to-end trace reported separately; no fixture policy or preferences in live mode.
+
+**Next consumer:** CS: worker runbook/restart; Cyber: sanitized processing and token trace.
+
+**Shared gate:** A fixed candidate revision works with actual providers and authoritative state. Each failure has a named owner; no mocked/live ambiguity.
+
+**When blocked:** If a provider fails, typed input/no suggestion and truthful source-unavailable states remain. Do not put keys into logs or switch to production fake adapters.
+
+## AI-R6 · Freeze, hand off and reserve recovery time
+
+**Shared allocation:** 8% of remaining time.
+
+**Implement:** Freeze prompt/model/call-budget configuration and verify worker health/restart. Document cancellation and safe provider-failure behavior.
+
+**Your exit evidence:** No last-minute tool expansion or unmeasured model switch.
+
+**Next consumer:** CS: runtime recovery and final provider evidence.
+
+**Shared gate:** Code, configuration, evidence and team handoffs describe the same release. The product is ready for a controlled demonstration.
+
+**When blocked:** Buffer is for release recovery, not another product pivot. Keep the user-requested personal analysis report local.
+
+## Interface and review rules
+
+Use the existing canonical schemas and ports. New C7/C8 wire shapes need affected producer/consumer review and Cyber boundary review, source exports, generated schemas, fixtures and direct rejection tests. A planning document does not authorize a new runtime disclosure. Do not import another owner's internals; expose the rank/feature boundary deliberately.
+
+Keep journals, raw quiz extras and precise coordinates out of shared state, provider catalogue requests, agent logs and tests. Discovery can use only published profile/event fields under the separate C8 consent; pair signals retain named-recipient approval. No unrestricted agent conversation or automatic personal messages.
+
+## Verification and handoff
+
+Run the checks applicable to changed files plus root `npm run check`; shared/release changes require `check:all`, `ai:check` and the app build. Distinguish mock/harness checks, implemented adapters, deployment and live runs. Never represent an offline policy or seeded user as real discovery.
+
+Append the exact task/commit/files/verification/next consumer/blocker in your role update log; refresh your handoff. Consumers ACK actual usable interfaces. Read all four logs hourly and before interface edits; raise blockers within 15 minutes. Preserve role branch work when merging main. The personal assessment requested by the user stays local; implementation evidence belongs in normal role logs.

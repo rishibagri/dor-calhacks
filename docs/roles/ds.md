@@ -1,100 +1,129 @@
-# DS — Nimisha: preference model, activity matching and evaluation
+# Nimisha — DS — revised implementation plan
 
-Branch: `role/ds-context`
+**Branch:** `role/ds-context`. **Baseline:** main `d7285eb`. **Task IDs:** `DS-R0` through `DS-R6`.
 
-## Your outcome
-Make suggestions worth acting on. Turn explicit quiz choices into editable preferences, match only eligible approved information against real activity options, and measure useful suggestions and correct no-action outcomes. Own data logic, not just a spreadsheet or a final report.
+## Your outcome and owned files
 
-## Owned implementation
-`src/evaluation/`, pure quiz/profile/ranking modules, evaluation datasets/results; claim `src/components/feature/quiz-model.ts` and its tests with CS before changes because a starter implementation already exists. Shared synthetic fixtures in `contracts/fixtures/` require consuming-owner and privacy review.
+Matching, candidate retrieval requirements, evidence and the discover-results feature component.
 
-## Boundaries with other people
-CS owns Apify collection, catalogue endpoint and app UI rendering. You own normalization expectations, ranking/compatibility and quality criteria. Adam calls your pure matching hook from orchestration. Sumedh decides permission eligibility; ranking cannot override a deny. Never gather real private journals for an evaluation dataset.
+**Owned implementation:** src/evaluation/; proposed src/features/discovery/ (cards, reason-code display, empty states; receives authorized data via props); quiz semantics by file claim. New `src/features/` folders are assignments, not shipped components. Claim exact files in your own update log before editing shared surfaces.
 
-## Current starting point
-An eight-question app quiz and D015 mapping already exist on main. Fixtures include confirmed presets and recipient assignments; friends omit availability, family sharing is explicit beyond the suggested preset. Q1 space is local-only `prefersSpace`; Q5/Q6/Q8 remain in local vault extras. Review this before replacing any mapping.
+## Already implemented — preserve it
 
-## Latest role-branch evidence
-Current branch status: remote role/ds-context 42ff908 reports quiz fixtures, rule matching and evaluation work. Preserve it; review current D015/flow alignment and outstanding DS-Q2/DS-Q3 instead of rebuilding the dataset or rank baseline.
+Your 30 support cases, 12 activity cases, rankAckOptions and rankActivities are on main through PR #8. Synthetic ranking results exist; independent human ratings do not. C7 ActivityItem is still a consumer proposal; C8 nearby ranking is new work.
 
-## Your first action
-Inspect D015, `src/components/feature/quiz-model.ts`, local quiz extras, and all three scenario fixtures. ACK or identify a concrete mapping issue. Deliver deterministic expected profiles, no-action cases and the proposed ranking input/output to CS and Adam before advanced scoring.
+## Product reset
 
-## How to use these phases
-Times are targets relative to the original 36-hour start, not a new 36-hour allocation. Check current main, your remote role branch, the shared dashboard and your existing handoff first. Preserve completed work and evidence; skip a phase only when its exit conditions are met. If the sprint is already underway, start at the first unmet gate. Report schedule risk rather than silently moving deadlines. Planning remains capped at the original 30 minutes.
+Kinetic now supports existing relationships, nearby introductions and meeting people through local events. Use one-time approximate location and explicitly published public profiles visible before an invitation is accepted. No journal is required for discovery. Existing support signals/presets never grant stranger access. Read [LOCAL_CONNECTIONS](../features/LOCAL_CONNECTIONS.md), [C8 discovery](../../contracts/specs/DISCOVERY.md) and [README](../../README.md).
 
-Each phase has a named artifact, a check, and a consumer. Open small PRs every 2–3 hours. Log blockers within 15 minutes; continue independent work with explicit synthetic fixtures, never a production bypass. Each person owns their implementation, tests and run instructions. CS integrates the pieces; CS does not implement everyone else's logic.
+R phases replace old P scheduling only. Keep old commit-specific handoff history. Use the actual time remaining in the original 36-hour sprint; percentages are estimates, not a reset of the clock. Each person owns code, tests and a usable feature component so CS is not the sole implementer.
 
-## P0 · T+0–0:30 · Agree interfaces and claim work
+## DS-R0 · Reconcile the latest build and freeze the new seams
 
-- **Build:** Agree the eight question outcomes, local-only fields and meaningful support modes. Define partner/friend/family expected results and claim quiz semantics from CS.
-- **Exit evidence:** Every answer has an explicit local mapping or remains omitted; no personality diagnosis or automatic consent.
-- **Hand off:** CS: quiz copy/mapping decisions. Sumedh: fields that must remain local.
+**Shared allocation:** 3% of remaining time, at most 30 minutes.
 
-## P1 · T+0:30–3 · Unblock the other three owners
+**Implement:** Keep rankAckOptions, rankActivities and the 30+12 fixtures. Specify discovery ranking fields, bounded candidate retrieval and allowed explanation codes. Claim the new discover-results component and define its props.
 
-- **Build:** Produce reviewed profile fixtures, confirmed-preset scenarios and initial labeled expected outcomes; define ranking port and catalogue fields with CS/Adam.
-- **Exit evidence:** Fixtures validate; space, skip, empty preferences and blocked categories have expected no-action behavior.
-- **Hand off:** CS: quiz expectations and catalogue requirements. Adam: deterministic matching contract proposal.
+**Your exit evidence:** Approved/public inputs are distinguished from private quiz extras; a cold-start case is labeled.
 
-## P2 · T+3–7 · Build the private-to-approved path
+**Next consumer:** CS/Adam: typed consumer requirements and deterministic sample results.
 
-- **Build:** Implement pure quiz-to-profile mapping and eligible action ranking; author the 30-case dataset: 6 partners, 6 friends, 6 family, 6 privacy attacks, 6 no-action cases.
-- **Exit evidence:** Same inputs produce same outputs; missing data is not invented; all cases have expected outcome before model runs.
-- **Hand off:** Adam: tested rank hook. CS: owner-only profile result and preset suggestion data.
+**Shared gate:** Every missing interface has a producer, consumer and file claim. No one repeats completed bootstrap work.
 
-## P3 · T+7–12 · Join the real two-user flow
+**When blocked:** If a shared schema is unresolved, continue UI/rank/adapter work on explicitly synthetic fixtures; shared delivery remains disabled.
 
-- **Build:** Integrate ranking against approved signals/recipient consent and synthetic catalogue items, then CS’s normalized live catalogue when available. Include format, coarse time compatibility and activity expiry.
-- **Exit evidence:** No prohibited field is needed for a ranking decision; expired or incompatible options return no suggestion.
-- **Hand off:** Adam: rank result, stable IDs and allowed rationale codes; no raw-text hidden cause.
+## DS-R1 · Finish the existing connection path and implement new discovery contracts
 
-## P4 · T+12–17 · Complete all three relationship scenarios
+**Shared allocation:** 18% of remaining time.
 
-- **Build:** Run three complete scenarios and activity matching examples. Add a rule-based baseline, duplicate/cold-start cases and feedback interpretation. Keep local-only preferences out of shared worker inputs.
-- **Exit evidence:** Shared explanations contain only approved reasons; two-person overlap is real, not assumed from one person’s journal.
-- **Hand off:** CS: meaningful activity-card states; Sumedh: source-field/disclosure matrix.
+**Implement:** Adapt ActivityItem to reviewed C7 without parallel wire types. Implement pure nearby matching using only published interests, approved event intent and permitted area eligibility. Build discover cards/empty states against synthetic C8 data; explain overlap without a compatibility percentage.
 
-## P5 · T+17–22 · Validate quality, privacy and recovery
+**Your exit evidence:** Same input gives same result; block/expiry/missing consent never enters the eligible rank set; empty area stays honest.
 
-- **Build:** Freeze evaluation set, run model/agent and baseline comparisons, have two teammates rate eligible suggestions 1–5. Report relevance and false-positive/no-action errors separately.
-- **Exit evidence:** Publish actual counts/sample size and failures; target >=4 mean usefulness is reported as a target, never fabricated.
-- **Hand off:** Team: prioritized defect list linked to case IDs; Adam: counterexamples to fix.
+**Next consumer:** CS: discover-results component; Adam: canonical pure ranking port and fixtures.
 
-## P6 · T+22–27 · Finish activity discovery and selected depth
+**Shared gate:** Existing typed reflection-to-nudge flow has all real adapter implementations; C7/C8 schema, fixtures and guards are reviewed before shared discovery is enabled.
 
-- **Build:** Improve matching on diagnosed errors; support real catalogue ranking and both-person acceptance feedback after contract review. If .ics is useful, parse locally and export only explicitly approved coarse windows.
-- **Exit evidence:** Useful results do not require private calendars, precise location or medical/emotional labels.
-- **Hand off:** CS/Adam: stable ranked examples for approved activity flow.
+**When blocked:** Credentials can defer live execution, not implementation of identity/consent checks. Keep all data synthetic until the real boundary passes.
 
-## P7 · T+27–31 · Stabilize the release candidate
+## DS-R2 · Ship the nearby introduction vertical slice
 
-- **Build:** Rerun frozen cases against release candidate and document changed results/baseline; stop tuning if new changes lack evidence.
-- **Exit evidence:** Results reproducible from revision/seed/config, with live provider and fixture runs distinguished.
-- **Hand off:** Team: final evaluation report and exact run command.
+**Shared allocation:** 22% of remaining time.
 
-## P8 · T+31–34 · Freeze and document
+**Implement:** Finish deterministic shortlist, cap candidates, stable tie-breaks, duplicate removal and no-fit logic. Render chosen public name/avatar/interests and safe reason codes. Add sparse-area, already-connected, withdrawn, blocked and coarse-cell-edge cases.
 
-- **Build:** Document final mappings, limitations, edge cases and source coverage. Confirm activity cards never imply guaranteed ticket availability or compatibility.
-- **Exit evidence:** A teammate can reproduce the quality checks without real journals.
-- **Hand off:** CS: release quality summary; all: remaining risks.
+**Your exit evidence:** Rank never needs a journal, diagnosis, routine or exact distance; public result fields equal the approved profile projection.
 
-## P9 · T+34–36 · Release buffer and support
+**Next consumer:** CS: fully usable discovery feature; Adam: at most top three eligible candidates with allowed reasons.
 
-- **Build:** Provide regression triage and validate only release-blocking changes; preserve datasets/results.
-- **Exit evidence:** No last-minute unlabeled test-set retuning or unsupported claims.
-- **Hand off:** Team: final quality state and follow-up cases.
+**Shared gate:** A newcomer sees opted-in public profiles before sending an invite, receives a concrete reason to connect, and can decline, withdraw or block. Direct interaction requires recipient acceptance.
 
-## Verification you own
-- Contract fixture checks plus quiz mapping tests already in the app; add meaningful ranking/evaluation checks in owned modules.
-- Correct no-action for space/paused preference, no mutual fit, missing required consent, expired activity and empty catalogue.
-- Report target vs actual usefulness, coverage, error counts and latency separately.
-- Public catalogue content is untrusted data; no ranking output can mint consent or impersonate either participant.
+**When blocked:** If density is low, show a truthful empty state plus public events. Never invent real nearby users or silently widen location precision.
 
-## Completion and communication
-Update `docs/updates/ds.md` and `docs/handoffs/ds.md` at each meaningful handoff with task ID (`DS-P#`), UTC timestamp, branch/commit, files/contracts, actual verification, next named consumer action and blockers. Log a consumer ACK when integration succeeds. Read all four update logs hourly and before shared interface changes. Refresh shared status only from verified or clearly attributed evidence. Do not overwrite another role’s history.
+## DS-R3 · Connect people through local events and shared plans
 
-Read [the shared dependency plan](../PLAN.md) and [the Apify feature plan](../features/ACTIVITY_DISCOVERY.md). Demo/video production remains separate in docs/DEMO.md.
+**Shared allocation:** 22% of remaining time.
 
-## Latest main flow baseline — preserve this work
-Main through d4cc763 includes `contracts/src/disclosure.ts` and `contracts/specs/FLOWS.md`: reuse/review `previewDisclosure`, `nudgeDelivery`, `SignalCandidateSchema` and `templateForSignal`. Main D016–D020 are the canonical flow decisions; Adam's branch independently used D016 for different proposed contracts, so reconcile by schema/commit. Preview is device-only; opt-in defaults off per connection; quiet hours/cooldown apply at coordination and commit. Space/no need yields no candidate; availability-only approval produces no nudge. These helpers are drafted/offline-tested, not yet wired authoritative guards. Sumedh ACK remains pending.
+**Implement:** Implement event eligibility and overlap from explicitly published event intent, not scraped attendance. Extend ranker to in-person events/approved coarse area; retain online activities for existing long-distance connections. Build event-result cards and first-session recommendations.
+
+**Your exit evidence:** Duplicate listings resolve consistently; expired/cancelled/wrong-area events excluded; interest is not labeled attendance; no private Q5 export.
+
+**Next consumer:** Adam: event shortlist; CS: components and source-status labels; team: new held-out cases.
+
+**Shared gate:** Two users discover the same source-backed local event, explicitly choose to connect, and accept a current shared plan. Existing partner/friend/family journeys still work.
+
+**When blocked:** If the source is unavailable, keep cached age visible or show unavailable. Synthetic events remain labeled; never claim a live Apify integration from fixtures.
+
+## DS-R4 · Improve usefulness, efficiency and failure behavior
+
+**Shared allocation:** 15% of remaining time.
+
+**Implement:** Add at least 12 nearby/event cases beyond the existing 30 support + 12 activity cases. Get two teammate ratings on held-out useful introductions, measure no-fit/false-match coverage and compare baseline. Track invite accepted and optional plan completion instead of chat length.
+
+**Your exit evidence:** Results separate synthetic labels from human ratings; disclose tiny sample size; evaluate expensive AI against deterministic baseline.
+
+**Next consumer:** All: release decision by case and metric; Adam: cases where model adds measurable value.
+
+**Shared gate:** All three experiences have useful outcomes, measured call budgets and passing current privacy gates. Known failures remain visible; targets are not reported as achievements.
+
+**When blocked:** Cut extra feeds, animations or free-form agent negotiation first. Never cut consent checks, explicit public-profile opt-in or block/withdraw behavior.
+
+## DS-R5 · Morning live verification and release candidate
+
+**Shared allocation:** 12% of remaining time.
+
+**Implement:** Run partner, friend, family, newcomer and same-event scenarios against the release candidate. Verify real source normalization against fixture assumptions and review first-use copy with teammates.
+
+**Your exit evidence:** Actual visible recommendation matches authorized input and source; five scenarios reproducible.
+
+**Next consumer:** CS: release quality verdict and remaining empty/no-fit cases.
+
+**Shared gate:** A fixed candidate revision works with actual providers and authoritative state. Each failure has a named owner; no mocked/live ambiguity.
+
+**When blocked:** If a provider fails, typed input/no suggestion and truthful source-unavailable states remain. Do not put keys into logs or switch to production fake adapters.
+
+## DS-R6 · Freeze, hand off and reserve recovery time
+
+**Shared allocation:** 8% of remaining time.
+
+**Implement:** Freeze fixtures/labels/results and document cold-start/source coverage limits. Validate only changed regression cases after freeze.
+
+**Your exit evidence:** Quality results reproducible without real journals or relabeling misses.
+
+**Next consumer:** Team: quality summary and later research questions.
+
+**Shared gate:** Code, configuration, evidence and team handoffs describe the same release. The product is ready for a controlled demonstration.
+
+**When blocked:** Buffer is for release recovery, not another product pivot. Keep the user-requested personal analysis report local.
+
+## Interface and review rules
+
+Use the existing canonical schemas and ports. New C7/C8 wire shapes need affected producer/consumer review and Cyber boundary review, source exports, generated schemas, fixtures and direct rejection tests. A planning document does not authorize a new runtime disclosure. Do not import another owner's internals; expose the rank/feature boundary deliberately.
+
+Keep journals, raw quiz extras and precise coordinates out of shared state, provider catalogue requests, agent logs and tests. Discovery can use only published profile/event fields under the separate C8 consent; pair signals retain named-recipient approval. No unrestricted agent conversation or automatic personal messages.
+
+## Verification and handoff
+
+Run the checks applicable to changed files plus root `npm run check`; shared/release changes require `check:all`, `ai:check` and the app build. Distinguish mock/harness checks, implemented adapters, deployment and live runs. Never represent an offline policy or seeded user as real discovery.
+
+Append the exact task/commit/files/verification/next consumer/blocker in your role update log; refresh your handoff. Consumers ACK actual usable interfaces. Read all four logs hourly and before interface edits; raise blockers within 15 minutes. Preserve role branch work when merging main. The personal assessment requested by the user stays local; implementation evidence belongs in normal role logs.

@@ -1,30 +1,29 @@
-# Product and ambitious scope
-## Promise
-Help people show up for each other without requiring them to share every private detail. Distance creates missing context; Kinetic proposes small, timely acts of care.
+# Kinetic — human connection, with AI doing the preparation
 
-## Committed 36-hour experience
-- Skippable 6–8-question onboarding personalizes communication, support, social bandwidth and draft sharing preferences; editable owner-only connection profile.
-- Owner-confirmed partner/friend/family sharing presets, explicit assignment to each connection, and named-recipient disclosure previews. No individual category overrides or quiz-based automatic consent.
-- Responsive, polished web app: pair onboarding, two authenticated accounts, invite acceptance, journal, consent review, nudges, settings.
-- Live voice reflection through a Cartesia adapter, visible recording state, interruption/stop, transcript correction, and typed fallback.
-- Encrypted local IndexedDB/Web Crypto journal history and useful reflection via disclosed transient Claude processing. Raw audio defaults to transient processing; persistent recording requires separate explicit consent.
-- A private agent proposes a coarse sharing signal; the owner previews its exact recipient-visible meaning and approves or declines it. No signal is shared by default.
-- Two agents coordinate through structured, bounded signal exchange. Sender agent proposes; policy service validates; recipient agent ACKs compatible support modes and availability from its own approved preferences; coordinator proposes a nudge. Maximum two exchange rounds, no unrestricted agent chat.
-- Nudge inbox with rationale limited to approved context, dismiss/snooze/helpful feedback, quiet hours, cooldown, and one action the person can choose.
-- Privacy center: approved signals, recipient, expiry, revoke/unlink, journal deletion, and a sanitized receipt of what crossed the boundary.
-- Three complete seeded experiences: partners, friends, family. Same product, different relationship context.
-- Deployed application with reproducible seed/reset and documented recovery behavior.
-- CS-owned Apify discovery from one public activity source, with normalized source-backed cards, freshness and failure fallback.
-- Consent-reviewed activity matching and proposal acceptance by both participants. This requires new activity/proposal contracts and current approval checks; existing C3 fields are not sufficient authorization.
+## Product promise
+Help people start and sustain human connections. Kinetic supports existing partners, friends and family, people new to a neighborhood/campus, and people seeking company at a local event. AI helps find a useful person, reason and moment; people decide whether to connect.
 
-## Stretch after core acceptance at hour 22
-Opt-in recurring ritual suggestion, time-zone-aware scheduling, accessible playback, richer longitudinal owner-only reflection. Choose at most two. Do not add native apps, calendar OAuth, SMS, contact import, group relationships, or unlimited agent negotiation during this sprint.
+This expands the original distance-focused product without discarding it. Private journaling is optional for discovery. The thesis is worth testing: reducing coordination effort and uncertainty could produce more real conversations and shared plans. Do not present demand, loneliness reduction or retention as proven.
 
-## Privacy truth
-A nudge can itself reveal that someone may want support. Even coarse signals can invite inference. Show this clearly at approval; allow no sharing, generic suggestions, or exact bounded sharing. The journal is private from the other person, not necessarily from the processing providers. State which providers process audio/text and verify their actual retention options before making claims.
+## Three committed experiences
+1. **Existing connections:** skippable 6–8-question quiz; editable local preferences; typed/Cartesia voice reflection with disclosed Claude processing; local encrypted history; exact named-recipient approval under confirmed partner/friend/family presets; bounded agent exchange; recipient-opted-in nudge; revoke/unlink and minimized receipts. Preserve all three relationship examples.
+2. **Nearby introductions:** user grants one-time approximate location and separately publishes selected profile fields. Coarsen a location sample on device and discard precise coordinates. Match only opted-in Kinetic profiles in a permitted area, using explicit interests and approved broad availability. Show opted-in public profiles before invite acceptance, as the user requested. Private journals/quiz labels/routine histories never become discovery fields automatically.
+3. **Same-event connections:** collect a public local event catalogue via Apify; users separately choose to publish an interested/going intention for an event. Find people with compatible explicit intentions and suggest an introduction or shared plan. “Going” is self-declared, not verified attendance. Both people independently accept the same current proposal revision; no auto-RSVP, booking, personal message or purchase.
 
-## Core acceptance
-Two real accounts, a live journal, explicitly approved signal, bounded agent exchange, an actionable nudge, and revocation that prevents subsequent use. The other account cannot retrieve journal text, audio, identifiers, embeddings, private reasoning, or unapproved facts. All three relationship instances have synthetic end-to-end verification scenarios.
+## First-session experience
+Sign in → optionally take quiz → choose existing connections or Discover → see and confirm exactly what a public profile will show → one-time approximate area → useful nearby people or local events → choose an invitation/plan. An empty neighborhood still offers real public events; do not invent nearby people. Returning users see a small set of relevant suggestions, not an endless feed or pressure to journal.
 
-## Team and execution
-CS (you): app/integration/Apify. Nimisha: DS/quiz/matching/evaluation. Adam: AI/voice/providers/worker. Sumedh: Cyber/vault/authorization. Detailed P0–P9 phases and acceptance gates live in README.md and docs/roles/*.md; dependency artifacts/consumers live in docs/PLAN.md. Preserve already-started branch work.
+## Consent is specific to the experience
+Existing pair support uses C2/C3. Public discovery uses a separate proposed C8 publication consent with fields, audience, purpose, version and expiry. A published profile may be seen by eligible signed-in discoverers before mutual acceptance. Direct interaction still requires recipient acceptance. An accepted introduction does not automatically enable journal-based support or assign a relationship preset.
+
+One-time location does not imply continuous presence. Do not reveal exact coordinates, distances, home/work addresses, movement trails or habitual venues. A deliberately selected public venue preference may later be supported as an explicit C8 field; automatic claims that two people regularly visit the same place are out of scope. See [local connection requirements](docs/features/LOCAL_CONNECTIONS.md).
+
+## Scope and success
+Aim to ship all three experiences with one local event source, one configured launch region, real consent enforcement and a polished usable interface. Defer generalized groups, calendar OAuth, multiple scrapers, inferred routines, unrestricted agent chat and native apps. The 36-hour deadline does not restart. README R0–R6 and the four role guides allocate the remaining work.
+
+Success is a useful introduction, accepted invitation or agreed shared plan, plus optional user-reported completion. Track first useful suggestion, no-fit rate and false/unsafe suggestions. Do not optimize for bot conversation length, private disclosures collected, or compulsive notifications. Use synthetic fixtures and small honest user tests; no unsupported compatibility scores.
+
+## Release acceptance
+Two actual accounts and a denied third account complete (a) private reflection → exact approval → nudge, (b) opt-in public profile → nearby introduction, and (c) same-event intention → mutually accepted plan. Wrong audience, withdrawn profile, stale consent, revoked recipient preferences, blocked user and expired source cannot yield a new visible result. A real browser verifies vault lock/recovery/account isolation. Provider and deployment evidence are recorded separately from offline tests.
+
+The app is not yet proven end-to-end. Runtime C7/C8 schemas and transitions remain review-gated. Local encrypted storage is not cloud-free processing, and publication/withdrawal cannot erase information already seen. Keep private audio/text out of shared state and peer prompts; disclose actual provider processing and avoid unverified retention claims.

@@ -1,97 +1,129 @@
-# CS — You: product, shared-state integration and Apify discovery
+# CS — you — revised implementation plan
 
-Branch: `role/cs-app`
+**Branch:** `role/cs-app`. **Baseline:** main `d7285eb`. **Task IDs:** `CS-R0` through `CS-R6`.
 
-## Your outcome
-Make the four workstreams into a usable, deployed product. Own screens, account/connection flow, SpacetimeDB module plumbing, adapter wiring, deployment, and the new Apify activity catalogue. Deliver a real shared plan that both people choose, rather than just a generic reminder.
+## Your outcome and owned files
 
-## Owned implementation
-`src/app/`, `src/components/` UI and shell, `src/lib/backend/` app wiring, `src/lib/identity/`, `src/lib/spacetime/`, `spacetimedb/` module structure, `src/server/discovery/` (new), discovery API route and source-card UI, deployment configuration.
+Application composition, identity, SpacetimeDB publishing/bindings, Apify ingestion and deployment.
 
-## Boundaries with other people
-Sumedh owns authorization/vault semantics and implements the guarded approval logic in coordinated files; you own database plumbing and generated bindings. Adam owns reflection/voice services and worker execution; you own app wiring and session middleware. Nimisha owns quiz/ranking semantics; you render her outputs. Shared root dependencies, backend ports, database schema and worker routes need explicit file claims and consumer review. Never publish another agent’s unreviewed contract proposal as complete.
+**Owned implementation:** src/app/ and shared shell; src/lib/backend/, src/lib/identity/, src/lib/spacetime/; spacetimedb module exports/schema integration; src/server/discovery/. New `src/features/` folders are assignments, not shipped components. Claim exact files in your own update log before editing shared surfaces.
 
-## Current starting point
-M1 is already on main (082ab47; subsequent fixes through 8e208df): Next.js pages, eight-question quiz, app-side ports, private SpacetimeDB tables/reducers/views and client adapter exist. Module harness and app checks were reported offline. Generated bindings are placeholders; Clerk/SpacetimeDB are not live-verified in the inspected handoff; approval refuses until Cyber guards exist. Do not rebuild the shell.
+## Already implemented — preserve it
 
-## Your first action
-Read docs/handoffs/cs.md and inspect `src/lib/backend/ports.ts`, `spacetimedb/src/reducers/signals.ts` and D015. Resolve preview/approval integration with Sumedh and reflection response shape with Adam, then connect/publish the real module and generated bindings when credentials/runtime are ready. In parallel, choose one Apify public source and document its Actor/input/output/cost; do not run paid jobs just to complete documentation.
+Pages, quiz and database adapter are implemented. The app composition root still selects placeholderVault and placeholderReflection. Bindings are placeholders. Cyber has now shipped the real vault, guarded approval, delivery and commit reducers; integrate those rather than reimplementing them.
 
-## How to use these phases
-Times are targets relative to the original 36-hour start, not a new 36-hour allocation. Check current main, your remote role branch, the shared dashboard and your existing handoff first. Preserve completed work and evidence; skip a phase only when its exit conditions are met. If the sprint is already underway, start at the first unmet gate. Report schedule risk rather than silently moving deadlines. Planning remains capped at the original 30 minutes.
+## Product reset
 
-Each phase has a named artifact, a check, and a consumer. Open small PRs every 2–3 hours. Log blockers within 15 minutes; continue independent work with explicit synthetic fixtures, never a production bypass. Each person owns their implementation, tests and run instructions. CS integrates the pieces; CS does not implement everyone else's logic.
+Kinetic now supports existing relationships, nearby introductions and meeting people through local events. Use one-time approximate location and explicitly published public profiles visible before an invitation is accepted. No journal is required for discovery. Existing support signals/presets never grant stranger access. Read [LOCAL_CONNECTIONS](../features/LOCAL_CONNECTIONS.md), [C8 discovery](../../contracts/specs/DISCOVERY.md) and [README](../../README.md).
 
-## P0 · T+0–0:30 · Agree interfaces and claim work
+R phases replace old P scheduling only. Keep old commit-specific handoff history. Use the actual time remaining in the original 36-hour sprint; percentages are estimates, not a reset of the clock. Each person owns code, tests and a usable feature component so CS is not the sole implementer.
 
-- **Build:** Audit existing screens and ports; claim shared files; agree quiz, vault, reflection and policy adapter signatures. Add Apify discovery as your explicitly owned subtask.
-- **Exit evidence:** An interface owner and consumer are named for every placeholder; no duplicate bootstrap work.
-- **Hand off:** All three: exact app adapter paths, available scripts and missing interfaces.
+## CS-R0 · Reconcile the latest build and freeze the new seams
 
-## P1 · T+0:30–3 · Unblock the other three owners
+**Shared allocation:** 3% of remaining time, at most 30 minutes.
 
-- **Build:** Finish identity/module feasibility, replace placeholder bindings through the actual CLI generation path, document environment variables. For Apify, identify one public online-activity/event source, Actor ID/version and sample output; normalize a synthetic example first.
-- **Exit evidence:** A browser identity can be mapped to the module, or a concrete blocker is logged. Source choice has a documented schema and cost model; no private data sent.
-- **Hand off:** Sumedh: real caller/view context. Adam: authenticated service wiring seam. Nimisha: catalogue example.
+**Implement:** Merge current main into your existing role branch. ACK the provider-route claims and vault/guard integration seams. Inventory placeholder bindings and environment needs. Select one preconfigured launch area and one public event source with Apify; do not start a paid run for planning.
 
-## P2 · T+3–7 · Build the private-to-approved path
+**Your exit evidence:** One ownership map, one source configuration proposal and exact shared binding paths.
 
-- **Build:** Wire Nimisha’s quiz model and Sumedh’s vault into existing screens. Complete invite acceptance, preset confirmation/assignment, named-person preview, approve/decline states and error display.
-- **Exit evidence:** Skipping the quiz enables no sharing; exact preview matches approved fields; rejected policy remains visibly rejected.
-- **Hand off:** Sumedh: route/reducer smoke steps. Adam: a real approved-signal retrieval path once guarded.
+**Next consumer:** All: module/config seam; Nimisha: catalogue sample; Sumedh: C7/C8 schema proposal.
 
-## P3 · T+7–12 · Join the real two-user flow
+**Shared gate:** Every missing interface has a producer, consumer and file claim. No one repeats completed bootstrap work.
 
-- **Build:** Connect guarded approval to real state and Adam’s bounded workflow; subscribe to own nudges/receipts. Implement server-side Apify adapter and bounded cached catalogue retrieval independently of private context.
-- **Exit evidence:** Two distinct accounts complete approval → eligible nudge. Discovery returns normalized source-backed items or an explicitly unavailable/cached state.
-- **Hand off:** Nimisha: normalized catalogue API and dedupe/freshness fields. Adam: work IDs and result commit interface.
+**When blocked:** If a shared schema is unresolved, continue UI/rank/adapter work on explicitly synthetic fixtures; shared delivery remains disabled.
 
-## P4 · T+12–17 · Complete all three relationship scenarios
+## CS-R1 · Finish the existing connection path and implement new discovery contracts
 
-- **Build:** Complete journal history UI, privacy receipts/revoke/unlink, all three seeded experiences. Build activity cards with source links, timezones, format, freshness and separate user accept/decline controls.
-- **Exit evidence:** Partner/friend/family flows respect different confirmed presets. No external booking or message is sent automatically.
-- **Hand off:** All: stable preview URL, revision and exact reproduction steps; Cyber reviews shared-plan audience.
+**Shared allocation:** 18% of remaining time.
 
-## P5 · T+17–22 · Validate quality, privacy and recovery
+**Implement:** Wire per-account LocalVault and lifecycle subscription, widen ReflectionPort to PrivateReflection and compose Adam/Sumedh feature components. Generate actual module bindings and configure verified account/worker identities. Publish C7/C8 canonical schema changes with affected owners; apply D027 Q2 copy.
 
-- **Build:** Exercise reload/reconnect/identity switch, stale approvals, timeout, provider unavailable, empty catalogue and expired activity. Fix integration defects; publish source freshness visibly.
-- **Exit evidence:** No cross-account stale cache; a revoked signal cannot produce a new visible proposal; catalogue failure preserves core journaling.
-- **Hand off:** Nimisha: frozen build for evaluation. Sumedh: reproducible live authorization cases.
+**Your exit evidence:** Typed journal save/unlock and device-only preview work; generated bindings are reproducible, or live prerequisite blocker is named.
 
-## P6 · T+22–27 · Finish activity discovery and selected depth
+**Next consumer:** Adam: generated reducer/view bindings; Sumedh: vault integration; Nimisha: reviewed C7/C8 exports.
 
-- **Build:** Integrate consent-approved activity matching and both-person proposal acceptance after the new activity contract is reviewed. Add bounded refresh/deduping; select at most two already-approved polish tasks.
-- **Exit evidence:** A selected public activity becomes a shared proposal only under current audience approvals; acceptance is distinct for both people.
-- **Hand off:** Adam/Nimisha: stable catalogue IDs and proposal state. Sumedh: exact new fields and mutations.
+**Shared gate:** Existing typed reflection-to-nudge flow has all real adapter implementations; C7/C8 schema, fixtures and guards are reviewed before shared discovery is enabled.
 
-## P7 · T+27–31 · Stabilize the release candidate
+**When blocked:** Credentials can defer live execution, not implementation of identity/consent checks. Keep all data synthetic until the real boundary passes.
 
-- **Build:** Freeze source and Actor configuration; fix blocking UI/deployment issues; document synthetic reset and real-provider distinctions.
-- **Exit evidence:** Stable release revision; core flow works even if Apify times out; no fake-as-live status.
-- **Hand off:** All: release candidate ID and environment, without credentials.
+## CS-R2 · Ship the nearby introduction vertical slice
 
-## P8 · T+31–34 · Freeze and document
+**Shared allocation:** 22% of remaining time.
 
-- **Build:** Feature freeze; deploy verified build, run account/pair/nudge/discovery smoke checks, document rollback and configuration.
-- **Exit evidence:** Build and actual deployment smoke pass; unresolved limitations are listed.
-- **Hand off:** All: runbook and release revision; no additional broad feature work.
+**Implement:** Implement explicit one-time location capture, on-device coarsening and immediate coordinate discard. Add area/profile setup and thin Discover page composition. Wire indexed area/topic candidate queries, profile publication and invite/accept reducers to caller-filtered subscriptions.
 
-## P9 · T+34–36 · Release buffer and support
+**Your exit evidence:** No precise coordinate in network/storage/logs; only opted-in profiles appear; two accounts can create an accepted introduction.
 
-- **Build:** Reserve time for deployment/submission failures; support teammate verification and only release-blocking fixes.
-- **Exit evidence:** Same reviewed revision is running; source links and freshness labels work.
-- **Hand off:** Team: final status, unresolved risks and next maintenance owner.
+**Next consumer:** Nimisha: authorized candidate page + cursor; Adam: change-trigger/job and profile versions; Cyber: network trace.
 
-## Verification you own
-- Existing `npm run check:all`, `npm run build:app`; live browser checks supplement offline harnesses.
-- Two-account invite/approve/revoke flow plus third-account denial and identity-change cache clearing.
-- Apify fixture normalization, bad/expired URL/timezone handling, duplicate removal, rate-limit/timeout response and stale-cache label.
-- Inspect browser bundles/network for provider secrets and private fields; Sumedh reviews policy changes.
+**Shared gate:** A newcomer sees opted-in public profiles before sending an invite, receives a concrete reason to connect, and can decline, withdraw or block. Direct interaction requires recipient acceptance.
 
-## Completion and communication
-Update `docs/updates/cs.md` and `docs/handoffs/cs.md` at each meaningful handoff with task ID (`CS-P#`), UTC timestamp, branch/commit, files/contracts, actual verification, next named consumer action and blockers. Log a consumer ACK when integration succeeds. Read all four update logs hourly and before shared interface changes. Refresh shared status only from verified or clearly attributed evidence. Do not overwrite another role’s history.
+**When blocked:** If density is low, show a truthful empty state plus public events. Never invent real nearby users or silently widen location precision.
 
-Read [the shared dependency plan](../PLAN.md) and [the Apify feature plan](../features/ACTIVITY_DISCOVERY.md). Demo/video production remains separate in docs/DEMO.md.
+## CS-R3 · Connect people through local events and shared plans
 
-## Latest main flow baseline — preserve this work
-Main through d4cc763 includes `contracts/src/disclosure.ts` and `contracts/specs/FLOWS.md`: reuse/review `previewDisclosure`, `nudgeDelivery`, `SignalCandidateSchema` and `templateForSignal`. Main D016–D020 are the canonical flow decisions; Adam's branch independently used D016 for different proposed contracts, so reconcile by schema/commit. Preview is device-only; opt-in defaults off per connection; quiet hours/cooldown apply at coordination and commit. Space/no need yields no candidate; availability-only approval produces no nudge. These helpers are drafted/offline-tested, not yet wired authoritative guards. Sumedh ACK remains pending.
+**Shared allocation:** 22% of remaining time.
+
+**Implement:** Implement one Apify public catalogue using D028 guards, pinned source/build, bounded asynchronous ingestion, dedupe and shared cache. Use a developer-configured city/campus feed, never device-derived location in Actor input. Compose event pages and proposal acceptance controls.
+
+**Your exit evidence:** One real source can yield normalized records with source URL, fetchedAt/timezone/unknown fields; stale-cache/failure states work.
+
+**Next consumer:** Nimisha: C7 records; Adam: stable event IDs; Cyber: input/run metadata and proposal transitions.
+
+**Shared gate:** Two users discover the same source-backed local event, explicitly choose to connect, and accept a current shared plan. Existing partner/friend/family journeys still work.
+
+**When blocked:** If the source is unavailable, keep cached age visible or show unavailable. Synthetic events remain labeled; never claim a live Apify integration from fixtures.
+
+## CS-R4 · Improve usefulness, efficiency and failure behavior
+
+**Shared allocation:** 15% of remaining time.
+
+**Implement:** Measure indexed query/read counts and subscription payloads; remove table-wide scans on hot owner/pair/area paths. Verify one shared catalogue refresh per configured region/window, single-flight refresh and source cost caps. Exercise reconnect and identity switching. Expand CI beyond contract-only checks using a supported Node runtime.
+
+**Your exit evidence:** No Actor per page render, no full-user enumeration, no duplicate active subscriptions; numbers include dataset size and cache state.
+
+**Next consumer:** Adam/Nimisha: latency/candidate counts; Sumedh: scoped cache/subscription invalidation.
+
+**Shared gate:** All three experiences have useful outcomes, measured call budgets and passing current privacy gates. Known failures remain visible; targets are not reported as achievements.
+
+**When blocked:** Cut extra feeds, animations or free-form agent negotiation first. Never cut consent checks, explicit public-profile opt-in or block/withdraw behavior.
+
+## CS-R5 · Morning live verification and release candidate
+
+**Shared allocation:** 12% of remaining time.
+
+**Implement:** Configure Clerk issuer/audience and publish module/generate bindings. Deploy app and source adapter, verify two human accounts plus denied third account. Complete fresh-install and identity-change smoke checks on a fixed revision.
+
+**Your exit evidence:** Published module, configured environment and browser flow have recorded revision/results; keys remain local/host secrets.
+
+**Next consumer:** All: tested preview and reset steps; Adam: deployed worker identity and endpoints.
+
+**Shared gate:** A fixed candidate revision works with actual providers and authoritative state. Each failure has a named owner; no mocked/live ambiguity.
+
+**When blocked:** If a provider fails, typed input/no suggestion and truthful source-unavailable states remain. Do not put keys into logs or switch to production fake adapters.
+
+## CS-R6 · Freeze, hand off and reserve recovery time
+
+**Shared allocation:** 8% of remaining time.
+
+**Implement:** Freeze app/schema/source configuration, verify deployment revision, write rollback/reset instructions and fix only release blockers. Keep video/presentation tasks in docs/DEMO.md.
+
+**Your exit evidence:** Same reviewed revision runs and rollback path is known.
+
+**Next consumer:** Team: release revision and environment map.
+
+**Shared gate:** Code, configuration, evidence and team handoffs describe the same release. The product is ready for a controlled demonstration.
+
+**When blocked:** Buffer is for release recovery, not another product pivot. Keep the user-requested personal analysis report local.
+
+## Interface and review rules
+
+Use the existing canonical schemas and ports. New C7/C8 wire shapes need affected producer/consumer review and Cyber boundary review, source exports, generated schemas, fixtures and direct rejection tests. A planning document does not authorize a new runtime disclosure. Do not import another owner's internals; expose the rank/feature boundary deliberately.
+
+Keep journals, raw quiz extras and precise coordinates out of shared state, provider catalogue requests, agent logs and tests. Discovery can use only published profile/event fields under the separate C8 consent; pair signals retain named-recipient approval. No unrestricted agent conversation or automatic personal messages.
+
+## Verification and handoff
+
+Run the checks applicable to changed files plus root `npm run check`; shared/release changes require `check:all`, `ai:check` and the app build. Distinguish mock/harness checks, implemented adapters, deployment and live runs. Never represent an offline policy or seeded user as real discovery.
+
+Append the exact task/commit/files/verification/next consumer/blocker in your role update log; refresh your handoff. Consumers ACK actual usable interfaces. Read all four logs hourly and before interface edits; raise blockers within 15 minutes. Preserve role branch work when merging main. The personal assessment requested by the user stays local; implementation evidence belongs in normal role logs.

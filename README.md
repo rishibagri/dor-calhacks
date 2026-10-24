@@ -1,314 +1,269 @@
 # Kinetic
 
-### Private reflection that helps people turn intention into connection
+### AI that helps people connect with people
 
-Kinetic helps partners, friends and family living apart find a good moment and a concrete reason to connect. People reflect privately through voice; explicitly approved, minimal context lets their agents coordinate thoughtful suggestions. The new Apify discovery work adds real public activities so a suggestion can become a plan both people choose.
+Kinetic helps people build new connections and keep existing ones alive. A person can reflect privately, discover people with shared interests nearby, or find company for a local event. Their agent helps find a useful opening; the people choose whether to act.
 
-> The model proposes. People approve. Deterministic permissions decide what may cross the boundary.
+The product thesis is that AI should help someone leave a conversation with a bot and start a conversation with a person. This is a design goal to validate, not a claim that AI causes isolation for everyone. Kinetic complements calls and meeting up by reducing the effort of finding the person, reason and moment.
+
+> Private reflection → explicitly approved context → a useful human connection.
 
 ## Start here
-1. Read [AGENTS.md](AGENTS.md), [PRD.md](PRD.md) and [PROJECT_KNOWLEDGE.md](PROJECT_KNOWLEDGE.md).
-2. Read [contracts/README.md](contracts/README.md) and its detailed specs. These are shared on main, never branch-private.
-3. Find your detailed role guide: **[CS — you](docs/roles/cs.md)**, **[DS — Nimisha](docs/roles/ds.md)**, **[AI — Adam](docs/roles/ai.md)**, **[Cyber — Sumedh](docs/roles/cyber.md)**.
-4. Read [shared dependencies and handoffs](docs/PLAN.md), your handoff and all role update logs. Preserve existing work; start at the first unmet phase gate.
-5. Forward the tailored [team update messages](docs/team-messages/README.md) to agents that have already started.
 
-## Why use it
-A call is useful after people agree to show up. Kinetic addresses the missing context, timing and hesitation before that call. The intended loop is a private reflection → an exact approved signal → a useful suggestion → an optional shared activity proposal → two people deciding to act. Journaling must be useful on its own; suggestions should be specific enough to act on. Demand and usefulness remain hypotheses to test with real feedback, not proven retention claims.
+1. Read [AGENTS.md](AGENTS.md), [PRD.md](PRD.md), [PROJECT_KNOWLEDGE.md](PROJECT_KNOWLEDGE.md) and [contracts/README.md](contracts/README.md).
+2. Read [shared dependencies](docs/PLAN.md), [selected stack](docs/TECH_STACK.md) and the contract specs.
+3. Open your role: [CS](docs/roles/cs.md), [Nimisha / DS](docs/roles/ds.md), [Adam / AI](docs/roles/ai.md), [Sumedh / Cyber](docs/roles/cyber.md), then your handoff and all update logs.
+4. Merge main into your active role branch. Preserve implementation already completed. **R0–R6 below replace the old P0–P9 schedule; they do not reset code or give us another 36 hours.** Historical P IDs remain in logs as evidence.
+5. [Forwardable team messages](docs/team-messages/README.md) explain what changed. Video/presentation work stays separate in [docs/DEMO.md](docs/DEMO.md).
 
-| Relationship | Private owner context (never peer-visible) | Potential approved signal | Intended outcome |
+## The three experiences we are building
+
+| Experience | Example | What Kinetic does | Human decision |
 |---|---|---|---|
-| Partners | A difficult week away from home | Welcome a short call this week | A considerate check-in at a mutually suitable moment |
-| Friends | Missing an old shared hobby | Explicitly approved activity interest after C7 review | An online activity both choose |
-| Family | Wanting contact without a long catch-up | Welcome an encouraging note | A low-pressure connection chosen by the person |
+| Keep a connection | A partner away from home, an old friend or a family member | Private voice/typed reflection, exact approved signal, bounded agent coordination and a useful nudge | Approve sharing; choose whether to call, send a note or make a plan |
+| Meet nearby people | Someone has just moved to a neighborhood or campus | One-time approximate location, opted-in public profiles and matching on published interests | Publish a profile; inspect people before inviting; accept or decline an introduction |
+| Find company for an event | Two people want to attend the same local workshop | Public event discovery plus explicitly shared event intent; a concrete activity proposal | Choose what event intent to publish and accept the same plan revision |
 
-Quiz answers personalize communication, support, social bandwidth and draft sharing preferences. The 6–8-question quiz is skippable. Partner/friend/family presets are explicitly confirmed and assigned; no per-person category overrides. Preset permission is only a ceiling: every shared item still needs named-recipient approval. Precise calendars, emotional causes, quiz labels and journal text do not become shared context automatically.
+All original partner/friend/family functionality stays. Nearby discovery is not limited to people who are lonely or whose relationships are broken. A useful first session should work without writing a journal or inviting an existing friend.
 
-## Current implementation state — read before coding
+**User-confirmed design:** use a one-time approximate location, not background tracking. Show opted-in public profiles before an invitation is accepted. Public means the published fields are visible to eligible signed-in discoverers, not a globally readable database or a public journal. The proposed initial audience and retention rules are detailed in [LOCAL_CONNECTIONS.md](docs/features/LOCAL_CONNECTIONS.md).
 
-This repository has active work; it is no longer just a planning scaffold. The inspected shared baseline is main through `c4315e3`. Status below separates code on main from branch-reported work; verify newer branch heads before relying on it.
+The skippable 6–8-question quiz still personalizes communication style, support, bandwidth and draft sharing preferences. It never grants disclosure consent. Established connections use explicitly confirmed partner/friend/family presets with named per-item approvals. Stranger discovery has a separate explicit publication choice; it cannot inherit those presets.
 
-| Component | Current evidence | Next owner/action |
+## Completed implementation and current gaps
+
+Inspected baseline: main through `d7285eb`, including latest Cyber vault/F5/F7 work and AI/DS PRs #7/#8. This is an evidence-based reset of the documentation. Old handoffs retain their original commit-specific history; the current table and PROJECT_KNOWLEDGE take precedence for present status.
+
+| Area | Implemented on inspected main | Still required |
 |---|---|---|
-| Next.js app, navigation, onboarding/connection/journal/privacy/nudge pages | CS M1 plus core flow draft merged; offline build/typecheck and unconfigured route smoke reported | CS: wire real adapters, complete live flow |
-| SpacetimeDB private module and client adapter | CS M1 merged; 16 in-process module tests reported; generated bindings still placeholder in inspected handoff | CS: publish/generate and verify authenticated two-user path |
-| Signal approval | Intentionally refuses until real privacy guard lands | Sumedh: implement exact guarded approval with CS |
-| Local vault | Locked placeholder on inspected main | Sumedh: real VaultPort, keys/lock/profile/extras |
-| AI providers/worker and AI-branch proposal contracts | Adam’s M1 adapters/worker and D021 proposal are merged via PR #4; consumer ACK/integration and full live verification remain pending | Adam: preserve work, request consumer review and integrate routes/real policy |
-| Quiz semantics | Eight questions and D015 fixture fixes merged; review ACKs still needed | Nimisha: review/own mapping and rank/evaluation |
-| Apify source/activity plans | Approved scope, documentation only; Actor/source and paid-run limits not selected | CS owns ingestion; Nimisha ranks; Adam coordinates; Sumedh guards |
-| Production deployment / real end-to-end privacy | Not established by this documentation | All: publish reproducible live evidence before claims |
+| App / identity / bindings | Next.js pages, quiz, Clerk-aware routes and Spacetime client adapter | Replace composition-root placeholders; actual generated bindings, configured identities and deployed browser verification |
+| Vault | `LocalVault`, Web Crypto, IndexedDB adapter, recovery/lock lifecycle, profile/extras and reflection-text storage | Wire per-account instance and UI; real-browser persistence, pagehide and account-switch checks |
+| Existing connection guards | One shared policy; guarded approval, opt-in/delivery, worker-only commit, caller-filtered views | Authoritative recipient support-preference storage + commit binding; expiry/snooze visibility; JWT audience; scoped rate limits |
+| AI / voice | Claude/Cartesia adapters, authenticated routes, browser voice helpers; real-policy worker factory and replay ledger | Journal UI and database adapters, browser/provider live runs, deployed worker |
+| Droid efficiency | Haiku default and reused private working directory; Adam recorded isolated live comparisons | Concurrent execution/total deadlines; independent whole-pipeline cost and quality measurements |
+| DS | Quiz fixtures, 30 support cases; ACK rank hook; 12 activity cases, ranker and baseline results | Reviewed canonical C7/C8 exports, nearby/event cases, independent human usefulness ratings |
+| Apify | Executable input/link guards in `contracts/src/catalogue.ts` | Actual selected source/Actor, ingestion/cache, catalogue schema and live retrieval |
+| Nearby / event introductions | User-approved requirements in this reset | C8 schemas, coarse-area matching, opted-in profiles, event intents, invitations and guarded delivery |
+| Deployment | Offline code/test evidence and attributed isolated Droid evidence | Full app + database + providers together; no end-to-end live claim yet |
 
-The AI branch’s reported timings are not full production evidence: its log notes missing Claude/Cartesia credentials and variable Droid latency. Never relabel an offline harness, fixture policy, placeholder or isolated provider call as the complete live application.
+**Implemented is not integrated; integrated is not deployed; deployed is not live-verified.** The presence of a guard, adapter or passing synthetic case does not establish that the full application currently works. The reset changes planning/documentation only; it does not silently change runtime permissions or mark C7/C8 as shipped.
 
-## Latest core-flow decisions to preserve
-Main now includes [FLOWS.md](contracts/specs/FLOWS.md), `previewDisclosure`, `nudgeDelivery` and flow tests (CS draft of Sumedh-owned semantics; ACK pending). Main D016–D020 specify device-only preview, per-connection recipient opt-in default off, quiet hours 22:00–08:00 using the saved UTC offset, a 24-hour pair cooldown, no candidate for space/no need, and no nudge for availability-only approval. Draft helpers are not yet authoritative reducer wiring. Adam's branch also used the label D016 for a different proposal; reconcile by schema/commit, not the duplicate label.
-
-## End-to-end system
+## Architecture and trust boundaries
 
 ```mermaid
 flowchart TD
-  U[Person: quiz or selected voice reflection] --> V[Encrypted local vault]
-  U -->|Disclosed transient processing| P[Cartesia and Claude]
-  P --> V
-  V --> R[Owner sees exact named-recipient preview]
-  R -->|Explicit approval| G[SpacetimeDB guards and private tables]
-  G --> W[Factory bounded agent worker]
-  W --> M[DS matching on permitted inputs]
-  A[Apify: public catalogue only] --> C[CS normalize, sanitize and cache]
-  C -->|After activity contract review| M
-  M --> X[Version-checked result commit]
-  X --> L[Caller-filtered live views]
-  L --> N[Recipient nudge or approved activity proposal]
-  N --> B[People independently choose to act]
-  G -->|Revoked or stale| S[Suppress pending use]
+  U[Person] --> V[Private local vault and optional voice reflection]
+  V -->|Selected content with processing notice| P[Cartesia and Claude]
+  V --> E[Exact named-recipient approval]
+  U --> D[Explicit public profile and event-intent preview]
+  U --> L[One-time location: coarsen on device]
+  E --> S[SpacetimeDB private state and deterministic guards]
+  D --> S
+  L -->|Coarse area only| S
+  A[Apify: configured public event catalogue] --> C[Normalize, sanitize, deduplicate and cache]
+  S --> F[Filter permissions, area and blocks before ranking]
+  C --> F
+  F --> R[DS deterministic shortlist]
+  R --> W[Bounded Factory agent proposal when useful]
+  W --> G[Atomic current-consent and version recheck]
+  G --> H[Caller-filtered views and subscriptions]
+  H --> I[People choose an introduction or shared plan]
 ```
 
-SpacetimeDB holds authoritative relationships, consent/version state, approved signals and outcomes. Claude interprets selected disclosed context; Cartesia provides voice. Factory runs bounded coordination in a compatible worker. Apify supplies public activity data, not private reasoning or permissions. Detailed [architecture](contracts/specs/ARCHITECTURE.md) and [selected stack](docs/TECH_STACK.md) define the trust boundaries.
+“Nearby agents” means logical Kinetic agents for users who opted into discovery. It does not mean scanning phones, Wi-Fi, Bluetooth, private contacts or nonusers. Area matching is eligibility, not proof that someone is physically present. Public event interest is self-declared; scraping a listing does not reveal who will attend.
 
-## Team ownership and exact boundaries
+No journals, transcripts, inferred sensitive facts, embeddings, exact coordinates or habitual movement histories enter shared agent prompts. Publication allows only deliberately selected fields. Private tables plus caller-filtered views remain the database model; location is not made globally public to simplify matching.
 
-| Person | Owns implementation | Does not silently take over | Branch / detailed plan |
+## Balanced ownership
+
+Each person owns implementation, a usable feature surface, tests and a handoff. Equal responsibility means comparable blocks of work; the initial estimates are not measured labor hours. Rebalance at every gate if one person is blocked or overloaded. CS integrates components but does not write all four workstreams.
+
+| Owner | Main implementation | New feature surface | Explicit handoff |
 |---|---|---|---|
-| **CS — you** | Product UI, identity, module/client wiring, deployment, public Apify source adapter/catalogue/cards | Vault cryptography, permission semantics, model services or rank logic | `role/cs-app` · [CS phases](docs/roles/cs.md) |
-| **Nimisha — DS** | Quiz/profile mapping, matching, synthetic cases, quality/baseline evaluation | Source scraping, permission granting, other people’s private journals | `role/ds-context` · [DS phases](docs/roles/ds.md) |
-| **Adam — AI** | Cartesia/Claude adapters, private reflection and voice loop, Factory worker and bounded proposal workflow | Consent authority, raw context in shared agents, source catalogue collection | `role/ai-voice` · [AI phases](docs/roles/ai.md) |
-| **Sumedh — Cyber** | Encrypted local vault, policy semantics/guards, recipient/preset versioning, security tests and provider boundaries | Unclaimed module/UI edits, model-written authorization, fake privacy guarantees | `role/cyber-privacy` · [Cyber phases](docs/roles/cyber.md) |
+| CS — you | App composition, verified identity/bindings, module publishing, Apify catalogue/cache and deployment | Thin Discover/event pages, location/profile setup and accepted-plan integration | Generated bindings, catalogue API and page contracts |
+| Nimisha — DS | Quiz/profile semantics, deterministic nearby/event ranking, retrieval criteria, quality evaluation | `src/features/discovery/`: result cards, approved reason labels and empty states | Tested rank hook + component receiving authorized props |
+| Adam — AI | Voice/reflection, worker/database adapters, bounded proposals and efficiency | `src/features/voice/`: record/stop/correct/reflection experience | Provider component + database-backed worker and call metrics |
+| Sumedh — Cyber | Vault, consent/policy, recipient preferences, discovery/abuse guards and tests | `src/features/privacy/`: create/unlock/recovery/privacy controls | Drop-in privacy component + authoritative guards/views |
 
-CS owns module structure and generated bindings. Sumedh claims the precise approval/guard/suppression implementation files with CS. Adam claims provider route files with CS; session middleware and app wiring remain CS’s. Nimisha claims semantic changes to the existing quiz model with CS before editing. Shared wire shapes go in `@kinetic/contracts`; producer plus consuming owner review changes. This division keeps each person shipping code without making CS the sole implementer.
+New component paths are assignments, not existing implementation. Claim files before editing; CS retains shared navigation/layout. Cyber's existing claims for signals/delivery/coordination/policy/views remain intact. All cross-role wire types are exported from `@kinetic/contracts`, not duplicated in a feature folder. Shared package reviews require affected producer/consumer ACKs; this plan does not forge those ACKs.
 
-## Detailed 36-hour implementation phases
+## Revised execution phases — remaining work only
 
-T+0 is the original agreed start. Planning takes only 30 minutes. These targets do not restart the clock or erase completed work. Each phase uses the same task IDs across all role guides. Gates require evidence, not a checked box; rotate short rest breaks and surface deadline risk early. Video production is deliberately separate in [docs/DEMO.md](docs/DEMO.md).
+The original sprint is still 36 hours, with only the original 30 minutes allocated to planning. Do not restart that clock. At resumption, write down the actual remaining budget **B** and finish time. The percentages below allocate B and sum to 100%; they are planning estimates, not known time remaining. R0 is capped at 30 minutes, and any surplus goes to R6. Example only: if B = 18 hours, the approximate blocks are 0.5 / 3.25 / 4 / 4 / 2.75 / 2 / 1.5 hours, capped to the actual deadline.
 
-### P0 · T+0–0:30 — Align the one product and the interfaces
+All four owners work concurrently within a phase. Move completed tasks forward without repeating them. If the deadline is close, reduce scope transparently and preserve R5 verification and R6 recovery. No API keys are required to implement the seams or run synthetic checks; actual provider tests wait for the configured environment.
 
-**Purpose:** Confirm the user journey, read current work, and let all four people code by minute 30.
+### R0 · Reconcile the latest build and freeze the new seams
 
-| Owner / task | Concrete implementation |
-|---|---|
-| CS · `CS-P0` | Inspect merged shell/module; publish app adapter paths; claim Apify source integration. |
-| Nimisha · `DS-P0` | Confirm quiz/profile mapping and three scenario expectations; identify rank inputs/outputs. |
-| Adam · `AI-P0` | Inspect existing AI branch/AI-branch proposal; identify provider/worker interfaces needing review. |
-| Sumedh · `CYBER-P0` | Define local vault and authoritative consent inputs; claim guard files with CS. |
+**Time:** 3% of remaining time, at most 30 minutes. **Purpose:** Keep completed implementation; replace stale assignments and agree the new discovery boundary before independent coding.
 
-**Exit evidence:** Every surface has one implementer, named consumers and an explicit private/shared boundary. No one repeats completed M1 work.
+| Owner / task | Detailed deliverable | Evidence and next consumer |
+|---|---|---|
+| CS — you · `CS-R0` | Merge current main into your existing role branch. ACK the provider-route claims and vault/guard integration seams. Inventory placeholder bindings and environment needs. Select one preconfigured launch area and one public event source with Apify; do not start a paid run for planning. | **Check:** One ownership map, one source configuration proposal and exact shared binding paths. **Handoff:** All: module/config seam; Nimisha: catalogue sample; Sumedh: C7/C8 schema proposal. |
+| Nimisha — DS · `DS-R0` | Keep rankAckOptions, rankActivities and the 30+12 fixtures. Specify discovery ranking fields, bounded candidate retrieval and allowed explanation codes. Claim the new discover-results component and define its props. | **Check:** Approved/public inputs are distinguished from private quiz extras; a cold-start case is labeled. **Handoff:** CS/Adam: typed consumer requirements and deterministic sample results. |
+| Adam — AI · `AI-R0` | Keep the Haiku/reused-directory Droid path and existing routes/browser helpers. Claim the voice feature component and worker-side adapters. Propose an aggregate deadline, concurrency cap and call budget. | **Check:** A list of real vs fake dependencies, no new provider spend, and current exact adapter names. **Handoff:** CS: component/route interface; Sumedh: worker authority and preference consent requirements. |
+| Sumedh — Cyber · `CYBER-R0` | Keep LocalVault, F5/F7 reducers and D028 guards. Review C8 public-profile/approximate-area proposal separately from C3 pair consent. Claim support-preference storage, expiry and audience guard files. | **Check:** No silent extension of relationship presets or Apify query input; review checklist assigned. **Handoff:** All: schema/reducer rejection cases and precise permitted fields. |
 
-**If blocked:** If an interface is unresolved, record owner and deadline; continue on fixtures within owned modules.
+**Exit gate:** Every missing interface has a producer, consumer and file claim. No one repeats completed bootstrap work.
 
-### P1 · T+0:30–3 — Unblock teammates with working seams
+**If blocked:** If a shared schema is unresolved, continue UI/rank/adapter work on explicitly synthetic fixtures; shared delivery remains disabled.
 
-**Purpose:** Resolve runtime uncertainty and publish usable fixtures/signatures early.
+### R1 · Finish the existing connection path and implement new discovery contracts
 
-| Owner / task | Concrete implementation |
-|---|---|
-| CS · `CS-P1` | Prove account-to-module identity path, actual binding generation and environment needs. Select one Apify public source/Actor and document tested output/build/cost. |
-| Nimisha · `DS-P1` | Deliver editable profile fixtures, preset examples and no-action cases; propose pure rank hook. |
-| Adam · `AI-P1` | Reuse completed worker evidence; test missing Cartesia/Claude paths with credentials when available; document worker auth/deployment requirements. |
-| Sumedh · `CYBER-P1` | Finalize key/unlock/recovery design; review existing guards/views and D015; publish vault/policy adapter requirements. |
+**Time:** 18% of remaining time. **Purpose:** Close the current integration gaps while building the new public-profile/area/event-intent foundation in parallel.
 
-**Exit evidence:** G1: all adapters have a signature, synthetic fixture and a consumer. Runtime/credential blockers are explicit. Public catalogue work contains no private user context.
+| Owner / task | Detailed deliverable | Evidence and next consumer |
+|---|---|---|
+| CS — you · `CS-R1` | Wire per-account LocalVault and lifecycle subscription, widen ReflectionPort to PrivateReflection and compose Adam/Sumedh feature components. Generate actual module bindings and configure verified account/worker identities. Publish C7/C8 canonical schema changes with affected owners; apply D027 Q2 copy. | **Check:** Typed journal save/unlock and device-only preview work; generated bindings are reproducible, or live prerequisite blocker is named. **Handoff:** Adam: generated reducer/view bindings; Sumedh: vault integration; Nimisha: reviewed C7/C8 exports. |
+| Nimisha — DS · `DS-R1` | Adapt ActivityItem to reviewed C7 without parallel wire types. Implement pure nearby matching using only published interests, approved event intent and permitted area eligibility. Build discover cards/empty states against synthetic C8 data; explain overlap without a compatibility percentage. | **Check:** Same input gives same result; block/expiry/missing consent never enters the eligible rank set; empty area stays honest. **Handoff:** CS: discover-results component; Adam: canonical pure ranking port and fixtures. |
+| Adam — AI · `AI-R1` | Build the voice/reflection feature component using current clients: record, stop, correction, cancel, typed fallback. Implement worker adapters for worker_signal_context, worker_delivery and commit_nudge with CS-generated bindings. Wire DS rank via reviewed shared port. Serialize the reused Droid directory or use isolated pool slots before enabling concurrent jobs. | **Check:** No production fake; reflected text persists locally, candidate stays in memory; missing recipient consent returns no result. **Handoff:** CS: drop-in voice component; Cyber: exact read/commit mapping and version bindings. |
+| Sumedh — Cyber · `CYBER-R1` | Implement authoritative recipient support-preference consent and bind its ID/version and expiry into commit_nudge. Add JWT audience validation and expiry/snooze enforcement. Build vault create/unlock/recovery/privacy controls as an isolated feature component. Review/implement C8 publish/withdraw/block guards in claimed files. | **Check:** Direct-reducer tests cover wrong caller, preference revocation during generation, expired view state and blocked discovery; privacy controls exercise real LocalVault. **Handoff:** Adam: preference view/guard; CS: privacy component and guarded state contracts. |
 
-**If blocked:** A failed provider spike gets a bounded follow-up while typed input and offline checks continue. Do not weaken identity or consent to meet the gate.
+**Exit gate:** Existing typed reflection-to-nudge flow has all real adapter implementations; C7/C8 schema, fixtures and guards are reviewed before shared discovery is enabled.
 
-### P2 · T+3–7 — Build the private-to-approved path
+**If blocked:** Credentials can defer live execution, not implementation of identity/consent checks. Keep all data synthetic until the real boundary passes.
 
-**Purpose:** Make owner reflection and explicit sharing real before coordinating peers.
+### R2 · Ship the nearby introduction vertical slice
 
-| Owner / task | Concrete implementation |
-|---|---|
-| CS · `CS-P2` | Wire quiz and vault into existing screens; finish invite acceptance, preset assignment, exact named preview, approve/decline and rejected-state UI. |
-| Nimisha · `DS-P2` | Implement/review deterministic quiz mapping, initial rank logic and labeled 30-case dataset; treat skip/space as ordinary no-action outcomes. |
-| Adam · `AI-P2` | Finish authenticated transient reflection/voice routes and browser mic/stop/cancel/error behavior; return private results only to the local vault. |
-| Sumedh · `CYBER-P2` | Implement real VaultPort for journals/profiles/extras and guarded approval with exact payload/recipient/current versions/expiry/idempotency. |
+**Time:** 22% of remaining time. **Purpose:** Make the expanded product real: choose an approximate area once, publish an opt-in profile, find a useful person and deliberately invite them.
 
-**Exit evidence:** G2: selected text or voice becomes an owner-only reflection; only exact user-approved fields can be committed for a named recipient. Quiz completion/skip sends nothing.
+| Owner / task | Detailed deliverable | Evidence and next consumer |
+|---|---|---|
+| CS — you · `CS-R2` | Implement explicit one-time location capture, on-device coarsening and immediate coordinate discard. Add area/profile setup and thin Discover page composition. Wire indexed area/topic candidate queries, profile publication and invite/accept reducers to caller-filtered subscriptions. | **Check:** No precise coordinate in network/storage/logs; only opted-in profiles appear; two accounts can create an accepted introduction. **Handoff:** Nimisha: authorized candidate page + cursor; Adam: change-trigger/job and profile versions; Cyber: network trace. |
+| Nimisha — DS · `DS-R2` | Finish deterministic shortlist, cap candidates, stable tie-breaks, duplicate removal and no-fit logic. Render chosen public name/avatar/interests and safe reason codes. Add sparse-area, already-connected, withdrawn, blocked and coarse-cell-edge cases. | **Check:** Rank never needs a journal, diagnosis, routine or exact distance; public result fields equal the approved profile projection. **Handoff:** CS: fully usable discovery feature; Adam: at most top three eligible candidates with allowed reasons. |
+| Adam — AI · `AI-R2` | Implement bounded logical agent exchange over C8-approved cards after deterministic eligibility. Produce an introduction suggestion or no action, never an unsolicited message. Skip model calls for zero choices; benchmark deterministic single-choice mode; recheck profiles/blocks before commit. | **Check:** At most one initial call plus one permitted repair for a shortlisted proposal; zero raw journals/coordinates in prompts; stale opt-out cannot publish. **Handoff:** CS: proposal/result state; Sumedh: generation-race cases; Nimisha: outcome vs ranking evidence. |
+| Sumedh — Cyber · `CYBER-R2` | Enforce authenticated discovery audience, explicit profile publication, private coarse-area membership and TTL. Implement withdraw, block/report and invite limits. Ensure strangers cannot access pair signals, support preferences, raw quiz answers or exact location. | **Check:** Third-account/direct-view tests, withdrawal during generation, repeat-probe limits and invitation replay checks pass offline; browser/live proof still separate. **Handoff:** CS: controls and enforcement matrix; Adam: final authorized projection and commit guards. |
 
-**If blocked:** If vault or guard is missing, keep sharing disabled and record the exact missing artifact. No plaintext server journal or unconditional approval fallback.
+**Exit gate:** A newcomer sees opted-in public profiles before sending an invite, receives a concrete reason to connect, and can decline, withdraw or block. Direct interaction requires recipient acceptance.
 
-### P3 · T+7–12 — Integrate a real two-person outcome
+**If blocked:** If density is low, show a truthful empty state plus public events. Never invent real nearby users or silently widen location precision.
 
-**Purpose:** Join the live interfaces rather than polishing independent islands.
+### R3 · Connect people through local events and shared plans
 
-| Owner / task | Concrete implementation |
-|---|---|
-| CS · `CS-P3` | Connect real module, approved-signal retrieval, caller-filtered subscriptions, work IDs and guarded worker-result commit. Build bounded Apify adapter/cache independently. |
-| Nimisha · `DS-P3` | Integrate matching against approved signal/prefs; cover unsupported/missing/expired fields and normalized catalogue fixtures. |
-| Adam · `AI-P3` | Run real bounded Factory coordination, rank hook, timeout/retry/no-action outcomes and pre-commit consent recheck; avoid duplicate results. |
-| Sumedh · `CYBER-P3` | Validate direct reducer/subscription access, worker identity, third-user denial and revoke-during-generation; supply real policy adapter. |
+**Time:** 22% of remaining time. **Purpose:** Add a concrete reason to return: a real local event and another person who explicitly wants company there.
 
-**Exit evidence:** G3: two actual accounts complete journal → exact approval → bounded job → eligible nudge. A third account cannot see it; revoked or stale input cannot commit.
+| Owner / task | Detailed deliverable | Evidence and next consumer |
+|---|---|---|
+| CS — you · `CS-R3` | Implement one Apify public catalogue using D028 guards, pinned source/build, bounded asynchronous ingestion, dedupe and shared cache. Use a developer-configured city/campus feed, never device-derived location in Actor input. Compose event pages and proposal acceptance controls. | **Check:** One real source can yield normalized records with source URL, fetchedAt/timezone/unknown fields; stale-cache/failure states work. **Handoff:** Nimisha: C7 records; Adam: stable event IDs; Cyber: input/run metadata and proposal transitions. |
+| Nimisha — DS · `DS-R3` | Implement event eligibility and overlap from explicitly published event intent, not scraped attendance. Extend ranker to in-person events/approved coarse area; retain online activities for existing long-distance connections. Build event-result cards and first-session recommendations. | **Check:** Duplicate listings resolve consistently; expired/cancelled/wrong-area events excluded; interest is not labeled attendance; no private Q5 export. **Handoff:** Adam: event shortlist; CS: components and source-status labels; team: new held-out cases. |
+| Adam — AI · `AI-R3` | Add bounded event-based introduction and shared-plan proposals selected only from normalized catalogue IDs. Distinguish discovery opt-in from pair activity approval. Implement expiry/cancel/retry handling and human acceptance of the same proposal revision. | **Check:** No web/tool action from scraped titles; no automatic RSVP, booking, message or external purchase; profile/event changes suppress stale proposals. **Handoff:** CS/Cyber: exact proposal state and guarded finalization; Nimisha: decision traces without private content. |
+| Sumedh — Cyber · `CYBER-R3` | Implement reviewed C7 activity approvals, C8 event-intent visibility, own-action acceptance and finalization guards. Validate source freshness, both current approvals and matching proposal revision. Review optional public venue tags without habitual-visit disclosure. | **Check:** Wrong event/user/revision, one-sided acceptance, revoke-after-first-accept, block and expired catalogue all refuse finalization. **Handoff:** All: green boundary tests; CS: exact preview copy and event-intent withdrawal. |
 
-**If blocked:** If G3 slips, suspend stretch and focus each owner on their missing boundary. Apify data collection must not block the existing consent-to-nudge path.
+**Exit gate:** Two users discover the same source-backed local event, explicitly choose to connect, and accept a current shared plan. Existing partner/friend/family journeys still work.
 
-### P4 · T+12–17 — Complete the product and all three relationships
+**If blocked:** If the source is unavailable, keep cached age visible or show unavailable. Synthetic events remain labeled; never claim a live Apify integration from fixtures.
 
-**Purpose:** Make the flow understandable, controllable and useful in partners/friends/family cases.
+### R4 · Improve usefulness, efficiency and failure behavior
 
-| Owner / task | Concrete implementation |
-|---|---|
-| CS · `CS-P4` | Finish history, receipts, revoke/unlink and error screens. Show source-backed catalogue cards with format, timezone, source URL and fetch age. |
-| Nimisha · `DS-P4` | Run each scenario end-to-end; compare initial rule baseline, no-fit and cold-start behavior; define allowed ranking explanation codes. |
-| Adam · `AI-P4` | Handle support-only signals and recipient-preference consent correctly; return templates/no action rather than revealing hidden causes. |
-| Sumedh · `CYBER-P4` | Complete deletion/derived revocation and preset-change invalidation; inspect provider logging and accurate privacy copy. |
+**Time:** 15% of remaining time. **Purpose:** Measure actual outcomes and call counts; make the product inexpensive by avoiding unnecessary work rather than weakening safeguards.
 
-**Exit evidence:** G4: all three seeded journeys work; what was shared is visible to the owner; catalogue items have provenance and unknown fields stay unknown.
+| Owner / task | Detailed deliverable | Evidence and next consumer |
+|---|---|---|
+| CS — you · `CS-R4` | Measure indexed query/read counts and subscription payloads; remove table-wide scans on hot owner/pair/area paths. Verify one shared catalogue refresh per configured region/window, single-flight refresh and source cost caps. Exercise reconnect and identity switching. Expand CI beyond contract-only checks using a supported Node runtime. | **Check:** No Actor per page render, no full-user enumeration, no duplicate active subscriptions; numbers include dataset size and cache state. **Handoff:** Adam/Nimisha: latency/candidate counts; Sumedh: scoped cache/subscription invalidation. |
+| Nimisha — DS · `DS-R4` | Add at least 12 nearby/event cases beyond the existing 30 support + 12 activity cases. Get two teammate ratings on held-out useful introductions, measure no-fit/false-match coverage and compare baseline. Track invite accepted and optional plan completion instead of chat length. | **Check:** Results separate synthetic labels from human ratings; disclose tiny sample size; evaluate expensive AI against deterministic baseline. **Handoff:** All: release decision by case and metric; Adam: cases where model adds measurable value. |
+| Adam — AI · `AI-R4` | Measure 10+ eligible provider runs when keys arrive. Right-size reflection output/model using quality checks; add request dedupe without persistent private-result cache, total deadlines/cancellation, retry policy and worker concurrency bounds. Track all usage/fallback outcomes. Verify token expiry and stateful audio resampling across small microphone frames; bound browser TTS input. | **Check:** Cost per successful useful result, median/p95 including failures, model/cache/attempt counts; retained safety checks; no unsupported savings claim. **Handoff:** CS: tested runtime budget; Cyber: dedupe/retention boundaries; DS: quality regression cases. |
+| Sumedh — Cyber · `CYBER-R4` | Run cross-user access, payload injection, withdrawal/revocation races, account switch and browser vault tests. Validate rate-limit scope across instances, expired token behavior, metadata-only telemetry, source-link safety and profile abuse controls. | **Check:** Current fixed adversarial suite passes; no sender-visible recipient outcome codes; no unsupported provider-retention or E2E claim. **Handoff:** All: release-blocking findings and exact reproduction; CS: privacy acceptance conditions. |
 
-**If blocked:** Fix a broken relationship case before introducing another scenario or feed. When no compatible action exists, suppress the nudge.
+**Exit gate:** All three experiences have useful outcomes, measured call budgets and passing current privacy gates. Known failures remain visible; targets are not reported as achievements.
 
-### P5 · T+17–22 — Measure quality and attack the boundaries
+**If blocked:** Cut extra feeds, animations or free-form agent negotiation first. Never cut consent checks, explicit public-profile opt-in or block/withdraw behavior.
 
-**Purpose:** Validate usefulness and failure recovery, not just a happy-path screenshot.
+### R5 · Morning live verification and release candidate
 
-| Owner / task | Concrete implementation |
-|---|---|
-| CS · `CS-P5` | Exercise reload/reconnect/identity switch, provider failure, stale catalogue and empty states; fix integration defects. |
-| Nimisha · `DS-P5` | Freeze and run 30 cases plus baseline; two teammates rate eligible suggestions. Report sample size, false nudges and actual usefulness. |
-| Adam · `AI-P5` | Measure >=10 representative voice/nudge runs with median/p95 and timeouts; cap tools/rounds/retries; fix unsafe output. |
-| Sumedh · `CYBER-P5` | Run injection, altered/encoded fields, wrong audience, stale versions, races, log leakage and direct database bypass cases. |
+**Time:** 12% of remaining time. **Purpose:** Use API keys to prove the integrated product with controlled synthetic accounts, not to discover missing implementation for the first time.
 
-**Exit evidence:** G5: fixed deterministic privacy checks pass; quality and latency have measured results with limitations. Known privacy failures block real-user mode.
+| Owner / task | Detailed deliverable | Evidence and next consumer |
+|---|---|---|
+| CS — you · `CS-R5` | Configure Clerk issuer/audience and publish module/generate bindings. Deploy app and source adapter, verify two human accounts plus denied third account. Complete fresh-install and identity-change smoke checks on a fixed revision. | **Check:** Published module, configured environment and browser flow have recorded revision/results; keys remain local/host secrets. **Handoff:** All: tested preview and reset steps; Adam: deployed worker identity and endpoints. |
+| Nimisha — DS · `DS-R5` | Run partner, friend, family, newcomer and same-event scenarios against the release candidate. Verify real source normalization against fixture assumptions and review first-use copy with teammates. | **Check:** Actual visible recommendation matches authorized input and source; five scenarios reproducible. **Handoff:** CS: release quality verdict and remaining empty/no-fit cases. |
+| Adam — AI · `AI-R5` | Verify direct Claude reflection, Cartesia STT/TTS, deployed Factory worker and database-backed commit. Test mic denial, stop/cancel, token expiry, cold/warm calls and upstream failure with total budget limits. | **Check:** Provider-by-provider success and end-to-end trace reported separately; no fixture policy or preferences in live mode. **Handoff:** CS: worker runbook/restart; Cyber: sanitized processing and token trace. |
+| Sumedh — Cyber · `CYBER-R5` | Repeat direct reducer/view attacks on deployed identities and inspect browser network/IndexedDB. Verify preference revocation at commit, profile withdraw/block, timed expiry, account switching and provider notices. | **Check:** Live access control evidence accompanies harness results; any leak blocks real-user mode. **Handoff:** Team: explicit privacy release conditions and honest limitations. |
 
-**If blocked:** The gate controls stretch, not truthful reporting. Fix the highest-impact diagnosed failure; never tune numbers or claim the latency target was achieved without measurements.
+**Exit gate:** A fixed candidate revision works with actual providers and authoritative state. Each failure has a named owner; no mocked/live ambiguity.
 
-### P6 · T+22–27 — Turn discovery into a mutually accepted activity
+**If blocked:** If a provider fails, typed input/no suggestion and truthful source-unavailable states remain. Do not put keys into logs or switch to production fake adapters.
 
-**Purpose:** Finish the concrete differentiator using one reliable source and reviewed new sharing fields.
+### R6 · Freeze, hand off and reserve recovery time
 
-| Owner / task | Concrete implementation |
-|---|---|
-| CS · `CS-P6` | Finish Apify normalization/cache/source configuration and shared proposal UI/state. Ensure each participant accepts the same current proposal revision. |
-| Nimisha · `DS-P6` | Rank approved activity interests and compatible time/format against valid catalogue records; provide clear permitted explanations. |
-| Adam · `AI-P6` | Propose/counter within a bounded workflow using permitted activity context; humans accept, decline or cancel. |
-| Sumedh · `CYBER-P6` | Review and enforce activity-specific consent categories, preset/assignment/item versions, audience, cancellation and expiry before shared delivery. |
+**Time:** 8% of remaining time. **Purpose:** Protect a stable build and leave enough time for deployment failures and an understandable handoff.
 
-**Exit evidence:** G6: one verified source-backed activity can become a plan both users independently accept; stale/revoked proposals cannot finalize.
+| Owner / task | Detailed deliverable | Evidence and next consumer |
+|---|---|---|
+| CS — you · `CS-R6` | Freeze app/schema/source configuration, verify deployment revision, write rollback/reset instructions and fix only release blockers. Keep video/presentation tasks in docs/DEMO.md. | **Check:** Same reviewed revision runs and rollback path is known. **Handoff:** Team: release revision and environment map. |
+| Nimisha — DS · `DS-R6` | Freeze fixtures/labels/results and document cold-start/source coverage limits. Validate only changed regression cases after freeze. | **Check:** Quality results reproducible without real journals or relabeling misses. **Handoff:** Team: quality summary and later research questions. |
+| Adam — AI · `AI-R6` | Freeze prompt/model/call-budget configuration and verify worker health/restart. Document cancellation and safe provider-failure behavior. | **Check:** No last-minute tool expansion or unmeasured model switch. **Handoff:** CS: runtime recovery and final provider evidence. |
+| Sumedh — Cyber · `CYBER-R6` | Review only changed security boundaries; confirm no debug credentials, public private tables or raw journal traces. Document key-loss and withdrawal limits. | **Check:** No known unauthorized disclosure; unresolved limits are named. **Handoff:** Team: final boundary state and follow-up owner. |
 
-**If blocked:** Current C3 does not authorize activity-interest fields. If C7/new consent review is incomplete, keep catalogue read-only and preserve the existing core path. No auto-booking or private data sent to Apify.
+**Exit gate:** Code, configuration, evidence and team handoffs describe the same release. The product is ready for a controlled demonstration.
 
-### P7 · T+27–31 — Stabilize one release candidate
+**If blocked:** Buffer is for release recovery, not another product pivot. Keep the user-requested personal analysis report local.
 
-**Purpose:** Stop expanding sources and make the integrated revision reproducible.
+## Integration order and scope protection
 
-| Owner / task | Concrete implementation |
-|---|---|
-| CS · `CS-P7` | Freeze source/Actor configuration and build; fix blockers; document synthetic reset and deployment rollback. |
-| Nimisha · `DS-P7` | Rerun frozen cases and baseline against the candidate; publish actual differences and remaining bad suggestions. |
-| Adam · `AI-P7` | Exercise worker restart/replay, provider timeouts, limited credentials and cancellation; preserve honest fallback labels. |
-| Sumedh · `CYBER-P7` | Review changed boundaries/config and retest revocation, membership and provider/source exposure. |
+The two parallel tracks are (1) finish the existing private-to-approved connection path and (2) build opt-in discovery and event introductions. Both reuse verified identity, deterministic consent and caller-filtered state. New discovery does not require a journal entry. Private journaling must still work when discovery has no users or the event provider is unavailable.
 
-**Exit evidence:** G7: stable revision, reproducible run steps and agreed remaining limitations. Offline harness, isolated provider tests and real deployment evidence remain distinct.
+Priority order under time pressure: verified identity and consent → real vault/provider wiring → useful nearby introduction → one local event source and same-event plan → quality/performance and live checks. Keep online activities and partner/friend/family regression cases. Defer additional sources, Google Calendar OAuth, automatic travel/venue-history inference, open-ended agent chat, native apps, generalized groups and cosmetic aura work. Do not solve density by making up users.
 
-**If blocked:** Only blocker fixes get new changes. Every boundary change triggers affected verification, not an indiscriminate rewrite.
+## Shared contracts
 
-### P8 · T+31–34 — Freeze, deploy and document
+| Contract | Current role | Reset requirement |
+|---|---|---|
+| C1 | Local profile/private reflection/voice | Preserve private storage; reflection text only persists, candidate remains in memory |
+| C2 | Confirmed relationship presets + assignment | Existing pair rules stay; do not treat strangers as friends automatically |
+| C3 | ApprovedSignal v2: support + coarse availability | No activity, location or profile data stuffed into existing enum/string fields |
+| C4 | Bounded ACK, jobs and outcomes | Recipient preference consent must have real backing; outcome codes stay worker/ops-only |
+| C5 | Nudges/receipts + guarded commit | Recipient consent binding, expiry, snooze and live view evidence still needed |
+| C6 | Canonical deterministic guards + offline test boundary | Reuse current guards; fakes never enter production |
+| C7 | Public activity inputs/link guards implemented; catalogue/proposal types pending | Source-backed events, approved interests, revisioned mutual plans and explicit event intent dependency |
+| C8 (proposed) | Discovery publication, coarse area, public profile, event intent, invitation | Separate schema/guards/fixtures before runtime rollout; see [discovery spec](contracts/specs/DISCOVERY.md) |
 
-**Purpose:** Make the release understandable to someone outside the team.
+## Efficiency budgets to implement and verify
 
-| Owner / task | Concrete implementation |
-|---|---|
-| CS · `CS-P8` | Deploy the reviewed revision and run actual two-account smoke checks plus catalogue links/freshness; record configuration needs without secrets. |
-| Nimisha · `DS-P8` | Publish final mappings, evaluation report, known coverage and repeatable commands. |
-| Adam · `AI-P8` | Freeze tested prompts/model configuration and record deployed worker/provider status and actual timing. |
-| Sumedh · `CYBER-P8` | Record final privacy acceptance, vault recovery/data-loss limitations, deletion semantics and unsupported claims. |
+- Browse/rank locally or through indexed authorized retrieval; **zero model calls for feed rendering, empty candidates or denied consent**. Shortlist deterministically before a bounded agent call.
+- Trigger matching on meaningful approved profile/event/area changes, not every render or all pairs. Coalesce repeated updates; revalidate current permission on delivery even on a cache hit.
+- One shared catalogue refresh per configured feed/window; reuse a normalized cache with source age, limited stale fallback and one in-flight refresh. Never launch an Actor per user/profile/card.
+- Preserve the cheaper Droid default/reused-directory work. Benchmark single-choice deterministic mode and a persistent runtime before changing orchestration. Do not let simultaneous jobs erase each other's reused working directory.
+- Right-size reflection token budgets from measured structured-output needs, add cancellation/total deadlines and avoid repeated paid requests. Private result caching requires a reviewed retention boundary; prefer browser request coalescing and short-lived in-flight dedupe.
+- Record metadata-only call count, duration, success/failure, model, tokens/credits, retries and cache hits. Measure cost per useful completed result, not just cost per API call. Do not log journals, location, prompts or tokens.
 
-**Exit evidence:** A teammate can run the documented flow at the recorded revision; actual deployment behavior and unresolved issues are documented.
+These are assigned engineering requirements, not a claim that optimizations are already implemented. The user's separate assessment report is intentionally local and not part of this repository.
 
-**If blocked:** No new broad features. If deployment fails, use the tested local/preview environment and state its limitation honestly.
+## Setup, verification and release evidence
 
-### P9 · T+34–36 — Use the buffer for blockers and handoff
-
-**Purpose:** Keep a stable product while completing release/submission support.
-
-| Owner / task | Concrete implementation |
-|---|---|
-| CS · `CS-P9` | Handle release-blocking deployment/UI/source failures and verify the running revision. |
-| Nimisha · `DS-P9` | Triage quality regressions and preserve frozen results. |
-| Adam · `AI-P9` | Support critical provider/worker failures without increasing agent authority. |
-| Sumedh · `CYBER-P9` | Review security-sensitive fixes and prevent emergency auth/privacy bypasses. |
-
-**Exit evidence:** Final status, reproducible evidence and next owners are recorded. Planned work is not silently marked complete.
-
-**If blocked:** Defer nonessential polish. Record incomplete integration rather than disguising synthetic behavior as live.
-
-## Apify integration — what is new
-CS owns the external public activity source and cards, not Nimisha or a separate fifth workstream. Start with one tested catalogue useful across distance. Collect generic public listings server-side, normalize and cache them, and let internal permitted matching choose useful options. Source freshness and provenance are visible; the catalogue can fail without breaking journaling.
-
-No private journal, quiz answer, detailed schedule, pair identity or relationship label goes to Apify. New shared activity-interest/proposal fields require reviewed contracts/consent before use; the current support/availability signal is not a hidden transport for new data. See [the implementation plan and acceptance criteria](docs/features/ACTIVITY_DISCOVERY.md).
-
-## Shared contracts and source of truth
-
-| ID | Boundary | Producer → Consumer | Owner |
-|---|---|---|---|
-| C1 | Local profile/private reflection | Quiz/reflection → local vault/UI | Nimisha + Adam; Sumedh vault |
-| C2 | Preset and named assignment | Owner confirmation → guarded state | Sumedh semantics; CS plumbing |
-| C3 | ApprovedSignal v2 | Guarded approval → shared coordination | Sumedh; Adam consumes |
-| C4 | ACK and bounded coordination | Consented prefs → outcome | Adam; Nimisha matching |
-| C5 | Nudge and disclosure receipt | Guarded commit → own live view | CS; Sumedh review |
-| C6 | Real policy port and offline test boundary | Authoritative guards → consumers | Sumedh; all consume |
-| C7 (planned) | Public activity catalogue + shared proposal | CS source → rank/worker/UI | CS; Nimisha/Adam consume; Sumedh consent review |
-
-The full [contract index](contracts/README.md) distinguishes executable schemas from planned interfaces. `contracts/src/schemas.ts` is the shared runtime schema source; generated schema files and fixtures change together. The app adapter seam is `src/lib/backend/ports.ts`; shared wire definitions must not fork there. Adam’s D021 additive contracts have now merged through PR #4; consumer/privacy ACKs and app/worker integration remain pending.
-
-## Privacy and safety model
-- Default deny; accepted connection plus confirmed preset plus named item approval plus current versions/expiry are required.
-- Quiz completion and relationship labels do not grant access. Same-preset connections share category rules, but approvals remain recipient-specific.
-- Journals/private extras persist in the encrypted local vault. Selected disclosed content may reach Cartesia/Claude; local persistence is not cloud-free processing.
-- Factory only receives approved shared data. External source text cannot instruct the agent to call arbitrary tools or change permissions.
-- Authorization is enforced inside authoritative reducers/views, not only Next.js/Zod or a model prompt. Workers cannot mint owner consent.
-- Tightened presets, reassignment, unlink and revocation invalidate affected pending work and cached recipient state where feasible. Previously seen information cannot be recalled.
-- No automatic messages, bookings, payments, group sharing, E2E inference claims or relationship diagnoses in the committed scope.
-
-## Repository architecture
-
-| Path | Purpose / owner |
-|---|---|
-| `src/app/`, `src/components/` | CS UI, shell and route integration; provider handlers claimed with Adam |
-| `src/lib/backend/`, `src/lib/identity/`, `src/lib/spacetime/` | CS adapters/identity/bindings; consumed by all |
-| `spacetimedb/` | CS module plumbing; Sumedh guard/approval review and coordinated implementation |
-| `src/vault/`, `src/privacy/` | Sumedh encryption and real authorization semantics |
-| `src/evaluation/` | Nimisha matching, evaluation and pure preference logic |
-| `src/agents/`, `worker/` | Adam provider/worker code merged via PR #4; app/policy integration pending |
-| `src/server/discovery/` | Planned CS Apify normalization/cache adapter |
-| `contracts/` | Shared schemas/types/ports, generated schemas, specs, fixtures and checks |
-| `integration/` | Cross-owner verification plan and future live smoke harnesses |
-| `docs/roles/`, `docs/handoffs/`, `docs/updates/` | Detailed per-person phases, durable handoffs and ongoing logs |
-| `docs/team-messages/` | Forwardable transition messages for agents already working |
-| `PRD.md`, `PROJECT_KNOWLEDGE.md`, `docs/DECISIONS.md` | Requirements, durable actual status and decisions |
-
-## Setup and verification
-Use Node 20+ for supported packages; inspect package engines and current scripts. The existing app tests use Node’s TypeScript execution, so use the team-tested Node runtime (CS reported Node 24) or add an explicit compatible test runner before claiming support on an older runtime.
+Use the team-tested Node runtime (Node 24 in prior handoffs); root TypeScript tests use Node's built-in TypeScript execution. An engine minimum alone does not prove all scripts work on every earlier Node version.
 
 ```sh
 npm ci
-npm run check          # shared contract schemas/fixtures/checks
-npm run check:module   # in-process SpacetimeDB module harness, not live deployment
+npm run check           # shared contracts / schemas / offline fixtures
+npm run check:module    # in-process module harness, NOT published state
 npm run typecheck
-npm run test:app
-npm run check:all      # the above checks together
-npm run dev           # local Next.js app; missing adapters remain labeled
-npm run build:app
+npm run test:app        # quiz, evaluation and vault checks
+npm run check:all       # all of the above
+npm run ai:check        # separate: agents + worker checks
+npm run build:app       # application build; npm run build only builds contracts
+npm run dev
 ```
 
-Use `npm run contracts:schema` after runtime shape changes. `npm run build` currently builds contracts; it is not the application deployment command. Current scripts are authoritative; AI scripts `ai:build` and `ai:check` are now available after PR #4. Read bundled Next.js docs as AGENTS.md requires before coding against its APIs.
+Run `npm run contracts:schema` after runtime shape changes and update fixtures in the same PR. Do not run multiple build/check jobs that write the same workspace outputs concurrently. `npm run ai:live` may use real credits and needs deliberate configuration; do not run it just to claim readiness before morning keys are supplied.
 
-Copy configuration locally from [.env.example](.env.example); never commit credentials. Clerk and a correctly configured module identity mapping are needed for actual account checks. Publishing the SpacetimeDB module and generating bindings are separate from passing the in-process harness. Read [the module guide](spacetimedb/README.md) and [client guide](src/lib/spacetime/README.md). Never hand-write placeholder bindings and call them generated/live.
+Configuration is documented in [.env.example](.env.example); keep real values local or in host secrets. Publish the SpacetimeDB module and generate bindings using [its guide](spacetimedb/README.md). Factory runs in a compatible persistent worker host; a local CLI login is not deployed authentication. Build/font downloads and local listening permissions can affect checks independently of application correctness; record the distinction.
 
-Apify requires a server-only token, selected Actor/source, build/input/output mapping, resource/cost bounds and tested dataset retrieval. No Actor run or paid resource was created by this documentation update. Factory needs its compatible deployed runtime and configured credentials; keys that work in a local CLI are not proof that a deployed worker is configured.
+**Morning acceptance:** two distinct signed-in test users plus a third denied user; real vault lifecycle; typed and voice reflection; exact approval and recipient preference consent; real worker commit; revoke during generation; profile opt-in/withdraw/block; nearby introduction; source-backed event plan with both acceptances. Seed partner, friend, family, newcomer and same-event cases separately. Record implementation, offline test, deployment and live evidence independently in PROJECT_KNOWLEDGE.
 
-## Deployment responsibilities
-CS coordinates Vercel app/API plus hosted SpacetimeDB, with Sumedh checking identities and views. Adam owns Factory-compatible worker deployment and provider adapter readiness. CS owns Apify ingestion deployment. Record URLs/revision and sanitized configuration requirements in handoffs; keep keys out of branch logs and shared screenshots.
+## Coordination and repository map
 
-## Evaluation and release claims
-Nimisha owns 30 synthetic cases plus a rule baseline; Sumedh owns direct authorization/race checks; Adam owns measured provider/workflow timing; CS owns real two-account integration evidence. “No suggestion” is correct for paused preference, no overlap, missing consent or expired data. Report usefulness, latency, coverage and failure rates separately with actual sample counts. Existing isolated/fake-policy Droid runs do not prove full live privacy correctness.
+| Path | Purpose |
+|---|---|
+| `contracts/` | Shared runtime schemas/ports, guard logic, fixtures and normative specs |
+| `src/app/`, `src/components/`, `src/lib/` | Existing app composition and database/identity integration |
+| `spacetimedb/` | Authoritative shared state, reducers and caller-filtered views |
+| `src/vault/`, `src/privacy/` | Local encryption, policy and boundary reviews |
+| `src/evaluation/`, `src/agents/`, `worker/` | Matching/evaluation, provider adapters and bounded agent execution |
+| `src/features/` (planned role folders) | Independently owned discovery, voice and privacy components |
+| `src/server/discovery/` (planned) | CS public catalogue ingestion/cache |
+| `docs/roles/`, `docs/handoffs/`, `docs/updates/` | Current per-person plan, durable handoffs and historical updates |
+| `docs/features/`, `docs/PLAN.md` | Feature behavior and producer/consumer gates |
 
-## Team communication and syncing
-Each person preserves their role branch and merges main into it. Never reset another person’s active branch to this documentation commit. Shared contracts stay on main. Use named task IDs from the phases, small PRs every 2–3 hours, logs on meaningful handoffs and consumer ACKs. Raise blocked interfaces within 15 minutes and inspect all four logs hourly. The [dependency plan](docs/PLAN.md) names exact artifacts/consumers and shared-file ownership.
+Main remains authoritative for shared contracts. Each owner merges it into their active branch; never reset teammates' work. Log R-task IDs, exact files, evidence and next consumer; ACK handoffs when usable and raise blockers within 15 minutes. Read all four logs before interface edits and hourly. Small PRs every 2–3 hours keep integration manageable.
 
-## Scope and implementation honesty
-Core: voice/typed reflection, local vault, explicit recipient-approved context, bounded coordination, useful nudge, privacy controls, three relationship instances. Added: one Apify catalogue and consent-reviewed shared-activity matching/proposal acceptance. Gate deeper activity delivery on reviewed new contracts and working core integration. Optional later: recurring rituals, additional sources and calendar OAuth. Group matching, automatic booking/payment and native apps remain out of this sprint unless explicitly reprioritized.
-
-This setup takes its product/architecture/lifecycle/ownership/verification structure from [FaultLine](https://github.com/Jay-Thpr/FaultLine), adapted to Kinetic. It does not copy FaultLine runtime code or unrelated safety rules. Video planning stays in its own file. The repository remains private to invited collaborators; “shared contracts” means available to all four owners, not published personal data.
-
-### Publication-time status update
-While this plan was being written, Adam’s M1/D021 adapters and worker merged through PR #4 (main c4315e3). They are implemented/mostly offline-tested code, not yet the full configured app pipeline. Their runtime uses the restricted `droid exec` path; see worker/README.md for the SDK tradeoff and tested constraints. Nimisha and Sumedh also have active role-branch work; read those branches before assigning them new bootstrap work. Historical snapshots are evidence at their stated commit, not an instruction to rebuild. Main decision IDs D016–D021 remain intact; this planning scope uses D022–D025.
+The repository is private; shared contracts are visible to all invited teammates. This README keeps the detailed product/architecture/ownership/verification organization inspired by [FaultLine](https://github.com/Jay-Thpr/FaultLine). Video planning stays in its own file. See [decisions](docs/DECISIONS.md) for the original agreements and this reset.

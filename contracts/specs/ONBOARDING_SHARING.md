@@ -6,7 +6,7 @@ Skippable eight-question “How do you connect?” onboarding with one question 
 
 Proposed eight scenario questions:
 1. After a long day, what helps: a short call, a kind note, shared activity, or space?
-2. When a friend goes quiet, do you prefer a light check-in, an invitation, or time?
+2. When you have gone quiet for a while, what would you like from a friend: a light check-in, an invitation, or time? (D027; app copy alignment is CS work.)
 3. What communication tone and rhythm feel right: direct/gentle/playful, and spontaneous/planned/flexible?
 4. When overwhelmed, should suggestions be fewer, quieter, or paused?
 5. Which activities make connecting easy: talking, games, watching together, creating, or other? Keep free text local.
@@ -37,3 +37,6 @@ Quiz completion/skip never emits a shared signal. Changing a quiz answer never c
 
 ## Skip and change behavior
 Skip goes directly to the application with no inferred personality profile and all sharing blocked until explicit preset confirmation. Users can retake/edit the quiz. Quiz changes only suggest draft settings; confirmed presets remain unchanged until the owner reviews and confirms the edits. Disconnecting a person revokes only that connection; changing a preset affects all assigned connections.
+
+## Discovery onboarding is a separate opt-in
+After or without the quiz, users can enter Discover. They preview the exact public profile fields, choose publication, and authorize one-time approximate location separately. Raw quiz responses/labels stay local; they may pre-fill an editable local draft but never publish automatically. A public profile can be shown before an invitation is accepted, per user choice. Do not create a relationship preset assignment until the person explicitly chooses it for an accepted relationship. New event-intent publication also needs its own explicit preview. C8 runtime shapes/guards remain proposed.

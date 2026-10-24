@@ -29,3 +29,10 @@ Each role logs commands/results or reproducible manual steps. No claim of implem
 - Factory executes a real event-triggered bounded workflow in its deployed compatible worker; no private journal content in sessions, work queues or logs.
 - Cartesia transcription and voice are exercised live; provider-processing notices accurately describe the tested path.
 - No source-ID leakage from local vault; receipts link only approved signal IDs.
+
+## Expanded connection acceptance (R-phase reset)
+Retain partner/friend/family cases; add newcomer and same-local-event journeys. Discovery must work without a journal. Assert one-time location is coarsened before network transmission; opted-in public fields visible before invitation acceptance; no unauthenticated/blocked/expired/withdrawn profile leakage; no automatic preset assignment; direct contact acceptance; explicit event intent and both-party same-revision plan confirmation. A source listing is never evidence of attendance.
+
+DS adds at least 12 labeled nearby/event cases, including empty/sparse area, cell edge, duplicate/expired event, one-sided intent, blocked profile and withdrawal during generation. Keep author-labeled synthetic relevance separate from two teammate ratings on held-out examples. Evaluate useful human actions, not bot message volume.
+
+Measure calls and total latency per journey: no model call on feed/denial/no-fit; bounded shortlisted proposals; one shared catalogue refresh per configured window; request replay/cancellation/concurrency failures. Prove real-browser vault, real two-account + denied third-account database path and provider runs at R5. Runtime budgets are targets until measured. Known semantic-ID TODO and provider/runtime limitations must remain visible in results.

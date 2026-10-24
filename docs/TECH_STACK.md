@@ -8,7 +8,7 @@ User-selected stack; replaces the earlier Postgres proposal. This is a planning 
 | Authoritative shared state | Hosted SpacetimeDB | Relationships, approved disclosures, live subscriptions, matching state | SpacetimeDB |
 | Database logic | SpacetimeDB reducers + private tables and caller-filtered views | Authorization and atomic consent/state transitions | SpacetimeDB |
 | Reasoning | Anthropic Claude API | Selected-context extraction, event understanding, constrained proposals | Anthropic |
-| Orchestration | Factory Droid TypeScript SDK | Trigger-driven workflows, bounded tools, sanitized action receipts | Factory |
+| Orchestration | Factory Droid via restricted `droid exec` (current implementation) | Trigger-driven bounded workflows; SDK remains a separately evaluated option | Factory |
 | Voice | Cartesia API/SDK | Voice check-ins, transcription and spoken updates, verified adapter configuration | Cartesia |
 | Privacy | TypeScript + Zod | Strict validation and recipient/category/purpose enforcement | — |
 | Private vault | IndexedDB + Web Crypto | Encrypted local journals, transcripts, quiz answers and preferences | — |
@@ -18,9 +18,9 @@ User-selected stack; replaces the earlier Postgres proposal. This is a planning 
 | Deployment | Vercel + hosted SpacetimeDB + separate compatible Factory worker | Frontend/API, shared state, agent execution | — |
 
 ## Runtime and provider boundaries
-- Next.js API handles provider credentials and authenticated requests. Master keys never reach browsers. Factory worker runs a subprocess/daemon-compatible Node environment; verify deployed runtime, credentials, model availability, timeouts and cancellation by hour 3. Vercel hosts the UI/API; do not assume a long-running Droid process fits that environment.
+- Next.js API handles provider credentials and authenticated requests. Master keys never reach browsers. Factory worker runs a subprocess/daemon-compatible Node environment; verify deployed runtime, credentials, model availability, timeouts and cancellation in R1 before live integration. Vercel hosts the UI/API; do not assume a long-running Droid process fits that environment.
 - Claude provider calls and Factory model usage are separate integration decisions: private extraction uses the direct Claude adapter; shared coordination via Factory receives only approved structured signals. Do not accidentally transmit raw journals into persistent Droid sessions or tool logs.
-- Factory SDK documentation currently calls for Node >=18, a Droid CLI or daemon, and Zod 3 for SDK tool/structured-output integrations. The shared contracts use patched Zod 4; isolate any SDK-required Zod 3 validation in the Factory adapter and never use it as the authoritative disclosure validator. Pin tested SDK/adapter versions after the spike.
+- Current implementation uses restricted `droid exec`; the SDK probe/tradeoff is recorded in worker/README.md and D021. Preserve the current tested allowlist when evaluating a daemon/SDK for startup latency. Sponsor SDK-track eligibility must be confirmed separately; CLI use is not SDK implementation. Pin tested runtime/model versions, measure cache/credits and never use provider output as authorization.
 - Cartesia documentation exposes speech-to-text and text-to-speech. AI owns testing chosen endpoints, streaming, turn detection, browser audio capture, provider processing disclosure, and failure behavior.
 - SpacetimeDB authorization belongs in reducers and caller-filtered views over private tables. Next.js/Zod checks are additional safeguards; directly calling a reducer must never bypass consent enforcement. Do not publish sensitive tables as globally public subscriptions.
 - Authentication polishing can be optional; stable verified identity and authorization are required before handling real private data. Synthetic development identities must remain clearly restricted to test mode.
@@ -34,7 +34,7 @@ User-selected stack; replaces the earlier Postgres proposal. This is a planning 
 - [Next.js](https://nextjs.org/docs), [Google Calendar](https://developers.google.com/workspace/calendar/api)
 
 ## Scope distinction
-Core delivery remains private voice reflection → explicit disclosure approval → recipient-specific coordination → live nudge. Added user-approved scope: one Apify activity catalogue and consent-reviewed mutual activity proposals; CS owns ingestion, Nimisha matching, Adam coordination and Sumedh disclosure enforcement. C7/new activity categories must be reviewed before shared delivery. Bandwidth aura and group matching remain uncommitted candidates. Start calendars with synthetic .ics schedules. Group sharing must never inherit pair consent; it needs explicit audience membership and consent per recipient.
+The three experiences are existing connections, nearby introductions and same-local-event connections. Preserve private voice reflection → exact approval → recipient-specific nudge. Add one-time device-coarsened location and opted-in public profiles visible before invitation acceptance through reviewed C8 rules. C7 covers public event catalogue and shared plans; event intent is explicit, not scraped attendance. CS owns ingestion/state; Nimisha matching/discovery component; Adam coordination/voice component; Sumedh consent/privacy component. Runtime C7/C8 changes require review before shared delivery. Bandwidth aura and group matching remain uncommitted candidates. Start calendars with synthetic .ics schedules. Group sharing must never inherit pair consent; it needs explicit audience membership and consent per recipient.
 
 ## Apify processing boundary
 Server-only token and configured public source; no journals, private quiz extras, pair IDs or person-specific context in Actor input. Collect a generic public catalogue and match inside Kinetic. See docs/features/ACTIVITY_DISCOVERY.md. No source/Actor or paid run is selected by this plan.

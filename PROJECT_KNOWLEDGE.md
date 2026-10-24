@@ -1,44 +1,43 @@
-# Kinetic — persistent project knowledge
+# Kinetic — current project knowledge
 
-## Confirmed product and team
-Voice/typed private reflection for partners, friends and family separated by distance. The 6–8-question quiz is skippable and personalizes communication, support, bandwidth and draft sharing preferences. Partner/friend/family presets require confirmation and explicit named assignment; each disclosed item still needs exact approval. Journals and private quiz extras persist in the local encrypted vault, with disclosed transient provider processing.
+## Reset baseline and priority
+Inspected main **d7285eb** includes Cyber's real vault/F5/F7 work plus AI PR #7 and DS PR #8. The user requested a README/phase reset, not a code reset. Old P-phase assignments are superseded by README/docs/roles R0–R6; historical logs/handoffs retain their original commit-specific evidence. No teammate branch is reset.
 
-User-confirmed owners: **CS = you; DS = Nimisha; AI = Adam; Cyber = Sumedh.** CS additionally owns Apify public activity discovery. Matching and mutual accepted activity proposals are approved scope, gated on reviewed new consent/contracts. Calls are complemented by useful reasons/timing to connect, not promised to be replaced.
+Product: AI helping people connect with people. Three experiences: existing partner/friend/family relationships; nearby opted-in public profiles; same-local-event connections. User confirmed **one-time approximate location** and **public opt-in profiles visible before invitation acceptance**. Quiz remains 6–8 questions/skippable; all four personalization dimensions; explicit sharing confirmation. Discovery publication is separate from pair presets. Journaling is optional for finding people/events.
 
-## Current baseline and evidence classification
-Inspected main includes CS work through `c4315e3`: Next.js shell/pages, app adapter ports, private SpacetimeDB module/reducers/views, client adapter, eight-question quiz and D015 fixture fix. CS handoffs report offline contract checks (14 after D015), module harness (16), app quiz checks (4), typecheck and app build. These results are attributed to the existing CS handoff, not newly rerun for this documentation change.
+## Current implementation ledger
 
-On inspected main, approval deliberately refuses pending Cyber policy; vault is locked placeholder; generated bindings/Clerk/module connection are not live-verified. No end-to-end deployed privacy proof exists from these harnesses. Do not rebuild completed shell/module interfaces.
-
-Adam’s remote AI role branch (`5ccd4ba` inspected) reports M1 provider/worker adapters and contract proposals, tests and limited live Droid runs with fake policy/fixture preferences. It reports missing Claude/Cartesia credentials and latency variability. This is branch-reported evidence, not a merged/live-full-pipeline claim. Preserve that branch and review its proposed shapes before integration.
-
-Nimisha and Sumedh work is not merged into inspected main, but their remote logs report matching/evaluation and guard/key-design implementations respectively; see the publication snapshot below. Apify source/Actor choice, ingestion and mutual-plan C7 are planning only; no source selected, API job run or production code added by the planning update.
-
-## Current next handoffs
-| Owner | Next artifact | Consumer |
+| Area | Implemented on inspected main | Still required |
 |---|---|---|
-| CS (you) | Real identity/module/bindings path and reviewed integration ports; one Apify source sample/config | Sumedh, Adam, Nimisha |
-| Nimisha | ACK/review D015, quiz/profile semantics, rank hook and expected no-action cases | CS, Adam, Sumedh |
-| Adam | Preserve/review AI-branch proposal with consumers; authenticated reflection/voice and worker ports | CS, Sumedh, Nimisha |
-| Sumedh | Real VaultPort incl. local extras; exact guarded approval and worker consent access | CS, Adam |
+| App / identity / bindings | Next.js pages, quiz, Clerk-aware routes and Spacetime client adapter | Replace composition-root placeholders; actual generated bindings, configured identities and deployed browser verification |
+| Vault | `LocalVault`, Web Crypto, IndexedDB adapter, recovery/lock lifecycle, profile/extras and reflection-text storage | Wire per-account instance and UI; real-browser persistence, pagehide and account-switch checks |
+| Existing connection guards | One shared policy; guarded approval, opt-in/delivery, worker-only commit, caller-filtered views | Authoritative recipient support-preference storage + commit binding; expiry/snooze visibility; JWT audience; scoped rate limits |
+| AI / voice | Claude/Cartesia adapters, authenticated routes, browser voice helpers; real-policy worker factory and replay ledger | Journal UI and database adapters, browser/provider live runs, deployed worker |
+| Droid efficiency | Haiku default and reused private working directory; Adam recorded isolated live comparisons | Concurrent execution/total deadlines; independent whole-pipeline cost and quality measurements |
+| DS | Quiz fixtures, 30 support cases; ACK rank hook; 12 activity cases, ranker and baseline results | Reviewed canonical C7/C8 exports, nearby/event cases, independent human usefulness ratings |
+| Apify | Executable input/link guards in `contracts/src/catalogue.ts` | Actual selected source/Actor, ingestion/cache, catalogue schema and live retrieval |
+| Nearby / event introductions | User-approved requirements in this reset | C8 schemas, coarse-area matching, opted-in profiles, event intents, invitations and guarded delivery |
+| Deployment | Offline code/test evidence and attributed isolated Droid evidence | Full app + database + providers together; no end-to-end live claim yet |
 
-## Contract boundaries
-Model/quiz/source output never grants permission. SpacetimeDB reducers/views enforce identity, membership, named recipient, exact approval, preset/assignment/item versions, expiry/revocation. Factory gets approved structured data only. Apify gets generic public catalogue inputs only; source text is untrusted data. C3 currently supports support/availability only; C7 activity/proposal and new consent fields must be reviewed before sharing them.
+No full deployed end-to-end evidence is established. Do not confuse LocalVault's adapter status or a live-worker factory name with an integrated/deployed application. The existing app composition still uses placeholders. The C8 discovery contract is a proposal; no runtime schema was changed by this reset.
 
-## Execution references
-README.md contains detailed shared phases and gates. Each docs/roles/<role>.md contains the matching per-person tasks, file ownership, evidence and handoffs. docs/PLAN.md names producer/consumer dependencies and edit boundaries. docs/features/ACTIVITY_DISCOVERY.md scopes Apify. Forwardable changes are in docs/team-messages/. Video remains separate in docs/DEMO.md.
+## Latest reviews to preserve
+D026 reconciles preview and approval through one policy. D016–D020 are Cyber-ACKed; D021 is ACKed with conditions in src/privacy/REVIEWS.md: persist reflection text only, keep candidate in memory; recipient-preference consent needs real storage and commit binding; outcome codes/ACKs are never sender-visible. D028 executable Apify guards reject user context and location. D027 DS rank/mapping decisions remain; no blanket consumer ACK is implied by this planning update.
 
-## Risks and unresolved work
-Live provider credentials/retention, Factory runtime/latency, Clerk identity mapping and real module deployment require evidence. Sumedh must decide key/unlock/recovery and resolve current identity bypass/audience questions with CS. D015 and AI-branch proposal reviews must be ACKed explicitly, not assumed. Source/Actor schema, cost limits and usage conditions need verification with Apify. Group matching, additional feeds, aura and automatic external actions are not committed by this update.
+## Evidence and limitations
+Team-reported isolated Droid comparison (docs/handoffs/ai.md): 12 Haiku runs used 289 Factory credits; 12 reused-directory Opus runs used 9,448. These are recorded runs with fake policy/preferences and no full database path; not a forecast of total application cost. Claude, Cartesia, browser microphone and deployed state need live verification.
 
-Keep knowledge current after significant merges. Report planned, implemented, offline-tested, deployed and live-verified separately; cite actual branch/commit and results. Never secrets or private journal content.
+DS report: 30 support cases (one known semantic signal-ID TODO), 12 synthetic activity cases; author-labeled relevance, not independent user usefulness. Cyber's upstream signal ID generation mitigates the TODO in the module harness; do not call it proven closed in every boundary. New nearby/event evaluations are still to be built.
 
-## Latest merged core flow
-Main D016–D020 and contracts/specs/FLOWS.md add CS-drafted pure previewDisclosure/nudgeDelivery/SignalCandidateSchema and 10 flow tests, not wired reducer/UI enforcement. Preview stays device-only. Recipients opt in per connection, default off; quiet hours default 22:00–08:00 at saved offset; pair cooldown is 24 hours. Space/no need yields no candidate; availability-only approval yields no nudge. Sumedh must ACK/amend semantics. Adam’s branch used D016 for an independent contract proposal; the proposal is now main D021, with consumer/schema integration still requiring review. Planning decisions here are D022–D025 to avoid overwriting main IDs.
+Current reset verification is recorded below with exact commands/results. No paid providers or Actor jobs are launched for this documentation review.
 
-Verification for the integrated planning/main update: `npm ci --ignore-scripts` completed with no audit findings; `npm run check:all` passed 24 contract/flow checks, 16 in-process module checks, app typecheck and 4 quiz checks. Document links/phase completeness/decision IDs checked. These are offline checks; no Apify/provider/deployment call was performed.
+## Next owned work
+CS: app composition, per-account vault wiring, real identity/bindings, one configured local catalogue and discovery state. Nimisha: C8 candidate/quality logic plus discovery result component. Adam: voice feature plus authoritative worker adapters and call efficiency. Sumedh: preference consent/expiry/audience/discovery guards plus privacy controls. Detailed responsibilities/acceptance/handoffs are in docs/roles and docs/PLAN.
 
-## Concurrent-work update at publication
-Main advanced to c4315e3 (PR #4) during planning: Adam’s M1, additive D021 interfaces, 12 generated schemas and worker adapters are now merged. Earlier branch-only observations above describe the earlier inspection; use this newer status. Consumer ACKs/full policy/app/provider integration still remain pending. Remote Cyber 129c31f and DS 42ff908 also report active work (guards/key design and matching/evaluation respectively); neither is merged by this planning update. Preserve those branches and consult their current handoffs. Branch logs contain independent decision labels; main IDs are authoritative.
+## Operational boundaries
+No raw journals/audio/quiz extras/exact coordinates in shared state or agent logs. No location/profile inputs to Apify; use a developer-configured public regional feed under D028 review. C7 new activity and C8 publication consent must be reviewed before sharing. No automatic contact/booking/payment, invented neighbors, copied attendance lists or inferred habitual locations. Existing pair consent cannot authorize strangers. Preserve R5 live verification and R6 recovery within the original deadline.
 
-Final merged-revision verification (including PR #4): `npm run check:all` passed contracts/flows 26, module harness 16, app typecheck and quiz 4; `npm run ai:check` passed agents 34 and worker 6. Locked install reports no audit findings. Offline only; no provider, Apify Actor or deployment was run.
+The detailed personal assessment requested by the user is kept local and delivered in chat, not committed to GitHub. This file holds implementation status only.
+
+## Reset verification — main d7285eb plus documentation changes
+Fresh locked install completed. `npm run check:all` exited 0: contracts 63, in-process module 52, typecheck clean, app/vault/evaluation 102 passed + 1 known TODO (semantic signal ID). `npm run ai:check` exited 0: agents 45, worker 10. Default app build was blocked by environment restrictions (font download, then Turbopack port/process operation); alternate `npm run build:app -- --webpack` passed. This is compile/offline evidence, not deployed/provider/browser evidence. Local link/phase/decision-ID and `git diff --check` validation passed. No runtime schema or implementation code changed by this reset; no paid provider/Actor call ran.
