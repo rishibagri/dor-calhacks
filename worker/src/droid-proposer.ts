@@ -3,7 +3,8 @@ import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { ProviderError, type AckProposalInput, type AckProposerPort } from '@kinetic/agents';
+import { ProviderError, type AckProposalInput, type AckProposerPort, type IntroProposalInput, type IntroProposerPort }
+  from '@kinetic/agents';
 
 /** The only tool the Droid may use: a planning list with no file, shell, network or web access. */
 export const DROID_ALLOWED_TOOLS = ['TodoWrite'] as const;
@@ -47,34 +48,33 @@ export interface DroidAckProposerOptions {
 }
 
 /**
- * Recipient agent backed by a headless `droid exec` run. It receives approved enums and pre-filtered options
- * only, and its reply is untrusted input to the bounded coordinator.
- *
- * Each concurrent run gets one of a fixed pool of private, empty working directories (slots). Droid's system
- * prompt includes the working directory, so reusing a slot lets Factory's prompt cache hit (measured 40 → 14
- * credits per Haiku call). A slot is held for the whole run, so one job never empties a directory another job
- * is using. Directories are emptied before every call and removed by close().
+ * Runs bounded, tool-less `droid exec` prompts for the worker's agents. Each concurrent run gets one of a fixed
+ * pool of private, empty working directories (slots). Droid's system prompt includes the working directory, so
+ * reusing a slot lets Factory's prompt cache hit (measured 40 → 14 credits per Haiku call). A slot is held for
+ * the whole run, so one job never empties a directory another job is using. Share one runner between proposers
+ * so the worker has a single concurrency budget. Directories are emptied before every call and removed by close().
  */
-export class DroidAckProposer implements AckProposerPort {
+export class DroidRunner {
   private readonly slots: { dir: Promise<string> | undefined; busy: boolean }[];
   private readonly waiting: ((slot: number) => void)[] = [];
   constructor(private readonly options: DroidAckProposerOptions = {}) {
     this.slots = Array.from({ length: Math.max(1, options.concurrency ?? 2) }, () => ({ dir: undefined, busy: false }));
   }
 
-  async propose(input: AckProposalInput, _requestId: string): Promise<unknown> {
+  /** Runs one prompt and returns the model's reply as untrusted, best-effort parsed JSON. */
+  async run(prompt: string): Promise<unknown> {
     const slot = await this.acquire();
     try {
-      return await this.run(slot, input);
+      return await this.runIn(slot, prompt);
     } finally {
       this.release(slot);
     }
   }
 
-  private async run(slot: number, input: AckProposalInput): Promise<unknown> {
+  private async runIn(slot: number, prompt: string): Promise<unknown> {
     const cwd = await this.emptyWorkdir(slot);
     const started = Date.now();
-    const stdout = await this.exec(cwd, buildAckPrompt(input));
+    const stdout = await this.exec(cwd, prompt);
     let envelope;
     try {
       envelope = DroidExecResultSchema.parse(JSON.parse(stdout));
@@ -167,6 +167,59 @@ export class DroidAckProposer implements AckProposerPort {
       child.on('close', code => settle(code === 0 ? null : new ProviderError('factory', 'unavailable')));
     });
   }
+}
+
+/**
+ * Recipient agent backed by a headless `droid exec` run. It receives approved enums and pre-filtered options
+ * only, and its reply is untrusted input to the bounded coordinator.
+ */
+export class DroidAckProposer implements AckProposerPort {
+  readonly runner: DroidRunner;
+  constructor(options: DroidAckProposerOptions & { runner?: DroidRunner } = {}) {
+    this.runner = options.runner ?? new DroidRunner(options);
+  }
+
+  propose(input: AckProposalInput, _requestId: string): Promise<unknown> {
+    return this.runner.run(buildAckPrompt(input));
+  }
+
+  close(): Promise<void> {
+    return this.runner.close();
+  }
+}
+
+/**
+ * Viewer-side introduction agent (AI-R2). It sees, per eligible candidate, only the published tags both people
+ * chose and a count of shared events: no names, refs, areas, bios or event titles. Its reply is untrusted input
+ * to IntroductionCoordinator, which can only pick among the options it was given.
+ */
+export class DroidIntroProposer implements IntroProposerPort {
+  readonly runner: DroidRunner;
+  constructor(options: DroidAckProposerOptions & { runner?: DroidRunner } = {}) {
+    this.runner = options.runner ?? new DroidRunner(options);
+  }
+
+  propose(input: IntroProposalInput, _requestId: string): Promise<unknown> {
+    return this.runner.run(buildIntroPrompt(input));
+  }
+
+  close(): Promise<void> {
+    return this.runner.close();
+  }
+}
+
+export function buildIntroPrompt(input: IntroProposalInput): string {
+  const options = input.candidates.map((c, i) =>
+    `${i}: shared interests ${JSON.stringify(c.overlapTags)}; shared events ${c.sharedEventCount}`).join('\n');
+  return [
+    input.round === 2 ? 'Your previous reply could not be used. Follow the reply format exactly.\n' : '',
+    'You help one person in Kinetic decide whether to introduce themselves to someone nearby. You see only interests both people chose to publish.',
+    'Pick the person and the single opening most likely to lead to a comfortable first conversation, or reply none if no option is a real fit.',
+    'A shared event is a concrete opening; a specific shared interest beats a generic one.',
+    `Options, already ranked:\n${options}`,
+    'Reply with one JSON object and nothing else: {"decision":"suggest","candidateIndex":N,"lead":"tag","tagIndex":M} or',
+    '{"decision":"suggest","candidateIndex":N,"lead":"event"} or {"decision":"none"}. Do not use tools.',
+  ].join('\n');
 }
 
 export function buildAckPrompt(input: AckProposalInput): string {

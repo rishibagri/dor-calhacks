@@ -9,6 +9,9 @@ const targets = {
   'private-reflection': 'PrivateReflectionSchema', 'voice-session': 'VoiceSessionSchema',
   'recipient-support-preferences': 'RecipientSupportPreferencesSchema',
   'coordination-job': 'CoordinationJobSchema', 'coordination-outcome': 'CoordinationOutcomeSchema',
+  // PROPOSED (D033): C8 introduction step, not runtime-enabled.
+  'introduction-shortlist': 'IntroductionShortlistSchema', 'introduction-proposal': 'IntroductionProposalSchema',
+  'introduction-outcome': 'IntroductionOutcomeSchema',
 };
 for (const [file, symbol] of Object.entries(targets)) {
   const schema = z.toJSONSchema(shapes[symbol]);

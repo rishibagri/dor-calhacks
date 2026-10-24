@@ -108,3 +108,27 @@ test('droid slots: concurrent runs never share a directory; extra calls queue, o
   await proposer.close();
   assert.equal(existsSync(runs[0].cwd) || existsSync(runs[1].cwd), false, 'close removes every slot directory');
 });
+
+test('intro prompt: published overlap tags and event counts only; ack and intro agents share one slot pool', async () => {
+  const { buildIntroPrompt, DroidIntroProposer, DroidAckProposer: Ack, DroidRunner } = await import('../dist/index.js');
+  const prompt = buildIntroPrompt({ candidates: [{ overlapTags: ['board_games'], sharedEventCount: 0 },
+    { overlapTags: ['hiking'], sharedEventCount: 2 }], round: 2 });
+  assert.match(prompt, /previous reply could not be used/);
+  assert.match(prompt, /0: shared interests \["board_games"\]; shared events 0/);
+  assert.match(prompt, /"decision":"none"/);
+  const { runs, spawn } = heldSpawn();
+  const runner = new DroidRunner({ spawn, env: {}, concurrency: 1, timeoutMs: 5000 });
+  const intro = new DroidIntroProposer({ runner });
+  const ack = new Ack({ runner });
+  const first = intro.propose({ candidates: [{ overlapTags: ['hiking'], sharedEventCount: 0 }], round: 1 }, 'r1');
+  const second = ack.propose(input, 'r2');
+  await until(() => runs.length >= 1);
+  await new Promise(r => setTimeout(r, 20));
+  assert.equal(runs.length, 1, 'one shared slot: the ack call waits for the intro call');
+  runs[0].release();
+  await first;
+  await until(() => runs.length >= 2);
+  runs[1].release();
+  await second;
+  await runner.close();
+});
