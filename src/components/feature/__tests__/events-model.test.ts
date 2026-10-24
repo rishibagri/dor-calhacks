@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canAccept, canCancel, eventCards, isIntentActive, nextIntentVersion, orderPlans } from '../events-model.ts';
+import { canAccept, canCancel, eventCards, isIntentActive, nextIntentVersion, orderPlans, sourceState } from '../events-model.ts';
 
 const NOW = new Date('2026-10-24T12:00:00Z');
 const me = { publicationId: 'pub', published: true, displayName: 'A', interestTags: ['hiking'], revision: 1, expiresAt: '2026-10-27T00:00:00Z',
@@ -49,4 +49,17 @@ test('plans: awaiting-me first, accept only when pending and not yet accepted, n
   assert.equal(canAccept(p('x', 'stale', false)), false);
   assert.equal(canCancel(p('x', 'stale', false)), true);
   assert.equal(canCancel(p('x', 'closed', false)), false);
+});
+
+test('source state: never loaded, unavailable keeps last success, stale by age, ok', () => {
+  const H = 3_600_000, now = NOW.getTime();
+  const row = (over: Record<string, unknown>) => ({ feedKey: 'berkeley-campus', lastAttemptAt: NOW.toISOString(), lastSuccessAt: NOW.toISOString(),
+    lastStatus: 'ok' as const, recordCount: 3, ...over });
+  assert.deepEqual(sourceState([], 'berkeley-campus', now, 48 * H), { kind: 'never_loaded' });
+  assert.deepEqual(sourceState([row({})], null, now, 48 * H), { kind: 'never_loaded' });
+  assert.equal(sourceState([row({ lastStatus: 'failed' })], 'berkeley-campus', now, 48 * H).kind, 'unavailable');
+  assert.deepEqual(sourceState([row({ lastStatus: 'failed', lastSuccessAt: null })], 'berkeley-campus', now, 48 * H), { kind: 'unavailable', lastSuccessAt: null });
+  assert.equal(sourceState([row({ lastSuccessAt: new Date(now - 49 * H).toISOString() })], 'berkeley-campus', now, 48 * H).kind, 'stale');
+  assert.equal(sourceState([row({})], 'berkeley-campus', now, 48 * H).kind, 'ok');
+  assert.equal(sourceState([row({ feedKey: 'sf-mission' })], 'berkeley-campus', now, 48 * H).kind, 'never_loaded');
 });

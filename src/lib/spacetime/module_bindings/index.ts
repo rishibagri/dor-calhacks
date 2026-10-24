@@ -50,6 +50,7 @@ import DismissIntroductionProposalReducer from "./dismiss_introduction_proposal_
 import DismissNudgeReducer from "./dismiss_nudge_reducer";
 import PublishDiscoveryProfileReducer from "./publish_discovery_profile_reducer";
 import PublishEventIntentReducer from "./publish_event_intent_reducer";
+import RecordCatalogueRunReducer from "./record_catalogue_run_reducer";
 import RegisterAccountReducer from "./register_account_reducer";
 import ReportDiscoveryUserReducer from "./report_discovery_user_reducer";
 import RespondIntroductionRequestReducer from "./respond_introduction_request_reducer";
@@ -78,6 +79,7 @@ import WithdrawDiscoveryProfileReducer from "./withdraw_discovery_profile_reduce
 
 // Import all table schema definitions
 import CatalogueEventsRow from "./catalogue_events_table";
+import CatalogueStatusRow from "./catalogue_status_table";
 import DiscoveryCardsRow from "./discovery_cards_table";
 import EventCompanionsRow from "./event_companions_table";
 import MyAccountRow from "./my_account_table";
@@ -112,6 +114,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, CatalogueEventsRow),
+  catalogueStatus: __table({
+    name: 'catalogue_status',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, CatalogueStatusRow),
   discoveryCards: __table({
     name: 'discovery_cards',
     indexes: [
@@ -286,6 +295,7 @@ const reducersSchema = __reducers(
   __reducerSchema("dismiss_nudge", DismissNudgeReducer),
   __reducerSchema("publish_discovery_profile", PublishDiscoveryProfileReducer),
   __reducerSchema("publish_event_intent", PublishEventIntentReducer),
+  __reducerSchema("record_catalogue_run", RecordCatalogueRunReducer),
   __reducerSchema("register_account", RegisterAccountReducer),
   __reducerSchema("report_discovery_user", ReportDiscoveryUserReducer),
   __reducerSchema("respond_introduction_request", RespondIntroductionRequestReducer),
@@ -319,6 +329,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
   tables: typeof tablesSchema.schemaType.tables & {
     /** @deprecated Use `catalogueEvents` instead. This alias will be removed in the next major version. */
     readonly "catalogue_events": Omit<typeof tablesSchema.schemaType.tables["catalogueEvents"], "accessorName"> & { readonly accessorName: "catalogue_events" };
+    /** @deprecated Use `catalogueStatus` instead. This alias will be removed in the next major version. */
+    readonly "catalogue_status": Omit<typeof tablesSchema.schemaType.tables["catalogueStatus"], "accessorName"> & { readonly accessorName: "catalogue_status" };
     /** @deprecated Use `discoveryCards` instead. This alias will be removed in the next major version. */
     readonly "discovery_cards": Omit<typeof tablesSchema.schemaType.tables["discoveryCards"], "accessorName"> & { readonly accessorName: "discovery_cards" };
     /** @deprecated Use `eventCompanions` instead. This alias will be removed in the next major version. */
@@ -382,6 +394,7 @@ const REMOTE_MODULE = {
 
 const tableAccessorAliases = {
   "catalogue_events": "catalogueEvents",
+  "catalogue_status": "catalogueStatus",
   "discovery_cards": "discoveryCards",
   "event_companions": "eventCompanions",
   "my_account": "myAccount",
@@ -426,6 +439,8 @@ type __DbViewBase = __DbConnectionImpl<typeof REMOTE_MODULE>["db"];
 export type DbView = __DbViewBase & {
   /** @deprecated Use `catalogueEvents` instead. This alias will be removed in the next major version. */
   readonly "catalogue_events": __DbViewBase["catalogueEvents"];
+  /** @deprecated Use `catalogueStatus` instead. This alias will be removed in the next major version. */
+  readonly "catalogue_status": __DbViewBase["catalogueStatus"];
   /** @deprecated Use `discoveryCards` instead. This alias will be removed in the next major version. */
   readonly "discovery_cards": __DbViewBase["discoveryCards"];
   /** @deprecated Use `eventCompanions` instead. This alias will be removed in the next major version. */
@@ -476,6 +491,8 @@ type __TablesBase = __QueryBuilder<typeof tablesSchema.schemaType>;
 export type Tables = __TablesBase & {
   /** @deprecated Use `catalogueEvents` instead. This alias will be removed in the next major version. */
   readonly "catalogue_events": __TablesBase["catalogueEvents"];
+  /** @deprecated Use `catalogueStatus` instead. This alias will be removed in the next major version. */
+  readonly "catalogue_status": __TablesBase["catalogueStatus"];
   /** @deprecated Use `discoveryCards` instead. This alias will be removed in the next major version. */
   readonly "discovery_cards": __TablesBase["discoveryCards"];
   /** @deprecated Use `eventCompanions` instead. This alias will be removed in the next major version. */

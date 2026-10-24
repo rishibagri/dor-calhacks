@@ -35,19 +35,28 @@ export const pair = table(
   { name: 'pair' },
   {
     pair_id: t.string().primaryKey(),
-    member_a: t.identity(),
+    member_a: t.identity().index('btree'),
     member_b: t.option(t.identity()),
     status: t.string(), // 'pending' | 'accepted' | 'unlinked'
     created_at: t.timestamp(),
   }
 );
 
+/**
+ * Membership lookup for `pair` (option columns cannot be indexed): one row per (pair, member), written by
+ * create_pair_invite (member_a) and accept_pair_invite (member_b). `pair` stays the authority for status.
+ */
+export const pair_member = table(
+  { name: 'pair_member' },
+  { key: t.string().primaryKey(), pair_id: t.string(), member: t.identity().index('btree') }
+);
+
 export const invite = table(
   { name: 'invite' },
   {
     token: t.string().primaryKey(),
-    pair_id: t.string(),
-    creator: t.identity(),
+    pair_id: t.string().index('btree'),
+    creator: t.identity().index('btree'),
     expires_at: t.timestamp(),
     used: t.bool(),
   }
@@ -57,7 +66,7 @@ export const relationship_preset = table(
   { name: 'relationship_preset' },
   {
     preset_id: t.string().primaryKey(),
-    owner: t.identity(),
+    owner: t.identity().index('btree'),
     preset_kind: t.string(), // one row per owner+preset_kind
     allowed_categories: t.array(t.string()),
     version: t.u32(),
@@ -70,8 +79,8 @@ export const preset_assignment = table(
   { name: 'preset_assignment' },
   {
     assignment_id: t.string().primaryKey(),
-    owner: t.identity(),
-    pair_id: t.string(),
+    owner: t.identity().index('btree'),
+    pair_id: t.string().index('btree'),
     recipient: t.identity(),
     preset_kind: t.string(),
     assignment_version: t.u32(),
@@ -83,8 +92,8 @@ export const approved_signal = table(
   { name: 'approved_signal' },
   {
     signal_id: t.string().primaryKey(),
-    pair_id: t.string(),
-    sender_id: t.identity(),
+    pair_id: t.string().index('btree'),
+    sender_id: t.identity().index('btree'),
     recipient_id: t.identity(),
     purpose: t.string(),
     support_mode: t.option(t.string()),
@@ -103,8 +112,8 @@ export const nudge = table(
   { name: 'nudge' },
   {
     id: t.string().primaryKey(),
-    pair_id: t.string(),
-    recipient_id: t.identity(),
+    pair_id: t.string().index('btree'),
+    recipient_id: t.identity().index('btree'),
     source_signal_ids: t.array(t.string()),
     source_consent_versions: t.array(t.u32()),
     template_id: t.string(),
@@ -126,8 +135,8 @@ export const nudge_delivery = table(
   { name: 'nudge_delivery' },
   {
     delivery_id: t.string().primaryKey(),
-    recipient: t.identity(),
-    pair_id: t.string(),
+    recipient: t.identity().index('btree'),
+    pair_id: t.string().index('btree'),
     opted_in: t.bool(),
     quiet_start_minute: t.option(t.u16()),
     quiet_end_minute: t.option(t.u16()),
@@ -145,8 +154,8 @@ export const support_preference = table(
   { name: 'support_preference' },
   {
     consent_id: t.string().primaryKey(),
-    recipient: t.identity(),
-    pair_id: t.string(),
+    recipient: t.identity().index('btree'),
+    pair_id: t.string().index('btree'),
     support_modes: t.array(t.string()),
     availability: t.array(t.string()),
     consent_version: t.u32(),
@@ -254,8 +263,8 @@ export const introduction_proposal = table(
   { name: 'introduction_proposal' },
   {
     proposal_id: t.string().primaryKey(),
-    viewer: t.identity(),
-    candidate: t.identity(),
+    viewer: t.identity().index('btree'),
+    candidate: t.identity().index('btree'),
     candidate_ref: t.string(),
     viewer_revision: t.u32(),
     candidate_revision: t.u32(),
@@ -278,6 +287,21 @@ export const discovery_report = table(
 export const rate_window = table(
   { name: 'rate_window' },
   { limit_key: t.string().primaryKey(), window_start: t.timestamp(), count: t.u32() }
+);
+
+/**
+ * Catalogue ingestion runs (CS-R3), one row per configured feed. Written only by the ingester, after each run.
+ * Lets the Events page tell "no events" from "source unavailable or stale". No source text, no personal data.
+ */
+export const catalogue_source = table(
+  { name: 'catalogue_source' },
+  {
+    feed_key: t.string().primaryKey(), // configured feed (area key), never device-derived
+    last_attempt_at: t.timestamp(),
+    last_success_at: t.option(t.timestamp()),
+    last_status: t.string(), // ok | failed
+    record_count: t.u32(),
+  }
 );
 
 /**
@@ -306,8 +330,8 @@ export const event_intent = table(
   { name: 'event_intent' },
   {
     intent_id: t.string().primaryKey(),
-    owner: t.identity(),
-    event_id: t.string(),
+    owner: t.identity().index('btree'),
+    event_id: t.string().index('btree'),
     kind: t.string(), // interested | going
     version: t.u32(),
     expires_at: t.timestamp(),
@@ -321,7 +345,7 @@ export const activity_approval = table(
   { name: 'activity_approval' },
   {
     approval_id: t.string().primaryKey(),
-    owner: t.identity(),
+    owner: t.identity().index('btree'),
     recipient: t.identity(),
     pair_id: t.string(),
     topics: t.array(t.string()),
@@ -346,8 +370,8 @@ export const shared_plan = table(
     revision: t.u32(),
     basis_kind: t.string(), // introduction | existing_connection
     basis_ref: t.string(), // intro_id or pair_id
-    participant_a: t.identity(),
-    participant_b: t.identity(),
+    participant_a: t.identity().index('btree'),
+    participant_b: t.identity().index('btree'),
     intent_a: t.string(),
     intent_a_version: t.u32(),
     intent_b: t.string(),
@@ -378,7 +402,7 @@ export const disclosure_receipt = table(
   {
     receipt_id: t.string().primaryKey(),
     signal_id: t.string(),
-    sender_id: t.identity(),
+    sender_id: t.identity().index('btree'),
     recipient_id: t.identity(),
     categories: t.array(t.string()),
     consent_version: t.u32(),
@@ -394,6 +418,7 @@ export const spacetimedb = schema({
   auth_config,
   account,
   pair,
+  pair_member,
   invite,
   relationship_preset,
   preset_assignment,
@@ -415,6 +440,7 @@ export const spacetimedb = schema({
   introduction_proposal,
   discovery_report,
   rate_window,
+  catalogue_source,
   catalogue_event,
   event_intent,
   activity_approval,

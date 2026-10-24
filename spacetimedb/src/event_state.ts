@@ -27,7 +27,8 @@ export function loadCatalogueEvent(db: ReadDb, eventId: string): CatalogueEventS
 }
 
 export function findIntentRow(db: ReadDb, owner: Identity, eventId: string): IntentRow | undefined {
-  return [...db.event_intent.iter()].find(i => i.owner.isEqual(owner) && i.event_id === eventId);
+  for (const i of db.event_intent.owner.filter(owner)) if (i.event_id === eventId) return i;
+  return undefined;
 }
 export function toIntentState(db: ReadDb, i: IntentRow): EventIntentState {
   return {

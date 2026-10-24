@@ -9,8 +9,8 @@ import { newId } from './ids';
  */
 export function suppressPairWork(ctx: Ctx, pairId: string, owner?: Identity): void {
   const affected = new Set<string>();
-  for (const s of [...ctx.db.approved_signal.iter()]) {
-    if (s.pair_id !== pairId || s.revoked_at) continue;
+  for (const s of [...ctx.db.approved_signal.pair_id.filter(pairId)]) {
+    if (s.revoked_at) continue;
     if (owner && !s.sender_id.isEqual(owner)) continue;
     affected.add(s.signal_id);
     ctx.db.approved_signal.signal_id.update({ ...s, revoked_at: ctx.timestamp });
@@ -24,8 +24,8 @@ export function suppressPairWork(ctx: Ctx, pairId: string, owner?: Identity): vo
       action: 'suppressed', created_at: ctx.timestamp,
     });
   }
-  for (const n of [...ctx.db.nudge.iter()]) {
-    if (n.pair_id !== pairId || n.suppressed) continue;
+  for (const n of [...ctx.db.nudge.pair_id.filter(pairId)]) {
+    if (n.suppressed) continue;
     if (owner && !n.source_signal_ids.some(id => affected.has(id))) continue;
     ctx.db.nudge.id.update({ ...n, suppressed: true });
   }

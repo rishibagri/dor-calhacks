@@ -27,8 +27,7 @@ export const approve_signal = spacetimedb.reducer(
   (ctx, args) => {
     requireAccount(ctx);
     // Idempotent retry (scoped to caller): never re-approve and never resurrect a revoked signal.
-    const prior = [...ctx.db.approved_signal.iter()]
-      .find(s => s.sender_id.isEqual(ctx.sender) && s.client_request_id === args.client_request_id);
+    const prior = [...ctx.db.approved_signal.sender_id.filter(ctx.sender)].find(s => s.client_request_id === args.client_request_id);
     if (prior) {
       const same = prior.pair_id === args.pair_id && prior.support_mode === args.support_mode &&
         prior.availability === args.availability && prior.consent_version === args.consent_version &&
@@ -81,7 +80,7 @@ export const revoke_signal = spacetimedb.reducer(
       consent_version: s.consent_version, recipient_policy_version: s.recipient_policy_version,
       preset_assignment_version: s.preset_assignment_version, action: 'revoked', created_at: ctx.timestamp,
     });
-    for (const n of [...ctx.db.nudge.iter()]) {
+    for (const n of [...ctx.db.nudge.pair_id.filter(s.pair_id)]) {
       if (n.source_signal_ids.includes(signal_id)) ctx.db.nudge.id.update({ ...n, suppressed: true });
     }
   }

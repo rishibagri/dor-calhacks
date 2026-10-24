@@ -14,12 +14,36 @@ export const hex = (id: Identity): string => id.toHexString();
 export const toMs = (ts: Timestamp): number => Number(ts.microsSinceUnixEpoch / 1000n);
 export const fromMs = (ms: number): bigint => BigInt(ms) * 1000n;
 
+// ---- Indexed lookups for hot owner/pair paths (CS-R4). Each reads one index range, never a whole table. ----
+
+/** The owner's assignment in one pair (owner index, then pair). */
+export function findAssignment(db: ReadDb, owner: Identity, pairId: string) {
+  for (const r of db.preset_assignment.owner.filter(owner)) if (r.pair_id === pairId) return r;
+  return undefined;
+}
+
+/** The owner's preset of one kind (one row per owner + kind). */
+export function findPreset(db: ReadDb, owner: Identity, kind: string) {
+  for (const r of db.relationship_preset.owner.filter(owner)) if (r.preset_kind === kind) return r;
+  return undefined;
+}
+
+/** Pairs the identity belongs to, via the pair_member index; each pair once. */
+export function pairsOf(db: ReadDb, who: Identity) {
+  const out = [];
+  for (const m of db.pair_member.member.filter(who)) {
+    const p = db.pair.pair_id.find(m.pair_id);
+    if (p) out.push(p);
+  }
+  return out;
+}
+
 /** Pair + the owner's assignment in it + the confirmed preset that assignment points at. */
 export function loadStanding(db: ReadDb, owner: Identity, pairId: string): Omit<PolicySnapshot, 'nowMs'> {
   const p = db.pair.pair_id.find(pairId);
   const pair = p ? { pairId: p.pair_id, memberA: hex(p.member_a), memberB: p.member_b ? hex(p.member_b) : null, status: p.status } : null;
-  const a = [...db.preset_assignment.iter()].find(r => r.pair_id === pairId && r.owner.isEqual(owner));
-  const preset = a ? [...db.relationship_preset.iter()].find(r => r.owner.isEqual(owner) && r.preset_kind === a.preset_kind) : undefined;
+  const a = findAssignment(db, owner, pairId);
+  const preset = a ? findPreset(db, owner, a.preset_kind) : undefined;
   return {
     pair,
     assignment: a && preset ? {
@@ -54,7 +78,8 @@ export const signalExpiredMarked = (db: ReadDb, signalId: string): boolean => is
 
 type PreferenceRow = NonNullable<ReturnType<Ctx['db']['support_preference']['consent_id']['find']>>;
 export function findPreferenceRow(db: ReadDb, recipient: Identity, pairId: string): PreferenceRow | undefined {
-  return [...db.support_preference.iter()].find(p => p.pair_id === pairId && p.recipient.isEqual(recipient));
+  for (const p of db.support_preference.recipient.filter(recipient)) if (p.pair_id === pairId) return p;
+  return undefined;
 }
 
 /** The recipient's current preference consent for a pair (null = none). Sweep-expired rows count as gone. */
@@ -109,10 +134,11 @@ export function blockedEitherWay(db: ReadDb, a: Identity, b: Identity): boolean 
 
 /** F5 gate inputs: the recipient's own delivery row for this pair (null = never opted in) and the last nudge in the pair. */
 export function loadDeliveryGate(db: ReadDb, recipient: Identity, pairId: string, nowMs: number): DeliveryGate {
-  const row = [...db.nudge_delivery.iter()].find(d => d.pair_id === pairId && d.recipient.isEqual(recipient));
+  let row;
+  for (const d of db.nudge_delivery.recipient.filter(recipient)) if (d.pair_id === pairId) { row = d; break; }
   let last: number | null = null;
   // Every nudge counts toward the per-pair cooldown, including dismissed/suppressed ones (no revoke-and-retry spam).
-  for (const n of db.nudge.iter()) if (n.pair_id === pairId) last = Math.max(last ?? 0, toMs(n.created_at));
+  for (const n of db.nudge.pair_id.filter(pairId)) last = Math.max(last ?? 0, toMs(n.created_at));
   return {
     nowMs, lastNudgeAtMs: last, preferences: loadPreference(db, recipient, pairId),
     pref: row ? {

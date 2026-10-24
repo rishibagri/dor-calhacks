@@ -44,7 +44,8 @@ export function bootstrapSteps(o: BootstrapOptions): Step[] {
     { title: 'Load catalogue source-host allowlist', argv: call(o, 'set_discovery_config', 'source_hosts', o.sourceHosts) },
     {
       title: o.enableExtensions ? 'Enable discovery/event extensions' : 'Keep discovery/event extensions OFF (core release)',
-      argv: call(o, 'set_discovery_config', 'enabled', [o.enableExtensions ? 'true' : 'false']),
+      // The module accepts exactly ['true'] (on) or [] (off).
+      argv: call(o, 'set_discovery_config', 'enabled', o.enableExtensions ? ['true'] : []),
     },
     {
       title: 'Generate client bindings',

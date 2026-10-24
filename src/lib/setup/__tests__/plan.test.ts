@@ -14,7 +14,7 @@ test('bootstrap order: build, publish, auth, allowlists, flag, bindings for both
   assert.ok(!steps[1]!.argv.includes('--delete-data'));
   const calls = steps.filter((s) => s.argv[1] === 'call').map((s) => s.argv[5]);
   assert.deepEqual(calls, ['set_auth_issuer', 'set_auth_audience', 'set_discovery_config', 'set_discovery_config', 'set_discovery_config', 'set_discovery_config']);
-  assert.deepEqual(steps.find((s) => s.argv.includes('"enabled"'))!.argv.at(-1), '["false"]');
+  assert.deepEqual(steps.find((s) => s.argv.includes('"enabled"'))!.argv.at(-1), '[]'); // module: [] = off
   const gens = steps.filter((s) => s.argv[1] === 'generate').map((s) => s.argv[5]);
   assert.deepEqual(gens, ['src/lib/spacetime/module_bindings', 'worker/src/module_bindings']);
 });
