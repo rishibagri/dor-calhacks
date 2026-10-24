@@ -11,8 +11,8 @@ import {
 } from "spacetimedb";
 
 export default __t.row({
-  nudgeId: __t.string().name("nudge_id"),
-  templateId: __t.string().name("template_id"),
+  id: __t.string(),
   pairId: __t.string().name("pair_id"),
+  templateId: __t.string().name("template_id"),
   visibleUntil: __t.timestamp().name("visible_until"),
 });

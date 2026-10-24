@@ -6,14 +6,14 @@
 import {
   ApprovedSignalSchema,
   DisclosureReceiptSchema,
-  NUDGE_TEMPLATE_IDS,
   RecipientPresetAssignmentSchema,
   RelationshipPresetSchema,
 } from '@dor/contracts';
 import type { ApprovedSignal, DisclosureReceipt, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
+import { NUDGE_TEMPLATE_IDS } from '@dor/contracts/policy';
 import { MAX_EVENT_TITLE, MAX_EVENT_TOPICS, MAX_INTEREST_TAGS, MAX_PUBLIC_NAME, validRecipientDelivery, validSupportPreferences } from '@dor/contracts/policy';
 import type {
-  ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, NudgeView, PairView, RecipientPause, SignalView, SupportPreferencesView,
+  ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView,
 } from '@/lib/backend/ports';
 import { toCamel, type LooseRow } from './bindings';
 
@@ -95,16 +95,14 @@ export const mapAssignment: Mapper<RecipientPresetAssignment> = (row) =>
     assignmentVersion: Number(plain(get(row, 'assignment_version'))),
   });
 
-const NUDGE_VIEW_KEYS = ['nudge_id', 'template_id', 'pair_id', 'visible_until'];
-
-/** Strict: any extra column (e.g. a re-widened row leaking created_at/expires_at) rejects the row. */
-export const mapNudge: Mapper<NudgeView> = (row) => {
-  if (Object.keys(row).some((k) => !NUDGE_VIEW_KEYS.includes(k) && !NUDGE_VIEW_KEYS.map(toCamel).includes(k))) return null;
-  const id = str(row, 'nudge_id');
+/** `my_nudges` narrow row (Cyber, Core 3 audit item 2): {id, pair_id, template_id, visible_until}. */
+export const mapNudge: Mapper<RecipientNudgeView> = (row) => {
+  const id = str(row, 'id');
   const pairId = str(row, 'pair_id');
+  const templateId = NUDGE_TEMPLATE_IDS.find((t) => t === str(row, 'template_id'));
   const visibleUntil = str(row, 'visible_until');
-  const templateId = NUDGE_TEMPLATE_IDS.find((x) => x === str(row, 'template_id'));
-  return id && pairId && visibleUntil && templateId ? { id, pairId, templateId, visibleUntil } : null;
+  if (!id || !pairId || !templateId || !visibleUntil) return null;
+  return { id, pairId, templateId, visibleUntil };
 };
 
 export const mapReceipt: Mapper<DisclosureReceipt> = (row) =>

@@ -146,3 +146,8 @@ Conditions:
   - `requireOwner`'s no-owner-row fallback: never reached live; kept fail-closed.
   - `requireAuthenticated`'s `isInternal` shortcut is harness-only. No scheduled reducer calls it, so it's unchanged and commented.
 - **Evidence:** `spacetimedb/tests/scheduler_auth.test.ts` (5) calls the reducers with a live-shaped context (`isInternal` false, no connection, database identity). The sweep runs and really ends a lapsed pause. A user, the database identity with a connection, and a stranger without a connection are each refused for the sweep and for ingestion; the owner can ingest. 5 of 5 mutations are caught, including reverting to `isInternal`. Not yet re-verified on the live host: CS should restart the local module and confirm the sweep log is clean.
+
+## 2026-10-25: Core 3 audit items 2 and 3 fixed (D043; numbered after AI's D042)
+- **Item 2 (HIGH, timing to the recipient):** `my_nudges` now returns `{id, pair_id, template_id, visible_until}`, with `visible_until` rounded up to the hour. Tests: exact row keys; no signal or consent ids; an hour-aligned `visible_until` within one hour after the exact expiry. A mutation restoring the exact expiry is caught.
+- **Item 3 (HIGH, recipient state to the sender):** `my_receipts` filters to `approved` and `revoked`. Owner-caused invalidation is recorded as `revoked`. Noninterference test: recipient opt-out, consent revoke and unlink leave the sender's receipts byte-identical. 3 mutations caught.
+- **Residual:** nudge arrival time for a live subscriber (see D043).

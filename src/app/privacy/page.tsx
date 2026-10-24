@@ -19,8 +19,6 @@ const FACTS = [
   ['Nudges can still imply', 'A nudge may let someone infer that you would welcome support.'],
 ] as const;
 
-const RECEIPT_ACTIONS = new Set<string>(['approved', 'revoked', 'expired']);
-
 function hasDiscoveryFootprint(shared: ReturnType<typeof useLiveShared>): boolean {
   const me = shared.myDiscoveryProfile();
   return Boolean(me?.published && !me.withdrawn) || shared.myEventIntents().some((i) => i.active) ||
@@ -30,7 +28,7 @@ function hasDiscoveryFootprint(shared: ReturnType<typeof useLiveShared>): boolea
 export default function PrivacyPage() {
   const vault = useVault();
   const shared = useLiveShared();
-  const receipts = shared.myReceipts().filter((r) => RECEIPT_ACTIONS.has(r.action)); // sender sees only what they or the clock caused
+  const receipts = shared.myReceipts();
   const names = new Map(shared.myPairs().flatMap((p) => p.counterpartIdentityHex ? [[p.counterpartIdentityHex, p.counterpartDisplayName ?? 'Your connection'] as const] : []));
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -58,7 +56,7 @@ export default function PrivacyPage() {
       <Card>
         <CardHeader>
           <CardTitle>Receipts</CardTitle>
-          <CardDescription>Every time you approved, revoked, or an approval expired.</CardDescription>
+          <CardDescription>Every approval you made and every one you revoked. What the other person did with it is never shown here.</CardDescription>
         </CardHeader>
         <CardContent>
           {receipts.length === 0 && <p className="text-sm text-muted-foreground">No receipts yet.</p>}
