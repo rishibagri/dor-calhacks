@@ -42,7 +42,7 @@ const UNSAFE_CHARS = /[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁠-⁩﻿]/;
 export const looksLikeContactOrId = (s: string): boolean => IDENTIFIER_RES.some(re => re.test(s));
 
 /**
- * D047 safety net: tag segments that would publish a special-category or stigmatising fact about a person (health,
+ * D046 safety net: tag segments that would publish a special-category or stigmatising fact about a person (health,
  * recovery, grief, sexuality, religion, immigration status, legal or financial trouble). D045 makes transitions
  * ("starting college", "new to the city") discovery tags; this keeps an allowlist from ever offering, say, `divorce`
  * or `rehab` as a public profile label. Matching is per hyphen segment (prefix stems; `trans` exact), so `transit`

@@ -6,7 +6,6 @@ import { isMember, requireAccount, requireMemberPair } from '../guards';
 import { newId, newToken } from '../ids';
 import { INVITE_TTL_MICROS } from '../constants';
 import { suppressPairWork } from '../suppress';
-import { revokeRulesInPair } from '../standing_rule';
 
 export const create_pair_invite = spacetimedb.reducer(ctx => {
   requireAccount(ctx);
@@ -67,6 +66,5 @@ export const unlink_pair = spacetimedb.reducer(
       ctx.db.preset_assignment.assignment_id.delete(a.assignment_id);
     }
     suppressPairWork(ctx, pair_id);
-    revokeRulesInPair(ctx, pair_id); // D047: unlinking ends every standing rule in the pair
   }
 );

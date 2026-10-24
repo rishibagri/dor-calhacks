@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { AVAILABILITIES, DISCLOSURE_PURPOSE, NUDGE_TEMPLATE_IDS, RELATIONSHIP_PRESET_KINDS,
   SHARING_CATEGORIES, SUPPORT_MODES } from './enums.js';
-import { STANDING_RULE_PURPOSES } from './standing-rule.js';
 
 const id = z.string().min(1).max(128);
 const time = z.string().datetime({ offset: true });
@@ -97,14 +96,3 @@ export type RecipientSupportPreferences = z.infer<typeof RecipientSupportPrefere
 export type CoordinationJob = z.infer<typeof CoordinationJobSchema>;
 export type CoordinationOutcomeCode = z.infer<typeof CoordinationOutcomeCodeSchema>;
 export type CoordinationOutcome = z.infer<typeof CoordinationOutcomeSchema>;
-
-/**
- * D047 standing rule as the owner sees it. Strict; enum-only, unique, at least one category; no free text.
- * The server also bounds the expiry (STANDING_RULE_MIN_MS..MAX_MS) and checks the rule against the current preset.
- */
-export const StandingRuleSchema = z.object({
-  schemaVersion: z.literal(1), pairId: id,
-  supportModes: z.array(SupportModeSchema).refine(v => new Set(v).size === v.length, 'Duplicate support modes'),
-  availability: z.array(AvailabilitySchema).refine(v => new Set(v).size === v.length, 'Duplicate availability'),
-  purpose: z.enum(STANDING_RULE_PURPOSES), version: z.number().int().nonnegative(), expiresAt: time,
-}).strict().refine(r => r.supportModes.length + r.availability.length > 0, 'A rule needs at least one category');

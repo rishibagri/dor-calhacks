@@ -62,9 +62,6 @@ export const sweep_expired = spacetimedb.reducer(
     for (const p of ctx.db.recipient_pause.iter()) {
       if (!p.resumed_at && p.expires_at.microsSinceUnixEpoch <= now) mark('pause', p.pause_id, p.version); // restores nothing
     }
-    for (const r of ctx.db.standing_rule.iter()) {
-      if (!r.revoked_at && r.expires_at.microsSinceUnixEpoch <= now) mark('standing_rule', r.rule_id, r.version); // D047
-    }
     for (const p of [...ctx.db.shared_plan.iter()]) {
       if (p.status === 'pending' && p.expires_at.microsSinceUnixEpoch <= now) ctx.db.shared_plan.plan_id.update({ ...p, status: 'expired' });
     }

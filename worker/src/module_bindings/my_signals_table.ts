@@ -25,6 +25,4 @@ export default __t.row({
   expiresAt: __t.timestamp().name("expires_at"),
   revokedAt: __t.option(__t.timestamp()).name("revoked_at"),
   clientRequestId: __t.string().name("client_request_id"),
-  ruleId: __t.option(__t.string()).name("rule_id"),
-  ruleVersion: __t.option(__t.u32()).name("rule_version"),
 });
