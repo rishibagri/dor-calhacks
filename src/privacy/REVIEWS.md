@@ -66,6 +66,37 @@ Verdict: **ACK the separation, with the permitted fields and rejection cases bel
 
 **Rejection cases each consumer must keep (direct calls):** disabled flag; unauthenticated/unregistered caller; unpublished viewer; expired or withdrawn publication or area; other area; block in either direction; forged owner/record mismatch; contact details in the name; non-allowlisted tag; non-configured area; stale notice version; stale `expected_revision`.
 
-**Open for R2 (not implemented):** introduction proposal/request/accept (human-triggered; recipient alone accepts), report with a coarse reason, invite and repeat-probe limits, avatar media path, event intent (C7/C8). Exact area resolution, publication duration and audience defaults still need owner confirmation; the current numbers are the LOCAL_CONNECTIONS proposals.
+**R2 items now implemented (D038, see the next section):** introduction proposal commit, request/accept, report, invite and repeat-probe limits. **Still open:** avatar media path, event intent (C7/C8, R3). Exact area resolution, publication duration and audience defaults still need owner confirmation; the current numbers are the LOCAL_CONNECTIONS proposals.
 
 **Review checklist assigned:** CS: UI copy for audience and duration, the device-side coarsening to a configured area, the flag rollout. DS: rank only `discovery_cards` rows (published tags), never private extras. AI: agent prompts get tags and opaque refs only; recheck visibility at commit.
+
+## 2026-10-24: C8 introductions, report and limits (CYBER-R2, D038)
+Verdict: **implemented as proposed guards and module transitions behind the same flag.** CS (producer), AI and DS (consumers) review pending. Matrix: `DISCOVERY_ENFORCEMENT.md`.
+
+**Design choices to review:**
+- Accepting an introduction creates no pair. Turning a connection into a support relationship still goes through the existing pair invite and named C2/C3 approvals.
+- No decline oracle: the sender sees accepted | pending | closed, a decline stays "pending" until the original expiry, and a pending request and the 30-day cooldown share one error message. The cooldown is anchored on the original expiry, not the decline time.
+- A sender's profile edit closes their pending requests, so the recipient never accepts a profile they weren't shown.
+- Report = coarse reason + block. No free text, because it would reach moderators verbatim and could carry personal data.
+- Rate limits count successful actions (failed reducers roll back). Probing stays uninformative through uniform `not_found` and random refs.
+- AI proposals: the worker commit rechecks everything at commit time; the view rechecks again live; `same_event` is refused until event intents exist.
+
+**Rejection cases consumers must keep:** third-account action on someone else's introduction; sender accepting; recipient cancelling; replay after decline; request-id reuse for another person; accept after expiry, withdrawal, profile edit or block; request to an unseen, other-area or own card; free-text report reason; proposal after withdrawal, block, area move or edit during generation; proposal tags outside the overlap; `same_event` before R3; non-worker commit.
+
+## 2026-10-24: D034 plan lifecycle (Adam) and C7/C8 events (CYBER-R3, D039)
+Verdict on D034: **ACK; adopted as the reducer finalization guard, unchanged.** `applyPlanAction` takes the actor from `ctx.sender`, and the reducer computes `PlanSourceCheck` in the same transaction:
+- `eventScheduled` also requires a fresh copy (≤ 48 h) and an unmoved start time.
+- `intentsCurrent` also requires both bound intent versions and the basis (accepted introduction, or pair + both C7 approvals).
+
+Two conditions for consumers:
+1. Show acceptance state only to its owner until "confirmed".
+2. Never turn a confirmed plan into an external action.
+
+**C7 (ACTIVITY_CONSENT.md §2) as implemented:**
+- `activity_interest` is preset-only. It is not in `SHARING_CATEGORIES`, so ApprovedSignal v2 can't carry it.
+- The quiz can't nominate it; it is off until the owner adds it to a preset.
+- The item approval names the counterpart, exact topics and previewed preset versions, lasts ≤ 24 h and is revocable. It is rechecked at commit and at every acceptance.
+
+**Venue tags:** not added (see the matrix's venue review). No habitual-visit disclosure is possible from the shipped fields.
+
+**Rejection cases consumers must keep:** third-account plan action; wrong revision; repeat accept; one-sided acceptance at expiry; second acceptance after intent revoke, re-publish, approval revoke, preset tightening, block, event cancellation, moved start or stale copy; commit with a non-participant's intent, a stale intent version, an unaccepted basis, approvals on an introduction basis, < 1 h lead or a duplicate live plan; user-written catalogue records; unsafe source links; free topics; intent for a cancelled, stale or started event.

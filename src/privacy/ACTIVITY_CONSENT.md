@@ -1,6 +1,6 @@
 # Activity-sharing consent boundary (C7) — Cyber definition, D028
 
-Status: **proposed boundary; no activity sharing is implemented or permitted.**
+Status: **§1 guards executable (D028). §2 implemented offline as D039 (CYBER-R3), behind the off-by-default discovery flag, CS/AI/DS review pending; not live.** `activity_interest` is a preset-only category; `approve_activity_interest` is the item consent; shared plans finalize through the D034 lifecycle with current-consent rechecks. See `DISCOVERY_ENFORCEMENT.md` (events section).
 - The executable part is limited to what may be sent to Apify and which source links may be shown (`contracts/src/catalogue.ts`, tested in `contracts/tests/catalogue.test.mjs`).
 - Producer: Sumedh (Cyber). Consumers who must review: CS (ingestion, reducers, UI), Nimisha (matching), Adam (proposal workflow).
 - Feature plan: `docs/features/ACTIVITY_DISCOVERY.md`.

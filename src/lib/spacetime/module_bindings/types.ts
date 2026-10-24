@@ -19,6 +19,22 @@ export const Account = __t.object("Account", {
 });
 export type Account = __Infer<typeof Account>;
 
+export const ActivityApproval = __t.object("ActivityApproval", {
+  approvalId: __t.string(),
+  owner: __t.identity(),
+  recipient: __t.identity(),
+  pairId: __t.string(),
+  topics: __t.array(__t.string()),
+  recipientPolicyVersion: __t.u32(),
+  presetAssignmentVersion: __t.u32(),
+  consentVersion: __t.u32(),
+  clientRequestId: __t.string(),
+  expiresAt: __t.timestamp(),
+  revokedAt: __t.option(__t.timestamp()),
+  createdAt: __t.timestamp(),
+});
+export type ActivityApproval = __Infer<typeof ActivityApproval>;
+
 export const ApprovedSignal = __t.object("ApprovedSignal", {
   signalId: __t.string(),
   pairId: __t.string(),
@@ -66,6 +82,37 @@ export const AuthConfig = __t.object("AuthConfig", {
 });
 export type AuthConfig = __Infer<typeof AuthConfig>;
 
+export const CatalogueEvent = __t.object("CatalogueEvent", {
+  eventId: __t.string(),
+  title: __t.string(),
+  startsAt: __t.timestamp(),
+  endsAt: __t.option(__t.timestamp()),
+  status: __t.string(),
+  fetchedAt: __t.timestamp(),
+  topics: __t.array(__t.string()),
+  format: __t.string(),
+  areaKey: __t.option(__t.string()),
+  sourceUrl: __t.option(__t.string()),
+  updatedAt: __t.timestamp(),
+});
+export type CatalogueEvent = __Infer<typeof CatalogueEvent>;
+
+export const CatalogueEventRow = __t.object("CatalogueEventRow", {
+  eventId: __t.string(),
+  title: __t.string(),
+  startsAt: __t.timestamp(),
+  endsAt: __t.option(__t.timestamp()),
+  topics: __t.array(__t.string()),
+  format: __t.string(),
+  areaKey: __t.option(__t.string()),
+  sourceUrl: __t.option(__t.string()),
+  fetchedAt: __t.timestamp(),
+});
+export type CatalogueEventRow = __Infer<typeof CatalogueEventRow>;
+
+export const CatalogueEvents = __t.object("CatalogueEvents", {});
+export type CatalogueEvents = __Infer<typeof CatalogueEvents>;
+
 export const DisclosureReceipt = __t.object("DisclosureReceipt", {
   receiptId: __t.string(),
   signalId: __t.string(),
@@ -106,6 +153,12 @@ export const DiscoveryConfig = __t.object("DiscoveryConfig", {
 });
 export type DiscoveryConfig = __Infer<typeof DiscoveryConfig>;
 
+export const DiscoveryPage = __t.object("DiscoveryPage", {
+  owner: __t.identity(),
+  afterRef: __t.string(),
+});
+export type DiscoveryPage = __Infer<typeof DiscoveryPage>;
+
 export const DiscoveryPublication = __t.object("DiscoveryPublication", {
   publicationId: __t.string(),
   owner: __t.identity(),
@@ -120,6 +173,36 @@ export const DiscoveryPublication = __t.object("DiscoveryPublication", {
 });
 export type DiscoveryPublication = __Infer<typeof DiscoveryPublication>;
 
+export const DiscoveryReport = __t.object("DiscoveryReport", {
+  reportId: __t.string(),
+  reporter: __t.identity(),
+  target: __t.identity(),
+  reason: __t.string(),
+  createdAt: __t.timestamp(),
+});
+export type DiscoveryReport = __Infer<typeof DiscoveryReport>;
+
+export const EventCompanionRow = __t.object("EventCompanionRow", {
+  cardRef: __t.string(),
+  eventId: __t.string(),
+});
+export type EventCompanionRow = __Infer<typeof EventCompanionRow>;
+
+export const EventCompanions = __t.object("EventCompanions", {});
+export type EventCompanions = __Infer<typeof EventCompanions>;
+
+export const EventIntent = __t.object("EventIntent", {
+  intentId: __t.string(),
+  owner: __t.identity(),
+  eventId: __t.string(),
+  kind: __t.string(),
+  version: __t.u32(),
+  expiresAt: __t.timestamp(),
+  revokedAt: __t.option(__t.timestamp()),
+  updatedAt: __t.timestamp(),
+});
+export type EventIntent = __Infer<typeof EventIntent>;
+
 export const ExpiredRecord = __t.object("ExpiredRecord", {
   recordKey: __t.string(),
   kind: __t.string(),
@@ -132,6 +215,61 @@ export const ExpirySweep = __t.object("ExpirySweep", {
   scheduledAt: __t.scheduleAt(),
 });
 export type ExpirySweep = __Infer<typeof ExpirySweep>;
+
+export const Introduction = __t.object("Introduction", {
+  introId: __t.string(),
+  sender: __t.identity(),
+  recipient: __t.identity(),
+  clientRequestId: __t.string(),
+  senderRevision: __t.u32(),
+  senderName: __t.string(),
+  recipientName: __t.option(__t.string()),
+  sharedTags: __t.array(__t.string()),
+  status: __t.string(),
+  senderClosed: __t.bool(),
+  createdAt: __t.timestamp(),
+  expiresAt: __t.timestamp(),
+  respondedAt: __t.option(__t.timestamp()),
+});
+export type Introduction = __Infer<typeof Introduction>;
+
+export const IntroductionProposal = __t.object("IntroductionProposal", {
+  proposalId: __t.string(),
+  viewer: __t.identity(),
+  candidate: __t.identity(),
+  candidateRef: __t.string(),
+  viewerRevision: __t.u32(),
+  candidateRevision: __t.u32(),
+  reasonCode: __t.string(),
+  sharedTags: __t.array(__t.string()),
+  openerId: __t.string(),
+  decidedBy: __t.string(),
+  createdAt: __t.timestamp(),
+  expiresAt: __t.timestamp(),
+});
+export type IntroductionProposal = __Infer<typeof IntroductionProposal>;
+
+export const IntroductionProposalRow = __t.object("IntroductionProposalRow", {
+  proposalId: __t.string(),
+  candidateRef: __t.string(),
+  reasonCode: __t.string(),
+  sharedTags: __t.array(__t.string()),
+  openerId: __t.string(),
+  decidedBy: __t.string(),
+  expiresAt: __t.timestamp(),
+});
+export type IntroductionProposalRow = __Infer<typeof IntroductionProposalRow>;
+
+export const IntroductionRow = __t.object("IntroductionRow", {
+  introId: __t.string(),
+  direction: __t.string(),
+  status: __t.string(),
+  counterpartName: __t.option(__t.string()),
+  sharedTags: __t.array(__t.string()),
+  createdAt: __t.timestamp(),
+  expiresAt: __t.option(__t.timestamp()),
+});
+export type IntroductionRow = __Infer<typeof IntroductionRow>;
 
 export const Invite = __t.object("Invite", {
   token: __t.string(),
@@ -158,6 +296,17 @@ export type ModuleOwner = __Infer<typeof ModuleOwner>;
 export const MyAccount = __t.object("MyAccount", {});
 export type MyAccount = __Infer<typeof MyAccount>;
 
+export const MyActivityApprovalRow = __t.object("MyActivityApprovalRow", {
+  approvalId: __t.string(),
+  pairId: __t.string(),
+  topics: __t.array(__t.string()),
+  expiresAt: __t.timestamp(),
+});
+export type MyActivityApprovalRow = __Infer<typeof MyActivityApprovalRow>;
+
+export const MyActivityApprovals = __t.object("MyActivityApprovals", {});
+export type MyActivityApprovals = __Infer<typeof MyActivityApprovals>;
+
 export const MyDiscoveryProfile = __t.object("MyDiscoveryProfile", {});
 export type MyDiscoveryProfile = __Infer<typeof MyDiscoveryProfile>;
 
@@ -176,6 +325,24 @@ export const MyDiscoveryRow = __t.object("MyDiscoveryRow", {
 });
 export type MyDiscoveryRow = __Infer<typeof MyDiscoveryRow>;
 
+export const MyEventIntentRow = __t.object("MyEventIntentRow", {
+  eventId: __t.string(),
+  kind: __t.string(),
+  version: __t.u32(),
+  active: __t.bool(),
+  expiresAt: __t.timestamp(),
+});
+export type MyEventIntentRow = __Infer<typeof MyEventIntentRow>;
+
+export const MyEventIntents = __t.object("MyEventIntents", {});
+export type MyEventIntents = __Infer<typeof MyEventIntents>;
+
+export const MyIntroductionProposals = __t.object("MyIntroductionProposals", {});
+export type MyIntroductionProposals = __Infer<typeof MyIntroductionProposals>;
+
+export const MyIntroductions = __t.object("MyIntroductions", {});
+export type MyIntroductions = __Infer<typeof MyIntroductions>;
+
 export const MyInvites = __t.object("MyInvites", {});
 export type MyInvites = __Infer<typeof MyInvites>;
 
@@ -187,6 +354,9 @@ export type MyNudges = __Infer<typeof MyNudges>;
 
 export const MyPairs = __t.object("MyPairs", {});
 export type MyPairs = __Infer<typeof MyPairs>;
+
+export const MyPlans = __t.object("MyPlans", {});
+export type MyPlans = __Infer<typeof MyPlans>;
 
 export const MyPresetAssignments = __t.object("MyPresetAssignments", {});
 export type MyPresetAssignments = __Infer<typeof MyPresetAssignments>;
@@ -271,6 +441,13 @@ export const PresetViewRow = __t.object("PresetViewRow", {
 });
 export type PresetViewRow = __Infer<typeof PresetViewRow>;
 
+export const RateWindow = __t.object("RateWindow", {
+  limitKey: __t.string(),
+  windowStart: __t.timestamp(),
+  count: __t.u32(),
+});
+export type RateWindow = __Infer<typeof RateWindow>;
+
 export const RelationshipPreset = __t.object("RelationshipPreset", {
   presetId: __t.string(),
   owner: __t.identity(),
@@ -281,6 +458,46 @@ export const RelationshipPreset = __t.object("RelationshipPreset", {
   revokedAt: __t.option(__t.timestamp()),
 });
 export type RelationshipPreset = __Infer<typeof RelationshipPreset>;
+
+export const SharedPlan = __t.object("SharedPlan", {
+  planId: __t.string(),
+  revision: __t.u32(),
+  basisKind: __t.string(),
+  basisRef: __t.string(),
+  participantA: __t.identity(),
+  participantB: __t.identity(),
+  intentA: __t.string(),
+  intentAVersion: __t.u32(),
+  intentB: __t.string(),
+  intentBVersion: __t.u32(),
+  approvalA: __t.option(__t.string()),
+  approvalB: __t.option(__t.string()),
+  eventId: __t.string(),
+  eventStartsAt: __t.timestamp(),
+  sourceFetchedAt: __t.timestamp(),
+  acceptedA: __t.bool(),
+  acceptedB: __t.bool(),
+  status: __t.string(),
+  closedBy: __t.option(__t.identity()),
+  decidedBy: __t.string(),
+  createdAt: __t.timestamp(),
+  expiresAt: __t.timestamp(),
+});
+export type SharedPlan = __Infer<typeof SharedPlan>;
+
+export const SharedPlanRow = __t.object("SharedPlanRow", {
+  planId: __t.string(),
+  revision: __t.u32(),
+  status: __t.string(),
+  myAcceptance: __t.bool(),
+  eventId: __t.string(),
+  eventTitle: __t.string(),
+  eventStartsAt: __t.timestamp(),
+  sourceUrl: __t.option(__t.string()),
+  counterpartName: __t.option(__t.string()),
+  expiresAt: __t.timestamp(),
+});
+export type SharedPlanRow = __Infer<typeof SharedPlanRow>;
 
 export const SupportPreference = __t.object("SupportPreference", {
   consentId: __t.string(),
@@ -313,6 +530,23 @@ export const WorkerIdentity = __t.object("WorkerIdentity", {
   identity: __t.identity(),
 });
 export type WorkerIdentity = __Infer<typeof WorkerIdentity>;
+
+export const WorkerPlanCandidateRow = __t.object("WorkerPlanCandidateRow", {
+  basisKind: __t.string(),
+  basisRef: __t.string(),
+  eventId: __t.string(),
+  intentIds: __t.array(__t.string()),
+  intentVersions: __t.array(__t.u32()),
+  approvalIds: __t.array(__t.string()),
+  eventStartsAt: __t.timestamp(),
+  fetchedAt: __t.timestamp(),
+  topics: __t.array(__t.string()),
+  format: __t.string(),
+});
+export type WorkerPlanCandidateRow = __Infer<typeof WorkerPlanCandidateRow>;
+
+export const WorkerPlanCandidates = __t.object("WorkerPlanCandidates", {});
+export type WorkerPlanCandidates = __Infer<typeof WorkerPlanCandidates>;
 
 export const WorkerPreferenceRow = __t.object("WorkerPreferenceRow", {
   consentId: __t.string(),

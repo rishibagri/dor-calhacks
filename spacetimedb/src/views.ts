@@ -1,6 +1,7 @@
 import { t } from 'spacetimedb/server';
 import type { Identity } from 'spacetimedb';
 import {
+  catalogueEventUsable, currentPlanStatus, intentStands,
   DISCOVERY_CARD_LIMIT, guardDiscoveryVisibility, guardPreferenceStanding, guardSignalStanding, projectDiscoveryCard,
   templateForSignal,
 } from '@dor/contracts/policy';
@@ -9,6 +10,13 @@ import {
   blockedEitherWay, discoveryEnabled, hex, loadDiscoveryParty, loadPreference, loadStanding, signalExpiredMarked,
   toStoredSignal, type ReadDb,
 } from './policy_state';
+import {
+  approvalsStand, findIntentRow, loadCatalogueEvent, loadPlanCheck, toApprovalState, toCatalogueState, toIntentState, toPlanState,
+  type PlanRow,
+} from './event_state';
+
+const CATALOGUE_VIEW_LIMIT = 200;
+const WORKER_PLAN_LIMIT = 200;
 
 // Every view filters strictly by ctx.sender. Tables stay private; only these are public.
 // Views project minimal client-facing rows (column names are the CS client seam,
@@ -294,6 +302,11 @@ const discoveryCardRow = t.row('DiscoveryCardRow', {
  * other published participants in the same configured area with no block either way. Opaque card refs and
  * approved public fields only: no identity, area key, expiry, pair, preset, preference, quiz or journal data.
  * Bounded to DISCOVERY_CARD_LIMIT; never a user directory.
+ *
+ * CS-R2 indexed query: reads only area_participation rows in the viewer's area (btree on area_key), never the whole
+ * publication table. Cards are in card-ref order after the viewer's own discovery_page cursor, so a client can page
+ * through a dense area deterministically. People the viewer already has an accepted introduction with are left out
+ * (they are connected; a card would only invite a refused request).
  */
 export const discovery_cards = spacetimedb.view(
   { name: 'discovery_cards', public: true }, t.array(discoveryCardRow),
@@ -302,15 +315,271 @@ export const discovery_cards = spacetimedb.view(
     if (!enabled || !ctx.db.account.identity.find(ctx.sender)) return [];
     const viewer = loadDiscoveryParty(ctx.db, ctx.sender);
     if (!viewer.publication || !viewer.area) return [];
-    const cards = [];
-    for (const r of ctx.db.discovery_publication.iter()) {
-      if (cards.length >= DISCOVERY_CARD_LIMIT) break;
-      if (r.owner.isEqual(ctx.sender)) continue;
-      const target = loadDiscoveryParty(ctx.db, r.owner);
-      if (!guardDiscoveryVisibility(viewer, target, blockedEitherWay(ctx.db, ctx.sender, r.owner), enabled, null).ok) continue;
-      const c = projectDiscoveryCard(target.publication!, viewer.publication.interestTags);
-      cards.push({ card_ref: c.cardRef, display_name: c.displayName, interest_tags: c.interestTags, shared_tags: c.sharedTags, revision: c.revision });
+    const after = ctx.db.discovery_page.owner.find(ctx.sender)?.after_ref ?? '';
+    const connected = acceptedCounterparts(ctx.db, ctx.sender);
+    const eligible = [];
+    for (const a of ctx.db.area_participation.area_key.filter(viewer.area.areaKey)) {
+      if (a.owner.isEqual(ctx.sender) || connected.has(a.owner.toHexString())) continue;
+      const target = loadDiscoveryParty(ctx.db, a.owner);
+      if (!target.publication || target.publication.publicationId <= after) continue;
+      if (!guardDiscoveryVisibility(viewer, target, blockedEitherWay(ctx.db, ctx.sender, a.owner), enabled, null).ok) continue;
+      eligible.push(projectDiscoveryCard(target.publication, viewer.publication.interestTags));
     }
-    return cards;
+    eligible.sort((x, y) => (x.cardRef < y.cardRef ? -1 : x.cardRef > y.cardRef ? 1 : 0));
+    return eligible.slice(0, DISCOVERY_CARD_LIMIT).map(c => (
+      { card_ref: c.cardRef, display_name: c.displayName, interest_tags: c.interestTags, shared_tags: c.sharedTags, revision: c.revision }));
+  }
+);
+
+/** Hex identities the caller has an accepted introduction with (indexed on both sides). */
+function acceptedCounterparts(db: ReadDb, me: Identity): Set<string> {
+  const out = new Set<string>();
+  for (const r of db.introduction.sender.filter(me)) if (r.status === 'accepted') out.add(r.recipient.toHexString());
+  for (const r of db.introduction.recipient.filter(me)) if (r.status === 'accepted') out.add(r.sender.toHexString());
+  return out;
+}
+
+// ---- C8 introductions (CYBER-R2, PROPOSED) ----
+
+const introductionRow = t.row('IntroductionRow', {
+  intro_id: t.string(), direction: t.string(), status: t.string(), counterpart_name: t.option(t.string()),
+  shared_tags: t.array(t.string()), created_at: t.timestamp(), expires_at: t.option(t.timestamp()),
+});
+
+/**
+ * The caller's own introductions. No identities or card refs. Incoming: the sender's public name snapshot and
+ * the published overlap; a pending request is shown only while the sender's profile still stands unchanged.
+ * Outgoing: accepted | pending | closed. A decline is never revealed (it reads "pending" until it lapses), and the
+ * recipient's name appears only after they accept. Anything between blocked people is hidden.
+ */
+export const my_introductions = spacetimedb.view(
+  { name: 'my_introductions', public: true }, t.array(introductionRow),
+  ctx => {
+    if (!ctx.db.account.identity.find(ctx.sender)) return [];
+    const out = [];
+    for (const r of ctx.db.introduction.iter()) {
+      const incoming = r.recipient.isEqual(ctx.sender);
+      if (!incoming && !r.sender.isEqual(ctx.sender)) continue;
+      if (blockedEitherWay(ctx.db, r.sender, r.recipient)) continue;
+      let status: string;
+      if (incoming) {
+        if (r.status === 'pending') {
+          const pub = loadDiscoveryParty(ctx.db, r.sender).publication;
+          const stands = pub && pub.withdrawnAtMs === null && !pub.expiredMarked && pub.revision === r.sender_revision;
+          if (!stands) continue;
+          status = 'pending';
+        } else status = r.status === 'accepted' || r.status === 'declined' ? r.status : 'closed';
+      } else {
+        // accepted | pending | closed only: whether the recipient declined, withdrew or let it lapse is theirs.
+        status = r.status === 'accepted' ? 'accepted'
+          : (r.status === 'pending' || r.status === 'declined') && !r.sender_closed ? 'pending' : 'closed';
+      }
+      out.push({
+        intro_id: r.intro_id, direction: incoming ? 'incoming' : 'outgoing', status,
+        counterpart_name: incoming ? r.sender_name : status === 'accepted' ? r.recipient_name : undefined,
+        shared_tags: r.shared_tags, created_at: r.created_at, expires_at: status === 'pending' ? r.expires_at : undefined,
+      });
+    }
+    return out;
+  }
+);
+
+const introductionProposalRow = t.row('IntroductionProposalRow', {
+  proposal_id: t.string(), candidate_ref: t.string(), reason_code: t.string(), shared_tags: t.array(t.string()),
+  opener_id: t.string(), decided_by: t.string(), expires_at: t.timestamp(),
+});
+
+/**
+ * The viewer's own AI introduction suggestions, rechecked live: the candidate must still be visible to the
+ * viewer (publication, area, block, sweep expiry) and both profiles unchanged since the proposal.
+ */
+export const my_introduction_proposals = spacetimedb.view(
+  { name: 'my_introduction_proposals', public: true }, t.array(introductionProposalRow),
+  ctx => {
+    const enabled = discoveryEnabled(ctx.db);
+    if (!enabled || !ctx.db.account.identity.find(ctx.sender)) return [];
+    const viewer = loadDiscoveryParty(ctx.db, ctx.sender);
+    const out = [];
+    for (const p of ctx.db.introduction_proposal.iter()) {
+      if (!p.viewer.isEqual(ctx.sender)) continue;
+      const cand = loadDiscoveryParty(ctx.db, p.candidate);
+      if (!guardDiscoveryVisibility(viewer, cand, blockedEitherWay(ctx.db, p.viewer, p.candidate), enabled, null).ok) continue;
+      if (viewer.publication!.revision !== p.viewer_revision || cand.publication!.revision !== p.candidate_revision) continue;
+      out.push({ proposal_id: p.proposal_id, candidate_ref: p.candidate_ref, reason_code: p.reason_code, shared_tags: p.shared_tags,
+        opener_id: p.opener_id, decided_by: p.decided_by, expires_at: p.expires_at });
+    }
+    return out;
+  }
+);
+
+// ---- C7/C8 events and shared plans (CYBER-R3, PROPOSED) ----
+
+const catalogueRow = t.row('CatalogueEventRow', {
+  event_id: t.string(), title: t.string(), starts_at: t.timestamp(), ends_at: t.option(t.timestamp()), topics: t.array(t.string()),
+  format: t.string(), area_key: t.option(t.string()), source_url: t.option(t.string()), fetched_at: t.timestamp(),
+});
+
+/**
+ * Public catalogue for registered accounts: scheduled records not yet started or stale (sweep markers). Not
+ * joined to any user row (the client filters by its own area). Bounded; never includes intents or counts.
+ */
+export const catalogue_events = spacetimedb.view(
+  { name: 'catalogue_events', public: true }, t.array(catalogueRow),
+  ctx => {
+    if (!discoveryEnabled(ctx.db) || !ctx.db.account.identity.find(ctx.sender)) return [];
+    const out = [];
+    for (const e of ctx.db.catalogue_event.iter()) {
+      if (out.length >= CATALOGUE_VIEW_LIMIT) break;
+      if (catalogueEventUsable(toCatalogueState(ctx.db, e), null)) continue;
+      out.push({ event_id: e.event_id, title: e.title, starts_at: e.starts_at, ends_at: e.ends_at, topics: e.topics, format: e.format,
+        area_key: e.area_key, source_url: e.source_url, fetched_at: e.fetched_at });
+    }
+    return out;
+  }
+);
+
+const myIntentRow = t.row('MyEventIntentRow', {
+  event_id: t.string(), kind: t.string(), version: t.u32(), active: t.bool(), expires_at: t.timestamp(),
+});
+
+/**
+ * The caller's own event intents that have not lapsed, including withdrawn ones (active = false) so the client
+ * knows the version to pass when publishing again. Withdraw from here.
+ */
+export const my_event_intents = spacetimedb.view(
+  { name: 'my_event_intents', public: true }, t.array(myIntentRow),
+  ctx => [...ctx.db.event_intent.iter()]
+    .filter(i => i.owner.isEqual(ctx.sender) && !toIntentState(ctx.db, i).expiredMarked)
+    .map(i => ({ event_id: i.event_id, kind: i.kind, version: i.version, active: !i.revoked_at, expires_at: i.expires_at }))
+);
+
+const companionRow = t.row('EventCompanionRow', { card_ref: t.string(), event_id: t.string() });
+
+/**
+ * Mutual event overlap only: (card, event) where the caller can see the card now AND both currently published
+ * intent for the same usable event. You never learn someone's intent for an event you did not mark yourself.
+ * The kind (interested/going) is not shown to others.
+ */
+export const event_companions = spacetimedb.view(
+  { name: 'event_companions', public: true }, t.array(companionRow),
+  ctx => {
+    const enabled = discoveryEnabled(ctx.db);
+    if (!enabled || !ctx.db.account.identity.find(ctx.sender)) return [];
+    const viewer = loadDiscoveryParty(ctx.db, ctx.sender);
+    if (!viewer.publication || !viewer.area) return [];
+    const mine = new Set([...ctx.db.event_intent.iter()]
+      .filter(i => i.owner.isEqual(ctx.sender) && intentStands(toIntentState(ctx.db, i), hex(ctx.sender), i.event_id, null, null) &&
+        !catalogueEventUsable(loadCatalogueEvent(ctx.db, i.event_id), null))
+      .map(i => i.event_id));
+    if (mine.size === 0) return [];
+    const out = [];
+    for (const i of ctx.db.event_intent.iter()) {
+      if (out.length >= DISCOVERY_CARD_LIMIT) break;
+      if (i.owner.isEqual(ctx.sender) || !mine.has(i.event_id)) continue;
+      if (!intentStands(toIntentState(ctx.db, i), hex(i.owner), i.event_id, null, null)) continue;
+      const target = loadDiscoveryParty(ctx.db, i.owner);
+      if (!guardDiscoveryVisibility(viewer, target, blockedEitherWay(ctx.db, ctx.sender, i.owner), enabled, null).ok) continue;
+      out.push({ card_ref: target.publication!.publicationId, event_id: i.event_id });
+    }
+    return out;
+  }
+);
+
+const myApprovalRow = t.row('MyActivityApprovalRow', { approval_id: t.string(), pair_id: t.string(), topics: t.array(t.string()), expires_at: t.timestamp() });
+
+/** The caller's own standing C7 approvals (owner only; the recipient never sees topics outside a plan). */
+export const my_activity_approvals = spacetimedb.view(
+  { name: 'my_activity_approvals', public: true }, t.array(myApprovalRow),
+  ctx => [...ctx.db.activity_approval.iter()]
+    .filter(a => a.owner.isEqual(ctx.sender) && !a.revoked_at && !toApprovalState(ctx.db, a).expiredMarked)
+    .map(a => ({ approval_id: a.approval_id, pair_id: a.pair_id, topics: a.topics, expires_at: a.expires_at }))
+);
+
+const planRow = t.row('SharedPlanRow', {
+  plan_id: t.string(), revision: t.u32(), status: t.string(), my_acceptance: t.bool(), event_id: t.string(), event_title: t.string(),
+  event_starts_at: t.timestamp(), source_url: t.option(t.string()), counterpart_name: t.option(t.string()), expires_at: t.timestamp(),
+});
+
+/**
+ * The caller's own plans. Status is recomputed live from current sources (stale when an intent, approval,
+ * basis, block or catalogue record no longer holds). The other person's acceptance is never shown before both
+ * accepted ("confirmed"), and who declined or cancelled is shown only to that person (others see "closed").
+ */
+export const my_plans = spacetimedb.view(
+  { name: 'my_plans', public: true }, t.array(planRow),
+  ctx => {
+    const out = [];
+    for (const p of ctx.db.shared_plan.iter()) {
+      const isA = p.participant_a.isEqual(ctx.sender);
+      if (!isA && !p.participant_b.isEqual(ctx.sender)) continue;
+      if (blockedEitherWay(ctx.db, p.participant_a, p.participant_b)) continue;
+      const live = currentPlanStatus(toPlanState(p), loadPlanCheck(ctx.db, p, null));
+      const status = live === 'declined' || live === 'cancelled'
+        ? (p.closed_by?.isEqual(ctx.sender) ? live : 'closed') : live;
+      const other = isA ? p.participant_b : p.participant_a;
+      const e = ctx.db.catalogue_event.event_id.find(p.event_id);
+      out.push({
+        plan_id: p.plan_id, revision: p.revision, status, my_acceptance: isA ? p.accepted_a : p.accepted_b, event_id: p.event_id,
+        event_title: e?.title ?? '', event_starts_at: p.event_starts_at, source_url: e?.source_url,
+        counterpart_name: counterpartName(ctx.db, p, other), expires_at: p.expires_at,
+      });
+    }
+    return out;
+  }
+);
+
+/** Introduction basis: the public-name snapshots both people agreed to. Pair basis: the counterpart's account name. */
+function counterpartName(db: ReadDb, p: PlanRow, other: Identity): string | undefined {
+  if (p.basis_kind === 'introduction') {
+    const r = db.introduction.intro_id.find(p.basis_ref);
+    if (!r) return undefined;
+    return r.sender.isEqual(other) ? r.sender_name : r.recipient_name;
+  }
+  return db.account.identity.find(other)?.display_name;
+}
+
+const planCandidateRow = t.row('WorkerPlanCandidateRow', {
+  basis_kind: t.string(), basis_ref: t.string(), event_id: t.string(), intent_ids: t.array(t.string()),
+  intent_versions: t.array(t.u32()), approval_ids: t.array(t.string()), event_starts_at: t.timestamp(), fetched_at: t.timestamp(),
+  topics: t.array(t.string()), format: t.string(),
+});
+
+/**
+ * Worker-only plan inputs: for each current basis, events both participants currently intend, with the exact
+ * intent (and C7 approval) ids and versions commit_plan_proposal binds. Opaque ids, topics and times only: no
+ * names, identities, titles or source text. Empty for every non-worker caller.
+ */
+export const worker_plan_candidates = spacetimedb.view(
+  { name: 'worker_plan_candidates', public: true }, t.array(planCandidateRow),
+  ctx => {
+    if (!ctx.db.worker_identity.identity.find(ctx.sender) || !discoveryEnabled(ctx.db)) return [];
+    const out = [];
+    const bases: { kind: string; ref: string; a: Identity; b: Identity }[] = [];
+    for (const r of ctx.db.introduction.iter()) if (r.status === 'accepted') bases.push({ kind: 'introduction', ref: r.intro_id, a: r.sender, b: r.recipient });
+    for (const p of ctx.db.pair.iter()) if (p.status === 'accepted' && p.member_b) bases.push({ kind: 'existing_connection', ref: p.pair_id, a: p.member_a, b: p.member_b });
+    for (const base of bases) {
+      if (blockedEitherWay(ctx.db, base.a, base.b)) continue;
+      for (const ia of ctx.db.event_intent.iter()) {
+        if (out.length >= WORKER_PLAN_LIMIT) return out;
+        if (!ia.owner.isEqual(base.a) || !intentStands(toIntentState(ctx.db, ia), hex(base.a), ia.event_id, null, null)) continue;
+        const ib = findIntentRow(ctx.db, base.b, ia.event_id);
+        if (!ib || !intentStands(toIntentState(ctx.db, ib), hex(base.b), ia.event_id, null, null)) continue;
+        const e = ctx.db.catalogue_event.event_id.find(ia.event_id);
+        if (!e || catalogueEventUsable(toCatalogueState(ctx.db, e), null)) continue;
+        let approvals: string[] = [];
+        if (base.kind === 'existing_connection') {
+          const pick = (owner: Identity, other: Identity) => [...ctx.db.activity_approval.iter()].find(x => x.pair_id === base.ref &&
+            x.owner.isEqual(owner) && x.recipient.isEqual(other) && !x.revoked_at && !toApprovalState(ctx.db, x).expiredMarked &&
+            x.topics.some(t => e.topics.includes(t)))?.approval_id;
+          const pa = pick(base.a, base.b), pb = pick(base.b, base.a);
+          if (!pa || !pb || !approvalsStand(ctx.db, base.ref, base.a, base.b, pa, pb, e.topics, null)) continue;
+          approvals = [pa, pb];
+        }
+        out.push({ basis_kind: base.kind, basis_ref: base.ref, event_id: e.event_id, intent_ids: [ia.intent_id, ib.intent_id],
+          intent_versions: [ia.version, ib.version], approval_ids: approvals, event_starts_at: e.starts_at, fetched_at: e.fetched_at,
+          topics: e.topics, format: e.format });
+      }
+    }
+    return out;
   }
 );

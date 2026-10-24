@@ -20,6 +20,9 @@ import type {
   RelationshipPreset,
   RelationshipPresetKind,
   SharingCategory,
+  SupportMode,
+  Availability,
+  PrivateReflection,
 } from '@dor/contracts';
 
 export type { AgentAck, ApprovedSignal, DisclosureReceipt, LocalConnectionProfile, Nudge };
@@ -51,6 +54,89 @@ export interface PairView {
 export interface InviteView {
   inviteToken: string;
   expiresAt: string;
+}
+
+/**
+ * The caller's OWN recipient consent in one pair (`my_support_preferences`, D035). Written only by the
+ * recipient; every change bumps consentVersion. No row = no consent (worker fails closed).
+ */
+export interface SupportPreferencesView {
+  pairId: string;
+  supportModes: SupportMode[];
+  availability: Availability[];
+  consentVersion: number;
+  expiresAt: string;
+  revokedAt: string | null;
+}
+
+/** One of the caller's own approved signals (`my_signals`), with its revocation time if revoked. */
+export type SignalView = ApprovedSignal & { revokedAt: string | null };
+
+/** The caller's own discovery publication + area status (`my_discovery_profile`). Never another person's. */
+export interface MyDiscoveryView {
+  /** Own card ref (publication id), or null before first publish. */
+  publicationId: string | null;
+  published: boolean;
+  displayName: string | null;
+  interestTags: string[];
+  revision: number;
+  expiresAt: string | null;
+  withdrawn: boolean;
+  expired: boolean;
+  areaKey: string | null;
+  areaExpiresAt: string | null;
+  areaActive: boolean;
+  discoveryEnabled: boolean;
+}
+
+/**
+ * One `discovery_cards` row, exactly the C8 DiscoveryCardProjection keys (DS's adapter rejects any other key).
+ * No identity, area, distance or contact field exists on it.
+ */
+export interface DiscoveryCardRow {
+  cardRef: string;
+  displayName: string;
+  interestTags: string[];
+  sharedTags: string[];
+  revision: number;
+}
+
+/** The caller's own introduction (`my_introductions`). Outgoing declines read as pending by design (D038). */
+export interface IntroductionView {
+  introId: string;
+  direction: 'incoming' | 'outgoing';
+  status: 'pending' | 'accepted' | 'declined' | 'closed';
+  counterpartName: string | null;
+  sharedTags: string[];
+  createdAt: string;
+  expiresAt: string | null;
+}
+
+/** The viewer's own AI introduction suggestion (`my_introduction_proposals`). A suggestion, never a request. */
+export interface IntroductionProposalView {
+  proposalId: string;
+  candidateRef: string;
+  reasonCode: string;
+  sharedTags: string[];
+  openerId: 'suggest_shared_interest' | 'suggest_event_together';
+  expiresAt: string;
+}
+
+/**
+ * A view row that exists but failed validation. Shown as "couldn't read" with a safe off/revoke action, never
+ * silently dropped (a dropped row would hide an active approval or show an opted-in setting as off).
+ */
+export interface UnreadableRow { id: string | null; pairId: string | null }
+
+export type ReportReason = 'spam' | 'harassment' | 'impersonation' | 'inappropriate_profile' | 'other';
+
+/** The caller's OWN delivery settings as a recipient in one pair (`my_nudge_delivery`, D017/D018). */
+export interface NudgeDeliveryView {
+  pairId: string;
+  optedIn: boolean;
+  quietStartMinute: number | null;
+  quietEndMinute: number | null;
+  utcOffsetMinutes: number;
 }
 
 export type ReducerResult = { ok: true } | { ok: false; code: ReducerErrorCode; message: string };
@@ -105,6 +191,37 @@ export interface SharedStatePort {
   revokeSignal(signalId: string): Promise<ReducerResult>; // revoke_signal
   dismissNudge(nudgeId: string): Promise<ReducerResult>; // dismiss_nudge
   snoozeNudge(nudgeId: string, until: string): Promise<ReducerResult>; // snooze_nudge
+  /** Caller's own recipient consent; expectedVersion 0 creates. */
+  setSupportPreferences(input: {
+    pairId: string;
+    supportModes: SupportMode[];
+    availability: Availability[];
+    expiresAt: string;
+    expectedVersion: number;
+  }): Promise<ReducerResult>; // set_support_preferences
+  revokeSupportPreferences(pairId: string): Promise<ReducerResult>; // revoke_support_preferences
+  /** Caller's own opt-in; default (no row) is off. */
+  setNudgeDelivery(input: NudgeDeliveryView): Promise<ReducerResult>; // set_nudge_delivery
+  /** C8 (flag-gated server-side). The exact preview the owner confirmed; expectedRevision 0 = first publish. */
+  publishDiscoveryProfile(input: {
+    displayName: string;
+    interestTags: string[];
+    expiresAt: string;
+    expectedRevision: number;
+  }): Promise<ReducerResult>; // publish_discovery_profile
+  withdrawDiscoveryProfile(): Promise<ReducerResult>; // withdraw_discovery_profile
+  /** A configured coarse area key only; coordinates never reach this port. */
+  setDiscoveryArea(areaKey: string): Promise<ReducerResult>; // set_discovery_area
+  blockDiscoveryUser(cardRef: string): Promise<ReducerResult>; // block_discovery_user
+  /** Caller's own discovery cursor: cards after this ref; '' = first page. */
+  setDiscoveryPage(afterRef: string): Promise<ReducerResult>; // set_discovery_page
+  sendIntroductionRequest(cardRef: string, clientRequestId: string): Promise<ReducerResult>; // send_introduction_request
+  respondIntroductionRequest(introId: string, accept: boolean): Promise<ReducerResult>; // respond_introduction_request
+  cancelIntroductionRequest(introId: string): Promise<ReducerResult>; // cancel_introduction_request
+  blockIntroductionParticipant(introId: string): Promise<ReducerResult>; // block_introduction_participant
+  /** Also blocks. The target is never told who reported or why. */
+  dismissIntroductionProposal(proposalId: string): Promise<ReducerResult>; // dismiss_introduction_proposal
+  reportDiscoveryUser(target: { kind: 'card' | 'introduction'; ref: string }, reason: ReportReason): Promise<ReducerResult>; // report_discovery_user
 
   // caller-filtered views
   myAccount(): { displayName: string } | null; // my_account
@@ -114,6 +231,15 @@ export interface SharedStatePort {
   myPresetAssignments(): RecipientPresetAssignment[]; // my_preset_assignments
   myNudges(): Nudge[]; // my_nudges
   myReceipts(): DisclosureReceipt[]; // my_receipts
+  mySignals(): SignalView[]; // my_signals (sender-only, D026); includes revoked rows
+  mySupportPreferences(): SupportPreferencesView[]; // my_support_preferences
+  myNudgeDelivery(): NudgeDeliveryView[]; // my_nudge_delivery
+  myDiscoveryProfile(): MyDiscoveryView | null; // my_discovery_profile
+  discoveryCards(): DiscoveryCardRow[]; // discovery_cards (≤ DISCOVERY_CARD_LIMIT, caller-filtered)
+  myIntroductions(): IntroductionView[]; // my_introductions
+  myIntroductionProposals(): IntroductionProposalView[]; // my_introduction_proposals
+  /** Rows present in a view but unreadable; see UnreadableRow. */
+  unreadable(): { signals: UnreadableRow[]; supportPreferences: UnreadableRow[]; nudgeDelivery: UnreadableRow[] };
 
   subscribe(listener: () => void): () => void;
 }
@@ -185,5 +311,6 @@ export interface VaultPort {
 /** Transient provider reflection via authenticated Next.js route (AI owns). */
 export interface ReflectionPort {
   readonly status: AdapterStatus;
-  reflect(selectedText: string, clientRequestId: string): Promise<{ reflection: string }>;
+  /** C1 (AI-owned contract): reflection text plus an owner-only candidate held in memory, never persisted. */
+  reflect(selectedText: string, clientRequestId: string, signal?: AbortSignal): Promise<PrivateReflection>;
 }

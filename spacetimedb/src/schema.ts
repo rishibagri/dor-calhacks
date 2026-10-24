@@ -184,7 +184,7 @@ export const discovery_publication = table(
   { name: 'discovery_publication' },
   {
     publication_id: t.string().primaryKey(), // opaque card reference; never an identity
-    owner: t.identity(),
+    owner: t.identity().index('btree'), // one row per owner; indexed so lookups never scan every profile
     display_name: t.string(),
     interest_tags: t.array(t.string()),
     audience: t.string(),
@@ -201,17 +201,170 @@ export const area_participation = table(
   { name: 'area_participation' },
   {
     owner: t.identity().primaryKey(),
-    area_key: t.string(),
+    area_key: t.string().index('btree'), // discovery_cards reads only the viewer's area
     revision: t.u32(),
     expires_at: t.timestamp(),
     active: t.bool(),
   }
 );
 
+/**
+ * The caller's own discovery page position (CS-R2): discovery_cards returns at most DISCOVERY_CARD_LIMIT cards in
+ * card-ref order after `after_ref`. Views take no arguments, so paging is this per-viewer row. '' = first page.
+ */
+export const discovery_page = table(
+  { name: 'discovery_page' },
+  { owner: t.identity().primaryKey(), after_ref: t.string() }
+);
+
 /** Private blocks. Matching in either direction hides both people from each other. Never shown to the target. */
 export const discovery_block = table(
   { name: 'discovery_block' },
-  { block_id: t.string().primaryKey(), blocker: t.identity(), blocked: t.identity(), created_at: t.timestamp() }
+  {
+    block_id: t.string().primaryKey(), blocker: t.identity().index('btree'), blocked: t.identity().index('btree'),
+    created_at: t.timestamp(),
+  }
+);
+
+/**
+ * C8 introduction requests (CYBER-R2). Human-triggered by the sender; only the recipient accepts or declines.
+ * Accepting is an in-app connection only: no pair, preset, signal, contact detail or message is created.
+ */
+export const introduction = table(
+  { name: 'introduction' },
+  {
+    intro_id: t.string().primaryKey(),
+    sender: t.identity().index('btree'),
+    recipient: t.identity().index('btree'),
+    client_request_id: t.string(), // sender-scoped idempotency key
+    sender_revision: t.u32(), // sender publication revision the request was made from
+    sender_name: t.string(), // public name snapshot the recipient was shown
+    recipient_name: t.option(t.string()), // snapshot shown to the sender only after acceptance
+    shared_tags: t.array(t.string()), // published overlap at request time (the "reason to connect")
+    status: t.string(), // pending | accepted | declined | cancelled | expired | ended
+    sender_closed: t.bool(), // lapsed for the sender's view (a decline is never shown as such)
+    created_at: t.timestamp(),
+    expires_at: t.timestamp(),
+    responded_at: t.option(t.timestamp()),
+  }
+);
+
+/** Worker-committed AI introduction suggestions (D033), visible to the viewer alone. Never sent to the candidate. */
+export const introduction_proposal = table(
+  { name: 'introduction_proposal' },
+  {
+    proposal_id: t.string().primaryKey(),
+    viewer: t.identity(),
+    candidate: t.identity(),
+    candidate_ref: t.string(),
+    viewer_revision: t.u32(),
+    candidate_revision: t.u32(),
+    reason_code: t.string(),
+    shared_tags: t.array(t.string()),
+    opener_id: t.string(),
+    decided_by: t.string(),
+    created_at: t.timestamp(),
+    expires_at: t.timestamp(),
+  }
+);
+
+/** Private moderation records. No view exposes them; the target is never told. Coarse reason code only. */
+export const discovery_report = table(
+  { name: 'discovery_report' },
+  { report_id: t.string().primaryKey(), reporter: t.identity(), target: t.identity(), reason: t.string(), created_at: t.timestamp() }
+);
+
+/** Per-caller fixed-window counters for repeat-probe and spam limits. Private; key = `<action>:<identity hex>`. */
+export const rate_window = table(
+  { name: 'rate_window' },
+  { limit_key: t.string().primaryKey(), window_start: t.timestamp(), count: t.u32() }
+);
+
+/**
+ * Public catalogue records (C7, D039). Written only by the module owner or an allow-listed worker (the
+ * ingester); public, untrusted source data, never permission. No venue, organizer or attendee fields.
+ */
+export const catalogue_event = table(
+  { name: 'catalogue_event' },
+  {
+    event_id: t.string().primaryKey(),
+    title: t.string(), // sanitized display text, never fed to a model
+    starts_at: t.timestamp(),
+    ends_at: t.option(t.timestamp()),
+    status: t.string(), // scheduled | cancelled | unknown
+    fetched_at: t.timestamp(),
+    topics: t.array(t.string()),
+    format: t.string(), // in_person | online
+    area_key: t.option(t.string()), // configured coarse area for in-person events
+    source_url: t.option(t.string()), // safeCatalogueUrl output only
+    updated_at: t.timestamp(),
+  }
+);
+
+/** One person's explicit event intent (C8). Ends with the event; never inferred from scraping or calendars. */
+export const event_intent = table(
+  { name: 'event_intent' },
+  {
+    intent_id: t.string().primaryKey(),
+    owner: t.identity(),
+    event_id: t.string(),
+    kind: t.string(), // interested | going
+    version: t.u32(),
+    expires_at: t.timestamp(),
+    revoked_at: t.option(t.timestamp()),
+    updated_at: t.timestamp(),
+  }
+);
+
+/** C7 item consent for an existing pair: named recipient, exact topics, bound preset versions, <= 24 h. Immutable. */
+export const activity_approval = table(
+  { name: 'activity_approval' },
+  {
+    approval_id: t.string().primaryKey(),
+    owner: t.identity(),
+    recipient: t.identity(),
+    pair_id: t.string(),
+    topics: t.array(t.string()),
+    recipient_policy_version: t.u32(),
+    preset_assignment_version: t.u32(),
+    consent_version: t.u32(),
+    client_request_id: t.string(),
+    expires_at: t.timestamp(),
+    revoked_at: t.option(t.timestamp()),
+    created_at: t.timestamp(),
+  }
+);
+
+/**
+ * Shared plan proposals (D034 lifecycle, D039 guards). Worker-committed; each participant accepts their own
+ * copy of the current revision. Participants are derived from the basis, never from request fields.
+ */
+export const shared_plan = table(
+  { name: 'shared_plan' },
+  {
+    plan_id: t.string().primaryKey(),
+    revision: t.u32(),
+    basis_kind: t.string(), // introduction | existing_connection
+    basis_ref: t.string(), // intro_id or pair_id
+    participant_a: t.identity(),
+    participant_b: t.identity(),
+    intent_a: t.string(),
+    intent_a_version: t.u32(),
+    intent_b: t.string(),
+    intent_b_version: t.u32(),
+    approval_a: t.option(t.string()), // C7 approvals (existing_connection only)
+    approval_b: t.option(t.string()),
+    event_id: t.string(),
+    event_starts_at: t.timestamp(),
+    source_fetched_at: t.timestamp(),
+    accepted_a: t.bool(),
+    accepted_b: t.bool(),
+    status: t.string(), // pending | confirmed | declined | cancelled | expired | stale
+    closed_by: t.option(t.identity()), // who declined/cancelled; shown only to them
+    decided_by: t.string(),
+    created_at: t.timestamp(),
+    expires_at: t.timestamp(),
+  }
 );
 
 /** Allow-listed coordination worker identities (module-owner managed). Workers have no account and cannot approve. */
@@ -257,4 +410,13 @@ export const spacetimedb = schema({
   discovery_publication,
   area_participation,
   discovery_block,
+  discovery_page,
+  introduction,
+  introduction_proposal,
+  discovery_report,
+  rate_window,
+  catalogue_event,
+  event_intent,
+  activity_approval,
+  shared_plan,
 });

@@ -6,7 +6,7 @@ User requirement: dor must not expose a private activity or imply a hidden story
 
 - Relationship coordination accepts only explicitly approved support/availability fields for a named recipient. Raw stories, reasons, event details and suggested questions are rejected by the strict approved-signal schema.
 - The model selects from permitted options. It does not author recipient-facing copy. Extra free text in its reply is rejected; recipient copy comes from the fixed contract templates.
-- Journal/reflection content stays out of recipient prompts and shared state. The reflection candidate is private until separately approved. The composed journal currently provides no automatic candidate-to-share action.
+- Journal/reflection content stays out of recipient prompts and shared state. The reflection candidate is private until separately approved. The composed journal offers an explicit candidate-to-preview action; the owner must separately approve the named-recipient disclosure. No automatic sharing is permitted.
 - Consent, revocation, membership and delivery checks remain authoritative. An uncertain permission means no delivery.
 
 ## Required product behavior for future integration

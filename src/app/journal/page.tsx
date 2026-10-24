@@ -1,10 +1,35 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import type { SignalCandidate } from '@dor/contracts';
 import { SavedJournals } from '@/components/feature/saved-journals';
-import { useBackendUserId, useVault } from '@/lib/backend';
+import { ShareReview } from '@/components/feature/share-review';
+import { useBackendUserId, useReflection, useVault, type VaultPort } from '@/lib/backend';
 import { VoiceReflection } from '@/features/voice/voice-reflection';
 import { VaultControls } from '@/features/privacy/vault-controls';
+
+/**
+ * Mounted only while the vault is unlocked, so the in-memory share candidate is dropped on lock,
+ * sign-out or account switch (keyed by userId).
+ */
+function JournalWorkspace({ vault }: { vault: VaultPort }) {
+  const reflection = useReflection();
+  const [candidate, setCandidate] = useState<SignalCandidate | null>(null);
+  // Clear synchronously on pagehide so a back/forward-cached page never holds the candidate (Cyber review).
+  useEffect(() => {
+    const clear = () => setCandidate(null);
+    window.addEventListener('pagehide', clear);
+    return () => window.removeEventListener('pagehide', clear);
+  }, []);
+  return (
+    <div className="space-y-8">
+      <VoiceReflection vault={vault} reflect={reflection.reflect} onCandidate={(c) => setCandidate(c)} />
+      {candidate && <ShareReview candidate={candidate} onClose={() => setCandidate(null)} />}
+      <SavedJournals vault={vault} version={vault.getVersion()} />
+    </div>
+  );
+}
 
 export default function JournalPage() {
   const vault = useVault();
@@ -22,7 +47,7 @@ export default function JournalPage() {
           read-aloud sends the reflection to Cartesia. None of these actions shares it with a connection.
         </p>
         {vault.status.kind === 'live' && !vault.locked
-          ? <div key={userId} className="space-y-8"><VoiceReflection vault={vault} /><SavedJournals vault={vault} version={vault.getVersion()} /></div>
+          ? <JournalWorkspace key={userId} vault={vault} />
           : <p>Unlock your vault to write or record. Locking clears the open draft and stops recording.</p>}
         <p className="text-sm text-muted-foreground">
           AI suggestions stay on this screen. Sharing still requires a separate explicit approval.

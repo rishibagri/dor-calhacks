@@ -1,0 +1,36 @@
+{
+  "fixtureVersion": 1,
+  "owner": "DS",
+  "synthetic": true,
+  "clock": "2026-10-24T18:00:00Z",
+  "viewerAreaKey": "area-a",
+  "note": "Synthetic stand-in for CS's regional C7 feed in the DS EventListing proposal shape (CatalogueEventRef + coarse areaKey). No real events. Pairs with nearby-candidates.json. Every row except evt-games-night (latest copy) and evt-jazz must be excluded for the reason in expectedExclusion.",
+  "events": [
+    { "eventId": "evt-games-night", "startsAt": "2026-10-24T20:00:00Z", "endsAt": "2026-10-24T23:00:00Z", "status": "scheduled", "fetchedAt": "2026-10-24T12:00:00Z", "topics": ["board-games"], "format": "in_person", "areaKey": "area-a" },
+    { "eventId": "evt-games-night", "startsAt": "2026-10-24T20:00:00Z", "endsAt": "2026-10-24T23:00:00Z", "status": "cancelled", "fetchedAt": "2026-10-23T12:00:00Z", "topics": ["board-games"], "format": "in_person", "areaKey": "area-a" },
+    { "eventId": "evt-jazz", "startsAt": "2026-10-24T21:00:00Z", "endsAt": "2026-10-24T23:30:00Z", "status": "scheduled", "fetchedAt": "2026-10-24T09:00:00Z", "topics": ["live-music"], "format": "in_person", "areaKey": "area-a" },
+    { "eventId": "evt-hike-cancelled", "startsAt": "2026-10-25T15:00:00Z", "status": "cancelled", "fetchedAt": "2026-10-24T09:00:00Z", "topics": ["hiking"], "format": "in_person", "areaKey": "area-a" },
+    { "eventId": "evt-other-area", "startsAt": "2026-10-24T20:00:00Z", "status": "scheduled", "fetchedAt": "2026-10-24T09:00:00Z", "topics": ["board-games"], "format": "in_person", "areaKey": "area-b" },
+    { "eventId": "evt-started", "startsAt": "2026-10-24T17:00:00Z", "endsAt": "2026-10-24T19:00:00Z", "status": "scheduled", "fetchedAt": "2026-10-24T09:00:00Z", "topics": ["coffee"], "format": "in_person", "areaKey": "area-a" },
+    { "eventId": "evt-too-soon", "startsAt": "2026-10-24T18:10:00Z", "status": "scheduled", "fetchedAt": "2026-10-24T09:00:00Z", "topics": ["coffee"], "format": "in_person", "areaKey": "area-a" },
+    { "eventId": "evt-stale", "startsAt": "2026-10-25T18:00:00Z", "status": "scheduled", "fetchedAt": "2026-10-20T00:00:00Z", "topics": ["film"], "format": "in_person", "areaKey": "area-a" },
+    { "eventId": "evt-online-film", "startsAt": "2026-10-24T20:00:00Z", "status": "scheduled", "fetchedAt": "2026-10-24T09:00:00Z", "topics": ["film"], "format": "online", "areaKey": null },
+    { "eventId": "evt-unknown-time", "startsAt": "2026-10-25T18:00:00Z", "status": "unknown", "fetchedAt": "2026-10-24T09:00:00Z", "topics": ["books"], "format": "in_person", "areaKey": "area-a" },
+    { "eventId": "evt-far-future", "startsAt": "2026-11-20T18:00:00Z", "status": "scheduled", "fetchedAt": "2026-10-24T09:00:00Z", "topics": ["running"], "format": "in_person", "areaKey": "area-a" },
+    { "eventId": "evt-with-venue", "startsAt": "2026-10-25T18:00:00Z", "status": "scheduled", "fetchedAt": "2026-10-24T09:00:00Z", "topics": ["cooking"], "format": "in_person", "areaKey": "area-a", "venue": "SYNTHETIC 1 Example St" },
+    { "eventId": "evt-sensitive-topic", "startsAt": "2026-10-25T18:00:00Z", "status": "scheduled", "fetchedAt": "2026-10-24T09:00:00Z", "topics": ["diagnosis-anxiety"], "format": "in_person", "areaKey": "area-a" }
+  ],
+  "expectedExclusion": {
+    "evt-games-night": "duplicate",
+    "evt-hike-cancelled": "cancelled",
+    "evt-other-area": "wrong_area",
+    "evt-started": "already_started",
+    "evt-too-soon": "starts_too_soon",
+    "evt-stale": "expired_source",
+    "evt-online-film": "format_out_of_scope",
+    "evt-unknown-time": "time_unverified",
+    "evt-far-future": "beyond_horizon",
+    "evt-with-venue": "invalid_event",
+    "evt-sensitive-topic": "invalid_event"
+  }
+}

@@ -1,7 +1,7 @@
 import type { Identity } from 'spacetimedb';
 import { Timestamp } from 'spacetimedb';
 import { fail, type Ctx, type AccountRow, type PairRow } from './errors';
-import { audienceAllowed } from '@dor/contracts/policy';
+import { ACTIVITY_CATEGORY, audienceAllowed } from '@dor/contracts/policy';
 import { CATEGORIES, PRESET_KINDS } from './constants';
 type Account = AccountRow;
 type Pair = PairRow;
@@ -61,7 +61,8 @@ export function parseKind(kind: string): string {
 export function parseCategories(cats: string[]): string[] {
   if (new Set(cats).size !== cats.length) fail('invalid', 'duplicate categories');
   for (const c of cats) {
-    if (!(CATEGORIES as readonly string[]).includes(c)) fail('invalid', `unknown category ${c}`);
+    // ACTIVITY_CATEGORY is preset-only (C7, D039): a preset may allow it, but no C3 signal ever carries it.
+    if (!(CATEGORIES as readonly string[]).includes(c) && c !== ACTIVITY_CATEGORY) fail('invalid', `unknown category ${c}`);
   }
   return cats;
 }

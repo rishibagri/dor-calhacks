@@ -1,4 +1,89 @@
-# CYBER handoff (Sumedh): current, CYBER-R0/R1
+# CYBER handoff (Sumedh): current, CYBER-R3
+
+Status: implemented on `role/cyber-privacy` (on main `2b8e59b`, after R2 PR #18 merged). Offline-verified only: the module is unpublished, there's no live Apify source, and discovery stays behind the off-by-default flag.
+
+## What R3 added (D039)
+| Protection | Where | Evidence |
+|---|---|---|
+| Catalogue records only from the server ingester; default-deny normalization (no venue/attendee fields), allowlisted topics/areas/hosts, sanitized titles, no rollback; public view not joined to users | `upsert_catalogue_event`, `guardCatalogueEvent`, `catalogue_events` | `spacetimedb/tests/events.test.ts`, `contracts/tests/events.test.mjs` |
+| Event intents: explicit, usable events only, end with the event, every change bumps the version; overlap visible only mutually and only to people who can see your card; kind never shown | `publish_event_intent`, `revoke_event_intent`, `event_companions`, `my_event_intents` | mutual-only, block, other-area, revoke tests |
+| C7 for existing pairs: preset-only `activity_interest` (off by default), item approval with named counterpart, exact topics, previewed versions, ≤ 24 h | `approve_activity_interest`, `activityApprovalStands`, `my_activity_approvals` | off-by-default, version, outsider, tightening tests |
+| D034 lifecycle adopted: both accept the same revision while every source holds; participants from the basis; times from the catalogue | `commit_plan_proposal`, `revise_plan_proposal`, `respond_plan`, `cancel_plan`, `planSourceCheck`, `my_plans` | wrong user/revision, one-sided, revoke-after-first-accept, block, cancelled/stale/moved event, decline privacy |
+| Worker-only plan inputs | `worker_plan_candidates` | worker-only, no names/titles test |
+| Exact preview copy and withdrawal controls for CS | `src/features/privacy/event-consent-model.ts`, `event-privacy-controls.tsx` | `event-consent-model.test.ts` (6) |
+| Venue tags review | `src/privacy/DISCOVERY_ENFORCEMENT.md` | not added; no habitual-visit disclosure |
+
+## Verification
+- `npm run check:all` exit 0: contracts 116, schemas current, module 137, typecheck, app 193 + 1 known todo.
+- `npm run ai:check` exit 0: agents 64, worker 21, worker integration 19.
+- Mutation checks: 23 of 23 caught.
+- Not run: `next build` (the new components aren't imported by any page yet). Not proven: live Apify, deployed isolation, real scheduler, browser.
+
+## Exact next actions
+- **CS:**
+  1. ACK D039.
+  2. Regenerate bindings.
+  3. Set `source_hosts`.
+  4. Make real ingestion call `upsert_catalogue_event`.
+  5. Use the preview copy verbatim.
+  6. Add an owner-confirmed `activity_interest` preset toggle (off by default).
+  7. Compose `<EventPrivacyControls>` and plan acceptance using `my_plans`.
+- **Adam:**
+  1. Build plan options only from `worker_plan_candidates`.
+  2. Commit via `commit_plan_proposal` with the row's ids and versions unchanged, and use `revise_plan_proposal` after catalogue changes.
+  3. Refusals mean no plan.
+  4. `same_event` introduction proposals still need a shape change before the guard can accept them.
+- **Nimisha:** event companions = `event_companions` rows only (mutual, visible). Keep the D039 rejection cases as no-action evals.
+- **Cyber next:** CYBER-R4 adversarial suite (rate limits on remaining reducers, account switch, browser vault), then R5 live replay.
+
+## Blockers
+None offline. Live proof needs a published module, real ingestion and two real accounts.
+
+---
+
+# CYBER handoff (Sumedh): CYBER-R2 (superseded by R3 above)
+
+Status: implemented on `role/cyber-privacy` (on main `030ead2`), **uncommitted working tree; the user commits and opens the PR.** Offline-verified only; the module is unpublished and discovery stays behind the off-by-default flag.
+
+## What R2 added (D038)
+| Protection | Where | Evidence |
+|---|---|---|
+| Introduction requests: human-triggered, only to a card visible now, idempotent per sender id (a replay never revives), ≤ 72 h; recipient alone accepts/declines, sender alone cancels; accepting creates no pair or other sharing | `reducers/introductions.ts`, `guardIntroductionRequest/Response`, `introduction` table, `my_introductions` | `spacetimedb/tests/introductions.test.ts` |
+| No decline oracle: the sender sees accepted / pending / closed; a pending request and the 30-day cooldown give one message | `my_introductions`, `introductionErrorMessage`, sweep `sender_closed` | decline vs no-answer test; contracts cooldown test |
+| Block from a card or an introduction; report with a coarse reason (private, also blocks); cascades end pending and accepted introductions and proposals | `discovery_effects.ts`, `block_introduction_participant`, `report_discovery_user`, `discovery_report` | report privacy, block-from-request, block-during-pending tests |
+| Withdrawal and profile edits close dependent requests and proposals | `closeDiscoveryLinks`, `stalePublicationDependents` | withdraw/edit during pending tests |
+| Repeat-probe and spam limits per caller per day: 10 requests, 20 blocks, 10 reports, 4 area changes, 20 publishes; ≤ 5 pending | `guardRateLimit`, `consumeRate`, `rate_window` | one test per limit, per-caller isolation |
+| Worker-only commit of AI introduction proposals: visibility, both versions and current tag overlap rechecked; viewer-only view rechecks live | `commit_introduction_proposal`, `guardIntroductionProposalCommit`, `my_introduction_proposals` | withdraw/block/area/edit during generation, model-widened proposals, defence-in-depth view test |
+| Introduction safety controls component | `src/features/privacy/introduction-{model,controls}` | `introduction-model.test.ts` (5) |
+| Enforcement matrix for CS | `src/privacy/DISCOVERY_ENFORCEMENT.md` | — |
+
+## Verification
+- `npm run check:all` exit 0: contracts 105, schemas current, module 113, typecheck, app 186 + 1 known todo.
+- `npm run ai:check` exit 0: agents 64, worker 21, worker integration 19.
+- Mutation checks: 20 of 20 caught (rate limits, cascades, decline mask, worker check, authority, versions, tag overlap, view rechecks).
+- Not run: `next build` (the new component isn't imported by any page yet). Not proven: deployed isolation, real JWT mapping, the real scheduler, browser rendering, two real accounts.
+
+## Exact next actions
+- **CS:**
+  1. ACK D038 and the file claims.
+  2. Regenerate bindings (new reducers and the `my_introductions` / `my_introduction_proposals` views).
+  3. Compose `<IntroductionControls>` (`src/features/privacy/README.md`) and card-level block/report on Discover.
+  4. Send a fresh random `client_request_id` per tap, and reuse it on retry.
+  5. Never show a decline to the sender.
+  6. Enable discovery only after the ACKs.
+- **Adam:**
+  1. After generation, commit proposals through `commit_introduction_proposal` with the worker identity (args in `src/privacy/README.md`).
+  2. Treat refusals as no proposal.
+  3. `same_event` waits for R3.
+- **Nimisha:** rank only `discovery_cards`. Already-connected and pending pairs are refused at commit, so filtering them out early saves model calls. Keep the D038 rejection cases in `src/privacy/REVIEWS.md` as eval no-action cases.
+- **Cyber next:** CYBER-R3 (event intents, C7 activity approvals, plan finalization guard); R5 live replay of `DISCOVERY_ENFORCEMENT.md`.
+
+## Blockers
+None for offline work. Live proof needs a published module, the Clerk `aud` set up and two real accounts.
+
+---
+
+# CYBER handoff (Sumedh): CYBER-R0/R1 (superseded by R2 above)
 
 Status: implemented on `role/cyber-privacy` @ `0021c16` + `9b82854`, on main `fab86d6`. PR #10 to main is open. **Offline-verified only.** The module is unpublished, so nothing here is live.
 

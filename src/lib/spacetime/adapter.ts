@@ -155,6 +155,26 @@ export class SpacetimeSharedState implements SharedStateController {
   revokeSignal = (id: string) => this.call('revoke_signal', () => A.revokeSignal(id));
   dismissNudge = (id: string) => this.call('dismiss_nudge', () => A.dismissNudge(id));
   snoozeNudge = (id: string, until: string) => this.call('snooze_nudge', () => A.snoozeNudge(id, until));
+  setSupportPreferences: SharedStatePort['setSupportPreferences'] = (i) =>
+    this.call('set_support_preferences', () => A.setSupportPreferences(i));
+  revokeSupportPreferences = (id: string) => this.call('revoke_support_preferences', () => A.revokeSupportPreferences(id));
+  setNudgeDelivery: SharedStatePort['setNudgeDelivery'] = (i) => this.call('set_nudge_delivery', () => A.setNudgeDelivery(i));
+  publishDiscoveryProfile: SharedStatePort['publishDiscoveryProfile'] = (i) =>
+    this.call('publish_discovery_profile', () => A.publishDiscoveryProfile(i));
+  withdrawDiscoveryProfile = () => this.call('withdraw_discovery_profile', () => ({}));
+  setDiscoveryArea = (key: string) => this.call('set_discovery_area', () => A.setDiscoveryArea(key));
+  blockDiscoveryUser = (ref: string) => this.call('block_discovery_user', () => A.cardRef(ref));
+  setDiscoveryPage = (after: string) => this.call('set_discovery_page', () => ({ afterRef: after }));
+  sendIntroductionRequest = (ref: string, req: string) =>
+    this.call('send_introduction_request', () => A.sendIntroductionRequest(ref, req));
+  respondIntroductionRequest = (id: string, accept: boolean) =>
+    this.call('respond_introduction_request', () => A.respondIntroductionRequest(id, accept));
+  cancelIntroductionRequest = (id: string) => this.call('cancel_introduction_request', () => A.introId(id));
+  blockIntroductionParticipant = (id: string) => this.call('block_introduction_participant', () => A.introId(id));
+  dismissIntroductionProposal = (id: string) =>
+    this.call('dismiss_introduction_proposal', () => ({ proposalId: id }));
+  reportDiscoveryUser: SharedStatePort['reportDiscoveryUser'] = (t, reason) =>
+    this.call('report_discovery_user', () => A.reportDiscoveryUser(t, reason));
 
   // ---- views ---------------------------------------------------------------
   myAccount = () => this.views.account;
@@ -164,5 +184,13 @@ export class SpacetimeSharedState implements SharedStateController {
   myPresetAssignments = () => this.views.assignments;
   myNudges = () => this.views.nudges;
   myReceipts = () => this.views.receipts;
+  mySignals = () => this.views.signals;
+  mySupportPreferences = () => this.views.supportPreferences;
+  myNudgeDelivery = () => this.views.nudgeDelivery;
+  myDiscoveryProfile = () => this.views.discoveryProfile;
+  discoveryCards = () => this.views.discoveryCards;
+  myIntroductions = () => this.views.introductions;
+  myIntroductionProposals = () => this.views.proposals;
+  unreadable = () => this.views.unreadable;
 }
 

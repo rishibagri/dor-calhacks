@@ -72,13 +72,25 @@ Docs in this folder: [REVIEWS.md](REVIEWS.md) (D016–D021 verdicts, C8 review),
 ### CS: discovery (proposed C8, off by default)
 Owner config: `set_discovery_config({key:'tags', values:[...]})`, `{key:'areas', values:[...]}` (configured coarse areas only), then `{key:'enabled', values:['true']}` only after the C8 ACKs. Client: `publish_discovery_profile`, `set_discovery_area` (the device maps its one-time sample to a configured area key and discards it), `withdraw_discovery_profile`, `block_discovery_user({card_ref})`. Subscribe to `discovery_cards` and `my_discovery_profile`. See REVIEWS.md "C8".
 
+### CS: introductions, block and report (proposed C8, D038)
+Client: `send_introduction_request({card_ref, client_request_id})` (a fresh random id per user tap, reused on retry), `respond_introduction_request({intro_id, accept})`, `cancel_introduction_request`, `block_introduction_participant`, `report_discovery_user({target_kind, target_ref, reason})`, `dismiss_introduction_proposal`. Subscribe to `my_introductions` and `my_introduction_proposals`. Compose `<IntroductionControls>` (`src/features/privacy/README.md`). Never show a decline to the sender, and show refusals only through `messageForError`. Full matrix: `DISCOVERY_ENFORCEMENT.md`.
+
+### Adam: introduction proposals (D033 → D038)
+Commit each proposal with the worker identity through `commit_introduction_proposal({proposal_id, viewer_ref, candidate_ref, viewer_publication_version, candidate_publication_version, reason_code: 'shared_interest', shared_tags, event_id: none, opener_id: 'suggest_shared_interest', decided_by, expires_at})`. `proposal_id` must match `^[A-Za-z0-9_-]{8,64}$` (a UUID qualifies). The reducer is the authority: treat `stale:*`, `not_found:*`, `unauthorized: withdrawn` and `invalid:*` as no proposal, and `unauthorized: worker only` as a deployment fault. `same_event` is refused until R3.
+
+### CS: events, intents and plans (C7/C8, D039)
+Ingestion (server only): after the D028-guarded Apify run, call `upsert_catalogue_event` as the module owner or the allow-listed worker, once per normalized record. Set `set_discovery_config({key:'source_hosts', values:[...]})` first. Client: `catalogue_events` (filter by your own area on the device), `publish_event_intent` / `revoke_event_intent` with `my_event_intents` for the version, `event_companions` for mutual overlap, `respond_plan({plan_id, revision, accept})` / `cancel_plan` with `my_plans`. Existing pairs: a preset toggle for `activity_interest` (off by default, owner-confirmed) plus `approve_activity_interest` / `revoke_activity_interest` with `my_activity_approvals`. Use the preview strings in `src/features/privacy/event-consent-model.ts` verbatim and compose `<EventPrivacyControls>`.
+
+### Adam: shared plans (D034 → D039)
+Read `worker_plan_candidates` (worker identity). For each row, `commit_plan_proposal({plan_id, basis_kind, basis_ref, event_id, intent_ids, intent_versions, approval_ids, expires_at, decided_by})` with the row's ids and versions unchanged; `plan_id` must match `^[A-Za-z0-9_-]{8,64}$`. The reducer sets times from the catalogue. After a catalogue change, `revise_plan_proposal({plan_id, expected_revision, expires_at})`. Treat `stale:*`, `not_found:*` and `invalid:*` as no plan, and `unauthorized: worker only` as a deployment fault. `PlanCoordinator`'s options must come from these rows only.
+
 ### CS: Apify (C7)
 Build every Actor input via `guardPublicCatalogueQuery(input, ACTIVITY_TOPIC_ALLOWLIST)`, and render source links only via `safeCatalogueUrl`. See ACTIVITY_CONSENT.md.
 
-## Known gaps (2026-10-24, CYBER-R1)
+## Known gaps (2026-10-24, CYBER-R3)
 - Nothing is published. All reducer and view evidence comes from the in-process SpacetimeDB harness, which doesn't prove deployed isolation, real JWT mapping, the real scheduler or concurrent transactions.
 - **Views can't check `aud`** (ViewCtx has no `senderAuth`). A token from the same Clerk instance minted for another audience maps to the same Identity and could read that user's own `my_*` rows; reducers refuse it. Mitigation: use a Clerk instance (distinct issuer) dedicated to dor, since a separate JWT template keeps the same iss/sub.
 - Expiry in views is bounded by the 60 s sweep, not exact. The sweep scans whole tables (fine for the demo; index it in R4). `expired_record` markers are never pruned.
-- No rate limiting on `approve_signal`, `set_nudge_delivery`, `set_support_preferences` or the discovery reducers yet (R2/R4).
-- C8 is proposed: introductions/invites, report, invite limits and repeat-probe limits are R2. Discovery stays disabled until the C8 ACKs.
+- Discovery reducers have per-caller daily limits (D038). `approve_signal`, `set_nudge_delivery` and `set_support_preferences` still have none (R4). Limits are per database and count successful actions only.
+- C8 is proposed: publication, area, introductions, block, report and limits are implemented offline (D038, `DISCOVERY_ENFORCEMENT.md`). Discovery stays disabled until the C8 ACKs. Events, intents, C7 approvals and plans are implemented offline (D039); no live Apify source yet; `same_event` introduction proposals still refused (needs an AI shape change); no moderator tooling.
 - C7 activity sharing isn't permitted; only the Apify input and link guards exist.
