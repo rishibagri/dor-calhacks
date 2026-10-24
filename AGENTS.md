@@ -38,7 +38,7 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 | Role / person | Current status | Next handoff |
 |---|---|---|
 | CS — you | role/cs-app (offline only): core-first separation (extensions hidden by default) + private decision loop before exact-recipient preview (docs/features/PRIVATE_DECISION_LOOP.md); R1–R3 code preserved | Core 3: publish/auth/worker config and two-account + denied-third run. Adam: assessment → LoopState seam. Sumedh: durable pause contract → CS controls |
-| DS — Nimisha | On main: DS-R0–R2 (PR #9), strict `discovery_cards` adapter (PR #13), first DS-R3 cut (PR #17); DS nearby ranking + `DiscoveryResults` composed in `/discover` and `eligibleEvents` used by `/events` (CS PRs #22/#24; offline/synthetic). PR #25 (open; **extension maintenance only**, no new discovery scope): D039 fix (no other person's interested/going), companions only from `event_companions`, 48 h freshness + Cyber's area rule, still accepts CS's Events listing shape, D038 proposal gate, card `onReport` | **Core-first (README Core 1–4):** DS Core 1 = expected support/avoid/uncertain outcomes + forbidden-disclosure labels before any model eval; Core 2 = paired recipient-intent scenarios + private-story noninterference cases. CS: pass `reportCard` to `onReport`. Sumedh: filter linked pairs, a3. Adam: gate `same_event` proposals |
+| DS — Nimisha | On main: DS-R0–R3 extension work (PRs #9/#13/#17/#25; `/discover` + `/events` consume DS rankers; offline/synthetic). Core 1/2 (role/ds-context, PR open): `decision-cases.json` 24 labeled cases + six forbidden-disclosure labels, paired scenarios + noninterference against CS `decide()`; 22/24 match, missed 0, 2 known gaps | Adam: assessment → `excludeForNow` seam (r4 entry-only refusal). CS: validate candidate with `SignalCandidateSchema` in the loop (i2). Sumedh: review labels vs pause semantics; a3. DS next: Core 3 ratings + baseline comparison |
 | Cyber — Sumedh | role/cyber-privacy (on main 2b8e59b): CYBER-R3 guarded catalogue ingestion, C8 event intents (mutual-only overlap), C7 activity approvals (preset-only, off by default), D034 plan finalization with current-source rechecks, `EventPrivacyControls` + exact preview copy (D039). R2 merged (#18). Offline only: contracts 116, module 137, app 193, ai 104; flag off, not published | CS: ACK D039, bindings, ingestion → `upsert_catalogue_event`, preview copy, preset toggle. Adam: `commit_plan_proposal` from `worker_plan_candidates`. Nimisha: `event_companions`. Cyber next: CYBER-R4 adversarial suite |
 | AI — Adam | role/ai-voice (PR to main pending): Droid SDK transport is the worker default (`@factory/droid-sdk`, verified tool allowlist, one prompt per session; `DOR_DROID_TRANSPORT=cli` fallback); 25 s job budget; reflection in-flight dedupe + metadata-only usage; extension paths for plans (D039) and the introduction commit (D038). Offline + isolated live Droid via SDK (synthetic stand-ins) | Core 1: private assessment/clarification seam proposal (no_action / needs_clarification / ready_for_preview) with Nimisha + Sumedh; Core 3: live Claude/Cartesia/SDK on the core journey |
 
@@ -299,3 +299,38 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - No human ratings.
   - No Core 1 labels yet.
 - **Details:** `docs/handoffs/ds.md`, `docs/updates/ds.md`.
+
+### 2026-10-24T18:45Z | DS → CS, AI, Cyber | Core 1 labels + Core 2 paired decision-loop scenarios
+- **Branch/commit:** `role/ds-context` on main `5df9fcd`; PR to main is open (not merged). Read the remote role branch until it merges.
+- **Status:** implemented and offline-verified against CS's pure `decide()`, synthetic only, NOT live. No model assessment was evaluated because none exists yet.
+- **Interfaces (DS-owned, evaluation only, no contract change):**
+  - `src/evaluation/fixtures/decision-cases.json`: 24 cases (support/avoid/uncertain). Each has an expected `no_action` / `needs_clarification` / `ready_for_preview` (README design vocabulary) and forbidden-disclosure terms under six labels: `unapproved_recipient`, `private_activity`, `location`, `excuse`, `relationship_tension`, `timing_detail`. The labels were written from the README rules before any run and are never relabeled to match the code.
+  - Pairs: general vs specific, explicit refusal, ambiguous timing, skipped question, changed answer, prompt injection, private party, no candidate; plus a 4-story noninterference set.
+  - `src/evaluation/decision-loop.ts`: `replay`, `surfacesOf`, `leaksOf`, `scoreCase` (unsafe and missed reported separately) and `observable` (preview + nudge schedule). It imports CS's `decision-loop-model.ts` from evaluation code only, as PRIVATE_DECISION_LOOP.md invites; production code must not import it.
+  - `report.ts` has a new Core 1/2 section in `results/latest.md`.
+- **Evidence:**
+  - Decision suite: 31 pass / 0 fail / 2 todo (known gaps).
+  - `npm run check:all` exit 0: contracts 116, module 143, app 293 pass / 0 fail / 3 todo.
+  - Report: 22/24 expected outcomes, missed 0, unsafe 2 (both known gaps), correct no-action 8/9.
+  - Noninterference: 4 private stories give an identical outcome, preview, recipient copy and nudge schedule.
+  - Fixed-copy scan: no story term in any question, note, no-action or template text.
+  - Mutations on CS's model: 5/5 caught (ignored exclusion, skip fall-through, changed answer keeps choice, auto-pick fallback, leaky copy). The model was restored and is unchanged.
+- **AI (Adam) next:**
+  1. Implement the private assessment → `excludeForNow` seam, so a refusal written only in the entry ("not Alex tonight") excludes that person without a button tap. Case `r4` is a todo test until then; when it lands, remove its `knownGap` and set `assessment.exclude`.
+  2. Map invalid, refused or timed-out assessment output to `no_action`. The assessment may exclude or veto; it may never set `chosen`.
+  3. Run the 24 cases against the real assessment once it exists (Core 3).
+- **CS (Rishi) next:**
+  1. Parse the candidate with `SignalCandidateSchema` in `startLoop`/`decide` (a failed parse is treated as `null`), so a malformed candidate never reaches `ready_for_preview`. Case `i2` is a todo test; `previewDisclosure` already denies it downstream.
+  2. Optional: export the model's helpers through a shared seam if the team wants evaluation code to avoid the direct import.
+- **Cyber (Sumedh) next:**
+  1. Review the six forbidden-disclosure labels against the recipient-restriction and pause semantics.
+  2. Once the durable pause contract lands, DS adds the change-of-mind-during-generation case (not covered yet).
+  3. a3.
+- **DS next:** Core 3: two teammate ratings, unsafe and missed reported separately, compared with the deterministic baseline. Core 4: partner/friend/family examples plus the private-party no-action case, with the real sample size.
+- **Open gaps:**
+  - r4 (AI seam) and i2 (CS validation).
+  - Single DS annotator; no teammate ratings.
+  - No pause or change-of-mind case.
+  - The module is unpublished.
+- **Run:** `node --test src/evaluation/__tests__/decision-loop.test.ts`; `node src/evaluation/report.ts --write`.
+- **Details:** `docs/handoffs/ds.md`, `docs/updates/ds.md`, `src/evaluation/results/latest.md`.

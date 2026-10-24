@@ -7,6 +7,7 @@ import { FakeClock, FakeDisclosurePolicy } from '@dor/contracts/fakes';
 import { buildPreview, matchSignal } from './matching.ts';
 import { NEARBY_RANKERS, RANKERS, evaluate, evaluateNearby, type CaseFile, type CatalogueFile, type NearbyCaseFile, type NearbyPoolFile } from './metrics.ts';
 import { rankActivities } from './rank.ts';
+import { scoreCase, type DecisionFile } from './decision-loop.ts';
 
 const load = async (f: string) => JSON.parse(await readFile(new URL(`./fixtures/${f}`, import.meta.url), 'utf8'));
 const support = await load('evaluation-cases.json');
@@ -14,6 +15,7 @@ const cases: CaseFile = await load('activity-cases.json');
 const catalogue: CatalogueFile = await load('activity-catalogue.json');
 const nearbyCases: NearbyCaseFile = await load('nearby-cases.json');
 const nearbyPool: NearbyPoolFile = await load('nearby-candidates.json');
+const decisions: DecisionFile = await load('decision-cases.json');
 let revision = 'unknown';
 try {
   revision = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim();
@@ -54,6 +56,12 @@ const chained = shared.map(s => {
 
 // 4. Nearby/event shortlist: DS vs naive most-tags baseline.
 const nearby = Object.entries(NEARBY_RANKERS).map(([name, fn]) => evaluateNearby(name, fn, nearbyCases, nearbyPool));
+
+// 5. Core 1/2 decision loop: CS's decide() against DS labels written before the run.
+const scored = decisions.cases.map(c => ({ c, s: scoreCase(decisions, c) }));
+const outcomeOf = (o: ReturnType<typeof scoreCase>['outcome']) =>
+  o.kind === 'no_action' ? `no_action: ${o.reason}` : o.kind === 'ready_for_preview' ? `ready_for_preview: ${o.recipient.pairId}` : `needs_clarification: ${o.question}`;
+const expectedNoAction = scored.filter(x => x.c.expected.kind === 'no_action');
 
 const out = `# DS evaluation results
 
@@ -107,6 +115,19 @@ ${nearbyCases.cases.map((c, i) => `| ${c.id} | ${nearby.map(s => {
   const body = o.result.kind === 'shortlist' ? o.result.entries.map(e => e.ref).join(', ') : `none: ${o.result.reason}`;
   return o.falseMatches.length ? `${body} (**false:** ${o.falseMatches.join(', ')})` : body;
 }).join(' | ')} |`).join('\n')}
+
+## Core 1/2 decision loop (CS decide()), ${scored.length} labeled cases
+| Metric | Actual |
+|---|---|
+| Expected outcome reproduced | ${pct(scored.filter(x => x.s.matches).length, scored.length)} |
+| Unsafe (unexpected or wrong-recipient preview, or a forbidden term/person surfaced) | ${scored.filter(x => x.s.unsafe).length} |
+| Missed (preview expected, none offered) | ${scored.filter(x => x.s.missed).length} |
+| Correct no-action | ${pct(expectedNoAction.filter(x => x.s.outcome.kind === 'no_action').length, expectedNoAction.length)} |
+| Forbidden-disclosure findings | ${scored.reduce((n, x) => n + x.s.leaks.length, 0)} |
+
+| Case | Pair | Expected | Actual | Note |
+|---|---|---|---|---|
+${scored.map(({ c, s }) => `| ${c.id} | ${c.pair} | ${c.expected.kind}${c.expected.reason ? `: ${c.expected.reason}` : ''} | ${outcomeOf(s.outcome)}${s.leaks.length ? ` (**leak:** ${s.leaks.map(l => `${l.label}/${l.surface}`).join(', ')})` : ''} | ${s.matches ? '' : c.knownGap ? 'known gap' : '**mismatch**'} |`).join('\n')}
 
 ## Chained: shared_activity nudges from the 30 cases → ds_rules_v1 (no approved interests)
 | Support case | Agreed window | Suggestions |
