@@ -4,6 +4,16 @@ Read `docs/roles/ai.md` and README **R0–R6** for current assignments. The hist
 
 ---
 
+# AI handoff — core-first checkpoint (2026-10-24 ~18:20Z)
+
+The README now puts the partner/friend/family journey first (Core 1–4) and lists the sponsor targets. For AI:
+- **Factory:** the SDK call path is the worker default (`worker/src/droid-sdk.ts`). The CLI is only the `DOR_DROID_TRANSPORT=cli` fallback. Evidence so far is offline tests plus an isolated live run with synthetic stand-ins; deployed proof is still open.
+- **Anthropic/Cartesia:** live runs on the core journey wait for Core 3 and Adam's go-ahead.
+- **Next AI work (Core 1):** propose the private assessment/clarification seam (`no_action` / `needs_clarification` / `ready_for_preview`, at most two private questions; invalid/refused/timeout → no delivery). Agree it with Nimisha (paired fixtures) and Sumedh (pause semantics) before changing contracts. Gate the coordinator fallback on the future pause check.
+- Plan and introduction worker paths below are **extensions**, not core gates.
+
+---
+
 # AI handoff — R2–R4 worker paths (2026-10-24 ~16:45Z)
 
 **Branch:** `role/ai-voice`, working tree on main `59f917e` (not yet committed or in a PR). **Status:** implemented and offline-verified only; no provider call, no published module.

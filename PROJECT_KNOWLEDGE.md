@@ -47,3 +47,12 @@ Fresh locked install completed. `npm run check:all` exited 0: contracts 63, in-p
 Supersedes the older placeholder statements for this branch only: account-specific LocalVault initialization now uses hashed Clerk account namespaces, cancellation/pagehide locking and reactive lifecycle state. Journal and Privacy compose the existing VoiceReflection and VaultControls; journal can save, list, open and delete local entries/reflections. Account change remounts private UI; locking unmounts the editor. Generated client/worker SpacetimeDB bindings and Node ESM build fixes from the Desktop working copy are included. No shared contract shapes changed.
 
 Reconciled with main 6093b2a: recipient preview/approval, support-preference settings, Discover composition and authoritative event/plan guards have since landed and are preserved. Remaining integration/live gates include event-page/catalogue work, deployed worker/auth configuration and real-browser/provider E2E verification. The core-first roadmap is proposed separately in PR #26. Claude is not configured locally; Cartesia configuration is not proof of live operation. No deployment or paid provider test was performed. Relationship safety requirements and their limited regression evidence are in docs/features/RELATIONSHIP_SAFETY.md.
+
+## AI follow-up — role/ai-voice (2026-10-24)
+
+Offline-verified unless stated otherwise.
+- **Factory sponsor path:** the worker's default Droid transport is the SDK (`@factory/droid-sdk` sessions, `worker/src/droid-sdk.ts`). `droid exec` is only the explicit `DOR_DROID_TRANSPORT=cli` fallback. Isolated live SDK run with synthetic stand-ins (not deployed): 4/4 agent-decided.
+- **Core coordination:** a 25 s aggregate job budget covers slot wait and rounds. `/api/reflections` coalesces duplicate in-flight requests and logs metadata-only usage.
+- **Extension paths (not core gates):** plans over `worker_plan_candidates` → `commit_plan_proposal`; the introduction commit over `commit_introduction_proposal` is not wired, because there is no worker-readable candidate source yet.
+- **Not built yet:** the private assessment/clarification outcomes and the recipient pause from the core-first README. That is AI Core 1/2 work and needs reviewed contracts first.
+- **Token safety:** offline checks never load `.env.local`; paid runs are explicit.
