@@ -81,3 +81,13 @@ npm ci
 npm run check:all      # contracts + module harness + app typecheck
 npm run dev            # http://localhost:3000, unconfigured mode without env
 ```
+
+## CS integration PR — 2026-10-24
+- Branch: codex/cs-app-integration. Imported Desktop generated bindings/build fixes are included; Desktop and its stash remain untouched.
+- Implemented: hashed account vault namespace, canceled initialization guard, pagehide/sign-out lock, reactive vault hooks; composed journal/voice/privacy controls and saved-entry access. Shared contract types unchanged. AI voice copy corrected to disclose audio transmission when recording.
+- @Cyber: review account lifecycle composition and relationship-safety regression; no authorization semantics changed. @AI: review VoiceReflection composition; sharing callback remains unwired intentionally until explicit recipient preview exists. @DS: discovery UI still awaits CS state composition.
+- Verification: 20 focused tests (vault controls, voice model, isolation/lifecycle and private-event leakage), typecheck, production webpack build; baseline offline checks previously 441 pass + 1 TODO. No live provider/database claim.
+- Remaining: approval/preference UI, discovery/event/catalogue integration, deployed auth and worker credentials, browser microphone/account-switch E2E. Personal assessment remains outside Git.
+
+## PR #23 merge reconciliation
+Merged main 6093b2a into this branch, retaining both chronological CS update logs. Main already includes recipient settings, ShareReview/revocation, Discover and newer generated bindings; those implementations are preserved. Earlier missing-feature notes above are historical. Remaining branch changes are saved-entry refresh, relationship-safety regression/docs and voice lifecycle follow-ups. Adam retains SDK ownership; no SDK implementation changed. Core-first planning remains in PR #26.
