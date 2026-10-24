@@ -36,6 +36,9 @@ Status: implemented on `role/cyber-privacy` (on main `2b8e59b`, after R2 PR #18 
 - **Nimisha:** event companions = `event_companions` rows only (mutual, visible). Keep the D039 rejection cases as no-action evals.
 - **Cyber next:** CYBER-R4 adversarial suite (rate limits on remaining reducers, account switch, browser vault), then R5 live replay.
 
+## Deferred to the front-end pass (owner decision, 2026-10-24)
+- **Raw server text in Discover forms (CS files):** `discovery-profile.tsx` and `discovery-area.tsx` show reducer refusals through `ResultNotice`, which prints the raw `code: message`. These should go through fixed copy (`messageForError` from `src/features/privacy/introduction-model.ts`, or an equivalent map). Non-blocking: the text only describes the caller's own state. Pick this up with Rishi when the front end is worked on.
+
 ## Blockers
 None offline. Live proof needs a published module, real ingestion and two real accounts.
 
