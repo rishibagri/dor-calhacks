@@ -65,6 +65,24 @@ Status: PR #25 (open), `role/ds-context` merged with main `71c3b6a` (README core
 2. Map `EventCompanions` entries to `IntroductionShortlist` with `publicationVersion` from `result.candidates`.
 3. Agree the import path with CS.
 
+## Core 1/2 status (2026-10-24T18:45Z, PR open)
+- **Core 1 labels:** `src/evaluation/fixtures/decision-cases.json`, 24 synthetic cases. Each has an expected `no_action` / `needs_clarification` / `ready_for_preview` and forbidden-disclosure terms under six labels (`unapproved_recipient`, `private_activity`, `location`, `excuse`, `relationship_tension`, `timing_detail`). The labels come from the README rules and were written before any run; they are not relabeled to fit the code.
+- **Core 2 paired scenarios** run against CS's `decide()` (`src/evaluation/decision-loop.ts`): general vs specific, explicit refusal, ambiguous timing, skipped question, changed answer, prompt injection, private party and no candidate, plus a 4-story noninterference check.
+- **Result:** 22/24 match; missed 0; unsafe 2, both known gaps:
+  - **r4 (AI):** a refusal written only in the entry still offers Alex, because no assessment feeds the loop.
+  - **i2 (CS):** a malformed candidate reaches `ready_for_preview`; `previewDisclosure` then denies it.
+- **Not covered:** model assessments (none exist), the durable pause / change-of-mind-during-generation case (needs Cyber's pause contract), and teammate ratings (Core 3).
+
+## Core 1/2 v2 with D040 (2026-10-24T20:30Z, pushed to PR #32; not merged)
+- **Pipeline:** `initialLoopState(candidate, assessment)` → owner taps → `decide(state, assessedRecipients(recipients, assessment))`.
+- **Cases:** 44. 19 new `a*` cases reference all 10 cases in AI's reflection fixture by ID; the DS expectations were written before the run. The v1 labels are unchanged.
+- **Results:** 42/44 expected; appropriate silence 18/19; missed 0/8; unsafe suggestions 1 (i2); excluded person surfaced 0; forbidden-disclosure findings 1 (r4m).
+- **Open:**
+  - **r4m (AI + CS):** a refusal is ignored when the assessment is missing.
+  - **i2 (CS):** a malformed candidate reaches `ready_for_preview`.
+- **r5 resolved by the DS owner:** an owner tap on an assessment-excluded person → `no_action: no_recipient` (v1 label `needs_clarification` kept in `labelHistory`). Preferred because the excluded person must not be contacted or substituted automatically and re-asking would invite a second choice; verified against PRIVATE_ASSESSMENT.md §3, README 'Deterministic exclusion', CS `decide()` and AI's assessment test. No other label changed.
+- **Limits:** the AI fixture outputs are hand-written, not Claude, so a live run is still needed (Core 3).
+
 ## Next for DS: core-first (README "Current direction", Core 1–4)
 Discovery/event ranking work is paused. Don't expand it until the core passes live verification. The earlier "D038/D039 metrics cases" and "first-session recommendations" items are dropped.
 1. **Core 1:** before any model evaluation, define the expected owner-side outcome (`no_action` / `needs_clarification` / `ready_for_preview`, still a proposed vocabulary) for support, avoid and uncertain recipient intent, plus the forbidden-disclosure labels (unapproved party, activity, location, excuse, tension, timing). Co-define them with Adam (assessment output) and Sumedh (recipient restriction).

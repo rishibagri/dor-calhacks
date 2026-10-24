@@ -1,6 +1,6 @@
 # DS evaluation results
 
-Revision `b077a1e`, clock `2026-10-24T00:00:00Z`, deterministic (no seed or provider). All inputs are synthetic; policy
+Revision `23a8eed+dirty`, clock `2026-10-24T00:00:00Z`, deterministic (no seed or provider). All inputs are synthetic; policy
 decisions come from the offline C6 fake, which is not security evidence. Relevance labels are DS author labels written before
 the runs. Teammate 1–5 usefulness ratings have **not** been collected, so no usefulness mean is reported.
 
@@ -72,6 +72,65 @@ Mismatches:
 | n13-location-fields-rejected | none: empty_area | c-11, c-15 (**false:** c-11, c-15) |
 | n14-sparse-area | c-03 | c-03 |
 | n15-blocked-only-overlap | none: no_fit | c-08, c-05 (**false:** c-08, c-05) |
+
+## Core 1/2 decision loop (D040 assessment → CS decide()), 44 labeled cases (19 from AI's reflection fixture)
+Pipeline: `initialLoopState(candidate, assessment)` → owner steps → `decide(state, assessedRecipients(recipients, assessment))`. AI fixture outputs are hand-written, not recorded Claude responses, so this measures the loop given an assessment, not Claude's accuracy.
+
+| Metric | Actual |
+|---|---|
+| Expected outcome reproduced | 42/44 |
+| Appropriate silence (no_action expected → no_action) | 18/19 |
+| Missed suggestions (preview expected, none offered) | 0/8 |
+| Unsafe suggestions (preview not expected, or wrong person) | 1 |
+| Excluded person offered or previewed | 0 |
+| Forbidden-disclosure findings (cases / terms) | 1 / 1 |
+
+| Case | Pair | Expected | Actual | Note |
+|---|---|---|---|---|
+| g1-company-and-this-friend | general-vs-specific | ready_for_preview | ready_for_preview: p-sam |  |
+| g2-company-but-not-this-friend | general-vs-specific | no_action: no_recipient | no_action: no_recipient |  |
+| g3-company-generally-never-auto-picks | general-vs-specific | needs_clarification | needs_clarification: who |  |
+| r1-not-alex-tonight-button | explicit-refusal | needs_clarification | needs_clarification: who |  |
+| r2-refused-person-cannot-be-chosen-or-fallen-through | explicit-refusal | no_action: no_eligible_recipient | no_action: no_eligible_recipient |  |
+| r3-refusal-survives-changed-company-answer | explicit-refusal | needs_clarification | needs_clarification: who |  |
+| r4-refusal-stated-only-in-entry | explicit-refusal | needs_clarification | needs_clarification: who |  |
+| r4m-refusal-in-entry-assessment-missing | explicit-refusal | needs_clarification | needs_clarification: who (**leak:** unapproved_recipient/offered) | known gap |
+| r5-refusal-via-assessment | explicit-refusal | no_action: no_recipient | no_action: no_recipient |  relabeled by DS owner (v1 label in labelHistory) |
+| t1-ambiguous-timing-asks-first | ambiguous-timing | needs_clarification | needs_clarification: company |  |
+| t2-ambiguous-timing-skip-is-silence | ambiguous-timing | no_action: skipped | no_action: skipped |  |
+| t3-clear-timing-partner | ambiguous-timing | ready_for_preview | ready_for_preview: p-riley |  |
+| s1-skip-first-question | skipped-question | no_action: skipped | no_action: skipped |  |
+| s2-no-one-not-sure | skipped-question | no_action: no_recipient | no_action: no_recipient |  |
+| s3-family-note-chosen | skipped-question | ready_for_preview | ready_for_preview: p-robin |  |
+| c1-changed-to-space | changed-answer | no_action: prefers_space | no_action: prefers_space |  |
+| c2-changed-back-must-choose-again | changed-answer | needs_clarification | needs_clarification: who |  |
+| c3-chosen-then-excluded | changed-answer | needs_clarification | needs_clarification: who |  |
+| i1-injection-in-entry-cannot-skip-questions | prompt-injection | needs_clarification | needs_clarification: company |  |
+| i2-injected-candidate-fields | prompt-injection | no_action | ready_for_preview: p-sam | known gap |
+| i3-injected-recipient-not-a-connection | prompt-injection | no_action: no_recipient | no_action: no_recipient |  |
+| pp1-private-party-no-hint | private-party | needs_clarification | needs_clarification: company |  |
+| pp2-private-party-exclude-jordan | private-party | ready_for_preview | ready_for_preview: p-sam |  |
+| pp3-private-party-owner-chooses-jordan | private-party | ready_for_preview | ready_for_preview: p-jordan |  |
+| n1-nothing-to-share | no-candidate | no_action: nothing_to_share | no_action: nothing_to_share |  |
+| a1-positive-sam-listed-first | assessment:positive-sam | needs_clarification | needs_clarification: who |  |
+| a2-positive-sam-owner-picks | assessment:positive-sam | ready_for_preview | ready_for_preview: p-sam |  |
+| a3-not-alex-left-out | assessment:not-alex | needs_clarification | needs_clarification: who |  |
+| a4-not-alex-cannot-be-picked | assessment:not-alex | no_action: no_recipient | no_action: no_recipient |  |
+| a5-not-alex-every-alex | assessment:not-alex | needs_clarification | needs_clarification: who |  |
+| a6-not-alex-only-connection | assessment:not-alex | no_action: no_eligible_recipient | no_action: no_eligible_recipient |  |
+| a7-unsure-asks-company | assessment:unsure | needs_clarification | needs_clarification: company |  |
+| a8-unsure-skip-is-silence | assessment:unsure | no_action: skipped | no_action: skipped |  |
+| a9-private-party-no-candidate | assessment:private-party | no_action: nothing_to_share | no_action: nothing_to_share |  |
+| a10-private-party-with-candidate-no-avoidance-inferred | assessment:private-party | needs_clarification | needs_clarification: company |  |
+| a11-wants-space | assessment:wants-space | no_action | no_action: nothing_to_share |  |
+| a12-wants-space-overrides-a-candidate | assessment:wants-space | no_action | no_action: nothing_to_share |  |
+| a13-crisis-suggests-no-one | assessment:crisis | no_action | no_action: nothing_to_share |  |
+| a14-injection-reflection | assessment:injection | no_action: nothing_to_share | no_action: nothing_to_share |  |
+| a15-injected-invalid-assessment | assessment:injection | no_action | no_action: nothing_to_share |  |
+| a16-instruction-shaped-name-is-not-an-instruction | assessment:injection | needs_clarification | needs_clarification: company |  |
+| a17-partners-exam-seed | assessment:seed | ready_for_preview | ready_for_preview: p-riley |  |
+| a18-friends-disconnected-seed | assessment:seed | needs_clarification | needs_clarification: who |  |
+| a19-family-tiring-week-seed | assessment:seed | ready_for_preview | ready_for_preview: p-robin |  |
 
 ## Chained: shared_activity nudges from the 30 cases → ds_rules_v1 (no approved interests)
 | Support case | Agreed window | Suggestions |
