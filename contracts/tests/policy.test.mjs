@@ -6,6 +6,7 @@ import {
   guardApproval, guardSignalUse, guardSignalStanding, guardNudgeCommit, payloadRevision,
   policyErrorCode, DisclosurePolicy, DISCLOSURE_CONSENT_VERSION, SIGNAL_LIFETIME_MS,
   previewDisclosure, DEFAULT_RECIPIENT_DELIVERY, NUDGE_COOLDOWN_MS,
+  guardPreferenceStanding, validSupportPreferences, audienceAllowed, PREFERENCE_MAX_LIFETIME_MS,
 } from '../dist/index.js';
 import * as zodFree from '../dist/policy.js';
 
@@ -191,13 +192,16 @@ test('standing guard (views, no clock) still catches revocation and version drif
   assert.equal(reason(guardSignalStanding({ ...sig, revokedAtMs: 1 }, noClock)), 'revoked');
 });
 
-const OPEN = { pref: { ...DEFAULT_RECIPIENT_DELIVERY, optedIn: true, quietStartMinute: null, quietEndMinute: null }, lastNudgeAtMs: null, nowMs: NOW };
+const PREFS = { consentId: 'consent-1', recipientId: B, pairId: 'pair-1', supportModes: ['short_call'], availability: ['this_week'],
+  consentVersion: 2, expiresAtMs: NOW + 30 * SIGNAL_LIFETIME_MS, revokedAtMs: null };
+const OPEN = { pref: { ...DEFAULT_RECIPIENT_DELIVERY, optedIn: true, quietStartMinute: null, quietEndMinute: null }, lastNudgeAtMs: null, nowMs: NOW, preferences: PREFS };
+const BOUND = { recipientConsentId: 'consent-1', recipientConsentVersion: 2 };
 
 test('revocation race: a decision is only as fresh as the snapshot; recheck at commit catches it', () => {
   const req = request(); const sig = storedFrom(req, guardApproval(req, world()));
   const sources = new Map([['sig-1', { signal: sig, snapshot: world() }]]);
   const nudge = { pairId: 'pair-1', recipientId: B, templateId: 'offer_short_call',
-    sourceSignalIds: ['sig-1'], sourceConsentVersions: [1] };
+    sourceSignalIds: ['sig-1'], sourceConsentVersions: [1], ...BOUND };
   assert.equal(guardNudgeCommit(nudge, sources, OPEN).allowed, true); // coordination-time check passes
   sources.set('sig-1', { signal: { ...sig, revokedAtMs: NOW + 1 }, snapshot: world() }); // owner revokes mid-generation
   assert.equal(reason(guardNudgeCommit(nudge, sources, OPEN)), 'revoked'); // commit-time recheck suppresses
@@ -207,7 +211,7 @@ test('nudge commit: template must match an approved mode; versions align; unknow
   const req = request(); const d = guardApproval(req, world()); const sig = storedFrom(req, d);
   const sources = new Map([['sig-1', { signal: sig, snapshot: world() }]]);
   const base = { pairId: 'pair-1', recipientId: B, templateId: 'offer_short_call',
-    sourceSignalIds: ['sig-1'], sourceConsentVersions: [1] };
+    sourceSignalIds: ['sig-1'], sourceConsentVersions: [1], ...BOUND };
   const ok = guardNudgeCommit(base, sources, OPEN);
   assert.equal(ok.allowed, true); assert.equal(ok.expiresAtMs, Math.min(d.expiresAtMs, NOW + NUDGE_COOLDOWN_MS));
   assert.equal(reason(guardNudgeCommit({ ...base, templateId: 'offer_note' }, sources, OPEN)), 'blocked_category');
@@ -280,12 +284,12 @@ test('port: quiz profile and model-shaped output never authorize', async () => {
 function commitFixture() {
   const req = request(); const d = guardApproval(req, world()); const sig = storedFrom(req, d);
   return { sources: new Map([['sig-1', { signal: sig, snapshot: world() }]]),
-    nudge: { pairId: 'pair-1', recipientId: B, templateId: 'offer_short_call', sourceSignalIds: ['sig-1'], sourceConsentVersions: [1] } };
+    nudge: { pairId: 'pair-1', recipientId: B, templateId: 'offer_short_call', sourceSignalIds: ['sig-1'], sourceConsentVersions: [1], ...BOUND } };
 }
 
 test('commit: recipient never opted in (no delivery row) means no nudge; default is off', () => {
   const { sources, nudge } = commitFixture();
-  assert.equal(guardNudgeCommit(nudge, sources, { pref: null, lastNudgeAtMs: null, nowMs: NOW }).reason, 'not_opted_in');
+  assert.equal(guardNudgeCommit(nudge, sources, { pref: null, lastNudgeAtMs: null, nowMs: NOW, preferences: PREFS }).reason, 'not_opted_in');
   assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, pref: { ...OPEN.pref, optedIn: false } }).reason, 'not_opted_in');
   assert.equal(DEFAULT_RECIPIENT_DELIVERY.optedIn, false);
 });
@@ -301,13 +305,72 @@ test('commit: quiet hours in recipient local time and 24h per-pair cooldown are 
 test('commit: consent failures win over delivery state (a revoked source never reaches the gate)', () => {
   const { sources, nudge } = commitFixture();
   const s = sources.get('sig-1'); s.signal.revokedAtMs = NOW;
-  assert.equal(guardNudgeCommit(nudge, sources, { pref: null, lastNudgeAtMs: null, nowMs: NOW }).reason, 'revoked');
+  assert.equal(guardNudgeCommit(nudge, sources, { pref: null, lastNudgeAtMs: null, nowMs: NOW, preferences: PREFS }).reason, 'revoked');
 });
 
 test('commit: stale approval (preset changed after approval) cannot produce a nudge', () => {
   const { sources, nudge } = commitFixture();
   sources.get('sig-1').snapshot.preset.version++;
   assert.equal(guardNudgeCommit(nudge, sources, OPEN).reason, 'stale_policy');
+});
+
+// ---- C4 recipient preference consent at commit (D021 #4, D035) ----
+test('commit: no recipient preference consent means no nudge, even when opted in', () => {
+  const { sources, nudge } = commitFixture();
+  assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, preferences: null }).reason, 'no_consent');
+});
+
+test('commit: preference revoked or edited during generation is caught at commit', () => {
+  const { sources, nudge } = commitFixture();
+  assert.equal(guardNudgeCommit(nudge, sources, OPEN).allowed, true); // coordinator read v2
+  assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, preferences: { ...PREFS, revokedAtMs: NOW, consentVersion: 3 } }).reason, 'revoked');
+  assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, preferences: { ...PREFS, consentVersion: 3 } }).reason, 'stale_policy');
+  assert.equal(guardNudgeCommit({ ...nudge, recipientConsentId: 'consent-other' }, sources, OPEN).reason, 'stale_policy');
+  assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, preferences: { ...PREFS, expiresAtMs: NOW } }).reason, 'expired');
+});
+
+test('commit: preference belonging to another recipient or pair is never borrowed', () => {
+  const { sources, nudge } = commitFixture();
+  assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, preferences: { ...PREFS, recipientId: C } }).reason, 'wrong_recipient');
+  assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, preferences: { ...PREFS, pairId: 'pair-2' } }).reason, 'wrong_recipient');
+});
+
+test('commit: the template mode must be one the recipient accepts; expiry clamps to the consent', () => {
+  const { sources, nudge } = commitFixture();
+  assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, preferences: { ...PREFS, supportModes: ['encouraging_note'] } }).reason, 'blocked_category');
+  const soon = NOW + 60_000;
+  const d = guardNudgeCommit(nudge, sources, { ...OPEN, preferences: { ...PREFS, expiresAtMs: soon } });
+  assert.equal(d.allowed, true); assert.equal(d.expiresAtMs, soon);
+});
+
+test('commit: malformed consent binding is invalid; consent checks precede delivery state', () => {
+  const { sources, nudge } = commitFixture();
+  assert.equal(guardNudgeCommit({ ...nudge, recipientConsentVersion: 0 }, sources, OPEN).reason, 'invalid_schema');
+  assert.equal(guardNudgeCommit({ ...nudge, recipientConsentId: '' }, sources, OPEN).reason, 'invalid_schema');
+  assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, pref: null, preferences: { ...PREFS, revokedAtMs: NOW } }).reason, 'revoked');
+});
+
+test('preference validation and standing (views: no clock)', () => {
+  assert.equal(validSupportPreferences({ supportModes: ['short_call'], availability: [] }), true);
+  assert.equal(validSupportPreferences({ supportModes: [], availability: [] }), false);
+  assert.equal(validSupportPreferences({ supportModes: ['short_call', 'short_call'], availability: [] }), false);
+  assert.equal(validSupportPreferences({ supportModes: ['call me at 555-1234'], availability: [] }), false);
+  assert.equal(validSupportPreferences({ supportModes: ['short_call'], availability: ['tuesday 9pm'] }), false);
+  assert.equal(guardPreferenceStanding(PREFS, B, 'pair-1', null).allowed, true);
+  assert.equal(guardPreferenceStanding({ ...PREFS, expiresAtMs: NOW }, B, 'pair-1', null).allowed, true); // sweep's job
+  assert.equal(guardPreferenceStanding({ ...PREFS, expiresAtMs: NOW }, B, 'pair-1', NOW).reason, 'expired');
+  assert.equal(guardPreferenceStanding(null, B, 'pair-1', NOW).reason, 'no_consent');
+  assert.equal(PREFERENCE_MAX_LIFETIME_MS, 30 * 24 * 60 * 60 * 1000);
+});
+
+test('JWT audience: fail closed on empty allowlist, missing or foreign audience', () => {
+  assert.equal(audienceAllowed(['kinetic'], ['kinetic']), true);
+  assert.equal(audienceAllowed(['other-app', 'kinetic'], ['kinetic']), true);
+  assert.equal(audienceAllowed(['other-app'], ['kinetic']), false);
+  assert.equal(audienceAllowed([], ['kinetic']), false);
+  assert.equal(audienceAllowed(undefined, ['kinetic']), false);
+  assert.equal(audienceAllowed(['kinetic'], []), false);
+  assert.equal(audienceAllowed([''], ['']), false);
 });
 
 // ---- One policy: device preview and reducer guard agree on every combination ----

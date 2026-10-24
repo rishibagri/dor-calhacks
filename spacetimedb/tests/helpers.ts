@@ -4,10 +4,11 @@ import * as mod from '../src/index';
 import { DISCLOSURE_CONSENT_VERSION, payloadRevision } from '@kinetic/contracts/policy';
 
 export const ISSUER = 'https://kinetic-test.clerk.accounts.dev';
+export const AUDIENCE = 'kinetic';
 export { mod };
 
-export function jwtAuth(sub: string, conn: bigint, issuer = ISSUER) {
-  const payload = JSON.stringify({ iss: issuer, sub, aud: ['kinetic'] });
+export function jwtAuth(sub: string, conn: bigint, issuer = ISSUER, aud: string[] = [AUDIENCE]) {
+  const payload = JSON.stringify({ iss: issuer, sub, aud });
   return TestAuth.fromJwtPayload(payload, new ConnectionId(conn));
 }
 
@@ -15,6 +16,7 @@ export function setup() {
   const h = createModuleTestHarness(mod.default, mod, { rngSeed: 7n });
   const admin = TestAuth.internal();
   h.withReducerTx(admin, ctx => mod.set_auth_issuer(ctx, { issuer: ISSUER, enabled: true }));
+  h.withReducerTx(admin, ctx => mod.set_auth_audience(ctx, { audience: AUDIENCE, enabled: true }));
   const alice = jwtAuth('alice', 1n);
   const bob = jwtAuth('bob', 2n);
   const carol = jwtAuth('carol', 3n);
@@ -74,3 +76,20 @@ export function approveArgs(w: World, owner: ReturnType<typeof jwtAuth>, pairId:
 }
 
 export const allSignals = (w: World) => w.h.withReducerTx(w.admin, ctx => [...ctx.db.approved_signal.iter()]);
+
+export const ALL_MODES = ['short_call', 'encouraging_note', 'shared_activity'];
+const DAY_MS = 24 * 60 * 60 * 1000;
+export const inDays = (w: World, days: number) => new Date(w.h.clock.now().toDate().getTime() + days * DAY_MS).toISOString();
+
+/** Call OUTSIDE w.call(). `who` records their own support-preference consent for the pair; returns the row. */
+export function grantPrefs(w: World, who: ReturnType<typeof jwtAuth>, pairId: string,
+  modes = ALL_MODES, availability = ['this_week'], days = 7) {
+  const cur = view<any>(w, who, mod.my_support_preferences).find(p => p.pair_id === pairId);
+  w.call(who, ctx => mod.set_support_preferences(ctx, {
+    pair_id: pairId, support_modes: modes, availability, expires_at: inDays(w, days), expected_version: cur?.consent_version ?? 0,
+  }));
+  return view<any>(w, who, mod.my_support_preferences).find(p => p.pair_id === pairId);
+}
+
+/** Runs the scheduled expiry sweep as the scheduler would (internal caller). */
+export const sweep = (w: World) => w.h.withReducerTx(w.admin, ctx => mod.sweep_expired(ctx, { sweep: { scheduled_id: 0n, scheduled_at: { tag: 'Interval', value: { micros: 0n } } as any } }));
