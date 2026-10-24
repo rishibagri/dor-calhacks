@@ -1,5 +1,5 @@
 import { ApprovedSignalSchema, CoordinationJobSchema, CoordinationOutcomeSchema, type CoordinationJob,
-  type CoordinationOutcome, type CoordinationPort } from '@kinetic/contracts';
+  type CoordinationOutcome, type CoordinationOutcomeCode, type CoordinationPort } from '@kinetic/contracts';
 
 export type CoordinationResult = Awaited<ReturnType<CoordinationPort['coordinate']>>;
 
@@ -7,9 +7,17 @@ export interface ApprovedSignalSource {
   /** Worker-identity read of approved envelopes by ID within one pair (CS: SpacetimeDB view or reducer). */
   approvedSignals(pairId: string, signalIds: string[]): Promise<unknown[]>;
 }
+/** A proposed nudge the authoritative commit refused (e.g. revoked during generation, quiet hours at commit). */
+export interface CommitRejection {
+  nudgeId: string;
+  outcome: Extract<CoordinationOutcomeCode, 'policy_denied' | 'not_opted_in' | 'quiet_hours' | 'cooldown'>;
+}
 export interface CoordinationCommitPort {
-  /** Version-checked reducer call. It must revalidate consent and reject stale or revoked proposals. */
-  commit(result: CoordinationResult, job: CoordinationJob): Promise<void>;
+  /**
+   * Version-checked reducer call. It must revalidate consent and reject stale or revoked proposals. Guard
+   * refusals are returned so the job records them; transport or configuration failures throw so the job retries.
+   */
+  commit(result: CoordinationResult, job: CoordinationJob): Promise<void | CommitRejection[]>;
 }
 export interface JobDeps {
   signals: ApprovedSignalSource;
@@ -80,6 +88,11 @@ async function coordinateJob(job: CoordinationJob, deps: JobDeps): Promise<Coord
   if (signals.length === 0) return [CoordinationOutcomeSchema.parse({ schemaVersion: 1, requestId: job.requestId,
     pairId: job.pairId, signalIds: job.signalIds, outcome: 'policy_denied', rounds: 0, decidedBy: 'none' })];
   const result = await deps.coordinator.coordinate(signals, job.requestId);
-  await deps.commit.commit(result, job);
-  return result.outcomes;
+  const rejected = new Map((await deps.commit.commit(result, job) ?? []).map(r => [r.nudgeId, r.outcome]));
+  return result.outcomes.map(o => {
+    const refusal = o.nudgeId ? rejected.get(o.nudgeId) : undefined;
+    if (!refusal) return o;
+    const { nudgeId: _dropped, ...rest } = o;
+    return CoordinationOutcomeSchema.parse({ ...rest, outcome: refusal });
+  });
 }

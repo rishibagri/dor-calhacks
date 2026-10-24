@@ -2,7 +2,7 @@ import { DisclosurePolicy, type Clock, type PolicyStateReader } from '@kinetic/c
 import { BoundedCoordinator, type CoordinatorDeps, type DeliveryStatePort, type RecipientPreferencesPort }
   from '@kinetic/agents';
 import { DroidAckProposer, type DroidAckProposerOptions } from './droid-proposer.js';
-import type { ApprovedSignalSource, CoordinationCommitPort } from './jobs.js';
+import { JobLedger, runCoordinationJob, type ApprovedSignalSource, type CoordinationCommitPort } from './jobs.js';
 import { createJobRequestHandler } from './server.js';
 
 /**
@@ -35,7 +35,9 @@ export function createLiveWorker(config: LiveWorkerConfig) {
     policy: new DisclosurePolicy(config.policyState, clock), preferences: config.preferences,
     delivery: config.delivery, proposer, clock, rank: config.rank,
   });
-  const handler = createJobRequestHandler({ authToken: config.authToken, signals: config.signals, coordinator,
-    commit: config.commit });
-  return { handler, coordinator, close: () => proposer.close() };
+  const deps = { signals: config.signals, coordinator, commit: config.commit, ledger: new JobLedger() };
+  const handler = createJobRequestHandler({ authToken: config.authToken, ...deps });
+  /** Same ledger as the HTTP handler, so a watcher-started job and a POSTed retry share one run. */
+  const runJob = (job: unknown) => runCoordinationJob(job, deps);
+  return { handler, runJob, coordinator, close: () => proposer.close() };
 }

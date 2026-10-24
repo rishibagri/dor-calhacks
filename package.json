@@ -26,7 +26,7 @@
     "contracts:schema": "npm run schema -w @kinetic/contracts",
     "test:app": "node --test \"src/**/__tests__/*.test.ts\"",
     "ai:build": "npm run build -w @kinetic/contracts && npm run build -w @kinetic/agents && npm run build -w @kinetic/worker",
-    "ai:check": "npm run ai:build && npm test -w @kinetic/agents && npm test -w @kinetic/worker",
+    "ai:check": "npm run ai:build && npm test -w @kinetic/agents && npm test -w @kinetic/worker && npm run test:integration -w @kinetic/worker",
     "ai:live": "npm run ai:build && npm run live -w @kinetic/agents && npm run live -w @kinetic/worker"
   },
   "dependencies": {

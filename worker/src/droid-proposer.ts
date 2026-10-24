@@ -40,22 +40,39 @@ export interface DroidAckProposerOptions {
   env?: NodeJS.ProcessEnv;
   /** Receives per-call usage for credit and latency tracking. */
   onUsage?: (usage: DroidUsage) => void;
+  /** Simultaneous `droid exec` runs, each in its own private directory. Default 2. */
+  concurrency?: number;
+  /** Calls allowed to wait for a slot; beyond this a call fails fast with `rate_limited`. Default 16. */
+  maxQueue?: number;
 }
 
 /**
  * Recipient agent backed by a headless `droid exec` run. It receives approved enums and pre-filtered options
  * only, and its reply is untrusted input to the bounded coordinator.
  *
- * Runs in one private, empty working directory per proposer instance. Droid's system prompt includes the
- * working directory, so reusing it lets Factory's prompt cache hit (measured 40 → 14 credits per Haiku call).
- * The directory is emptied before every call and removed by close().
+ * Each concurrent run gets one of a fixed pool of private, empty working directories (slots). Droid's system
+ * prompt includes the working directory, so reusing a slot lets Factory's prompt cache hit (measured 40 → 14
+ * credits per Haiku call). A slot is held for the whole run, so one job never empties a directory another job
+ * is using. Directories are emptied before every call and removed by close().
  */
 export class DroidAckProposer implements AckProposerPort {
-  private workdir: Promise<string> | undefined;
-  constructor(private readonly options: DroidAckProposerOptions = {}) {}
+  private readonly slots: { dir: Promise<string> | undefined; busy: boolean }[];
+  private readonly waiting: ((slot: number) => void)[] = [];
+  constructor(private readonly options: DroidAckProposerOptions = {}) {
+    this.slots = Array.from({ length: Math.max(1, options.concurrency ?? 2) }, () => ({ dir: undefined, busy: false }));
+  }
 
   async propose(input: AckProposalInput, _requestId: string): Promise<unknown> {
-    const cwd = await this.emptyWorkdir();
+    const slot = await this.acquire();
+    try {
+      return await this.run(slot, input);
+    } finally {
+      this.release(slot);
+    }
+  }
+
+  private async run(slot: number, input: AckProposalInput): Promise<unknown> {
+    const cwd = await this.emptyWorkdir(slot);
     const started = Date.now();
     const stdout = await this.exec(cwd, buildAckPrompt(input));
     let envelope;
@@ -72,20 +89,42 @@ export class DroidAckProposer implements AckProposerPort {
     return extractJsonObject(envelope.result);
   }
 
-  /** Removes the working directory. Safe to call more than once. */
+  /** Removes the slot directories. Safe to call more than once; call after in-flight runs finish. */
   async close(): Promise<void> {
-    const pending = this.workdir;
-    this.workdir = undefined;
-    if (pending) await rm(await pending, { recursive: true, force: true });
+    await Promise.all(this.slots.map(async slot => {
+      const pending = slot.dir;
+      slot.dir = undefined;
+      if (pending) await rm(await pending, { recursive: true, force: true });
+    }));
+  }
+
+  private acquire(): Promise<number> {
+    const free = this.slots.findIndex(s => !s.busy);
+    if (free !== -1) {
+      this.slots[free]!.busy = true;
+      return Promise.resolve(free);
+    }
+    if (this.waiting.length >= (this.options.maxQueue ?? 16)) {
+      return Promise.reject(new ProviderError('factory', 'rate_limited'));
+    }
+    return new Promise(resolve => this.waiting.push(resolve));
+  }
+
+  /** Hands the slot straight to the next waiter, so it never looks free in between. */
+  private release(slot: number): void {
+    const next = this.waiting.shift();
+    if (next) next(slot);
+    else this.slots[slot]!.busy = false;
   }
 
   private get model(): string {
     return this.options.model ?? DEFAULT_DROID_MODEL;
   }
 
-  private async emptyWorkdir(): Promise<string> {
-    this.workdir ??= mkdtemp(join(tmpdir(), 'kinetic-droid-'));
-    const dir = await this.workdir;
+  private async emptyWorkdir(slot: number): Promise<string> {
+    const state = this.slots[slot]!;
+    state.dir ??= mkdtemp(join(tmpdir(), 'kinetic-droid-'));
+    const dir = await state.dir;
     for (const entry of await readdir(dir)) await rm(join(dir, entry), { recursive: true, force: true });
     return dir;
   }
