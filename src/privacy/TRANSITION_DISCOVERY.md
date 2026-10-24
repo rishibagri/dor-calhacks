@@ -16,7 +16,7 @@ Nothing else is ever on a card: no area key, distance, expiry, account, pair, pr
 **Transitions (D045 "choose a transition"):** a transition is private to the owner unless they publish it as a tag. Publishable transitions are ordinary, non-sensitive life stages from the developer allowlist, for example `starting-college`, `new-to-city`, `new-job`, `recent-grad`. Transitions that disclose health, grief, divorce, recovery, sexuality, religion, immigration status, or legal or financial trouble are refused by D046 at configuration time.
 
 ## 2. Audience, area and lifetime
-- **Audience:** signed-in, registered accounts that are themselves published, in the same configured coarse area, with no block either way. Lurkers see nothing (`guardDiscoveryVisibility`). Already-connected people are hidden from each other's cards.
+- **Audience:** signed-in, registered accounts that are themselves published, in the same configured coarse area, with no block either way. Lurkers see nothing (`guardDiscoveryVisibility`). People with an accepted introduction are hidden from each other's cards; hiding linked pairs too is Chunk 2.
 - **Area:** one developer-configured coarse key per person. The device turns a single low-accuracy sample into that key and discards the coordinates; the server refuses coordinates, geohashes or finer cells (`guardAreaKey`). It lasts at most 24 h, with no background refresh, and at most 4 area changes a day.
 - **Publication:** at most 7 days, withdrawable at any time; a new revision is an explicit new consent.
 - **Event intent (interested/going):** explicit, per event, ends when the event ends. Others see it only where they marked the same event and can see your card; the kind is never shown (`event_companions`).
