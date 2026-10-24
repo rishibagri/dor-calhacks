@@ -35,7 +35,7 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 |---|---|---|
 | CS | M1 merged (PR #1); D015 fixture/quiz fix on role/cs-app @ d6e9a6b, PR pending. Shell, SpacetimeDB module (16 harness tests), Clerk-JWT adapter written; nothing live yet | Logic/flow review (signal preview + approval loop) before API work; then publish module + live two-account smoke test |
 | DS | Planned | Build fixtures on updated `contracts/fixtures/scenarios.json` (each scenario now has `confirmedPreset` + `presetAssignment`; friends omits availability). Use quiz `prefersSpace` / empty `preferredSupportModes` as a no-action case. Ref: D015 |
-| Cyber | Planned | Review D015 fixture preset records (privacy boundary). Implement `VaultPort` in `src/vault/` incl. `saveQuizExtras`/`loadQuizExtras` (`src/lib/backend/ports.ts`). Policy guard inside `approve_signal` (`spacetimedb/src/reducers/signals.ts`). Review `spacetimedb/src/guards.ts`. Open questions in docs/handoffs/cs.md |
+| Cyber | M1 on role/cyber-privacy @ 129c31f (PR pending): C6 guards in `@kinetic/contracts/policy`, authoritative `approve_signal`, sender-only `my_signals`/`my_receipts`, vault design (`src/vault/DESIGN.md`). Offline only: contracts 40/40, module 36/36; module not published | CS: ACK D017, compute `payloadRevision` in preview, ACK VaultPort additions, add JWT `aud` check. AI: live worker uses `DisclosurePolicy`; co-design `commit_nudge`. Cyber next: vault crypto + IndexedDB adapter |
 | AI | Planned | Implement `ReflectionPort` (`src/lib/backend/ports.ts`) behind authenticated `POST /api/reflections` + voice session route. Note: friends `approvedSignal` fixture no longer has `availability` |
 
 ## Ownership and handoffs
@@ -53,3 +53,36 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Handoff log (append newest at the bottom)
+
+### 2026-10-24T03:30Z | Cyber → CS, AI, DS | M1 disclosure guards + vault design
+- **Branch/commit:** `role/cyber-privacy` @ `129c31f` (based on main @ `8e208df`). PR to main pending; read the remote role branch until merged.
+- **Status:** implemented and offline-verified, NOT live. `npm run check:all` exit 0 (contracts 40/40, module 36/36, typecheck, app tests 4/4); `next build` ok; audit 0. The SpacetimeDB module has never been published.
+- **Interfaces:**
+  - `@kinetic/contracts/policy` (no runtime dependencies; safe inside reducers) exports:
+    - `guardApproval`, `guardSignalUse`, `guardSignalStanding`, `guardNudgeCommit`
+    - `payloadRevision`, `policyErrorCode`
+    - constants `SIGNAL_LIFETIME_MS` and `DISCLOSURE_CONSENT_VERSION`
+  - `DisclosurePolicy` (`@kinetic/contracts`) is the real `DisclosurePolicyPort` for routes and the worker.
+  - `approve_signal` enforces the guard and the table gained `client_request_id`.
+  - New sender-only `my_signals` view; `my_receipts` is now sender-only; `my_nudges` rechecks that each source signal is still valid.
+  - Decision D017.
+- **CS next:**
+  1. ACK D017.
+  2. In the preview route, compute `payloadRevision({pairId, recipientId: counterpartHex, supportMode, availability, recipientPolicyVersion, presetAssignmentVersion, consentVersion: DISCLOSURE_CONSENT_VERSION})` and pass it unchanged to `approve_signal`.
+  3. Use `my_signals` in the privacy center.
+  4. Regenerate bindings after publish.
+  5. ACK the VaultPort additions in `src/vault/DESIGN.md`.
+  6. Add a JWT `aud` check.
+  7. Publish the module and rerun `spacetimedb/tests/disclosure.test.ts` scenarios live with two test accounts.
+- **AI next:** in live mode, replace `FakeDisclosurePolicy` with `new DisclosurePolicy(reader, clock)`; the reader must load authoritative state. Co-design the `commit_nudge` reducer and worker identity with CS.
+- **DS next:** no-action eval cases assert guard reason codes (`expired`, `revoked`, `unlinked`, `stale_policy`, `blocked_category`, `no_consent`).
+- **Open gaps:**
+  - No `commit_nudge` reducer and no worker identity.
+  - No expiry sweep (views have no clock).
+  - No recipient nudge opt-in.
+  - No rate limiting.
+  - JWT `aud` is not checked.
+  - The CLI bundler's resolution of `@kinetic/contracts/policy` is untested.
+- **Details:** `docs/handoffs/cyber.md`, `docs/updates/cyber.md`, `src/privacy/README.md`.
