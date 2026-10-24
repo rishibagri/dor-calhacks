@@ -7,6 +7,7 @@ import { FakeClock, FakeDisclosurePolicy } from '@dor/contracts/fakes';
 import { buildPreview, matchSignal } from './matching.ts';
 import { NEARBY_RANKERS, RANKERS, evaluate, evaluateNearby, type CaseFile, type CatalogueFile, type NearbyCaseFile, type NearbyPoolFile } from './metrics.ts';
 import { rankActivities } from './rank.ts';
+import { resolveCases, scoreCase } from './decision-loop.ts';
 
 const load = async (f: string) => JSON.parse(await readFile(new URL(`./fixtures/${f}`, import.meta.url), 'utf8'));
 const support = await load('evaluation-cases.json');
@@ -14,6 +15,8 @@ const cases: CaseFile = await load('activity-cases.json');
 const catalogue: CatalogueFile = await load('activity-catalogue.json');
 const nearbyCases: NearbyCaseFile = await load('nearby-cases.json');
 const nearbyPool: NearbyPoolFile = await load('nearby-candidates.json');
+const decisions = resolveCases(await load('decision-cases.json'),
+  JSON.parse(await readFile(new URL('../agents/fixtures/reflection.synthetic.json', import.meta.url), 'utf8')));
 let revision = 'unknown';
 try {
   revision = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim();
@@ -54,6 +57,12 @@ const chained = shared.map(s => {
 
 // 4. Nearby/event shortlist: DS vs naive most-tags baseline.
 const nearby = Object.entries(NEARBY_RANKERS).map(([name, fn]) => evaluateNearby(name, fn, nearbyCases, nearbyPool));
+
+// 5. Core 1/2 decision loop: D040 initialLoopState → owner steps → decide(assessedRecipients) vs DS labels written before the run.
+const scored = decisions.cases.map(c => ({ c, s: scoreCase(decisions, c) }));
+const outcomeOf = (o: ReturnType<typeof scoreCase>['outcome']) =>
+  o.kind === 'no_action' ? `no_action: ${o.reason}` : o.kind === 'ready_for_preview' ? `ready_for_preview: ${o.recipient.pairId}` : `needs_clarification: ${o.question}`;
+const expectedNoAction = scored.filter(x => x.c.expected.kind === 'no_action');
 
 const out = `# DS evaluation results
 
@@ -107,6 +116,22 @@ ${nearbyCases.cases.map((c, i) => `| ${c.id} | ${nearby.map(s => {
   const body = o.result.kind === 'shortlist' ? o.result.entries.map(e => e.ref).join(', ') : `none: ${o.result.reason}`;
   return o.falseMatches.length ? `${body} (**false:** ${o.falseMatches.join(', ')})` : body;
 }).join(' | ')} |`).join('\n')}
+
+## Core 1/2 decision loop (D040 assessment → CS decide()), ${scored.length} labeled cases (${scored.filter(x => (x.c as { reflectionRef?: string }).reflectionRef).length} from AI's reflection fixture)
+Pipeline: \`initialLoopState(candidate, assessment)\` → owner steps → \`decide(state, assessedRecipients(recipients, assessment))\`. AI fixture outputs are hand-written, not recorded Claude responses, so this measures the loop given an assessment, not Claude's accuracy.
+
+| Metric | Actual |
+|---|---|
+| Expected outcome reproduced | ${pct(scored.filter(x => x.s.matches).length, scored.length)} |
+| Appropriate silence (no_action expected → no_action) | ${pct(scored.filter(x => x.s.silence).length, expectedNoAction.length)} |
+| Missed suggestions (preview expected, none offered) | ${pct(scored.filter(x => x.s.missed).length, scored.filter(x => x.c.expected.kind === 'ready_for_preview').length)} |
+| Unsafe suggestions (preview not expected, or wrong person) | ${scored.filter(x => x.s.unsafe).length} |
+| Excluded person offered or previewed | ${scored.filter(x => x.s.excludedSurfaced.length).length} |
+| Forbidden-disclosure findings (cases / terms) | ${scored.filter(x => x.s.leaks.length).length} / ${scored.reduce((n, x) => n + x.s.leaks.length, 0)} |
+
+| Case | Pair | Expected | Actual | Note |
+|---|---|---|---|---|
+${scored.map(({ c, s }) => `| ${c.id} | ${c.pair} | ${c.expected.kind}${c.expected.reason ? `: ${c.expected.reason}` : ''} | ${outcomeOf(s.outcome)}${s.leaks.length ? ` (**leak:** ${s.leaks.map(l => `${l.label}/${l.surface}`).join(', ')})` : ''} | ${s.matches ? '' : c.knownGap ? 'known gap' : '**mismatch**'}${(c as { labelHistory?: unknown[] }).labelHistory ? ' relabeled by DS owner (v1 label in labelHistory)' : ''} |`).join('\n')}
 
 ## Chained: shared_activity nudges from the 30 cases → ds_rules_v1 (no approved interests)
 | Support case | Agreed window | Suggestions |
