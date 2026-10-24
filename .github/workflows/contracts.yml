@@ -62,6 +62,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
+      # The module imports @dor/contracts/policy from the built dist; the generator bundles it.
+      - run: npm run build -w @dor/contracts
       # The installer cannot pin a version (it always fetches the latest release). Committed bindings
       # were generated with CLI 2.13.0; the version stamp line is ignored by the check, but a newer
       # generator may change output and require regenerating.
