@@ -57,6 +57,8 @@ export const reducerArgs = {
     quietEndMinute: i.quietEndMinute ?? undefined,
     utcOffsetMinutes: i.utcOffsetMinutes,
   }),
+  pauseRecipient: (pairId: string, expiresAt: string, expectedVersion: number) => ({ pairId, expiresAt, expectedVersion }),
+  resumeRecipient: (pairId: string, expectedVersion: number) => ({ pairId, expectedVersion }),
   // C8: audience and notice version are fixed by the contract, never user-chosen.
   publishDiscoveryProfile: (i: Input<'publishDiscoveryProfile'>) => ({
     displayName: i.displayName,

@@ -7,4 +7,5 @@ These are drafts for the user to forward; no messages were sent to teammates or 
 - [Sumedh — Cyber](cyber.md)
 
 ## Latest topic updates
+- [Core 3 live smoke + CS audit: Cyber, AI, DS actions](core3-audit.md) (CS, 2026-10-24)
 - [Core 1/2: Claude private assessment, durable pause, worker key](core2-private-assessment.md) (Adam, 2026-10-24)

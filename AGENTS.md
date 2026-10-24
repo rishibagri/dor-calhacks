@@ -37,9 +37,9 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 
 | Role / person | Current status | Next handoff |
 |---|---|---|
-| CS — you | role/cs-app (offline only): core-first separation (extensions hidden by default) + private decision loop before exact-recipient preview (docs/features/PRIVATE_DECISION_LOOP.md); R1–R3 code preserved | Core 3: publish/auth/worker config and two-account + denied-third run. Adam: assessment → LoopState seam. Sumedh: durable pause contract → CS controls |
+| CS — you | role/cs-app PR #35: Core 3 **partial live smoke 26/26** (+`--sweep` 30/30 live marker proof) via `scripts/smoke-core3.ts`; D041 pause controls on #34 (pause/resume, owner list, paused never offered); quiz → unsaved preset drafts; unnamed/duplicate labels + fail-closed exclusions; strict candidate parse (DS i2 closed); `npm run bindings:check` + CI. Nudge delivery, browser UI NOT verified | Sumedh: narrow `my_nudges` row, sender-only receipt actions, reason code, pause interface answers (docs/team-messages/core3-audit.md). Adam: worker reconnect, nickname exclusions, paid Stage C. Nimisha: new label cases. AI+CS: r4m (no assessment ⇒ ask?) |
 | DS — Nimisha | On main: DS-R0–R3 extension work (PRs #9/#13/#17/#25; offline/synthetic). PR #32 open: Core 1/2 decision-loop eval through D040 (44 labeled cases, 42/44, silence 18/19, missed 0/8, unsafe 1 (i2), forbidden 1 (r4m), excluded surfaced 0). Core 3 (role/ds-context, uncommitted): baselines on the same cases (no-assessment loop: 6 excluded surfaced, 10 forbidden; preview-on-candidate: 31 unsafe) + blinded two-rater workflow (85 items); ratings NOT collected | Team: 2 teammates (not DS) fill `src/evaluation/results/ratings/rater-{a,b}.md` independently. Adam + CS: D042 (r4m). CS: candidate validation (i2). Sumedh: labels vs D041; a3. DS next: score ratings, Core 4 examples + sample size |
-| Cyber — Sumedh | role/cyber-privacy (on main 2b8e59b): CYBER-R3 guarded catalogue ingestion, C8 event intents (mutual-only overlap), C7 activity approvals (preset-only, off by default), D034 plan finalization with current-source rechecks, `EventPrivacyControls` + exact preview copy (D039). R2 merged (#18). Offline only: contracts 116, module 137, app 193, ai 104; flag off, not published | CS: ACK D039, bindings, ingestion → `upsert_catalogue_event`, preview copy, preset toggle. Adam: `commit_plan_proposal` from `worker_plan_candidates`. Nimisha: `event_companions`. Cyber next: CYBER-R4 adversarial suite |
+| Cyber — Sumedh | role/cyber-privacy (on main 126f072): **Core 2 D041 durable recipient pause** implemented offline: `pause_recipient` / `resume_recipient` / `my_recipient_pauses`, enforced at approve, worker view, commit (same refusal as revocation) and `my_nudges`; revokes pre-pause approvals so nothing resurrects. Reviews: #30 ACK (no leak), D040 ACK-with-conditions. check:all + ai:check green (keys stripped); 16/16 mutations | CS: bindings + pause controls/copy. Adam: no worker change; add 4 integration pause cases. Nimisha: paired pause evals. Cyber next: Core 3 live two-account + denied-third run |
 | AI — Adam | On main (#27): Droid SDK worker default, 25 s job budget, reflection dedupe, plan/intro extension paths. role/ai-voice (PR pending): **D040 private assessment**, i.e. Claude returns an owner-only `assessment` (intent + explicit name exclusions/preferences) that only narrows CS's decision loop (docs/features/PRIVATE_ASSESSMENT.md); doctor now requires FACTORY_API_KEY for the SDK default. Offline only | Cyber: durable pause per docs/features/RECIPIENT_PAUSE.md (D041). CS: review the DecisionLoop/journal wiring. DS: evaluate the assessment cases. Adam next: live Claude run on synthetic cases (needs key + go-ahead) |
 
 R0–R6 replace the old P-phase schedule without resetting code or the original deadline. Detailed shared phases are in README.md; per-owner phases in docs/roles/*.md; exact producer/consumer dependencies in docs/PLAN.md. These are current planning assignments, not completion evidence. Merge main into your active role branch; do not reset or force-update other roles.
@@ -407,3 +407,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - The AI fixture outputs are hand-written (no live Claude run).
 - **Run:** `node --test src/evaluation/__tests__/ratings.test.ts`; `node src/evaluation/rate.ts --sheets|--score`; `node src/evaluation/report.ts --write`.
 
+### 2026-10-24T23:30Z | Cyber → CS, AI, DS | Core 2: D041 durable recipient pause (implemented offline) + #30/D040 reviews
+- **Interfaces:** `pause_recipient({pair_id, expires_at, expected_version})`, `resume_recipient({pair_id, expected_version})`, owner-only view `my_recipient_pauses {pair_id, version, expires_at, active, created_at}`.
+  - `approve_signal` refuses with `unauthorized: recipient_paused`.
+  - Paused signals are absent from `worker_signal_context`.
+  - `commit_nudge` refuses with `stale: revoked`; there is no new worker field.
+- **Guarantees:** owner-only, reason-free, 15 min to 30 days; pre-pause approvals are revoked, so nothing resurrects; silent to the counterpart; fail closed; expiry via the sweep.
+- **Reviews:** #30 ACK (no leak); D040 ACK with conditions (`src/privacy/REVIEWS.md`).
+- **Next:**
+  - CS: bindings and controls.
+  - Adam: integration cases only.
+  - Nimisha: paired evals.
+  - Details: `docs/handoffs/cyber.md`, `docs/features/RECIPIENT_PAUSE.md`.

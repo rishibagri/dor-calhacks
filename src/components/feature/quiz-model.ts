@@ -1,4 +1,4 @@
-import { LocalConnectionProfileSchema } from '@dor/contracts';
+import { LocalConnectionProfileSchema, SharingCategorySchema } from '@dor/contracts';
 import type { LocalConnectionProfile, SharingCategory } from '@dor/contracts';
 import type { ConnectActivity, LocalQuizExtras } from '@/lib/backend/ports';
 
@@ -87,4 +87,20 @@ export function countAnswered(a: QuizAnswers): number {
   return [a.afterLongDay.length > 0, a.friendQuiet.length > 0, a.tone !== null || a.rhythm !== null,
     a.overwhelmed !== null, a.activities.length > 0, a.scheduleSuggestions !== null,
     a.categories.length > 0, a.reviewComfort !== null].filter(Boolean).length;
+}
+
+/**
+ * Unsaved preset draft (D015: the quiz nominates, the owner confirms). A saved preset always wins; otherwise the
+ * profile's draft categories, valid keys only. With no preferred support mode (e.g. "space" only) there is nothing
+ * to nominate for support_preference. Never grants consent; the owner still saves and assigns.
+ */
+export function draftCategoriesFor(
+  saved: { allowedCategories: readonly SharingCategory[] } | null | undefined,
+  profile: Pick<LocalConnectionProfile, 'draftSharingCategories' | 'preferredSupportModes'> | null,
+): { categories: SharingCategory[]; suggested: boolean } {
+  if (saved) return { categories: [...saved.allowedCategories], suggested: false };
+  if (!profile) return { categories: [], suggested: false };
+  const valid = unique(profile.draftSharingCategories.filter((c) => SharingCategorySchema.safeParse(c).success));
+  const categories = profile.preferredSupportModes.length > 0 ? valid : valid.filter((c) => c !== 'support_preference');
+  return { categories, suggested: categories.length > 0 };
 }

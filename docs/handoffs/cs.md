@@ -114,3 +114,55 @@ npm run dev            # http://localhost:3000, unconfigured mode without env
 
 ## PR #23 merge reconciliation
 Merged main 6093b2a into this branch, retaining both chronological CS update logs. Main already includes recipient settings, ShareReview/revocation, Discover and newer generated bindings; those implementations are preserved. Earlier missing-feature notes above are historical. Remaining branch changes are saved-entry refresh, relationship-safety regression/docs and voice lifecycle follow-ups. Adam retains SDK ownership; no SDK implementation changed. Core-first planning remains in PR #26.
+
+## Core 3 Stage C handoff — 2026-10-24T18:50Z (CS → AI, Cyber)
+Status: environment prepared, **nothing live-verified**. No provider was called. The two/three-account smoke was deferred by the owner and is part of Stage C.
+
+**Published (Rishi's machine, local only):**
+- Server `dor-local` = `http://127.0.0.1:3100` (`spacetime start --listen-addr 127.0.0.1:3100`); module `dor`; published from main `126f072`.
+- Bootstrap: `npm run setup:module -- --server dor-local --run`. Reset: `npm run setup:module -- --server dor-local --run --reset --i-understand-this-deletes-data`, then rerun `setup:worker`.
+- Worker identity: `npm run setup:worker -- --server dor-local --run` (prefix `c200bdbc`), token in `.cache/worker-token` (never printed).
+- Regenerated app and worker bindings are identical to the committed ones.
+- A local DB is not reachable from another machine. If Stage C runs elsewhere, the runner repeats RUNBOOK steps 1–2 against their own server (local or `maincloud` after `spacetime login`). Admin calls must use the same login that published.
+
+**Auth:** issuer `DOR_CLERK_ISSUER` = Clerk dev Frontend API origin; `DOR_AUTH_AUDIENCE` = the current Clerk `spacetimedb` template `aud`, which is still the pre-rename value. Doctor warns about the name. Renaming both is optional and must be done together.
+
+**Env names configured (values in `.env.local` only, never in git):** `NEXT_PUBLIC_SPACETIMEDB_URI`, `NEXT_PUBLIC_SPACETIMEDB_MODULE`, `DOR_CLERK_ISSUER`, `DOR_AUTH_AUDIENCE`, `DOR_SPACETIME_URI`, `DOR_SPACETIME_MODULE`, `DOR_SPACETIME_WORKER_TOKEN`, `DOR_WORKER_AUTH_TOKEN`, `DOR_WORKER_URL`. Not set: `FACTORY_API_KEY`, `ANTHROPIC_API_KEY`, `CARTESIA_API_KEY` (Adam supplies). `DOR_DROID_TRANSPORT` is unset (SDK default).
+
+**Doctor:** core 0 errors (warn: audience name, Claude and Cartesia keys). `--worker`: 1 error, `FACTORY_API_KEY` missing, which is expected until Adam sets it.
+
+**Worker check:** started once with the env above; logged `connected` (identity `c200bdbc`) and `listening` 8787; `/healthz` returned `{"ok":true}`; then stopped. During that check the transport was `cli` (since removed), so `droid_transport` = sdk is not yet observed. There were 0 approved signals, so no Droid call happened.
+
+**Accounts:** none created. Clerk sign-up runs on the hosted Clerk page and is a human step. Stage C creates synthetic A, B (paired; B opts into nudge delivery and records support-preference consent) and C (unpaired, denied).
+
+**D041 pause:** not on main (requirements only, `docs/features/RECIPIENT_PAUSE.md`). Stage C runs without the pause cases and repeats them once Cyber's reducers and view land and CS adds the controls.
+
+**Found live, needs Cyber:** `sweep_expired` throws `unauthorized: scheduler only` every minute on the real host. SDK 2.13 never sets `senderAuth.isInternal` for scheduled calls (only the test harness does), so views would never hide expired records. A local fix (also admit calls with no connection whose sender is the database identity) is drafted on Rishi's machine, uncommitted and unreviewed. Sumedh: review the same pattern in `admin.ts` `requireOwner` (falls back to `isInternal`) and `events.ts` `requireIngester`.
+
+**Worker safety:** while the worker runs, any standing approved signal triggers a paid Droid call. Revoke test signals before starting it and never leave it running unattended.
+
+## Core 3 live smoke + CS logic audit — 2026-10-24T19:30Z (CS → Cyber, AI, DS)
+Status: **partial live verification** against real Clerk dev + local SpacetimeDB (`dor-local`, module `dor`). Nudge delivery (worker / `commit_nudge`), the browser UI path and the D041 pause cases are **not** verified.
+
+**Sweep fix (live):** same predicate as Cyber's `isDatabaseInternal` in PR #34 (harness `isInternal`, or no connection and sender == database identity). CS's duplicate `isScheduledCall` was **dropped from #35 in favour of #34**. Live evidence for that predicate (local module republished with it): before 19:07:58Z `sweep_expired: unauthorized: scheduler only` every 60 s; after, no error. **Positive proof (`smoke-core3.ts --sweep`, 30/30):** B's support preference set to expire at 19:24:17.757Z; `expired_record` row `preference:<consent_id>:2` present at 19:25:00Z (~42 s later, within the 60 s tick); consent restored, default run still 26/26. Note: `my_support_preferences` returns the raw owner row (no marker filter); the marker is consumed by `loadPreference` (`expiresAtMs = 0`) for commit/worker checks; CS UI already treats it as expired via `isConsentActive`. Main stays broken live until #34 merges.
+
+**Smoke (`scripts/smoke-core3.ts`, 26/26 PASS, re-run by CS):** `node --env-file=.env.local --experimental-strip-types scripts/smoke-core3.ts`. Three synthetic Clerk users (`dor-smoke-{a,b,c}+clerk_test@example.com`), real template JWTs (iss/aud match allow-lists). Covered: register; invite accept and third-account accept refused (`invalid: invite already used`); preset set/assign; B opt-in + support consent; A approve with app-identical `payloadRevision`; sender-only `my_signals`/`my_receipts`; C refused on approve (`not_found: wrong_recipient`) and revoke; C sees 0 rows in 9 views; wrong revision refused; recipient cannot revoke; revoke + same-`client_request_id` replay does not resurrect; reconnect with fresh token consistent; garbage token and anonymous refused. Note: a wrong `payloadRevision` is refused as `no_consent`, not `stale_policy`; still refused (Sumedh: intended code?).
+
+**Audit findings (code-traced; owner in brackets):**
+- HIGH [Cyber] `my_nudges` returns the raw `nudge` row (`views.ts:145`): recipient's client receives `created_at`, `expires_at` (= approval + lifetime, i.e. the approval moment), `source_signal_ids`, consent ids. UI shows none, but a raw subscription does. Proposed: narrow row (`id`, `template_id`, coarse `visible_until`).
+- HIGH [Cyber + product] Sender receipts include `used` / `suppressed` (`privacy/page.tsx:62`, `suppress.ts`): sender can infer the recipient opted out, is quiet/cooling down, or revoked consent. Proposed: sender sees only own actions (`approved`, `revoked`); recipient-caused outcomes collapse.
+- HIGH [AI] Worker `onDisconnect(() => undefined)` (`worker/src/spacetime/connection.ts:80`): no reconnect, stale cache, non-classified commit errors. Availability only; `commit_nudge` rechecks.
+- MEDIUM [Cyber] `requireOwner` / `requireIngester` still fall back to `isInternal`, never true live; ingestion must run as the worker identity.
+- MEDIUM [CS] No CI check that bindings match the module (doctor compares client vs worker only). D041 will need a regenerate.
+- MEDIUM [CS, product decision] Onboarding Q5/Q6/Q8 `LocalQuizExtras` and `draftSharingCategories` have no reader: quiz does not seed presets, `prefersSpace` unused. Either wire or correct the docs.
+- MEDIUM [AI/CS] `nameMatches` needs every written word in the connection name: "not Alexander" does not exclude "Alex"; unnamed pairs all show "Your connection". Owner still chooses, so weak guarantee rather than leak.
+- MISSING [Cyber → CS] D041 pause: no reducers/view on main; no CS controls; no pause check before approve.
+- Fixed in #35 [CS]: onboarding stale "Vault pending (Cyber)" copy; quiz answers reset on vault lock; stale composition-root claim in `docs/roles/cs.md`.
+- Fixed in #35 [CS]: `npm run bindings:check` + CI job `bindings` (regenerates into a temp dir and diffs both committed binding dirs; CLI version cannot be pinned by the installer).
+- Fixed in #35 [CS]: quiz `draftSharingCategories` now pre-selects an unsaved preset draft (never auto-saved, never overrides a saved preset; space-only answer drops `support_preference`); onboarding "space" copy corrected (no global suppression).
+- Fixed in #35 [CS]: unnamed connections get distinct labels ("Connection 1…", duplicates "Sam (2)"); when the assessment names anyone to skip, unnamed connections are left out (fail closed) with a neutral owner-only note. Nickname matching ("Alexander" vs "Alex") stays with AI.
+- Built [CS] on branch `role/cs-pause-controls` (stacked on #34): D041 pause/resume controls, owner pause list, paused recipients never offered.
+
+**Verified DONE by trace:** C2 preset set/assign; decision loop (2-question cap, skip/space ⇒ no action, never auto-chosen, invalid assessment fails closed); ShareReview → `approve_signal` arg shape matches reducer; revoke; recipient opt-in default off + consent; template-only nudge copy; journal clears on lock/pagehide/account switch; extensions hidden by default; no optimistic fallback when unconfigured; all client reducers auth-gated, admin owner-gated, worker reducers worker-gated; bindings complete and identical client/worker.
+
+**Not run:** worker/Droid (paid), Claude/Cartesia, browser sign-in + vault + ShareReview UI, revoke-during-generation, provider failure paths. Smoke users left in Clerk dev (A `user_3L9bVlb6RL6irokscBtvb4NoqFm`, B `user_3L9bVuc2RtFCIaWE6oyl1dmbA94`, C `user_3L9bVu5Rt3NCnJpqDVYaSqNeKHd`).

@@ -192,6 +192,15 @@ export interface NudgeDeliveryView {
   utcOffsetMinutes: number;
 }
 
+/** The caller's OWN pause of one counterpart (`my_recipient_pauses`, D041). No reason is stored. `version` 0 = never paused. */
+export interface RecipientPause {
+  pairId: string;
+  version: number;
+  expiresAt: string;
+  active: boolean;
+  createdAt: string;
+}
+
 export type ReducerResult = { ok: true } | { ok: false; code: ReducerErrorCode; message: string };
 
 /** Mirrors API.md error codes; reducers throw SenderError with one of these prefixes. */
@@ -255,6 +264,9 @@ export interface SharedStatePort {
   revokeSupportPreferences(pairId: string): Promise<ReducerResult>; // revoke_support_preferences
   /** Caller's own opt-in; default (no row) is off. */
   setNudgeDelivery(input: NudgeDeliveryView): Promise<ReducerResult>; // set_nudge_delivery
+  /** Owner-only, reason-free pause of one counterpart; expectedVersion 0 = first pause (D041). */
+  pauseRecipient(pairId: string, expiresAt: string, expectedVersion: number): Promise<ReducerResult>; // pause_recipient
+  resumeRecipient(pairId: string, expectedVersion: number): Promise<ReducerResult>; // resume_recipient
   /** C8 (flag-gated server-side). The exact preview the owner confirmed; expectedRevision 0 = first publish. */
   publishDiscoveryProfile(input: {
     displayName: string;
@@ -294,6 +306,7 @@ export interface SharedStatePort {
   mySignals(): SignalView[]; // my_signals (sender-only, D026); includes revoked rows
   mySupportPreferences(): SupportPreferencesView[]; // my_support_preferences
   myNudgeDelivery(): NudgeDeliveryView[]; // my_nudge_delivery
+  myRecipientPauses(): RecipientPause[]; // my_recipient_pauses (owner-only)
   myDiscoveryProfile(): MyDiscoveryView | null; // my_discovery_profile
   discoveryCards(): DiscoveryCardRow[]; // discovery_cards (≤ DISCOVERY_CARD_LIMIT, caller-filtered)
   myIntroductions(): IntroductionView[]; // my_introductions

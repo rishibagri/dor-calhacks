@@ -277,8 +277,7 @@
       "assessment": null,
       "steps": [{ "company": "company" }, { "who": "p-sam" }],
       "expected": { "kind": "no_action" },
-      "forbidden": { "timing_detail": ["Friday"], "location": ["station"], "private_activity": ["meet me"] },
-      "knownGap": "Expected: a malformed candidate (extra keys outside SignalCandidateSchema) never reaches ready_for_preview (README 'Invalid/ambiguous output never means send'). Pending CS's fix. decide() passes the candidate through unvalidated and returns ready_for_preview; previewDisclosure then denies it as invalid_schema, so nothing is shareable (asserted in decision-loop.test.ts). Owner: CS (parse with SignalCandidateSchema in startLoop/decide, or treat a failed parse as null)."
+      "forbidden": { "timing_detail": ["Friday"], "location": ["station"], "private_activity": ["meet me"] }
     },
     {
       "id": "i3-injected-recipient-not-a-connection",

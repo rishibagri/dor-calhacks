@@ -150,6 +150,17 @@ describe('no decline oracle, no re-ask pressure', () => {
   });
 });
 
+describe('relationship state is checked in both directions', () => {
+  it('a request the other person already sent blocks a crossing request; their accepted request counts as connected', () => {
+    const w = trio();
+    ask(w, w.bob, w.alice); // bob → alice pending
+    expect(() => ask(w, w.alice, w.bob)).toThrow('stale: already_requested');
+    respond(w, w.alice, incomingId(w, w.alice), true);
+    expect(() => ask(w, w.alice, w.bob)).toThrow('stale: already_connected');
+    expect(() => ask(w, w.bob, w.alice)).toThrow('stale: already_connected');
+  });
+});
+
 describe('replay and idempotency', () => {
   it('replaying a request is a no-op, even after a decline; reusing its id for someone else is refused', () => {
     const w = trio();

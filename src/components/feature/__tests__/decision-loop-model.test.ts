@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  MAX_QUESTIONS, NO_ACTION_COPY, QUESTION_COPY, answerCompany, answerWho, decide, excludeForNow, startLoop,
+  MAX_QUESTIONS, NO_ACTION_COPY, QUESTION_COPY, answerCompany, answerWho, applyUnnamedExclusionGuard, decide, excludeForNow, startLoop,
 } from '../decision-loop-model.ts';
 
 const SAM = { pairId: 'p-sam', name: 'Sam' };
@@ -20,6 +20,21 @@ test('positive: company → Sam → exact preview for Sam only (still not a send
 
 test('no candidate means no questions at all', () => {
   assert.deepEqual(decide(startLoop(null), PEOPLE), { kind: 'no_action', reason: 'nothing_to_share' });
+});
+
+test('candidate with an extra key is dropped: no_action, never preview', () => {
+  const bad = { supportMode: 'short_call', recipientId: 'friend-alex' } as never;
+  assert.deepEqual(decide(startLoop(bad), PEOPLE), { kind: 'no_action', reason: 'nothing_to_share' });
+});
+
+test('candidate with an invalid supportMode is dropped', () => {
+  const bad = { supportMode: 'send_now' } as never;
+  assert.deepEqual(decide(startLoop(bad), PEOPLE), { kind: 'no_action', reason: 'nothing_to_share' });
+});
+
+test('a valid candidate is kept unchanged', () => {
+  const c = { supportMode: 'short_call' as const, availability: 'today' as const };
+  assert.deepEqual(startLoop(c).candidate, c);
 });
 
 test('explicit exclusion: "not Alex tonight" removes Alex and never auto-picks another friend', () => {
@@ -93,4 +108,24 @@ test('state is plain data: nothing to persist beyond the episode, inputs never m
   excludeForNow(s1, SAM.pairId);
   assert.deepEqual(s0, { candidate: CALL, company: null, chosen: null, excluded: [], asked: [] });
   assert.deepEqual(s1.excluded, []);
+});
+
+const UNNAMED = { pairId: 'p-u', name: 'Connection 1', unnamed: true };
+
+test('exclusion present: an unnamed recipient is left out (cannot prove it is not the excluded person)', () => {
+  const { kept, leftOutUnnamed } = applyUnnamedExclusionGuard([SAM, UNNAMED], true);
+  assert.deepEqual(kept, [SAM]);
+  assert.deepEqual(leftOutUnnamed, [UNNAMED]);
+});
+
+test('no exclusion: an unnamed recipient stays eligible', () => {
+  const { kept, leftOutUnnamed } = applyUnnamedExclusionGuard([SAM, UNNAMED], false);
+  assert.deepEqual(kept, [SAM, UNNAMED]);
+  assert.deepEqual(leftOutUnnamed, []);
+});
+
+test('all recipients left out by the guard ends in the existing no-action state', () => {
+  const { kept } = applyUnnamedExclusionGuard([UNNAMED], true);
+  const s = answerCompany(startLoop(CALL), 'company');
+  assert.deepEqual(decide(s, kept), { kind: 'no_action', reason: 'no_eligible_recipient' });
 });

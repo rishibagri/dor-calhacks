@@ -26,6 +26,7 @@ npm run setup:module -- --server dor-local          # print the plan
 npm run setup:module -- --server dor-local --run    # publish, auth issuer/audience, allowlists, bindings
 ```
 The `spacetime login` that publishes becomes the module owner. Run every later admin call under the same login. Core setup keeps the discovery/event flag **off**; add `--extensions` only when deliberately enabling them.
+After any module change, run `npm run bindings:check` (regenerates into a temp dir and diffs both committed binding copies).
 
 ## 2. Worker identity
 ```sh

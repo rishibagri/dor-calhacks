@@ -1,4 +1,4 @@
-import { findAssignment, findPreset, findPublicationRow, pairsOf } from './policy_state';
+import { findAssignment, findPreset, findPublicationRow, pairsOf, pauseInForce } from './policy_state';
 import { t } from 'spacetimedb/server';
 import type { Identity } from 'spacetimedb';
 import {
@@ -129,6 +129,7 @@ function nudgeSourcesStand(db: ReadDb, n: { pair_id: string; source_signal_ids: 
     const s = db.approved_signal.signal_id.find(id);
     if (!s || s.pair_id !== n.pair_id || s.consent_version !== n.source_consent_versions[i]) return false;
     if (signalExpiredMarked(db, id)) return false;
+    if (pauseInForce(db, s.sender_id, s.pair_id, null)) return false; // D041: the sender is pausing this person
     return guardSignalStanding(toStoredSignal(s), loadStanding(db, s.sender_id, s.pair_id), hex(viewer)).allowed;
   });
 }
@@ -198,7 +199,9 @@ export const worker_signal_context = spacetimedb.view(
   ctx => {
     if (!isWorker(ctx.db, ctx.sender)) return [];
     return [...ctx.db.approved_signal.iter()]
-      .filter(s => !s.revoked_at && !signalExpiredMarked(ctx.db, s.signal_id) && guardSignalStanding(toStoredSignal(s), loadStanding(ctx.db, s.sender_id, s.pair_id)).allowed)
+      .filter(s => !s.revoked_at && !signalExpiredMarked(ctx.db, s.signal_id) &&
+        !pauseInForce(ctx.db, s.sender_id, s.pair_id, null) && // D041: paused pairs' signals are not presented
+        guardSignalStanding(toStoredSignal(s), loadStanding(ctx.db, s.sender_id, s.pair_id)).allowed)
       .flatMap(s => {
         const p = ctx.db.pair.pair_id.find(s.pair_id);
         if (!p) return [];
@@ -592,4 +595,23 @@ export const worker_plan_candidates = spacetimedb.view(
     }
     return out;
   }
+);
+
+// ---- D041 recipient pause (owner only) ----
+
+const myPauseRow = t.row('MyRecipientPauseRow', {
+  pair_id: t.string(), version: t.u32(), expires_at: t.timestamp(), active: t.bool(), created_at: t.timestamp(),
+});
+
+/**
+ * The caller's own pauses (one per pair they paused): who (by pair_id; the client shows the name from my_pairs),
+ * until when, and whether it is still in force. `version` is what pause/resume pass as expected_version. Nobody
+ * else, including the paused person, has any view of this table.
+ */
+export const my_recipient_pauses = spacetimedb.view(
+  { name: 'my_recipient_pauses', public: true }, t.array(myPauseRow),
+  ctx => [...ctx.db.recipient_pause.owner.filter(ctx.sender)].map(p => ({
+    pair_id: p.pair_id, version: p.version, expires_at: p.expires_at, created_at: p.created_at,
+    active: pauseInForce(ctx.db, ctx.sender, p.pair_id, null),
+  }))
 );

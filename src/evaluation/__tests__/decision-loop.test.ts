@@ -50,7 +50,7 @@ for (const c of file.cases) {
 
 test('known gaps still fail as labeled (remove knownGap when this test breaks)', () => {
   const gaps = file.cases.filter((c) => c.knownGap);
-  assert.deepEqual(gaps.map((c) => c.id).sort(), ['i2-injected-candidate-fields', 'r4m-refusal-in-entry-assessment-missing']);
+  assert.deepEqual(gaps.map((c) => c.id).sort(), ['r4m-refusal-in-entry-assessment-missing']);
   for (const c of gaps) assert.equal(scoreCase(file, c).matches, false, c.id);
 });
 

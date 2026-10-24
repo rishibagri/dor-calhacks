@@ -14,5 +14,6 @@ export * from './reducers/expiry';
 export * from './reducers/discovery';
 export * from './reducers/introductions';
 export * from './reducers/events';
+export * from './reducers/pause';
 export * from './views';
 export default spacetimedb;
