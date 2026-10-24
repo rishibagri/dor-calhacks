@@ -8,6 +8,8 @@
  * user-typed text are structurally impossible to pass (unknown keys and free text are rejected).
  */
 
+import { looksSensitiveTag } from './discovery.js';
+
 export interface PublicCatalogueQuery {
   format: 'online' | 'in_person' | 'any';
   /** Each topic must appear in the developer-configured allowlist; never user text. */
@@ -35,7 +37,7 @@ const looksLikeIdentifier = (s: string) => IDENTIFIER_RES.some(re => re.test(s))
 
 /** Validates the developer allowlist itself: short lowercase slugs only. */
 export function validTopicAllowlist(topics: readonly string[]): boolean {
-  return topics.length > 0 && topics.every(t => TOPIC_RE.test(t) && !looksLikeIdentifier(t));
+  return topics.length > 0 && topics.every(t => TOPIC_RE.test(t) && !looksLikeIdentifier(t) && !looksSensitiveTag(t));
 }
 
 /** Default deny. Returns a fresh object containing only allowlisted fields (never the caller's object). */

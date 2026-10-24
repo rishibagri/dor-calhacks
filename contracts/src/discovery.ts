@@ -41,11 +41,28 @@ const IDENTIFIER_RES = [
 const UNSAFE_CHARS = /[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁠-⁩﻿]/;
 export const looksLikeContactOrId = (s: string): boolean => IDENTIFIER_RES.some(re => re.test(s));
 
-/** Developer allowlists (interest tags, coarse launch areas): short lowercase slugs only. */
+/**
+ * D046 safety net: tag segments that would publish a special-category or stigmatising fact about a person (health,
+ * recovery, grief, sexuality, religion, immigration status, legal or financial trouble). D045 makes transitions
+ * ("starting college", "new to the city") discovery tags; this keeps an allowlist from ever offering, say, `divorce`
+ * or `rehab` as a public profile label. Matching is per hyphen segment (prefix stems; `trans` exact), so `transit`
+ * and `hiking` pass. A net, not a classifier: the developer allowlist is still reviewed.
+ */
+const SENSITIVE_STEMS = ['health', 'medic', 'mental', 'therap', 'rehab', 'sober', 'addict', 'grief', 'griev', 'bereav', 'widow',
+  'divorc', 'separat', 'pregnan', 'abortion', 'ivf', 'hiv', 'cancer', 'disab', 'diagnos', 'immigra', 'visa', 'asylum', 'refugee',
+  'undocumented', 'religio', 'church', 'mosque', 'synagogue', 'temple', 'lgbt', 'gay', 'lesbian', 'queer', 'bisexual', 'sexual',
+  'politic', 'prison', 'parole', 'criminal', 'debt', 'bankrupt', 'unemploy', 'homeless', 'evict', 'abuse', 'suicid'];
+const SENSITIVE_EXACT = ['trans', 'nonbinary'];
+export function looksSensitiveTag(tag: string): boolean {
+  if (tag.includes('self-harm')) return true;
+  return tag.split('-').some(s => SENSITIVE_EXACT.includes(s) || SENSITIVE_STEMS.some(stem => s.startsWith(stem)));
+}
+
+/** Developer allowlists (interest/transition tags, coarse launch areas): short lowercase slugs only. */
 export function validSlugAllowlist(values: readonly string[], kind: 'tag' | 'area'): boolean {
   const re = kind === 'tag' ? TAG_RE : AREA_RE;
   return values.length > 0 && values.length <= 256 && new Set(values).size === values.length &&
-    values.every(v => typeof v === 'string' && re.test(v) && !looksLikeContactOrId(v));
+    values.every(v => typeof v === 'string' && re.test(v) && !looksLikeContactOrId(v) && !(kind === 'tag' && looksSensitiveTag(v)));
 }
 
 export interface PublicationDraft {
