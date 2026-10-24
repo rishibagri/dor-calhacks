@@ -1,6 +1,7 @@
 export * from './schemas.js';
 export * from './policy.js';
 export * from './policy-port.js';
+export * from './catalogue.js';
 export type * from './ports.js';
 export * from './disclosure.js';
 export * from './reflection.js';
