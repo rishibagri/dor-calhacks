@@ -1,3 +1,9 @@
+# CS handoff — 2026-10-24T22:00Z, role/cs-app (Core 1/2/4)
+
+README core-first direction applied. Discover/Events preserved but hidden by default (`NEXT_PUBLIC_DOR_EXTENSIONS`). Journal now runs a private decision loop before any preview: see `docs/features/PRIVATE_DECISION_LOOP.md` for the journey, rules, tests and seams (AI assessment mapping, Cyber durable pause, DS paired scenarios). Offline only. Next CS: Core 3 live configuration (module publish, auth issuer/audience, worker identity, two-account + denied third account), then pause controls once the Cyber contract lands.
+
+---
+
 # CS handoff — 2026-10-24T20:30Z, role/cs-app (CS-R3)
 
 Status: CS-R3 implemented in code, **offline-verified only**. No Apify run, no published module.
