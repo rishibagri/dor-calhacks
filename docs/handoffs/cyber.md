@@ -1,4 +1,27 @@
-# CYBER handoff (Sumedh): current, CYBER-R3
+# CYBER handoff (Sumedh): current, Core 1
+
+**Plan change (README #26, sponsor feedback):** Core 1–4 are the active milestones, and R0–R6 are historical. The core product is the existing-relationship flow: private reflection → clarify → exact named-recipient approval → guarded delivery → dismiss/pause/revoke. Discovery, events and Apify are preserved extensions with their guards intact, not core dependencies.
+
+Status: Core 1 proposal on `role/cyber-privacy` (on main `71c3b6a`). **Proposed, not wired.**
+
+## Core 1 deliverable (D040)
+- `src/privacy/RECIPIENT_PAUSE.md`: episode exclusion (device-only) vs recipient pause (owner-only server record); transitions; enforcement at approval, use and commit; refusal reported as `revoked`; recipient-visible surface review; owner copy; review asks; 10 rejection cases for Core 2; file claims; open questions.
+- `contracts/src/recipient-pause.ts`: reference guards `guardPauseRequest`, `pauseActive`, `guardNotPaused`, `pauseInvalidates`, `previewRecipients`, with 7 tests. Nothing consumes them yet.
+- Evidence: `npm run check` exit 0 (contracts 123, schemas current); module typecheck ok.
+
+## Exact next actions
+- **CS:** review §2–§3 names, the §1 escalation rule, the §5 badge/count rows and the §6 copy; claim the pause UI and the episode exclusion in journal/share review.
+- **Adam:** review §7. Device-only `excludedRecipients`; suggestions only; nothing in worker requests or prompts. Share the assessment/clarification seam when specified, so Cyber can review it against D040.
+- **Nimisha:** §8 cases as no-action evals; paired fixtures (same availability, Alex excluded vs Jo not).
+- **Cyber after ACK (Core 2):** `recipient_pause` table and reducers, `guardNotPaused` in `approve_signal`, use checks and `commit_nudge`, invalidation, sweep, owner pause control model, §8 tests.
+- **Extension backlog (lower priority):** a preset-schema change so CS can offer `activity_interest` (PR #24 note); D028 review of CS's Apify config; DS asks from #25 (event-ID validator, linked pairs on discovery cards).
+
+## Deferred to the front-end pass
+- Raw server text in `discovery-profile.tsx` / `discovery-area.tsx` (see below).
+
+---
+
+# CYBER handoff (Sumedh): CYBER-R3 (historical; superseded by Core 1 above)
 
 Status: implemented on `role/cyber-privacy` (on main `2b8e59b`, after R2 PR #18 merged). Offline-verified only: the module is unpublished, there's no live Apify source, and discovery stays behind the off-by-default flag.
 

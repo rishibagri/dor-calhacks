@@ -39,7 +39,7 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 |---|---|---|
 | CS — you | role/cs-app (PR #22, offline only): CS-R1 done in code (vault/voice/share review/revoke/recipient consent, bindings); CS-R2 Discover + area-indexed paged `discovery_cards` + `set_discovery_page`; not published or live-verified | CS-R3: event pages on D039 + one Apify catalogue. Cyber: review discovery_cards index/cursor/connected filter. DS: card `onReport` → `reportCard`. Adam: introduction proposal job |
 | DS — Nimisha | role/ds-context b077a1e (local, unpushed): `rankNearby` shortlist + `src/features/discovery` components + 15 nearby cases; rankActivities uses safeCatalogueUrl/allowInPerson. Offline/synthetic | CS: compose DiscoveryResults/EventResults and ship C8 candidate query matching `src/features/discovery/types.ts`; Sumedh: confirm projection; Adam: ≤3-entry shortlist; team: ratings |
-| Cyber — Sumedh | role/cyber-privacy (on main 2b8e59b): CYBER-R3 guarded catalogue ingestion, C8 event intents (mutual-only overlap), C7 activity approvals (preset-only, off by default), D034 plan finalization with current-source rechecks, `EventPrivacyControls` + exact preview copy (D039). R2 merged (#18). Offline only: contracts 116, module 137, app 193, ai 104; flag off, not published | CS: ACK D039, bindings, ingestion → `upsert_catalogue_event`, preview copy, preset toggle. Adam: `commit_plan_proposal` from `worker_plan_candidates`. Nimisha: `event_companions`. Cyber next: CYBER-R4 adversarial suite |
+| Cyber — Sumedh | role/cyber-privacy (on main 71c3b6a): **Core 1** recipient exclusion/pause boundary proposal (D040, `src/privacy/RECIPIENT_PAUSE.md`) + reference guards (`contracts/src/recipient-pause.ts`, 7 tests); proposed, not wired. R2/R3 extension guards merged (#18, #20) | CS: review D040 §1–§6 + claim pause UI/episode exclusion. Adam: review §7, share assessment seam. Nimisha: §8 evals. Cyber next (after ACK): Core 2 authoritative pause enforcement |
 | AI — Adam | PR #7 merged: routes/browser helpers, real-policy worker factory, replay ledger and cheaper Droid; isolated Droid evidence only | AI-R1: voice component + worker database adapters; R2/R3: bounded introduction/event workflow; R4: call budgets |
 
 R0–R6 replace the old P-phase schedule without resetting code or the original deadline. Detailed shared phases are in README.md; per-owner phases in docs/roles/*.md; exact producer/consumer dependencies in docs/PLAN.md. These are current planning assignments, not completion evidence. Merge main into your active role branch; do not reset or force-update other roles.
@@ -243,3 +243,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - CS: regenerate bindings and wire ingestion.
   - Adam: commit plans from the worker view.
   - Nimisha: companions from `event_companions` only.
+
+### 2026-10-24T21:30Z | Cyber → CS, AI, DS | Core 1: recipient exclusion and pause semantics (D040, proposed)
+- **Status:** proposal plus reference guards; not wired; no runtime or wire change.
+- **Read:** `src/privacy/RECIPIENT_PAUSE.md`.
+  - Episode exclusion is device-only.
+  - A pause is an owner-only server record of 15 min to 30 days with no reason field. It revokes standing approvals to that person, so expiry or resume restores nothing.
+  - It is checked at approval, use and commit, and refuses as `revoked`.
+- **Asks:**
+  - CS: §1–§6.
+  - Adam: §7.
+  - Nimisha: §8.
+  - ACK in your role log before Core 2 wiring.
