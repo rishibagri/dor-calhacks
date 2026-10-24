@@ -9,3 +9,5 @@ coverage/
 demo/raw/
 demo/exports/
 .DS_Store
+next-env.d.ts
+*.tsbuildinfo
