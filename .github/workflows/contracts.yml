@@ -50,3 +50,26 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run build -w @dor/contracts && npm run build -w @dor/agents
       - run: npx next build --webpack
+
+  bindings:
+    name: Generated SpacetimeDB bindings are current
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      # The module imports @dor/contracts/policy from the built dist; the generator bundles it.
+      - run: npm run build -w @dor/contracts
+      # The installer cannot pin a version (it always fetches the latest release). Committed bindings
+      # were generated with CLI 2.13.0; the version stamp line is ignored by the check, but a newer
+      # generator may change output and require regenerating.
+      - name: Install SpacetimeDB CLI
+        run: |
+          curl -sSf https://install.spacetimedb.com | sh -s -- --yes
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - run: spacetime --version
+      - run: npm run bindings:check -- --require

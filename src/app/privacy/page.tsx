@@ -1,5 +1,6 @@
 'use client';
 
+import { ActivePauses } from '@/components/feature/active-pauses';
 import { ApprovedSignals } from '@/components/feature/approved-signals';
 import { DiscoveryStatus } from '@/components/feature/discovery-status';
 import { EventPrivacy } from '@/components/feature/event-privacy';
@@ -49,6 +50,7 @@ export default function PrivacyPage() {
         </AlertDescription>
       </Alert>
       <ApprovedSignals />
+      <ActivePauses />
       {/* Extensions: shown when enabled, or whenever there is still something of yours to withdraw. */}
       {(areExtensionsEnabled || hasDiscoveryFootprint(shared)) && <><DiscoveryStatus /><EventPrivacy /></>}
       <Card>

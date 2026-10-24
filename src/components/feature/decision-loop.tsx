@@ -7,9 +7,10 @@ import { useLiveShared } from '@/components/shell/use-live';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  NO_ACTION_COPY, QUESTION_COPY, QUESTION_NOTE, answerCompany, answerWho, decide, excludeForNow,
+  NO_ACTION_COPY, QUESTION_COPY, QUESTION_NOTE, answerCompany, answerWho, applyUnnamedExclusionGuard, decide, excludeForNow,
   type LoopState,
 } from './decision-loop-model';
+import { PAUSED_NOT_OFFERED, withoutPaused } from './pause-model';
 import { shareRecipients } from './share-review-model';
 import { ShareReview } from './share-review';
 
@@ -28,9 +29,12 @@ export function DecisionLoop({ candidate, assessment, onDone }: {
 }) {
   const shared = useLiveShared();
   const [s, setS] = useState<LoopState>(() => initialLoopState(candidate, assessment));
-  const connections = shareRecipients(shared.myPairs()).map(({ pairId, name }) => ({ pairId, name }));
-  const recipients = assessedRecipients(connections, assessment);
-  const leftOut = leftOutByAssessment(connections, assessment);
+  const { eligible: unpaused, pausedCount } = withoutPaused(
+    shareRecipients(shared.myPairs()).map(({ pairId, name, unnamed }) => ({ pairId, name, unnamed })),
+    shared.myRecipientPauses(), new Date());
+  const { kept, leftOutUnnamed } = applyUnnamedExclusionGuard(unpaused, (assessment?.excludedNames.length ?? 0) > 0);
+  const recipients = assessedRecipients(kept, assessment);
+  const leftOut = leftOutByAssessment(kept, assessment);
   const outcome = decide(s, recipients);
 
   if (outcome.kind === 'ready_for_preview') {
@@ -54,9 +58,15 @@ export function DecisionLoop({ candidate, assessment, onDone }: {
         <CardDescription>{QUESTION_NOTE}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        {pausedCount > 0 && <p className="text-sm text-muted-foreground">{PAUSED_NOT_OFFERED}</p>}
         {leftOut.length > 0 && (
           <p className="text-sm text-muted-foreground">
             Leaving out {leftOut.map((r) => r.name).join(', ')} for now, based on your entry.
+          </p>
+        )}
+        {leftOutUnnamed.length > 0 && (
+          <p className="text-sm text-muted-foreground">
+            Some connections without a name were left out because you mentioned someone to skip.
           </p>
         )}
         {outcome.kind === 'no_action' && <>

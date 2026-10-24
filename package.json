@@ -30,6 +30,7 @@
     "ai:live": "npm run ai:build && npm run live -w @dor/agents && npm run live -w @dor/worker",
     "setup:doctor": "node scripts/doctor.ts",
     "setup:module": "node scripts/bootstrap-module.ts",
+    "bindings:check": "node scripts/check-bindings.ts",
     "setup:worker": "node scripts/mint-worker-identity.ts",
     "ai:dryrun": "npm run ai:build && npm run test:integration -w @dor/worker -- full-dry-run"
   },

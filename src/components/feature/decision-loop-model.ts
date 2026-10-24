@@ -15,7 +15,7 @@
  * - Answers, exclusions and the candidate are never persisted or sent; the caller drops this state on lock,
  *   pagehide, sign-out and account switch.
  */
-import type { SignalCandidate } from '@dor/contracts';
+import { SignalCandidateSchema, type SignalCandidate } from '@dor/contracts';
 
 export const MAX_QUESTIONS = 2;
 
@@ -30,7 +30,26 @@ export const QUESTION_NOTE =
 
 export type CompanyAnswer = 'company' | 'space' | 'skip';
 
-export interface Recipient { pairId: string; name: string }
+export interface Recipient {
+  pairId: string;
+  name: string;
+  /** True when `name` is a generated label because the connection has no display name. */
+  unnamed?: boolean;
+}
+
+/**
+ * Fail closed on name exclusions: when the owner's entry names anyone to skip, a connection without a display name
+ * can never be matched, so we cannot prove it is not that person. Leave it out. Returns the kept and left-out lists.
+ */
+export function applyUnnamedExclusionGuard<R extends Recipient>(
+  recipients: readonly R[], hasNameExclusion: boolean,
+): { kept: R[]; leftOutUnnamed: R[] } {
+  if (!hasNameExclusion) return { kept: [...recipients], leftOutUnnamed: [] };
+  return {
+    kept: recipients.filter((r) => !r.unnamed),
+    leftOutUnnamed: recipients.filter((r) => r.unnamed),
+  };
+}
 
 export interface LoopState {
   candidate: SignalCandidate | null;
@@ -48,8 +67,10 @@ export type Outcome =
   | { kind: 'needs_clarification'; question: keyof typeof QUESTION_COPY; options: readonly Recipient[] }
   | { kind: 'ready_for_preview'; recipient: Recipient; candidate: SignalCandidate };
 
+/** Invalid output never means send: a candidate that fails the strict schema (extra keys, bad values) becomes null. */
 export function startLoop(candidate: SignalCandidate | null): LoopState {
-  return { candidate, company: null, chosen: null, excluded: [], asked: [] };
+  const parsed = candidate === null ? null : SignalCandidateSchema.safeParse(candidate);
+  return { candidate: parsed?.success ? parsed.data : null, company: null, chosen: null, excluded: [], asked: [] };
 }
 
 const eligible = (s: LoopState, recipients: readonly Recipient[]) => recipients.filter((r) => !s.excluded.includes(r.pairId));
@@ -60,8 +81,8 @@ export function decide(s: LoopState, recipients: readonly Recipient[]): Outcome 
   if (s.company === 'space') return { kind: 'no_action', reason: 'prefers_space' };
   if (s.company === 'skip') return { kind: 'no_action', reason: 'skipped' };
   const options = eligible(s, recipients);
+  if (options.length === 0) return { kind: 'no_action', reason: 'no_eligible_recipient' }; // never ask when nobody can be offered
   if (s.company === null) return ask(s, 'company', options);
-  if (options.length === 0) return { kind: 'no_action', reason: 'no_eligible_recipient' };
   if (s.chosen === 'none') return { kind: 'no_action', reason: 'no_recipient' };
   if (s.chosen === null) return ask(s, 'who', options);
   const recipient = options.find((r) => r.pairId === s.chosen);

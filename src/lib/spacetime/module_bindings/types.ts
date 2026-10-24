@@ -388,6 +388,18 @@ export type MyPresets = __Infer<typeof MyPresets>;
 export const MyReceipts = __t.object("MyReceipts", {});
 export type MyReceipts = __Infer<typeof MyReceipts>;
 
+export const MyRecipientPauseRow = __t.object("MyRecipientPauseRow", {
+  pairId: __t.string(),
+  version: __t.u32(),
+  expiresAt: __t.timestamp(),
+  active: __t.bool(),
+  createdAt: __t.timestamp(),
+});
+export type MyRecipientPauseRow = __Infer<typeof MyRecipientPauseRow>;
+
+export const MyRecipientPauses = __t.object("MyRecipientPauses", {});
+export type MyRecipientPauses = __Infer<typeof MyRecipientPauses>;
+
 export const MySignals = __t.object("MySignals", {});
 export type MySignals = __Infer<typeof MySignals>;
 
@@ -475,6 +487,19 @@ export const RateWindow = __t.object("RateWindow", {
   count: __t.u32(),
 });
 export type RateWindow = __Infer<typeof RateWindow>;
+
+export const RecipientPause = __t.object("RecipientPause", {
+  pauseId: __t.string(),
+  owner: __t.identity(),
+  pairId: __t.string(),
+  target: __t.identity(),
+  version: __t.u32(),
+  expiresAt: __t.timestamp(),
+  resumedAt: __t.option(__t.timestamp()),
+  createdAt: __t.timestamp(),
+  updatedAt: __t.timestamp(),
+});
+export type RecipientPause = __Infer<typeof RecipientPause>;
 
 export const RelationshipPreset = __t.object("RelationshipPreset", {
   presetId: __t.string(),

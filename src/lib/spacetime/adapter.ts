@@ -176,6 +176,8 @@ export class SpacetimeSharedState implements SharedStateController {
     this.call('set_support_preferences', () => A.setSupportPreferences(i));
   revokeSupportPreferences = (id: string) => this.call('revoke_support_preferences', () => A.revokeSupportPreferences(id));
   setNudgeDelivery: SharedStatePort['setNudgeDelivery'] = (i) => this.call('set_nudge_delivery', () => A.setNudgeDelivery(i));
+  pauseRecipient = (pairId: string, expiresAt: string, v: number) => this.call('pause_recipient', () => A.pauseRecipient(pairId, expiresAt, v));
+  resumeRecipient = (pairId: string, v: number) => this.call('resume_recipient', () => A.resumeRecipient(pairId, v));
   publishDiscoveryProfile: SharedStatePort['publishDiscoveryProfile'] = (i) =>
     this.call('publish_discovery_profile', () => A.publishDiscoveryProfile(i));
   withdrawDiscoveryProfile = () => this.call('withdraw_discovery_profile', () => ({}));
@@ -211,6 +213,7 @@ export class SpacetimeSharedState implements SharedStateController {
   mySignals = () => this.views.signals;
   mySupportPreferences = () => this.views.supportPreferences;
   myNudgeDelivery = () => this.views.nudgeDelivery;
+  myRecipientPauses = () => this.views.pauses;
   myDiscoveryProfile = () => this.views.discoveryProfile;
   discoveryCards = () => this.views.discoveryCards;
   myIntroductions = () => this.views.introductions;
