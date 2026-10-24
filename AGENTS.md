@@ -37,7 +37,7 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 |---|---|---|
 | CS — you | App/quiz/client adapter implemented; app composition still uses placeholders; actual bindings/auth/deployment unverified | CS-R1: compose real vault/voice features and generate bindings; CS-R2/R3: coarse-area discovery state and one Apify catalogue |
 | DS — Nimisha | role/ds-context b077a1e (local, unpushed): `rankNearby` shortlist + `src/features/discovery` components + 15 nearby cases; rankActivities uses safeCatalogueUrl/allowInPerson. Offline/synthetic | CS: compose DiscoveryResults/EventResults and ship C8 candidate query matching `src/features/discovery/types.ts`; Sumedh: confirm projection; Adam: ≤3-entry shortlist; team: ratings |
-| Cyber — Sumedh | d7285eb includes real vault, unified guards, opt-in, worker-only commit/views and Apify guards; offline only | CYBER-R1: recipient preference consent + commit binding, expiry/audience and privacy component; R2: publication/block guards |
+| Cyber — Sumedh | role/cyber-privacy @ 0021c16/9b82854 (PR #10): CYBER-R1 recipient preference consent bound into commit_nudge, JWT aud allowlist, 60 s expiry/snooze sweep, proposed C8 publish/withdraw/area/block guards (flag off), privacy controls component over real LocalVault (D035). Offline only: contracts 84, module 84, app 141, ai 55; not published | CS: ACK D035, set Clerk `aud` + `set_auth_audience`, compose `VaultControls`, preference settings UI. Adam: `worker_support_preferences` + consent binding in `commit_nudge`; hyphenated tags. Cyber next: CYBER-R2 introductions/report/limits |
 | AI — Adam | PR #7 merged: routes/browser helpers, real-policy worker factory, replay ledger and cheaper Droid; isolated Droid evidence only | AI-R1: voice component + worker database adapters; R2/R3: bounded introduction/event workflow; R4: call budgets |
 
 R0–R6 replace the old P-phase schedule without resetting code or the original deadline. Detailed shared phases are in README.md; per-owner phases in docs/roles/*.md; exact producer/consumer dependencies in docs/PLAN.md. These are current planning assignments, not completion evidence. Merge main into your active role branch; do not reset or force-update other roles.
@@ -171,3 +171,43 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - a3 is still open.
 - **Run:** `npm run check:all`; `node --test "src/evaluation/__tests__/*.test.ts" "src/features/discovery/__tests__/*.test.ts"`; `node src/evaluation/report.ts --write`.
 - **Details:** `docs/handoffs/ds.md`, `docs/updates/ds.md`, `src/evaluation/results/latest.md`, `src/features/discovery/types.ts`.
+
+### 2026-10-24T07:30Z | Cyber → CS, AI, DS | CYBER-R0/R1: recipient consent, JWT aud, expiry sweep, C8 guards, privacy controls
+- **Branch/commit:** `role/cyber-privacy` @ `0021c16` (boundary code) + `9b82854` (privacy component), on main `fab86d6`. PR #10 to main is open; it isn't merged yet.
+- **Status:** implemented and offline-verified, NOT live. The module is unpublished, and harness results do not prove deployed isolation, real JWT mapping or the real scheduler.
+- **Evidence:**
+  - `check:all` exit 0: contracts 84, module 84, app 141 + 1 pre-existing DS todo.
+  - `ai:check` exit 0: agents 45, worker 10.
+  - `next build` ok; audit 0.
+  - 19 of 20 mutations caught (list in `docs/updates/cyber.md`).
+- **Breaking interface:** `commit_nudge` now requires `recipient_consent_id` and `recipient_consent_version`. Take them from `AgentAck.recipientConsentId/Version`.
+- **CS next:**
+  1. ACK D035 and the file claims.
+  2. Set a fixed `aud` in the Clerk JWT template; after publish run `set_auth_issuer` and `set_auth_audience`.
+  3. Compose `<VaultControls vault={vault} />` (`src/features/privacy/README.md`).
+  4. Build the recipient preference settings UI.
+  5. Regenerate bindings.
+- **AI (Adam) next:**
+  1. `worker_support_preferences` backs `RecipientPreferencesPort`.
+  2. Bind consent in `commit_nudge`.
+  3. Switch `DiscoveryTagSchema` to hyphenated slugs.
+- **DS (Nimisha) next:** rank only `discovery_cards` rows; keep the C8 rejection cases in `src/privacy/REVIEWS.md`.
+- **Open gaps:**
+  - Views can't check `aud`.
+  - View expiry is bounded by the 60 s sweep.
+  - No rate limits yet.
+  - Discovery is off until the C8 ACKs.
+  - Introductions, report and limits are CYBER-R2.
+
+### 2026-10-24T08:30Z | Cyber → AI, CS | Merged main (AI PR #11); worker wired to recipient consent
+- **What changed:**
+  - Resolved the `docs/DECISIONS.md` conflict: main's D033/D034 are kept verbatim and D035 is appended after them.
+  - With the user's approval, edited Adam's worker adapter so the worker reads `worker_support_preferences` and passes `recipient_consent_id/version` from the compatible `AgentAck` into `commit_nudge`.
+  - The integration tests now use real consent recorded through `set_support_preferences`.
+- **Compatibility:** `supportPreferences()` on `WorkerStateSource` is optional (missing means no consent, fail closed). The `spacetimeWorkerPorts` override parameter and `UnavailableRecipientPreferences` are kept.
+- **Evidence:**
+  - `check:all` exit 0: contracts 95, module 84, app 147.
+  - `ai:check` exit 0: agents 64, worker 21, integration 17.
+  - Integration tests type-check with 0 errors.
+  - `next build` ok; audit 0.
+- **Adam:** review `worker/src/spacetime/adapters.ts`. **CS:** generated bindings must include the new view and the new `commit_nudge` args.

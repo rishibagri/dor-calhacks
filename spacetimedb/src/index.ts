@@ -9,5 +9,8 @@ export * from './reducers/signals';
 export * from './reducers/nudges';
 export * from './reducers/delivery';
 export * from './reducers/coordination';
+export * from './reducers/preferences';
+export * from './reducers/expiry';
+export * from './reducers/discovery';
 export * from './views';
 export default spacetimedb;

@@ -21,7 +21,9 @@ Overall: **ACK with conditions.** The interfaces are enum-only and fail closed. 
 1. **`PrivateReflection` (C1): ACK.** Persist the reflection *text* only (`VaultPort.saveReflection`, ≤2000 chars). Do **not** persist `candidate`: FLOWS F2 holds it in memory, and re-previewing a stale candidate later would be a new disclosure decision on stale context.
 2. **`SignalCandidateSchema` reuse: ACK.** Strict and enum-only. AI must emit `candidate: null` for space/no-need (D019).
 3. **`VoiceSession`: ACK, with conditions for the route.** Serve with `cache-control: no-store`. Never log the token or persist it in the vault, localStorage or React state beyond the call. The 60-second scope is acceptable. An XSS in our origin could read it during that window (documented residual risk).
-4. **`RecipientSupportPreferences`: BOUNDARY GAP (blocking for live coordination).**
+4. **`RecipientSupportPreferences`: implemented in CYBER-R1 (D035), offline only.** `support_preference` table, `set_support_preferences` / `revoke_support_preferences`, worker-only `worker_support_preferences`, and `commit_nudge` binding `recipient_consent_id/version` (see README "Semantics"). Original finding kept below for history.
+
+   **Original finding: BOUNDARY GAP (blocking for live coordination).**
    - It is the recipient's consent record, but there is no authoritative store. The worker's `RecipientPreferencesPort` therefore has no real backing, and the coordinator correctly returns `preferences_unavailable`.
    - Needed (CS module + Cyber guard): a recipient-owned row written by `set_support_preferences` (caller = recipient, accepted pair, ≤ 24h or explicit expiry, revocable), plus a worker-only view.
    - `commit_nudge` should then also bind `recipientConsentId/Version`. Until that lands, live coordination must stay fail-closed. Do not substitute fixture preferences in live mode.
@@ -39,3 +41,31 @@ Overall: **ACK with conditions.** The interfaces are enum-only and fail closed. 
 
 ## D015 fixture preset records (CS)
 ACKed in my M1 log. `presetConfirmation` is fixture metadata, not an authorization input. Far-future fixture expiries must not become runtime defaults.
+
+## 2026-10-24: C8 discovery proposal (D030/D031), Cyber review (CYBER-R0/R1)
+Verdict: **ACK the separation, with the permitted fields and rejection cases below.** Implemented as proposed guards (`contracts/src/discovery.ts`) plus module transitions behind an owner feature flag (default off). Needs CS/DS/AI ACK before enabling.
+
+**Kept separate (no silent extension):**
+- Discovery reads no C2/C3/C4 state: no preset, assignment, approved signal, support preference or delivery row. Pair membership never grants discovery visibility, and discovery never grants pair sharing (test: a stranger who discovers you still sees none of your pair state).
+- Apify inputs are unchanged (D028). No area key, tag choice or profile field enters `guardPublicCatalogueQuery`.
+- Quiz answers and extras never pre-publish anything; publication is its own explicit call.
+
+**Permitted fields (peer-visible projection `discovery_cards`):** opaque `card_ref` (random publication id, never an identity), `display_name` (≤ 40 chars, NFKC, no contact or identifier patterns, no bidi/zero-width), `interest_tags` (≤ 8, developer allowlist), `shared_tags` (overlap with the viewer), `revision`. Nothing else: no area key, expiry, account, pair, preset, preference, quiz, journal or location.
+
+**Rules enforced now:**
+| Rule | Where |
+|---|---|
+| Discovery off until the owner enables it | `requireDiscovery`, `discovery_cards` |
+| Exact preview: unknown keys rejected, allowlisted tags, notice version, duration ≤ 7 days | `guardPublicationDraft` |
+| Area = one configured coarse key; coordinates, geohashes and finer cells refused; ≤ 24h; no background refresh | `guardAreaKey`, `set_discovery_area` |
+| Audience = registered, currently published participants in the same area (lurkers see nothing) | `guardDiscoveryVisibility` |
+| Withdraw is immediate, ends area participation, idempotent; republish = new explicit revision | `withdraw_discovery_profile` |
+| Block hides both people at once, never shown to the target; unseen card or self → `not_found` | `block_discovery_user`, `blockedEitherWay` |
+| Expiry reaches the clockless view through sweep markers (≤ 60 s window) | `sweep_expired` |
+| Bounded result (≤ 50), no directory | `discovery_cards` |
+
+**Rejection cases each consumer must keep (direct calls):** disabled flag; unauthenticated/unregistered caller; unpublished viewer; expired or withdrawn publication or area; other area; block in either direction; forged owner/record mismatch; contact details in the name; non-allowlisted tag; non-configured area; stale notice version; stale `expected_revision`.
+
+**Open for R2 (not implemented):** introduction proposal/request/accept (human-triggered; recipient alone accepts), report with a coarse reason, invite and repeat-probe limits, avatar media path, event intent (C7/C8). Exact area resolution, publication duration and audience defaults still need owner confirmation; the current numbers are the LOCAL_CONNECTIONS proposals.
+
+**Review checklist assigned:** CS: UI copy for audience and duration, the device-side coarsening to a configured area, the flag rollout. DS: rank only `discovery_cards` rows (published tags), never private extras. AI: agent prompts get tags and opaque refs only; recheck visibility at commit.

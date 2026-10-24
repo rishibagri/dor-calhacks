@@ -4,6 +4,51 @@ Read `docs/roles/ai.md` and README **R0–R6** for current assignments. The hist
 
 ---
 
+# AI handoff — R1–R3 implementation (2026-10-24 ~06:10Z)
+
+**Branch:** `role/ai-voice` @ `ba354ef`+docs, based on main `4fe469a`. Pushed; not yet in a PR. **Status:** implemented and offline-verified only. No provider was called and no module is published. Budget used: B = 30 h from 05:45Z (deadline ≈ 11:45Z Oct 25).
+
+## What exists now
+| Piece | Files | Evidence kind |
+|---|---|---|
+| Worker DB adapters over `worker_signal_context`, `worker_delivery`, `commit_nudge`; prefs fail closed | `worker/src/spacetime/*` | Real module in-process (10 integration cases, 3 mutations caught) |
+| Droid slot pool (`DroidRunner`), shared by ACK/intro/plan agents | `worker/src/droid-proposer.ts` | Unit (concurrency, queue overflow, shared budget) |
+| `SignalWatcher` + process entrypoint (`/jobs`, `/healthz`) | `worker/src/{watcher,main}.ts` | Integration (restart → cooldown, 0 model calls); entrypoint not run (no bindings) |
+| Voice/reflection feature component | `src/features/voice/*` | Unit (model rules) + production build + server render; no browser mic run |
+| Introduction step (PROPOSED D033) | `contracts/src/introduction.ts`, `src/agents/src/introductions/*` | Contract + unit; no C8 state exists |
+| Shared-plan step + lifecycle (PROPOSED D034) | `contracts/src/{plan,plan-lifecycle}.ts`, `src/agents/src/plans/*` | Contract + unit; no C7 catalogue/intent state exists |
+| Full dry run, five journeys | `worker/integration/full-dry-run.test.ts`, `npm run ai:dryrun` | Real module + real AI code + LocalVault; synthetic accounts/providers/C8 state labeled per step |
+
+Checks at `ba354ef`: `npm run check` 74/74, `npm run ai:check` agents 64 + worker 18 + integration 15, `npm run test:app` 108 + 1 known TODO, typecheck clean.
+
+## Exact asks
+- **CS:**
+  1. Compose `<VoiceReflection vault={vault} onCandidate={(c, entryId) => …device-only preview…} />` from `@/features/voice` on the journal page. Its defaults call `/api/reflections` and `/api/voice/session`; pass `getVoiceSession={null}` for typed-only.
+  2. Widen `ReflectionPort` to `PrivateReflection`, or let the component use its default client.
+  3. After publishing, also generate bindings into `worker/src/module_bindings`.
+  4. Run `set_worker_identity` for the worker token's identity.
+  5. Pick the worker host: long-running Node with `droid`.
+  6. Review D033/D034 shapes against your C7 catalogue and C8 publication records.
+- **Sumedh:**
+  1. A recipient support-preference consent view the worker can read (`RecipientSupportPreferences` shape). Until then live coordination returns `preferences_unavailable` by design.
+  2. Review `classifyCommitError`: which reducer refusals are recorded and which are retried.
+  3. Decide whether reducers adopt `@kinetic/contracts/plan-lifecycle` as the plan finalization guard.
+  4. Decide whether the intro/plan fallback (`fixed_template`) is acceptable or must be off.
+  5. Supply a `DiscoveryEligibilityPort` / `PlanCurrentStatePort` backing once C8 guards exist.
+- **Nimisha:**
+  1. Package `rankAckOptions` so the worker can import it (a workspace or contracts export); the worker passes `rank` through `createLiveWorker`.
+  2. Produce `IntroductionShortlist` (≤ 3, rank order, overlap only) and rank `PlanRequest.events`.
+  3. Compare `deterministicOnly: true` against model selection in your evaluation.
+
+## Not done / next (R4–R5)
+- Aggregate per-job deadline and reflection in-flight dedupe.
+- Right-size `max_tokens` (still 16000).
+- Live runs: Claude, Cartesia, Droid via `KINETIC_DRYRUN_LIVE_*`.
+- Browser mic and TTS check.
+- Worker entrypoint against a published module.
+
+---
+
 # Current coordination update — Adam (AI)
 
 Read your updated detailed plan in docs/roles/ai.md and shared README.md phases. Task IDs are AI-P#; Cyber uses CYBER-P#. CS owns Apify ingestion; Nimisha matching; Adam bounded proposals; Sumedh disclosure/vault. Preserve existing work and review the main/role-branch status before selecting the first unmet phase. Forwardable message: docs/team-messages/ai.md. This notice does not ACK or complete any pending implementation/contract review.

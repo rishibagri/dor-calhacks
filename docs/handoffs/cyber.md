@@ -1,3 +1,48 @@
+# CYBER handoff (Sumedh): current, CYBER-R0/R1
+
+Status: implemented on `role/cyber-privacy` @ `0021c16` + `9b82854`, on main `fab86d6`. PR #10 to main is open. **Offline-verified only.** The module is unpublished, so nothing here is live.
+
+## What R1 added (D035)
+| Protection | Where | Evidence |
+|---|---|---|
+| Recipient support-preference consent: recipient-owned, versioned, ≤ 30 days, revocable; never visible to the sender | `support_preference`, `reducers/preferences.ts`, `my_support_preferences`, worker-only `worker_support_preferences` | `spacetimedb/tests/preferences.test.ts` |
+| `commit_nudge` binds `recipient_consent_id/version`; the guard needs that exact current consent, standing and covering the mode; expiry is clamped to it | `guardNudgeCommit`, `reducers/coordination.ts` | revoke/edit during generation, borrowed id, wrong caller, mode outside consent, replay binding |
+| JWT `aud` allowlist, fail closed | `auth_audience`, `requireAuthenticated`, `set_auth_audience` | same-issuer foreign-audience token refused |
+| Expiry and snooze reach clockless views | `sweep_expired` (60 s, internal), `expired_record`, `my_nudges` | expired nudge, signal and preference; snooze hide and reappear |
+| Proposed C8: exact publication preview, configured coarse areas, reciprocal same-area audience, withdraw, block both ways, bounded cards; flag off by default | `contracts/src/discovery.ts`, `reducers/discovery.ts`, `discovery_cards` | `contracts/tests/discovery.test.mjs`, `spacetimedb/tests/discovery.test.ts` |
+| Privacy controls over the real LocalVault | `src/features/privacy/` | `vault-controller.test.ts` (10) |
+
+## Verification
+- `npm run check:all` exit 0: contracts 84, schemas current, module 84, typecheck, app 141 + 1 pre-existing DS todo.
+- `npm run ai:check` exit 0: agents 45, worker 10.
+- `npx next build` ok; `npm audit` 0.
+- Mutation checks: 19 of 20 caught. The uncaught one, revoke without a version bump, is redundant with `revoked_at`.
+
+## Exact next actions
+- **CS:**
+  1. ACK D035 and the file claims (`docs/updates/cyber.md`).
+  2. Set a fixed `aud` claim in the Clerk JWT template. After publish run `set_auth_issuer` **and** `set_auth_audience`.
+  3. Confirm one `expiry_sweep` row exists.
+  4. Compose `<VaultControls vault={vault} />` with the per-account LocalVault.
+  5. Build the preference settings UI: default no consent; show expiry; renew and revoke.
+  6. Regenerate bindings.
+  7. Discovery: set the tags/areas allowlists, but enable only after the C8 ACKs.
+- **Adam:**
+  1. Map `worker_support_preferences` into `RecipientPreferencesPort` (`src/privacy/README.md`).
+  2. Pass `ack.recipientConsentId/Version` into `commit_nudge`.
+  3. Change `DiscoveryTagSchema` to hyphenated slugs.
+  4. Expect `stale: revoked`, `stale: stale_policy` and `unauthorized: no_consent|blocked_category` at commit. These are worker-only outcomes, never shown to the sender.
+- **Nimisha:** rank from `discovery_cards` only (published tags + `shared_tags`). Never use private extras.
+
+## Known gaps
+- Views can't check `aud`.
+- View expiry is bounded by the 60 s sweep, which scans whole tables; markers are never pruned.
+- No rate limits.
+- C8 introductions, report, invite/probe limits and event intent are R2/R3.
+- Not verified yet: real-browser vault/controls, live two-account smoke.
+
+---
+
 # Planning reset notice — current main d7285eb
 
 Read `docs/roles/cyber.md` and README **R0–R6** for current assignments. The historical implementation handoff below is preserved; statements such as “not merged” describe its original commit. Current status is in PROJECT_KNOWLEDGE.md. This notice is not a consumer ACK or evidence of live verification. New scope: existing connections + opted-in nearby public profiles + local-event introductions. One-time approximate location; no inherited pair consent. Forwardable update: `docs/team-messages/cyber.md`.
