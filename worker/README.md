@@ -40,4 +40,8 @@ node worker/scripts/live-droid.mjs --runs 4        # live Droid; policy and pref
 ```
 
 ## Verified (2026-10-24 UTC)
-12 live runs (4 × partners/friends/family): 12/12 `nudge_proposed`, decided by the agent in round 1, with the expected template. Coordinate latency median 3,676 ms, p95 5,248 ms. Revoked-before-use: `policy_denied` with 0 Droid calls. These used the contracts `FakeDisclosurePolicy` and fixture preferences, so this is live Droid execution, **not** an end-to-end live integration.
+These runs used the contracts `FakeDisclosurePolicy` and fixture preferences, so this is live Droid execution, **not** an end-to-end live integration.
+
+- ~02:52Z, 12 live runs (4 × partners/friends/family): 12/12 `nudge_proposed`, decided by the agent in round 1, with the expected template. Coordinate latency median 3,676 ms, p95 5,248 ms. Revoked-before-use: `policy_denied` with 0 Droid calls.
+- ~03:10Z, after merging the D015 fixtures (friends is now support-only), 3 runs: 3/3 `nudge_proposed` by the agent with the expected templates. Partners took 5,786 ms and family 7,321 ms; friends took 15,013 ms because round 1 hit the 8 s timeout and round 2 answered. Revoked case passed again.
+- Diagnosis, 4 direct calls with the friends input and a 30 s limit: every output was valid, but latency was 4.3, 12.4, 18.7 and 12.3 s. The variance is on the Factory/model side, not the prompt. **The 8 s per-call target is not reliably met right now.** The coordinator stays correct (round 2, then the deterministic fallback), but nudge latency can reach about 16 s before fallback.
