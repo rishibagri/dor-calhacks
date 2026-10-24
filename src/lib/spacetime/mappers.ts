@@ -6,14 +6,14 @@
 import {
   ApprovedSignalSchema,
   DisclosureReceiptSchema,
-  NudgeSchema,
   RecipientPresetAssignmentSchema,
   RelationshipPresetSchema,
 } from '@dor/contracts';
-import type { ApprovedSignal, DisclosureReceipt, Nudge, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
+import type { ApprovedSignal, DisclosureReceipt, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
+import { NUDGE_TEMPLATE_IDS } from '@dor/contracts/policy';
 import { MAX_EVENT_TITLE, MAX_EVENT_TOPICS, MAX_INTEREST_TAGS, MAX_PUBLIC_NAME, validRecipientDelivery, validSupportPreferences } from '@dor/contracts/policy';
 import type {
-  ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientPause, SignalView, SupportPreferencesView,
+  ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView,
 } from '@/lib/backend/ports';
 import { toCamel, type LooseRow } from './bindings';
 
@@ -95,18 +95,15 @@ export const mapAssignment: Mapper<RecipientPresetAssignment> = (row) =>
     assignmentVersion: Number(plain(get(row, 'assignment_version'))),
   });
 
-export const mapNudge: Mapper<Nudge> = (row) =>
-  parsed<Nudge>(NudgeSchema, {
-    schemaVersion: 1,
-    id: str(row, 'nudge_id') ?? str(row, 'id'),
-    pairId: str(row, 'pair_id'),
-    recipientId: str(row, 'recipient_id'),
-    sourceSignalIds: get(row, 'source_signal_ids'),
-    sourceConsentVersions: ((get(row, 'source_consent_versions') as unknown[]) ?? []).map((n) => Number(plain(n))),
-    templateId: str(row, 'template_id'),
-    createdAt: str(row, 'created_at'),
-    expiresAt: str(row, 'expires_at'),
-  });
+/** `my_nudges` narrow row (Cyber, Core 3 audit item 2): {id, pair_id, template_id, visible_until}. */
+export const mapNudge: Mapper<RecipientNudgeView> = (row) => {
+  const id = str(row, 'id');
+  const pairId = str(row, 'pair_id');
+  const templateId = NUDGE_TEMPLATE_IDS.find((t) => t === str(row, 'template_id'));
+  const visibleUntil = str(row, 'visible_until');
+  if (!id || !pairId || !templateId || !visibleUntil) return null;
+  return { id, pairId, templateId, visibleUntil };
+};
 
 export const mapReceipt: Mapper<DisclosureReceipt> = (row) =>
   parsed<DisclosureReceipt>(DisclosureReceiptSchema, {

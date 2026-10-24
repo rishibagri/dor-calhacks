@@ -1,6 +1,6 @@
 import { findAssignment, findPreset, findPublicationRow, pairsOf, pauseInForce } from './policy_state';
 import { t } from 'spacetimedb/server';
-import type { Identity } from 'spacetimedb';
+import { Timestamp, type Identity } from 'spacetimedb';
 import {
   catalogueEventUsable, currentPlanStatus, intentStands,
   DISCOVERY_CARD_LIMIT, guardDiscoveryVisibility, guardPreferenceStanding, guardSignalStanding, projectDiscoveryCard,
@@ -142,11 +142,27 @@ function nudgeConsentStands(db: ReadDb, n: { pair_id: string; template_id: strin
   return p.supportModes.some(m => templateForSignal({ supportMode: m }) === n.template_id);
 }
 
-/** Recipient only. Hidden while snoozed (sweep_expired clears snoozed_until when due), dismissed or suppressed. */
+const HOUR_MICROS = 3_600_000_000n;
+/** Rounds up to the next whole hour, so the recipient can't recover the sender's approval moment from the expiry. */
+const ceilToHour = (ts: Timestamp): Timestamp =>
+  new Timestamp(((ts.microsSinceUnixEpoch + HOUR_MICROS - 1n) / HOUR_MICROS) * HOUR_MICROS);
+
+const myNudgeRow = t.row('MyNudgeRow', {
+  id: t.string(), pair_id: t.string(), template_id: t.string(), visible_until: t.timestamp(),
+});
+
+/**
+ * Recipient only. Hidden while snoozed (sweep_expired clears snoozed_until when due), dismissed or suppressed.
+ * Narrow projection (Core 3 audit item 2): no created_at, exact expires_at, source signal ids, consent versions or
+ * consent id, because expires_at − SIGNAL_LIFETIME_MS was the sender's exact approval moment. `visible_until` is
+ * rounded up to the hour. The moment a nudge first appears to a live subscriber is inherent to delivery and still
+ * roughly tracks the commit; batching delivery would be the mitigation for that (not implemented).
+ */
 export const my_nudges = spacetimedb.view(
-  { name: 'my_nudges', public: true }, t.array(nudge.rowType),
+  { name: 'my_nudges', public: true }, t.array(myNudgeRow),
   ctx => [...ctx.db.nudge.recipient_id.filter(ctx.sender)].filter(n => !n.suppressed && !n.dismissed &&
     n.snoozed_until === undefined && nudgeSourcesStand(ctx.db, n, ctx.sender) && nudgeConsentStands(ctx.db, n, ctx.sender))
+    .map(n => ({ id: n.id, pair_id: n.pair_id, template_id: n.template_id, visible_until: ceilToHour(n.expires_at) }))
 );
 
 /** Sender-only: the owner's own approved signals (privacy center: recipient, expiry, revoke). */
@@ -155,13 +171,18 @@ export const my_signals = spacetimedb.view(
   ctx => [...ctx.db.approved_signal.sender_id.filter(ctx.sender)]
 );
 
+/** Receipt actions the sender caused themselves. `used` and `suppressed` are recipient-side outcomes (audit item 3). */
+const SENDER_OWN_ACTIONS = new Set(['approved', 'revoked']);
+
 /**
- * Sender-only (D026). Recipients must not see approved/revoked/suppressed receipts: that would
- * reveal a disclosure that produced no nudge, or a revocation. Recipients learn only via my_nudges.
+ * Sender-only (D026), and only the sender's OWN actions (Core 3 audit item 3). `used` (a nudge was committed) and
+ * `suppressed` (unlink or recipient-side changes) would tell the sender whether the recipient is opted in, in quiet
+ * hours or cooldown, accepts that mode, or changed settings: indirect disclosure from recipient to sender. Those rows
+ * stay in the private table as an audit trail and are never projected. Recipients never see receipts at all.
  */
 export const my_receipts = spacetimedb.view(
   { name: 'my_receipts', public: true }, t.array(disclosure_receipt.rowType),
-  ctx => [...ctx.db.disclosure_receipt.sender_id.filter(ctx.sender)]
+  ctx => [...ctx.db.disclosure_receipt.sender_id.filter(ctx.sender)].filter(r => SENDER_OWN_ACTIONS.has(r.action))
 );
 
 /** Recipient only: the caller's own support-preference consents (D035). Never visible to the sender. */

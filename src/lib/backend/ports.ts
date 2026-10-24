@@ -69,6 +69,18 @@ export interface SupportPreferencesView {
   revokedAt: string | null;
 }
 
+/**
+ * The recipient's own nudge (`my_nudges`), narrowed by Cyber (Core 3 audit item 2): no creation time, exact expiry,
+ * source signal ids or consent ids, because those let the recipient recover the sender's approval moment.
+ * `visibleUntil` is the expiry rounded up to the hour.
+ */
+export interface RecipientNudgeView {
+  id: string;
+  pairId: string;
+  templateId: Nudge['templateId'];
+  visibleUntil: string;
+}
+
 /** One of the caller's own approved signals (`my_signals`), with its revocation time if revoked. */
 export type SignalView = ApprovedSignal & { revokedAt: string | null };
 
@@ -301,7 +313,7 @@ export interface SharedStatePort {
   myInvites(): InviteView[]; // my_invites
   myPresets(): RelationshipPreset[]; // my_presets
   myPresetAssignments(): RecipientPresetAssignment[]; // my_preset_assignments
-  myNudges(): Nudge[]; // my_nudges
+  myNudges(): RecipientNudgeView[]; // my_nudges (narrow projection, Core 3 audit item 2)
   myReceipts(): DisclosureReceipt[]; // my_receipts
   mySignals(): SignalView[]; // my_signals (sender-only, D026); includes revoked rows
   mySupportPreferences(): SupportPreferencesView[]; // my_support_preferences

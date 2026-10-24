@@ -101,7 +101,8 @@ describe('typed approval → worker → commit_nudge, over the real module', () 
     expect(nudge.template_id).toBe('offer_short_call');
     expect(view(w, w.alice, mod.my_nudges)).toHaveLength(0);
     expect(view(w, w.carol, mod.my_nudges)).toHaveLength(0);
-    expect(view<any>(w, w.alice, mod.my_receipts).map(r => r.action)).toEqual(['approved', 'used']);
+    // Core 3 audit item 3: the sender sees only their own actions; the recipient-side 'used' outcome stays private.
+    expect(view<any>(w, w.alice, mod.my_receipts).map(r => r.action)).toEqual(['approved']);
   });
 
   it('recipient recorded no consent: no nudge and zero model calls (fail closed)', async () => {

@@ -1,6 +1,6 @@
-import type { DisclosureReceipt, Nudge, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
+import type { DisclosureReceipt, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
 import type {
-  ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientPause, SignalView, SupportPreferencesView,
+  ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView,
 } from '@/lib/backend/ports';
 import { findTable, type LooseConnection, type LooseRow, type LooseTable } from './bindings';
 import {
@@ -23,7 +23,7 @@ export interface ViewData {
   readonly invites: InviteView[];
   readonly presets: RelationshipPreset[];
   readonly assignments: RecipientPresetAssignment[];
-  readonly nudges: Nudge[];
+  readonly nudges: RecipientNudgeView[];
   readonly receipts: DisclosureReceipt[];
   readonly signals: SignalView[];
   readonly supportPreferences: SupportPreferencesView[];
