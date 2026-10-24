@@ -82,7 +82,7 @@ export default function OnboardingPage() {
           <CardDescription>Leave any blank. Answers stay in this tab&apos;s memory unless saved to the local vault.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <Question legend="1. After a long day, what helps?" hint="Choosing space means Kinetic suggests nothing for that moment.">
+          <Question legend="1. After a long day, what helps?" hint="Choosing space means Dor suggests nothing for that moment.">
             <MultiChoice name="q1" options={longDayOptions} value={a.afterLongDay}
               onChange={(v, on) => set({ afterLongDay: toggle(a.afterLongDay, v, on) })} />
           </Question>
