@@ -15,17 +15,17 @@ const CAPTURE_COPY: Record<Exclude<AreaCapture['kind'], 'area'>, string> = {
   unavailable: 'Your location could not be read. You can pick your area below instead.',
 };
 
-type Props = { me: MyDiscoveryView | null; isAreaLive: boolean };
+type Props = { me: MyDiscoveryView | null; isAreaLive: boolean; initialAreaKey?: string | null };
 
 /**
  * One-time area participation. "Use my location once" asks the browser a single time; the device turns the sample
  * into an area name and discards it. Only the area key is sent. Choosing from the list sends no location at all.
  */
-export function DiscoveryArea({ me, isAreaLive }: Props) {
+export function DiscoveryArea({ me, isAreaLive, initialAreaKey }: Props) {
   const shared = useLiveShared();
   const [result, setResult] = useState<ReducerResult | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
-  const [picked, setPicked] = useState(LAUNCH_AREAS[0]?.key ?? '');
+  const [picked, setPicked] = useState(LAUNCH_AREAS.find((a) => a.key === initialAreaKey)?.key ?? LAUNCH_AREAS[0]?.key ?? '');
   const current = areaLabel(me?.areaKey ?? null);
 
   const join = (areaKey: string) => void shared.setDiscoveryArea(areaKey).then(setResult);

@@ -3,6 +3,9 @@
 import { AccountInvites } from '@/components/feature/account-invites';
 import { PairsList } from '@/components/feature/pairs-list';
 import { PresetEditor } from '@/components/feature/preset-editor';
+import { introductionActions, toControlRows } from '@/components/feature/introduction-actions';
+import { useLiveShared } from '@/components/shell/use-live';
+import { IntroductionControls } from '@/features/privacy/introduction-controls';
 import { IntegrationStatus } from '@/components/shell/integration-status';
 
 const STEPS = [
@@ -12,6 +15,9 @@ const STEPS = [
 ];
 
 export default function ConnectionsPage() {
+  const shared = useLiveShared();
+  const me = shared.myDiscoveryProfile();
+  const isDiscoverable = Boolean(me?.published && !me.withdrawn && !me.expired);
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <header className="space-y-3">
@@ -25,6 +31,7 @@ export default function ConnectionsPage() {
         </ol>
       </header>
       <IntegrationStatus />
+      <IntroductionControls introductions={toControlRows(shared.myIntroductions())} discoverable={isDiscoverable} actions={introductionActions(shared)} />
       <AccountInvites />
       <PairsList />
       <PresetEditor />

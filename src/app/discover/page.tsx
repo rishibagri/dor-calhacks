@@ -14,7 +14,8 @@ import { isDiscoverySynthetic } from '@/lib/config';
 import { DiscoveryResults } from '@/features/discovery/discovery-results';
 import { IntroductionControls } from '@/features/privacy/introduction-controls';
 import { runAction } from '@/features/privacy/introduction-model';
-import { ExtensionGate } from '@/components/feature/extension-gate';
+import { DiscoveryGate } from '@/components/feature/discovery-gate';
+import { readPref, sessionStore } from '@/components/feature/transition-model';
 
 export default function DiscoverPage() {
   const shared = useLiveShared();
@@ -55,7 +56,7 @@ export default function DiscoverPage() {
   );
 
   return (
-    <ExtensionGate title="Discover" controls={safetyControls}>
+    <DiscoveryGate title="Discover" controls={safetyControls}>
     <div className="mx-auto max-w-3xl space-y-8">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Discover</h1>
@@ -67,12 +68,12 @@ export default function DiscoverPage() {
       <IntegrationStatus />
       {stage === 'disabled' ? (
         <p className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-          Discovery is not switched on yet. Nothing new can be published.
+          Discovery isn't switched on for this area yet. Nothing is shown and nothing can be published.
         </p>
       ) : (
         <>
           <DiscoveryProfile me={me} isLive={stage === 'ready' || stage === 'needs_area'} />
-          {stage !== 'needs_profile' && <DiscoveryArea me={me} isAreaLive={stage === 'ready'} />}
+          {stage !== 'needs_profile' && <DiscoveryArea me={me} isAreaLive={stage === 'ready'} initialAreaKey={readPref(sessionStore()).areaKey} />}
           {message && <p role="status" className="text-sm text-muted-foreground">{message}</p>}
           {stage === 'ready' && <>
             <IntroductionSuggestions />
@@ -90,9 +91,13 @@ export default function DiscoverPage() {
           </>}
         </>
       )}
+      <aside className="rounded-lg border p-4 text-sm text-muted-foreground">
+        <Link className="font-medium text-foreground underline" href="/connections">Keep in touch with people you already know</Link>
+        {' '}— optional, separate from meeting new people.
+      </aside>
       {/* Always rendered: withdraw, block and report keep working even when discovery is switched off (D038). */}
       {safetyControls}
     </div>
-    </ExtensionGate>
+    </DiscoveryGate>
   );
 }

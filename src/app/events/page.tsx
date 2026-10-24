@@ -9,7 +9,7 @@ import { discoverStage } from '@/components/feature/discover-model';
 import { CATALOGUE_MAX_SOURCE_AGE_MS } from '@dor/contracts';
 import { eventCards, formatWhen, sourceState } from '@/components/feature/events-model';
 import { isDiscoverySynthetic } from '@/lib/config';
-import { ExtensionGate } from '@/components/feature/extension-gate';
+import { DiscoveryGate } from '@/components/feature/discovery-gate';
 import { areaLabel } from '@/lib/discovery/config';
 
 export default function EventsPage() {
@@ -29,7 +29,7 @@ export default function EventsPage() {
     : null;
 
   return (
-    <ExtensionGate title="Events" controls={<PlansList />}>
+    <DiscoveryGate title="Events" controls={<PlansList />}>
     <div className="mx-auto max-w-3xl space-y-8">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Events</h1>
@@ -39,7 +39,7 @@ export default function EventsPage() {
         </p>
       </header>
       <IntegrationStatus />
-      {stage === 'disabled' && <p className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">Events are not switched on yet.</p>}
+      {stage === 'disabled' && <p className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">Discovery isn't switched on for this area yet. No events are shown.</p>}
       {(stage === 'needs_profile' || stage === 'needs_area') && (
         <p className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
           Set up your discoverable profile and area on <Link className="underline" href="/discover">Discover</Link> to see events near you.
@@ -60,6 +60,6 @@ export default function EventsPage() {
       )}
       <PlansList />
     </div>
-    </ExtensionGate>
+    </DiscoveryGate>
   );
 }

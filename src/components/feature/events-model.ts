@@ -71,6 +71,12 @@ export function canCancel(p: PlanView): boolean {
   return p.status === 'pending' || p.status === 'confirmed' || p.status === 'stale';
 }
 
+/** Host of a link already validated by safeCatalogueUrl (shown as the event's source), or null. */
+export function sourceHostOf(link: string | null): string | null {
+  if (!link) return null;
+  try { return new URL(link).hostname.replace(/^www\./, ''); } catch { return null; }
+}
+
 export function formatWhen(iso: string, locale?: string): string {
   return new Date(iso).toLocaleString(locale, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }

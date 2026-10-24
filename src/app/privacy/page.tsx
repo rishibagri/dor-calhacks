@@ -4,7 +4,7 @@ import { ActivePauses } from '@/components/feature/active-pauses';
 import { ApprovedSignals } from '@/components/feature/approved-signals';
 import { DiscoveryStatus } from '@/components/feature/discovery-status';
 import { EventPrivacy } from '@/components/feature/event-privacy';
-import { areExtensionsEnabled } from '@/lib/config';
+import { isDiscoveryUiEnabled } from '@/lib/config';
 import { useLiveShared } from '@/components/shell/use-live';
 import { IntegrationStatus } from '@/components/shell/integration-status';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -52,7 +52,7 @@ export default function PrivacyPage() {
       <ApprovedSignals />
       <ActivePauses />
       {/* Extensions: shown when enabled, or whenever there is still something of yours to withdraw. */}
-      {(areExtensionsEnabled || hasDiscoveryFootprint(shared)) && <><DiscoveryStatus /><EventPrivacy /></>}
+      {(isDiscoveryUiEnabled || hasDiscoveryFootprint(shared)) && <><DiscoveryStatus /><EventPrivacy /></>}
       <Card>
         <CardHeader>
           <CardTitle>Receipts</CardTitle>

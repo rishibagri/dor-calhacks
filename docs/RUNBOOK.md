@@ -87,7 +87,7 @@ Nothing below has been done; hosting is pending an owner decision.
 - [ ] Rerun `scripts/smoke-core3.ts` against hosted (`SMOKE_SERVER=maincloud`) and record revision and results
 
 ## Extensions (optional, not core)
-Set `NEXT_PUBLIC_DOR_EXTENSIONS=true`, bootstrap with `--extensions`, and load events with `node scripts/ingest-catalogue.ts --fixture src/lib/catalogue/fixtures/apify-sample.json --commit <db>` (synthetic) or `--fetch` after Cyber has reviewed the Apify task.
+Discover/Events UI is on by default (D045; hide with `NEXT_PUBLIC_DOR_DISCOVERY=off`). Bootstrap with `--extensions`, and load events with `node scripts/ingest-catalogue.ts --fixture src/lib/catalogue/fixtures/apify-sample.json --commit <db>` (synthetic) or `--fetch` after Cyber has reviewed the Apify task.
 
 ## Later: verification phase
 Deferred by plan. The two-account journey, denied third account, revoke during generation, reconnect, microphone/provider failure and account-switch checks are listed in README "Core 3" and will be recorded with exact revision and results when run.
