@@ -1,0 +1,365 @@
+{
+  "fixtureVersion": 1,
+  "owner": "DS",
+  "synthetic": true,
+  "clock": "2026-10-24T18:00:00Z",
+  "note": "DS nearby/event shortlist cases. Labels written before running rankNearby or the baseline, by one DS annotator (author labels, not teammate ratings). 'all' = every row in nearby-candidates.json; 'generated60' = 60 eligible coffee rows g-000..g-059.",
+  "cases": [
+    {
+      "id": "n1-nearby-overlap",
+      "group": "positive",
+      "description": "Newcomer with published tags and a games-night intent; full pool.",
+      "viewer": "v1",
+      "mode": {
+        "kind": "nearby"
+      },
+      "candidates": "all",
+      "expected": {
+        "kind": "shortlist",
+        "refs": [
+          "c-01",
+          "c-03",
+          "c-14"
+        ],
+        "relevantTop1": [
+          "c-01",
+          "c-03"
+        ],
+        "relevant": [
+          "c-01",
+          "c-03",
+          "c-14",
+          "c-10",
+          "c-13"
+        ],
+        "mustNotSuggest": [
+          "c-05",
+          "c-06",
+          "c-07",
+          "c-08",
+          "c-11",
+          "c-12",
+          "c-15",
+          "c-02",
+          "c-04",
+          "c-09"
+        ]
+      }
+    },
+    {
+      "id": "n2-event-companions",
+      "group": "positive",
+      "description": "Companions for games night: only current published intents count; event topic fits shared tag.",
+      "viewer": "v1",
+      "mode": {
+        "kind": "event",
+        "eventId": "evt-games-night",
+        "eventTags": [
+          "board-games"
+        ]
+      },
+      "candidates": "all",
+      "expected": {
+        "kind": "shortlist",
+        "refs": [
+          "c-01",
+          "c-03",
+          "c-14"
+        ],
+        "relevantTop1": [
+          "c-01",
+          "c-03"
+        ],
+        "relevant": [
+          "c-01",
+          "c-03",
+          "c-14"
+        ],
+        "mustNotSuggest": [
+          "c-05",
+          "c-06",
+          "c-07",
+          "c-08",
+          "c-11",
+          "c-12",
+          "c-15",
+          "c-13",
+          "c-10"
+        ],
+        "reasonsOf": {
+          "c-01": [
+            "shared_interest",
+            "same_event",
+            "event_fits_shared_interest"
+          ],
+          "c-14": [
+            "same_event"
+          ]
+        }
+      }
+    },
+    {
+      "id": "n3-cold-start",
+      "group": "no_action",
+      "description": "Published but chose no tags and no events: honest empty state, suggest public events.",
+      "viewer": "cold",
+      "mode": {
+        "kind": "nearby"
+      },
+      "candidates": "all",
+      "expected": {
+        "kind": "none",
+        "reason": "viewer_has_nothing_published"
+      }
+    },
+    {
+      "id": "n4-viewer-not-published",
+      "group": "no_action",
+      "description": "Viewer has not opted in to discovery.",
+      "viewer": "unpublished",
+      "mode": {
+        "kind": "nearby"
+      },
+      "candidates": "all",
+      "expected": {
+        "kind": "none",
+        "reason": "not_published"
+      }
+    },
+    {
+      "id": "n5-empty-area",
+      "group": "no_action",
+      "description": "Nobody else published in the area.",
+      "viewer": "v1",
+      "mode": {
+        "kind": "nearby"
+      },
+      "candidates": [],
+      "expected": {
+        "kind": "none",
+        "reason": "empty_area"
+      }
+    },
+    {
+      "id": "n6-only-ineligible",
+      "group": "no_action",
+      "description": "Blocked, withdrawn, expired, already connected and malformed rows only.",
+      "viewer": "v1",
+      "mode": {
+        "kind": "nearby"
+      },
+      "candidates": [
+        "c-05",
+        "c-06",
+        "c-07",
+        "c-08",
+        "c-11",
+        "c-12",
+        "c-15"
+      ],
+      "expected": {
+        "kind": "none",
+        "reason": "empty_area"
+      }
+    },
+    {
+      "id": "n7-no-fit",
+      "group": "no_action",
+      "description": "Eligible people exist but nobody shares the viewer's only tag.",
+      "viewer": "climber",
+      "mode": {
+        "kind": "nearby"
+      },
+      "candidates": "all",
+      "expected": {
+        "kind": "none",
+        "reason": "no_fit"
+      }
+    },
+    {
+      "id": "n8-viewer-no-event-intent",
+      "group": "no_action",
+      "description": "Viewer browses jazz event companions without publishing an intent for it.",
+      "viewer": "v1",
+      "mode": {
+        "kind": "event",
+        "eventId": "evt-jazz",
+        "eventTags": [
+          "live-music"
+        ]
+      },
+      "candidates": "all",
+      "expected": {
+        "kind": "none",
+        "reason": "viewer_no_event_intent"
+      }
+    },
+    {
+      "id": "n9-one-sided-event",
+      "group": "no_action",
+      "description": "Viewer intends games night; these candidates published no intent for it.",
+      "viewer": "v1",
+      "mode": {
+        "kind": "event",
+        "eventId": "evt-games-night",
+        "eventTags": [
+          "board-games"
+        ]
+      },
+      "candidates": [
+        "c-02",
+        "c-04",
+        "c-09",
+        "c-13"
+      ],
+      "expected": {
+        "kind": "none",
+        "reason": "empty_area"
+      }
+    },
+    {
+      "id": "n10-duplicate-row",
+      "group": "positive",
+      "description": "Same candidate row returned twice by the page query.",
+      "viewer": "v1",
+      "mode": {
+        "kind": "nearby"
+      },
+      "candidates": [
+        "c-01",
+        "c-01"
+      ],
+      "expected": {
+        "kind": "shortlist",
+        "refs": [
+          "c-01"
+        ],
+        "relevantTop1": [
+          "c-01"
+        ],
+        "relevant": [
+          "c-01"
+        ],
+        "mustNotSuggest": []
+      }
+    },
+    {
+      "id": "n11-injection-name",
+      "group": "positive",
+      "description": "Display name contains instructions; ranking must ignore it.",
+      "viewer": "v1",
+      "mode": {
+        "kind": "nearby"
+      },
+      "candidates": [
+        "c-13",
+        "c-10"
+      ],
+      "expected": {
+        "kind": "shortlist",
+        "refs": [
+          "c-10",
+          "c-13"
+        ],
+        "relevantTop1": [
+          "c-10",
+          "c-13"
+        ],
+        "relevant": [
+          "c-10",
+          "c-13"
+        ],
+        "mustNotSuggest": []
+      }
+    },
+    {
+      "id": "n12-over-cap",
+      "group": "positive",
+      "description": "60 eligible rows: only 50 considered (by ref), truncation reported.",
+      "viewer": "v1",
+      "mode": {
+        "kind": "nearby"
+      },
+      "candidates": "generated60",
+      "expected": {
+        "kind": "shortlist",
+        "refs": [
+          "g-000",
+          "g-001",
+          "g-002"
+        ],
+        "truncated": true,
+        "relevantTop1": [
+          "g-000"
+        ],
+        "relevant": [
+          "g-000",
+          "g-001",
+          "g-002"
+        ],
+        "mustNotSuggest": []
+      }
+    },
+    {
+      "id": "n13-location-fields-rejected",
+      "group": "no_action",
+      "description": "Rows leaking coordinates or distance (cell-edge shortcut) are rejected, not ranked.",
+      "viewer": "v1",
+      "mode": {
+        "kind": "nearby"
+      },
+      "candidates": [
+        "c-11",
+        "c-15"
+      ],
+      "expected": {
+        "kind": "none",
+        "reason": "empty_area"
+      }
+    },
+    {
+      "id": "n14-sparse-area",
+      "group": "positive",
+      "description": "Exactly one eligible person with overlap.",
+      "viewer": "v1",
+      "mode": {
+        "kind": "nearby"
+      },
+      "candidates": [
+        "c-03"
+      ],
+      "expected": {
+        "kind": "shortlist",
+        "refs": [
+          "c-03"
+        ],
+        "relevantTop1": [
+          "c-03"
+        ],
+        "relevant": [
+          "c-03"
+        ],
+        "mustNotSuggest": []
+      }
+    },
+    {
+      "id": "n15-blocked-only-overlap",
+      "group": "no_action",
+      "description": "The only overlapping people are blocked or already connected; others do not overlap.",
+      "viewer": "v1",
+      "mode": {
+        "kind": "nearby"
+      },
+      "candidates": [
+        "c-05",
+        "c-08",
+        "c-02",
+        "c-04"
+      ],
+      "expected": {
+        "kind": "none",
+        "reason": "no_fit"
+      }
+    }
+  ]
+}

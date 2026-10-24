@@ -14,6 +14,10 @@ Read root AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md and your 
 | `fixtures/activity-catalogue.json` | 17 synthetic catalogue rows in the DS `ActivityItem` proposal shape (C7 stand-in), incl. duplicate, stale, started, too-soon, in-person, unsafe URL, off-allowlist, undated, malformed and injection-titled rows | CS (normalization expectations) |
 | `fixtures/activity-cases.json` | 12 labeled activity cases (6 positive, 6 no-action) with expected order, relevance labels and must-not-suggest sets, written before any run | DS evaluation |
 | `metrics.ts`, `report.ts` | Relevance (top-1, precision@3), false suggestions and no-action accuracy for DS ranker vs baseline; `results/latest.md` | Team |
+| `nearby.ts` | `rankNearby`: deterministic nearby/event shortlist (top 3) over the authorized C8 candidate page; re-applies block/withdraw/expiry/connected/self, rejects cards with fields outside the projection, overlap only on both people's published tags and current event intents. `mostTagsBaseline` is comparison-only | CS, AI |
+| `fixtures/nearby-candidates.json`, `fixtures/nearby-cases.json` | 15 synthetic candidates, 4 viewers and 15 labeled nearby/event cases (6 positive, 9 no-action) written before any run | DS evaluation |
+| `results/ratings-template.md` | Sheet for two independent teammate 1–5 ratings | Team |
+| `../features/discovery/` | DS discovery feature: C8 consumer proposal types, pure view-model, `DiscoveryResults` and `EventResults` components (props only) | CS composes the page |
 | `__tests__/*.test.ts` | Offline checks over the fixtures and baseline | `npm run test:app` |
 
 Pipeline per case: `buildPreview` (candidate narrowed to the confirmed preset for the named recipient; quiz drafts are never an input) → owner approval → `DisclosurePolicyPort.check` → `matchSignal` (check order in `evaluation-cases.json#matchCheckOrder`) → fixed template nudge or no nudge.

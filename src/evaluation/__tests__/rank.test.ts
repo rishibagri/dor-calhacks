@@ -143,3 +143,12 @@ test('release bar: DS ranker has no false suggestion and every no-action case is
   assert.equal(ds.missedPositives, 0);
   assert.ok(baseline.falseSuggestionCount > ds.falseSuggestionCount);
 });
+
+test('activities: in-person events only when local-event discovery opts in; online-only by default', () => {
+  const concert = catalogue.items.filter(i => i.activityId === 'act-concert-inperson');
+  const today = { supportMode: 'shared_activity' as const, availability: 'today' as const };
+  const off = rankActivities(full({ agreed: today, catalogue: structuredClone(concert) }));
+  assert.deepEqual(off.excluded, [{ activityId: 'act-concert-inperson', reason: 'format_out_of_scope' }]);
+  const on = rankActivities(full({ agreed: today, catalogue: structuredClone(concert), allowInPerson: true }));
+  assert.ok(on.kind === 'ranked' && on.suggestions[0]!.activityId === 'act-concert-inperson');
+});
