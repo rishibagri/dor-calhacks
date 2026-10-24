@@ -125,9 +125,9 @@ test('new preset with all categories blocked shares nothing', () => {
 test('altered payload after preview fails the exact-item revision binding', () => {
   const shown = request();
   for (const tamper of [{ supportMode: 'shared_activity' }, { availability: 'today' }, { availability: undefined }]) {
-    assert.equal(reason(guardApproval({ ...shown, ...tamper }, world())), 'no_consent', JSON.stringify(tamper));
+    assert.equal(reason(guardApproval({ ...shown, ...tamper }, world())), 'stale_policy', JSON.stringify(tamper));
   }
-  assert.equal(reason(guardApproval({ ...shown, payloadRevision: (shown.payloadRevision ^ 1) >>> 0 }, world())), 'no_consent');
+  assert.equal(reason(guardApproval({ ...shown, payloadRevision: (shown.payloadRevision ^ 1) >>> 0 }, world())), 'stale_policy');
 });
 
 test('revision binds recipient, versions and consent notice', () => {
