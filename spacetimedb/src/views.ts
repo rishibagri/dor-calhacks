@@ -1,6 +1,6 @@
 import { findAssignment, findPreset, findPublicationRow, pairsOf, pauseInForce } from './policy_state';
 import { t } from 'spacetimedb/server';
-import type { Identity } from 'spacetimedb';
+import { Timestamp, type Identity } from 'spacetimedb';
 import {
   catalogueEventUsable, currentPlanStatus, intentStands,
   DISCOVERY_CARD_LIMIT, guardDiscoveryVisibility, guardPreferenceStanding, guardSignalStanding, projectDiscoveryCard,
@@ -22,6 +22,18 @@ const WORKER_PLAN_LIMIT = 200;
 // Every view filters strictly by ctx.sender. Tables stay private; only these are public.
 // Views project minimal client-facing rows (column names are the CS client seam,
 // see src/lib/spacetime/mappers.ts). Nothing here reads another user's preset.
+
+/**
+ * Recipient nudge projection. No created_at/expires_at to the second (an exact expiry = approval + 24h
+ * would reveal when the sender approved), and no source/consent/snooze internals.
+ */
+const nudgeViewRow = t.row('MyNudgeRow', {
+  nudge_id: t.string(),
+  template_id: t.string(),
+  pair_id: t.string(),
+  visible_until: t.timestamp(), // expires_at rounded down to the start of its UTC hour
+});
+const HOUR_MICROS = 3_600_000_000n;
 
 const pairViewRow = t.row('PairViewRow', {
   pair_id: t.string(),
@@ -144,9 +156,13 @@ function nudgeConsentStands(db: ReadDb, n: { pair_id: string; template_id: strin
 
 /** Recipient only. Hidden while snoozed (sweep_expired clears snoozed_until when due), dismissed or suppressed. */
 export const my_nudges = spacetimedb.view(
-  { name: 'my_nudges', public: true }, t.array(nudge.rowType),
+  { name: 'my_nudges', public: true }, t.array(nudgeViewRow),
   ctx => [...ctx.db.nudge.recipient_id.filter(ctx.sender)].filter(n => !n.suppressed && !n.dismissed &&
     n.snoozed_until === undefined && nudgeSourcesStand(ctx.db, n, ctx.sender) && nudgeConsentStands(ctx.db, n, ctx.sender))
+    .map(n => ({
+      nudge_id: n.id, template_id: n.template_id, pair_id: n.pair_id,
+      visible_until: new Timestamp(n.expires_at.microsSinceUnixEpoch / HOUR_MICROS * HOUR_MICROS),
+    }))
 );
 
 /** Sender-only: the owner's own approved signals (privacy center: recipient, expiry, revoke). */
@@ -158,10 +174,14 @@ export const my_signals = spacetimedb.view(
 /**
  * Sender-only (D026). Recipients must not see approved/revoked/suppressed receipts: that would
  * reveal a disclosure that produced no nudge, or a revocation. Recipients learn only via my_nudges.
+ * The sender sees only outcomes they caused or the clock caused. 'used' and 'suppressed' rows stay
+ * in the table but are hidden: they would reveal recipient-side state (opt-out, consent revoke,
+ * quiet hours/cooldown, pause, counterpart unlink).
  */
+const SENDER_VISIBLE_RECEIPTS = new Set(['approved', 'revoked', 'expired']);
 export const my_receipts = spacetimedb.view(
   { name: 'my_receipts', public: true }, t.array(disclosure_receipt.rowType),
-  ctx => [...ctx.db.disclosure_receipt.sender_id.filter(ctx.sender)]
+  ctx => [...ctx.db.disclosure_receipt.sender_id.filter(ctx.sender)].filter(r => SENDER_VISIBLE_RECEIPTS.has(r.action))
 );
 
 /** Recipient only: the caller's own support-preference consents (D035). Never visible to the sender. */

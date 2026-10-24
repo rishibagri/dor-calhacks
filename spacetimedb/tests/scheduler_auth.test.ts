@@ -92,3 +92,24 @@ describe('ingester and owner checks no longer depend on isInternal', () => {
     asCaller(w, LIVE_SCHEDULER, ctx => mod.upsert_catalogue_event(ctx, event(w))); // the database itself may
   });
 });
+
+describe('requireOwner on a real host', () => {
+  const setIssuer = (ctx: any) => mod.set_auth_issuer(ctx, { issuer: 'https://owner-test.example', enabled: true });
+
+  it('with the module_owner row present, only that identity acts; the database identity does not', () => {
+    const w = setup(); // the harness skips init, so seed the owner row (alice) the way init would
+    const aliceId: Identity = w.h.withReducerTx(w.alice, c => c.sender);
+    w.h.withReducerTx(w.admin, ctx => { ctx.db.module_owner.insert({ key: 'owner', owner: aliceId }); });
+    expect(() => asCaller(w, LIVE_SCHEDULER, setIssuer)).toThrow('unauthorized: module owner only');
+    expect(() => w.call(w.bob, setIssuer)).toThrow('unauthorized: module owner only');
+    w.call(w.alice, setIssuer);
+  });
+
+  it('without the row, only a database-internal caller (isDatabaseInternal) is admitted', () => {
+    const w = setup();
+    for (const shape of [{ internal: false, connected: false, sender: 'other' }, { internal: false, connected: true, sender: 'database' }] as Shape[]) {
+      expect(() => asCaller(w, shape, setIssuer)).toThrow('unauthorized: module owner only');
+    }
+    asCaller(w, LIVE_SCHEDULER, setIssuer);
+  });
+});

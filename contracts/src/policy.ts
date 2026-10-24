@@ -264,7 +264,7 @@ export function guardApproval(req: ApprovalRequest, s: PolicySnapshot): Approval
     recipientPolicyVersion: req.recipientPolicyVersion, presetAssignmentVersion: req.presetAssignmentVersion,
     consentVersion: req.consentVersion,
   });
-  if (req.payloadRevision !== expected) return deny('no_consent');
+  if (req.payloadRevision !== expected) return deny('stale_policy'); // preview no longer matches what is approved
   return {
     ...ALLOW, recipientId, recipientPolicyId: preset.policyId, categories: ev.shared,
     expiresAtMs: Math.min(s.nowMs + SIGNAL_LIFETIME_MS, preset.expiresAtMs),

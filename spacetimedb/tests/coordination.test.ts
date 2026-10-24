@@ -99,9 +99,16 @@ describe('F5 recipient gate (D017 opt-in default off, D018 quiet hours/cooldown)
     commit(w, worker, commitArgs(pairId, sig));
     const [n] = view<any>(w, w.bob, mod.my_nudges);
     expect(n.template_id).toBe('offer_short_call');
-    expect(n.expires_at.microsSinceUnixEpoch).toBeLessThanOrEqual(sig.expires_at.microsSinceUnixEpoch);
+    // Narrow projection: exactly these keys; visible_until is the expiry floored to its UTC hour.
+    expect(Object.keys(n).sort()).toEqual(['nudge_id', 'pair_id', 'template_id', 'visible_until']);
+    const HOUR = 3_600_000_000n;
+    expect(n.visible_until.microsSinceUnixEpoch % HOUR).toBe(0n);
+    expect(n.visible_until.microsSinceUnixEpoch).toBeLessThanOrEqual(sig.expires_at.microsSinceUnixEpoch);
+    expect(sig.expires_at.microsSinceUnixEpoch - n.visible_until.microsSinceUnixEpoch).toBeLessThan(HOUR);
+    // 'used' is written server-side but hidden from the sender (it would reveal recipient-side delivery state).
     expect(view<any>(w, w.alice, mod.my_receipts).map(r => [r.action, r.categories]))
-      .toEqual([['approved', ['support_preference', 'coarse_availability']], ['used', ['support_preference', 'coarse_availability']]]);
+      .toEqual([['approved', ['support_preference', 'coarse_availability']]]);
+    expect(w.h.withReducerTx(w.admin, ctx => [...ctx.db.disclosure_receipt.iter()].map(r => r.action))).toContain('used');
     expect(view(w, w.bob, mod.my_receipts)).toHaveLength(0);
     expect(view(w, w.alice, mod.my_nudges)).toHaveLength(0);
   });

@@ -137,8 +137,9 @@ describe('nudges and unlink', () => {
     w.call(w.bob, ctx => mod.unlink_pair(ctx, { pair_id: pairId }));
     expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
     expect(view(w, w.alice, mod.my_preset_assignments)).toHaveLength(0);
-    // Receipts are sender-only (D026): the recipient never learns of approvals/suppressions.
-    expect(view<any>(w, w.alice, mod.my_receipts).map(x => x.action)).toEqual(['approved', 'suppressed']);
+    // Receipts are sender-only (D026); 'suppressed' is stored but hidden even from the sender (recipient-side state).
+    expect(view<any>(w, w.alice, mod.my_receipts).map(x => x.action)).toEqual(['approved']);
+    expect(w.h.withReducerTx(w.admin, ctx => [...ctx.db.disclosure_receipt.iter()].map(r => r.action))).toContain('suppressed');
     expect(view(w, w.bob, mod.my_receipts)).toHaveLength(0);
     expect(view<any>(w, w.alice, mod.my_pairs)[0].status).toBe('unlinked');
     expect(() => w.call(w.carol, ctx => mod.unlink_pair(ctx, { pair_id: pairId }))).toThrow(/^not_found:/);

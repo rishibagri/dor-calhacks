@@ -183,6 +183,14 @@ export interface PlanView {
 
 export type ReportReason = 'spam' | 'harassment' | 'impersonation' | 'inappropriate_profile' | 'other';
 
+/** Recipient nudge row (`my_nudges`): template + pair + coarse visibility only. Timing is hour-rounded server-side. */
+export interface NudgeView {
+  id: string;
+  pairId: string;
+  templateId: Nudge['templateId'];
+  visibleUntil: string; // start of the UTC hour of the real expiry; never an exact moment
+}
+
 /** The caller's OWN delivery settings as a recipient in one pair (`my_nudge_delivery`, D017/D018). */
 export interface NudgeDeliveryView {
   pairId: string;
@@ -301,7 +309,7 @@ export interface SharedStatePort {
   myInvites(): InviteView[]; // my_invites
   myPresets(): RelationshipPreset[]; // my_presets
   myPresetAssignments(): RecipientPresetAssignment[]; // my_preset_assignments
-  myNudges(): Nudge[]; // my_nudges
+  myNudges(): NudgeView[]; // my_nudges
   myReceipts(): DisclosureReceipt[]; // my_receipts
   mySignals(): SignalView[]; // my_signals (sender-only, D026); includes revoked rows
   mySupportPreferences(): SupportPreferencesView[]; // my_support_preferences

@@ -370,6 +370,14 @@ export type MyInvites = __Infer<typeof MyInvites>;
 export const MyNudgeDelivery = __t.object("MyNudgeDelivery", {});
 export type MyNudgeDelivery = __Infer<typeof MyNudgeDelivery>;
 
+export const MyNudgeRow = __t.object("MyNudgeRow", {
+  nudgeId: __t.string(),
+  templateId: __t.string(),
+  pairId: __t.string(),
+  visibleUntil: __t.timestamp(),
+});
+export type MyNudgeRow = __Infer<typeof MyNudgeRow>;
+
 export const MyNudges = __t.object("MyNudges", {});
 export type MyNudges = __Infer<typeof MyNudges>;
 

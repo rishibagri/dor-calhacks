@@ -97,11 +97,11 @@ describe('typed approval → worker → commit_nudge, over the real module', () 
     expect(outcomes.map(o => o.outcome)).toEqual(['nudge_proposed']);
     if (!LIVE_DROID) expect(droid.calls()).toBe(1);
     const [nudge] = view<any>(w, w.bob, mod.my_nudges);
-    expect(nudge.id).toBe(outcomes[0]!.nudgeId);
+    expect(nudge.nudge_id).toBe(outcomes[0]!.nudgeId);
     expect(nudge.template_id).toBe('offer_short_call');
     expect(view(w, w.alice, mod.my_nudges)).toHaveLength(0);
     expect(view(w, w.carol, mod.my_nudges)).toHaveLength(0);
-    expect(view<any>(w, w.alice, mod.my_receipts).map(r => r.action)).toEqual(['approved', 'used']);
+    expect(view<any>(w, w.alice, mod.my_receipts).map(r => r.action)).toEqual(['approved']);
   });
 
   it('recipient recorded no consent: no nudge and zero model calls (fail closed)', async () => {

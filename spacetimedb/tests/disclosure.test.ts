@@ -105,7 +105,7 @@ describe('approve_signal: direct reducer bypass attempts', () => {
     const { w, pairId } = partnered();
     const shown = approveArgs(w, w.alice, pairId, BOTH);
     for (const tamper of [{ support_mode: 'shared_activity' }, { availability: 'today' }, { availability: undefined }, { payload_revision: (shown.payload_revision + 1) >>> 0 }]) {
-      expect(() => approve(w, w.alice, { ...shown, ...tamper, client_request_id: JSON.stringify(tamper) })).toThrow('unauthorized: no_consent');
+      expect(() => approve(w, w.alice, { ...shown, ...tamper, client_request_id: JSON.stringify(tamper) })).toThrow('stale: stale_policy');
     }
     expect(allSignals(w)).toHaveLength(0);
   });
