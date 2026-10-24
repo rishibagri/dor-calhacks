@@ -4,15 +4,16 @@ Read `docs/roles/ds.md` and README **R0–R6** for current assignments. The hist
 
 ---
 
-# DS handoff — Day 2, D039 compatibility + card report (latest)
-Status: on `role/ds-context`, based on main `6093b2a` (after CS PR #22). These changes are **uncommitted, awaiting owner review**. The first DS-R3 cut (`90d789a`) is on main via PR #17; this change replaces its event logic. DS nearby code now runs inside CS's Discover page, but only offline and on synthetic data.
+# DS handoff — Day 2, D039 compatibility + card report; core-first next (latest)
+Status: PR #25 (open), `role/ds-context` merged with main `71c3b6a` (README core-first, CS Events page). **Under the new README, discovery and events are preserved extensions, not core gates: this PR is maintenance only** (a D039 disclosure fix, server alignment, keeping CS's `/events` working, Report). DS code runs inside `/discover` and `/events`, offline and on synthetic data only. The first DS-R3 cut (`90d789a`) is on main via PR #17; this PR replaces its event logic.
 
 ## Integrated vs synthetic (as of main 6093b2a)
 | Piece | In the running app? | Evidence |
 |---|---|---|
 | `rankDiscoveryCards` + `DiscoveryResults` (nearby) | **Composed:** `/discover` (CS PR #22) ranks `discovery_cards` through the DS adapter and renders `DiscoveryResults` with invite/block. Offline only: module unpublished; cards labelled synthetic unless `NEXT_PUBLIC_DISCOVERY_SYNTHETIC=false` | `src/app/discover/page.tsx`, `src/components/feature/discover-model.ts` |
 | Card-level Report (`onReport`) | DS prop added here; **CS still needs to pass `reportCard`** (one line) | `src/features/discovery/discovery-results.tsx` |
-| `rankEventCompanions`, `eligibleEvents`, `EventResults` | **No.** No event page yet (CS-R3) | — |
+| `eligibleEvents` | **Composed:** CS's `/events` (`events-model.ts` `eventCards`) filters the catalogue with it, using CS's `toListing` shape, which PR #25 keeps accepting (regression test + CS's 4/4 test) | `src/components/feature/events-model.ts` |
+| `rankEventCompanions`, `EventResults` | **No.** CS's Events page joins `event_companions` to cards itself (mutual only, ≤3); it doesn't use the DS ranker | — |
 | Event view bindings (`catalogue_events`, `my_event_intents`, `event_companions`) | Generated in PR #22; field names match the DS row interfaces; CS has no event mappers yet | `src/lib/spacetime/module_bindings/*_table.ts` |
 | C8/D038/D039 reducers and views | Module code + in-process tests only; unpublished, discovery flag off | Cyber/CS logs |
 | `alreadyConnected` | **Half closed:** `discovery_cards` now hides accepted introductions (CS `4844ae6`), not existing pairs. The DS adapter stays `false` | `spacetimedb/src/views.ts` |
@@ -43,10 +44,11 @@ Status: on `role/ds-context`, based on main `6093b2a` (after CS PR #22). These c
 - **D038.** `forIntroductionProposals(entries)` (`src/features/discovery/adapters.ts`) withholds entries the server's `commit_introduction_proposal` would refuse (`same_event`-only, or no shared tag). It passes the rest on as `shared_interest` with at most 3 tags. The "no decline oracle" copy test is added.
 - **Card report (PR #22 ask).** `DiscoveryResults` gains an optional `onReport(ref, reason)`. It shows a Report button, which opens a picker limited to the contract `DISCOVERY_REPORT_REASONS` (same wording as Cyber's introduction form) with the D038 notice "Reporting also blocks them. They are not told who reported or why." Nothing is sent until the person confirms "Report and block"; without the prop, no button appears.
 - **Tag allowlist (PR #22 ask): confirmed.** `src/lib/discovery/config.ts` `DISCOVERY_TAGS` equals the DS fixture allowlist (10 non-sensitive slugs).
-- **Evidence (on main `6093b2a` + these changes):** DS suite 147 pass / 0 fail / 1 todo (a3); `tsc --noEmit` clean; `npm run check:all` exit 0 (contracts 116, module 143, app 228 + 1 todo); `npm run ai:check` exit 0 (agents 64, worker 21, integration 19); `next build --webpack` OK with `/discover` prerendered. Mutations: 16 tried on the D039 code (15 caught; the 16th exposed a redundant check, which was removed), and 2 on the report allowlist (both caught). The React component itself has no render test (`node --test` can't load TSX); its logic is tested through the view model.
+- **Evidence (merged with main `71c3b6a`):** DS suite 149 pass / 0 fail / 1 todo (a3); `tsc --noEmit` clean; `npm run check:all` exit 0 (contracts 116, module 143, app 244 + 1 todo); `npm run ai:check` exit 0 (agents 64, worker 21, integration 19); `next build --webpack` OK (`/discover`, `/events`); CS `events-model.test.ts` 4/4. Mutations: 16 on the D039 code (15 caught; the 16th exposed a redundant check, which was removed), 2 on the report allowlist and 4 on the CS-shape compatibility (all caught). The React component has no render test (`node --test` can't load TSX); its logic is tested through the view model.
 
 ## Messages to send (exact integration work)
 **→ CS:**
+0. `/events` keeps working with PR #25: `eligibleEvents` still accepts your `toListing` shape, which is regression-tested. Passing `catalogue_events` rows directly also works now.
 1. In `src/app/discover/page.tsx`, pass `onReport={(ref, reason) => void runAction(() => reportCard(shared, ref, reason))}` to `<DiscoveryResults>`.
 2. CS-R3 events: add mappers for `catalogue_events`, `my_event_intents` and `event_companions` (camelCase, ISO times, `null` for empty optionals; your `plain()` already does this). Call `rankEventCompanions({viewer, viewerAreaKey, catalogue, myIntents, cards, companions, allowedTags: DISCOVERY_TAGS, now})`, with `viewerAreaKey` only while `areaActive`. Render each event's companions with `<DiscoveryResults shortlist={{kind: 'shortlist', mode: 'event', entries: companions, excluded: [], truncated: false}} candidates={result.candidates} eventTitle=… />`.
 3. Invite, block and report go through guarded reducers only.
@@ -63,8 +65,23 @@ Status: on `role/ds-context`, based on main `6093b2a` (after CS PR #22). These c
 2. Map `EventCompanions` entries to `IntroductionShortlist` with `publicationVersion` from `result.candidates`.
 3. Agree the import path with CS.
 
-## Next for DS
-- D038/D039 cases in the metrics report (DS-R4 needs ≥12 new nearby/event cases with a baseline); human ratings; first-session recommendations.
+## Next for DS: core-first (README "Current direction", Core 1–4)
+Discovery/event ranking work is paused. Don't expand it until the core passes live verification. The earlier "D038/D039 metrics cases" and "first-session recommendations" items are dropped.
+1. **Core 1:** before any model evaluation, define the expected owner-side outcome (`no_action` / `needs_clarification` / `ready_for_preview`, still a proposed vocabulary) for support, avoid and uncertain recipient intent, plus the forbidden-disclosure labels (unapproved party, activity, location, excuse, tension, timing). Co-define them with Adam (assessment output) and Sumedh (recipient restriction).
+2. **Core 2:** paired fixtures:
+   - identical general availability but different recipient intent;
+   - "not Alex tonight";
+   - "I miss them, but not sure tonight";
+   - a skipped question;
+   - a changed answer;
+   - prompt injection;
+   - the private-party case.
+
+   Plus a noninterference check: hold the approved inputs and delivery settings fixed, vary the private story, and confirm the recipient-visible content and scheduling are identical.
+3. **Core 3:** two teammate ratings on eligible usefulness; report unsafe suggestions separately from missed ones; compare against the deterministic baseline (`matching.ts`).
+4. **Core 4:** choose partner/friend/family examples plus the private-party no-action case, and record the real sample size and limitations.
+
+Existing assets to build on: the 30-case support set (`fixtures/evaluation-cases.json`, `matching.ts`, which already has forbidden-disclosure checks) and `src/lib/backend/__tests__/relationship-safety.test.ts` (CS, sick/party case).
 
 ---
 

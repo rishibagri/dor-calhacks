@@ -15,7 +15,9 @@
  * Blocked/withdrawn/expired people are already absent from both server views; rankNearby re-checks what it can see.
  *
  * Row interfaces mirror the module's view rows in camelCase with ISO timestamps (CS's mappers convert SDK values).
- * Client bindings for these views are not generated yet. Title and source URL are accepted but never read here.
+ * Title and source URL are accepted but never read here. Catalogue rows may also arrive in CS's listing shape
+ * (`src/components/feature/events-model.ts` `toListing`): `status: 'scheduled'`, `endsAt` omitted when empty, no title
+ * or source URL. That is accepted because it carries the same facts; any other status, or any unknown key, rejects.
  */
 import { CATALOGUE_MAX_SOURCE_AGE_MS, EVENT_FORMATS, EVENT_INTENT_KINDS, MAX_EVENT_TITLE, MAX_EVENT_TOPICS, validSlugAllowlist }
   from '@dor/contracts/policy';
@@ -92,7 +94,8 @@ export interface EventCompanionInput {
   limit?: number;
 }
 
-const CATALOGUE_KEYS = new Set(['eventId', 'title', 'startsAt', 'endsAt', 'topics', 'format', 'areaKey', 'sourceUrl', 'fetchedAt']);
+const CATALOGUE_KEYS = new Set(['eventId', 'title', 'startsAt', 'endsAt', 'topics', 'format', 'areaKey', 'sourceUrl', 'fetchedAt',
+  'status']);
 const INTENT_KEYS = new Set(['eventId', 'kind', 'version', 'active', 'expiresAt']);
 const COMPANION_KEYS = new Set(['cardRef', 'eventId']);
 /** Same shape as the server's catalogue event IDs (contracts/src/events-policy.ts). */
@@ -109,17 +112,25 @@ const isEventId = (v: unknown): v is string => typeof v === 'string' && EVENT_ID
 export const validAreaKey = (v: unknown): v is string => typeof v === 'string' && validSlugAllowlist([v], 'area');
 const idOf = (raw: unknown) => (isObj(raw) && isEventId(raw.eventId) ? raw.eventId : null);
 
-/** Strict shape check for one `catalogue_events` row; anything unexpected rejects it. */
+/**
+ * Strict shape check for one catalogue row (view shape or CS's listing shape); anything unexpected rejects it.
+ * Returns a normalized copy in the view shape (absent `endsAt`/`title`/`sourceUrl` → null / '' / null).
+ */
 export function parseCatalogueEvent(raw: unknown, allowed: ReadonlySet<string>): CatalogueEventRow | null {
   if (!isObj(raw) || !onlyKeys(raw, CATALOGUE_KEYS)) return null;
   const e = raw, topics = e.topics;
-  const ok = isEventId(e.eventId) && typeof e.title === 'string' && e.title.length <= MAX_EVENT_TITLE &&
-    isTime(e.startsAt) && (e.endsAt === null || (isTime(e.endsAt) && Date.parse(e.endsAt) > Date.parse(e.startsAt))) &&
+  const endsAt = e.endsAt === undefined ? null : e.endsAt;
+  const ok = isEventId(e.eventId) && (e.status === undefined || e.status === 'scheduled') &&
+    (e.title === undefined || (typeof e.title === 'string' && e.title.length <= MAX_EVENT_TITLE)) &&
+    isTime(e.startsAt) && (endsAt === null || (isTime(endsAt) && Date.parse(endsAt) > Date.parse(e.startsAt))) &&
     Array.isArray(topics) && topics.length <= MAX_EVENT_TOPICS && new Set(topics).size === topics.length &&
     topics.every(t => typeof t === 'string' && TAG_RE.test(t) && allowed.has(t)) &&
     (EVENT_FORMATS as readonly unknown[]).includes(e.format) && (e.areaKey === null || validAreaKey(e.areaKey)) &&
-    (e.sourceUrl === null || typeof e.sourceUrl === 'string') && isTime(e.fetchedAt);
-  return ok ? (raw as unknown as CatalogueEventRow) : null;
+    (e.sourceUrl === undefined || e.sourceUrl === null || typeof e.sourceUrl === 'string') && isTime(e.fetchedAt);
+  if (!ok) return null;
+  return { eventId: e.eventId as string, title: (e.title as string | undefined) ?? '', startsAt: e.startsAt as string,
+    endsAt: endsAt as string | null, topics: [...(topics as string[])], format: e.format as CatalogueEventRow['format'],
+    areaKey: e.areaKey as string | null, sourceUrl: (e.sourceUrl as string | null | undefined) ?? null, fetchedAt: e.fetchedAt as string };
 }
 
 /** Narrows the public catalogue to events this viewer may be shown companions for. Never looks at people. */

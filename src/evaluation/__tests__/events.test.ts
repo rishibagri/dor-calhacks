@@ -58,6 +58,28 @@ test('events: a duplicated event ID withholds every copy, whatever the order', (
   }
 });
 
+test('events: CS listing shape (events-model.ts toListing) is accepted: status scheduled, endsAt omitted, no title/url', () => {
+  // Mirrors src/components/feature/events-model.ts `toListing` exactly; a mismatch here once emptied the Events page.
+  const toListing = (e: any) => ({ eventId: e.eventId, startsAt: e.startsAt, ...(e.endsAt ? { endsAt: e.endsAt } : {}),
+    status: 'scheduled' as const, fetchedAt: e.fetchedAt, topics: e.topics, format: e.format, areaKey: e.areaKey });
+  const rows = fx.catalogue.filter((e: { status?: string; venue?: string }) => e.status === undefined && e.venue === undefined);
+  const viaView = eligibleEvents(rows, fx.viewerAreaKey, fx.allowedTags, now).eligible.map(e => e.eventId);
+  const viaListing = eligibleEvents(rows.map(toListing), fx.viewerAreaKey, fx.allowedTags, now).eligible.map(e => e.eventId);
+  assert.deepEqual(viaListing, ['evt-games-night', 'evt-jazz']);
+  assert.deepEqual(viaListing, viaView);
+  const tooSoon = toListing(fx.catalogue.find((e: { eventId: string }) => e.eventId === 'evt-too-soon'));
+  assert.ok(!('endsAt' in tooSoon));
+  assert.deepEqual(eligibleEvents([tooSoon], fx.viewerAreaKey, fx.allowedTags, now).excluded, [{ eventId: 'evt-too-soon', reason: 'starts_too_soon' }]);
+  // Normalized output is the view shape, never the caller's object.
+  const [g] = eligibleEvents([toListing(games())], fx.viewerAreaKey, fx.allowedTags, now).eligible;
+  assert.deepEqual(Object.keys(g!).sort(), ['areaKey', 'endsAt', 'eventId', 'fetchedAt', 'format', 'sourceUrl', 'startsAt', 'title', 'topics']);
+});
+
+test('events: any status other than scheduled, or an unknown key, still rejects the row', () => {
+  for (const extra of [{ status: 'cancelled' }, { status: 'unknown' }, { status: 'SCHEDULED' }, { venue: 'x' }, { attendees: [] }, { endsAt: undefined, kind: 'going' }])
+    assert.deepEqual(eligibleEvents([{ ...games(), ...extra }], fx.viewerAreaKey, fx.allowedTags, now).eligible, [], JSON.stringify(extra));
+});
+
 // ---- Successful matches ----
 
 test('success: games-night companions are exactly the visible people the server paired with the viewer', () => {
