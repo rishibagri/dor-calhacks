@@ -1,16 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SharingCategorySchema } from '@dor/contracts';
-import type { RelationshipPresetKind, SharingCategory } from '@dor/contracts';
+import type { LocalConnectionProfile, RelationshipPresetKind, SharingCategory } from '@dor/contracts';
 import type { ReducerResult } from '@/lib/backend/ports';
 import { useLiveShared } from '@/components/shell/use-live';
+import { useVault } from '@/lib/backend';
 import { ResultNotice } from '@/components/shell/result-notice';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { CATEGORY_LABELS, toggle } from './quiz-model';
+import { CATEGORY_LABELS, draftCategoriesFor, toggle } from './quiz-model';
 
 export const PRESET_KINDS: RelationshipPresetKind[] = ['partner', 'friend', 'family'];
 const CATEGORIES = SharingCategorySchema.options;
@@ -22,7 +23,19 @@ function PresetCard({ kind }: { kind: RelationshipPresetKind }) {
   const [cats, setCats] = useState<SharingCategory[] | null>(null);
   const [result, setResult] = useState<ReducerResult | null>(null);
   const [reviewing, setReviewing] = useState(false);
-  const draft = cats ?? current?.allowedCategories ?? [];
+  const vault = useVault();
+  const [profile, setProfile] = useState<LocalConnectionProfile | null>(null);
+  const vaultReady = vault.status.kind === 'live' && !vault.locked;
+  // Quiz nomination only; a locked, unavailable or failing vault leaves the empty draft, silently.
+  useEffect(() => {
+    let live = true;
+    if (!vaultReady) { setProfile(null); return; }
+    vault.loadProfile().then((p) => { if (live) setProfile(p); }, () => { if (live) setProfile(null); });
+    return () => { live = false; };
+  }, [vault, vaultReady]);
+  const suggestion = draftCategoriesFor(current, profile);
+  const draft = cats ?? suggestion.categories;
+  const showSuggestion = cats === null && suggestion.suggested;
   const assignedCount = shared.myPresetAssignments().filter((a) => a.presetId === current?.policyId).length;
 
   const confirm = () =>
@@ -50,6 +63,11 @@ function PresetCard({ kind }: { kind: RelationshipPresetKind }) {
             <Label htmlFor={`${kind}-${c}`}>{CATEGORY_LABELS[c]}</Label>
           </div>
         ))}
+        {showSuggestion && (
+          <p className="text-sm text-muted-foreground">
+            Suggested from your onboarding answers. Nothing is shared until you save and assign it.
+          </p>
+        )}
         <ResultNotice result={result} />
         {reviewing ? (
           <div role="group" aria-label={`Confirm ${kind} preset`}

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  MAX_QUESTIONS, NO_ACTION_COPY, QUESTION_COPY, answerCompany, answerWho, decide, excludeForNow, startLoop,
+  MAX_QUESTIONS, NO_ACTION_COPY, QUESTION_COPY, answerCompany, answerWho, applyUnnamedExclusionGuard, decide, excludeForNow, startLoop,
 } from '../decision-loop-model.ts';
 
 const SAM = { pairId: 'p-sam', name: 'Sam' };
@@ -93,4 +93,24 @@ test('state is plain data: nothing to persist beyond the episode, inputs never m
   excludeForNow(s1, SAM.pairId);
   assert.deepEqual(s0, { candidate: CALL, company: null, chosen: null, excluded: [], asked: [] });
   assert.deepEqual(s1.excluded, []);
+});
+
+const UNNAMED = { pairId: 'p-u', name: 'Connection 1', unnamed: true };
+
+test('exclusion present: an unnamed recipient is left out (cannot prove it is not the excluded person)', () => {
+  const { kept, leftOutUnnamed } = applyUnnamedExclusionGuard([SAM, UNNAMED], true);
+  assert.deepEqual(kept, [SAM]);
+  assert.deepEqual(leftOutUnnamed, [UNNAMED]);
+});
+
+test('no exclusion: an unnamed recipient stays eligible', () => {
+  const { kept, leftOutUnnamed } = applyUnnamedExclusionGuard([SAM, UNNAMED], false);
+  assert.deepEqual(kept, [SAM, UNNAMED]);
+  assert.deepEqual(leftOutUnnamed, []);
+});
+
+test('all recipients left out by the guard ends in the existing no-action state', () => {
+  const { kept } = applyUnnamedExclusionGuard([UNNAMED], true);
+  const s = answerCompany(startLoop(CALL), 'company');
+  assert.deepEqual(decide(s, kept), { kind: 'no_action', reason: 'no_eligible_recipient' });
 });

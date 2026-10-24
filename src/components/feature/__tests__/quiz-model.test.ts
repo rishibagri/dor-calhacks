@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ApprovedSignalSchema } from '@dor/contracts';
-import { EMPTY_ANSWERS, buildProfile, buildQuizExtras, countAnswered } from '../quiz-model.ts';
+import { EMPTY_ANSWERS, buildProfile, buildQuizExtras, countAnswered, draftCategoriesFor } from '../quiz-model.ts';
 
 test('"space" maps to no support mode (no-action case) and is kept local', () => {
   const a = { ...EMPTY_ANSWERS, afterLongDay: ['space' as const] };
@@ -30,4 +30,24 @@ test('Q5/Q6/Q8 answers never enter the shared-schema profile', () => {
 test('other-activity note is dropped unless "other" is selected; empty quiz counts zero', () => {
   assert.equal(buildQuizExtras({ ...EMPTY_ANSWERS, activitiesNote: 'x' }).activitiesNote, null);
   assert.equal(countAnswered(EMPTY_ANSWERS), 0);
+});
+
+test('draftCategoriesFor: no profile gives an empty, unsuggested draft', () => {
+  assert.deepEqual(draftCategoriesFor(undefined, null), { categories: [], suggested: false });
+});
+
+test('draftCategoriesFor: an existing saved preset is never overridden', () => {
+  const profile = { draftSharingCategories: ['coarse_availability' as const], preferredSupportModes: ['short_call' as const] };
+  assert.deepEqual(draftCategoriesFor({ allowedCategories: [] }, profile), { categories: [], suggested: false });
+});
+
+test('draftCategoriesFor: keeps valid category keys only', () => {
+  const profile = { draftSharingCategories: ['coarse_availability', 'bogus', 'coarse_availability'] as never, preferredSupportModes: ['short_call' as const] };
+  assert.deepEqual(draftCategoriesFor(null, profile), { categories: ['coarse_availability'], suggested: true });
+});
+
+test('draftCategoriesFor: space-only answer nominates no support category', () => {
+  const built = buildProfile({ ...EMPTY_ANSWERS, afterLongDay: ['space'], categories: ['support_preference', 'coarse_availability'] });
+  assert.ok(built.data);
+  assert.deepEqual(draftCategoriesFor(null, built.data), { categories: ['coarse_availability'], suggested: true });
 });

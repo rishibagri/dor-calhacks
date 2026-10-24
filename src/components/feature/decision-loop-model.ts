@@ -30,7 +30,26 @@ export const QUESTION_NOTE =
 
 export type CompanyAnswer = 'company' | 'space' | 'skip';
 
-export interface Recipient { pairId: string; name: string }
+export interface Recipient {
+  pairId: string;
+  name: string;
+  /** True when `name` is a generated label because the connection has no display name. */
+  unnamed?: boolean;
+}
+
+/**
+ * Fail closed on name exclusions: when the owner's entry names anyone to skip, a connection without a display name
+ * can never be matched, so we cannot prove it is not that person. Leave it out. Returns the kept and left-out lists.
+ */
+export function applyUnnamedExclusionGuard<R extends Recipient>(
+  recipients: readonly R[], hasNameExclusion: boolean,
+): { kept: R[]; leftOutUnnamed: R[] } {
+  if (!hasNameExclusion) return { kept: [...recipients], leftOutUnnamed: [] };
+  return {
+    kept: recipients.filter((r) => !r.unnamed),
+    leftOutUnnamed: recipients.filter((r) => r.unnamed),
+  };
+}
 
 export interface LoopState {
   candidate: SignalCandidate | null;

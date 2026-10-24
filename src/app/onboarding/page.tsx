@@ -88,7 +88,7 @@ function OnboardingForm() {
           <CardDescription>Leave any blank. Answers stay in this tab&apos;s memory unless saved to the local vault.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <Question legend="1. After a long day, what helps?" hint="Choosing space means dor suggests nothing for that moment.">
+          <Question legend="1. After a long day, what helps?" hint="Choosing space adds no support suggestion to your drafts. You can always choose space again when you journal.">
             <MultiChoice name="q1" options={longDayOptions} value={a.afterLongDay}
               onChange={(v, on) => set({ afterLongDay: toggle(a.afterLongDay, v, on) })} />
           </Question>

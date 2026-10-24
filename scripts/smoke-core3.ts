@@ -94,6 +94,30 @@ function sql(q: string): string {
   return execFileSync('spacetime', ['sql', DB, q, '-s', SERVER], { encoding: 'utf8' }).trim();
 }
 
+// Opt-in: set a short-lived consent, wait for the 60 s sweep to mark it, then restore normal consent.
+async function sweepStep(b: Conn, pairId: string, normalExp: string): Promise<void> {
+  const stamp = () => new Date().toISOString();
+  const cur = b.rows('my_support_preferences').find((p) => p.pairId === pairId);
+  const shortExp = new Date(Date.now() + 8000).toISOString();
+  ok('10a', `B set_support_preferences expiring ${shortExp}`, await b.call('set_support_preferences', {
+    pairId, supportModes: ['short_call'], availability: ['today'], expiresAt: shortExp, expectedVersion: cur?.consentVersion ?? 0 }));
+  await waitFor(() => b.rows('my_support_preferences').some((p) => p.pairId === pairId && p.consentVersion === (cur?.consentVersion ?? 0) + 1));
+  const row = b.rows('my_support_preferences').find((p) => p.pairId === pairId);
+  rec('10b', 'B my_support_preferences row visible, active', 'row, not revoked', row ? `row v${row.consentVersion} revoked=${!!row.revokedAt}` : 'none', !!row && !row.revokedAt);
+  const id: string = row?.consentId ?? '';
+  const marked = () => sql('SELECT kind, record_key FROM expired_record').split('\n').some((l) => l.includes('preference') && l.includes(id));
+  console.log(`${stamp()} sweep: expiry set for ${shortExp}; polling expired_record every 5s (max 150s)`);
+  let found = false;
+  for (const end = Date.now() + 150000; Date.now() < end; await sleep(5000)) { if (marked()) { found = true; break; } }
+  console.log(`${stamp()} sweep: marker ${found ? 'PRESENT' : 'absent'}`);
+  rec('10c', 'sweep inserted expired_record kind=preference for B consent', 'marker present', found ? 'marker present' : 'absent after 150s', found);
+  const after = b.rows('my_support_preferences').find((p) => p.pairId === pairId);
+  console.log(`${stamp()} sweep: my_support_preferences still returns row=${!!after} (owner view is raw; expiry is enforced by loadPreference/commit_nudge, not hidden in this view)`);
+  const latest = b.rows('my_support_preferences').find((p) => p.pairId === pairId);
+  ok('10d', 'B restore normal support preferences', await b.call('set_support_preferences', {
+    pairId, supportModes: ['short_call'], availability: ['today'], expiresAt: normalExp, expectedVersion: latest?.consentVersion ?? 0 }));
+}
+
 async function main() {
   // ---- tokens + allow-list check (stop on mismatch) ----
   const accts: Acct[] = [];
@@ -199,6 +223,9 @@ async function main() {
   let anon = 'ACCEPTED';
   try { const g = await connect(undefined, false); anon = (await g.call('register_account', { displayName: 'x' })) ?? 'ACCEPTED'; g.close(); } catch (e: any) { anon = `connect rejected: ${e.message}`; }
   rec('9b', 'no token (anonymous)', 'reducer rejected', anon, anon !== 'ACCEPTED');
+
+  // 10 (opt-in, --sweep) positive proof that the scheduled sweep marks an expired preference.
+  if (process.argv.includes('--sweep')) await sweepStep(b, pairId, exp);
 
   console.log('NUDGE DELIVERY (commit_nudge / worker): not run (worker requires paid provider)');
   [a2, b, c].forEach((x) => x.close());

@@ -6,13 +6,6 @@ import { CATEGORIES, PRESET_KINDS } from './constants';
 type Account = AccountRow;
 type Pair = PairRow;
 
-/** Scheduled reducers: the in-process harness marks them isInternal; a live host delivers them with no
- * connection and sender == the database's own identity (no client can authenticate as that identity). */
-export function isScheduledCall(c: { isInternal: boolean; connectionId: unknown; sender: Identity; databaseIdentity: Identity }): boolean {
-  if (c.isInternal) return true;
-  return c.connectionId == null && c.sender.isEqual(c.databaseIdentity);
-}
-
 /**
  * Caller authentication. Internal callers (module owner / scheduled) are admitted; every
  * external caller must carry a JWT whose issuer is in auth_config (Clerk issuer) AND whose `aud`

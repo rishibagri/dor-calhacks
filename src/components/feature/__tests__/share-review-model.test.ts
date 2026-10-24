@@ -107,3 +107,20 @@ test('request ID is reused for a retry of the same payload and fresh when versio
   assert.notEqual(bumped.approval.payloadRevision, r.approval.payloadRevision);
   assert.notEqual(requestIdFor(bumped.approval, first, mint).id, first.id);
 });
+
+test('two unnamed connections get distinct stable labels by creation time then pair id', () => {
+  const list = shareRecipients([
+    { ...pair, pairId: 'b', counterpartDisplayName: null, createdAt: '2026-10-21T00:00:00Z' },
+    { ...pair, pairId: 'a', counterpartDisplayName: '  ', createdAt: '2026-10-22T00:00:00Z' },
+  ]);
+  assert.deepEqual(list.map((r) => [r.pairId, r.name, r.unnamed]), [['b', 'Connection 1', true], ['a', 'Connection 2', true]]);
+});
+
+test('duplicate display names are suffixed in stable order and named ones keep their names', () => {
+  const list = shareRecipients([
+    { ...pair, pairId: 'p2', counterpartDisplayName: 'sam', createdAt: '2026-10-22T00:00:00Z' },
+    { ...pair, pairId: 'p1', counterpartDisplayName: 'Sam', createdAt: '2026-10-21T00:00:00Z' },
+    { ...pair, pairId: 'p3', counterpartDisplayName: 'Alex', createdAt: '2026-10-23T00:00:00Z' },
+  ]);
+  assert.deepEqual(list.map((r) => r.name), ['sam (2)', 'Sam', 'Alex']);
+});

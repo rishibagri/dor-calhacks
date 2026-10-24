@@ -17,13 +17,43 @@ export interface ShareRecipient {
   pairId: string;
   name: string;
   counterpartHex: string;
+  /** True when the label is a generated "Connection N" because the connection has no display name. */
+  unnamed: boolean;
+}
+
+/**
+ * Distinct owner-facing labels so the owner can always tell connections apart. Stable order: pair creation time,
+ * then pair id. Unnamed → "Connection 1", "Connection 2", …; a repeated display name gets " (2)", " (3)", ….
+ */
+function labelPairs(pairs: readonly PairView[]): Map<string, { name: string; unnamed: boolean }> {
+  const ordered = [...pairs].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.pairId.localeCompare(b.pairId));
+  const seen = new Map<string, number>();
+  let unnamedCount = 0;
+  const labels = new Map<string, { name: string; unnamed: boolean }>();
+  for (const p of ordered) {
+    const base = p.counterpartDisplayName?.trim() ?? '';
+    if (base === '') {
+      unnamedCount += 1;
+      labels.set(p.pairId, { name: `Connection ${unnamedCount}`, unnamed: true });
+      continue;
+    }
+    const key = base.toLowerCase();
+    const n = (seen.get(key) ?? 0) + 1;
+    seen.set(key, n);
+    labels.set(p.pairId, { name: n === 1 ? base : `${base} (${n})`, unnamed: false });
+  }
+  return labels;
 }
 
 /** Accepted pairs with a known counterpart: the only people a signal could be approved for. */
 export function shareRecipients(pairs: readonly PairView[]): ShareRecipient[] {
-  return pairs.flatMap((p) => p.status === 'accepted' && p.counterpartIdentityHex
-    ? [{ pairId: p.pairId, counterpartHex: p.counterpartIdentityHex, name: p.counterpartDisplayName ?? 'Your connection' }]
-    : []);
+  const eligible = pairs.filter((p) => p.status === 'accepted' && p.counterpartIdentityHex);
+  const labels = labelPairs(eligible);
+  return eligible.map((p) => ({
+    pairId: p.pairId,
+    counterpartHex: p.counterpartIdentityHex as string,
+    ...(labels.get(p.pairId) as { name: string; unnamed: boolean }),
+  }));
 }
 
 export interface PrepareShareInput {
