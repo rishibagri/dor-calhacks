@@ -9,6 +9,7 @@
     "check": "npm run typecheck && npm test"
   },
   "dependencies": {
+    "@kinetic/contracts": "0.1.0",
     "spacetimedb": "2.13.0"
   },
   "devDependencies": {

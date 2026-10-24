@@ -1,6 +1,7 @@
 import { ConnectionId } from 'spacetimedb';
 import { createModuleTestHarness, TestAuth } from 'spacetimedb/server/test-utils';
 import * as mod from '../src/index';
+import { DISCLOSURE_CONSENT_VERSION, payloadRevision } from '@kinetic/contracts/policy';
 
 export const ISSUER = 'https://kinetic-test.clerk.accounts.dev';
 export { mod };
@@ -37,3 +38,39 @@ export function pairUp(w: World) {
 
 export const view = <T>(w: World, a: ReturnType<typeof jwtAuth>, v: unknown): T[] =>
   [...((v as any)(w.h.viewContext(a)) ?? [])] as T[];
+
+export const FUTURE = '2099-01-01T00:00:00Z';
+
+/** Configure + assign a confirmed preset for `owner` in `pairId` (owner must be a member). */
+export function confirmPreset(w: World, owner: ReturnType<typeof jwtAuth>, pairId: string, kind: string, cats: string[]) {
+  const cur = view<any>(w, owner, mod.my_presets).find(p => p.preset_kind === kind);
+  w.call(owner, ctx => mod.set_relationship_preset(ctx, { preset_kind: kind, allowed_categories: cats, expected_version: cur?.version ?? 0, expires_at: FUTURE }));
+  const asg = view<any>(w, owner, mod.my_preset_assignments).find(a => a.pair_id === pairId);
+  w.call(owner, ctx => mod.assign_relationship_preset(ctx, { pair_id: pairId, preset_kind: kind, expected_assignment_version: asg?.assignment_version ?? 0 }));
+}
+
+/**
+ * Call OUTSIDE w.call(): it reads views, and opening a view context inside a reducer tx traps the harness.
+ * Build approve_signal args the way the preview route does: from the caller's own views plus
+ * the canonical C6 payload revision. `over` lets tests tamper after the "preview".
+ */
+export function approveArgs(w: World, owner: ReturnType<typeof jwtAuth>, pairId: string,
+  payload: { support_mode?: string; availability?: string }, requestId = 'req-1', over: Record<string, unknown> = {}) {
+  const pair = view<any>(w, owner, mod.my_pairs).find(p => p.pair_id === pairId);
+  const asg = view<any>(w, owner, mod.my_preset_assignments).find(a => a.pair_id === pairId);
+  const preset = asg && view<any>(w, owner, mod.my_presets).find(p => p.policy_id === asg.preset_id);
+  const base = {
+    pair_id: pairId, support_mode: payload.support_mode, availability: payload.availability,
+    recipient_policy_version: preset?.version ?? 1, preset_assignment_version: asg?.assignment_version ?? 1,
+    consent_version: DISCLOSURE_CONSENT_VERSION, client_request_id: requestId,
+  };
+  const payload_revision = payloadRevision({
+    pairId, recipientId: pair?.counterpart_identity?.toHexString() ?? 'none',
+    supportMode: base.support_mode, availability: base.availability,
+    recipientPolicyVersion: base.recipient_policy_version, presetAssignmentVersion: base.preset_assignment_version,
+    consentVersion: base.consent_version,
+  });
+  return { ...base, payload_revision, ...over } as Parameters<typeof mod.approve_signal>[1] & Record<string, any>;
+}
+
+export const allSignals = (w: World) => w.h.withReducerTx(w.admin, ctx => [...ctx.db.approved_signal.iter()]);

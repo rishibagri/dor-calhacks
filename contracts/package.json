@@ -10,6 +10,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./policy": {
+      "types": "./dist/policy.d.ts",
+      "import": "./dist/policy.js"
+    },
     "./fakes": {
       "types": "./dist/fakes.d.ts",
       "import": "./dist/fakes.js"

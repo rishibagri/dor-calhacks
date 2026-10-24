@@ -72,7 +72,7 @@ export const preset_assignment = table(
   }
 );
 
-/** ApprovedSignal v2 + revoked_at. Stays EMPTY until Cyber's policy guard lands (approve_signal refuses). */
+/** ApprovedSignal v2 + revoked_at. Written only by the guarded approve_signal reducer (C6 guardApproval). */
 export const approved_signal = table(
   { name: 'approved_signal' },
   {
@@ -89,6 +89,7 @@ export const approved_signal = table(
     preset_assignment_version: t.u32(),
     expires_at: t.timestamp(),
     revoked_at: t.option(t.timestamp()),
+    client_request_id: t.string(), // sender-scoped idempotency key; replays never resurrect
   }
 );
 

@@ -1,5 +1,8 @@
 import { t } from 'spacetimedb/server';
-import { spacetimedb, account, nudge, disclosure_receipt } from './schema';
+import type { Identity } from 'spacetimedb';
+import { guardSignalStanding } from '@kinetic/contracts/policy';
+import { spacetimedb, account, approved_signal, nudge, disclosure_receipt } from './schema';
+import { hex, loadStanding, toStoredSignal, type ReadDb } from './policy_state';
 
 // Every view filters strictly by ctx.sender. Tables stay private; only these are public.
 // Views project minimal client-facing rows (column names are the CS client seam,
@@ -102,13 +105,38 @@ export const my_preset_assignments = spacetimedb.view(
   }
 );
 
+/**
+ * Defence in depth (C6): even if a suppression write was missed, a nudge is shown only while
+ * every source signal still has standing for this recipient (not revoked, pair accepted, same
+ * preset/assignment versions, categories still allowed). Views have no clock, so EXPIRY is
+ * not enforced here; it needs a scheduled sweep reducer (open Cyber/CS item).
+ */
+function nudgeSourcesStand(db: ReadDb, n: { pair_id: string; source_signal_ids: string[]; source_consent_versions: number[] }, viewer: Identity): boolean {
+  if (n.source_signal_ids.length === 0 || n.source_signal_ids.length !== n.source_consent_versions.length) return false;
+  return n.source_signal_ids.every((id, i) => {
+    const s = db.approved_signal.signal_id.find(id);
+    if (!s || s.pair_id !== n.pair_id || s.consent_version !== n.source_consent_versions[i]) return false;
+    return guardSignalStanding(toStoredSignal(s), loadStanding(db, s.sender_id, s.pair_id), hex(viewer)).allowed;
+  });
+}
+
 export const my_nudges = spacetimedb.view(
   { name: 'my_nudges', public: true }, t.array(nudge.rowType),
-  ctx => [...ctx.db.nudge.iter()].filter(n => n.recipient_id.isEqual(ctx.sender) && !n.suppressed && !n.dismissed)
+  ctx => [...ctx.db.nudge.iter()].filter(n => n.recipient_id.isEqual(ctx.sender) && !n.suppressed && !n.dismissed &&
+    nudgeSourcesStand(ctx.db, n, ctx.sender))
 );
 
+/** Sender-only: the owner's own approved signals (privacy center: recipient, expiry, revoke). */
+export const my_signals = spacetimedb.view(
+  { name: 'my_signals', public: true }, t.array(approved_signal.rowType),
+  ctx => [...ctx.db.approved_signal.iter()].filter(s => s.sender_id.isEqual(ctx.sender))
+);
+
+/**
+ * Sender-only (D017). Recipients must not see approved/revoked/suppressed receipts: that would
+ * reveal a disclosure that produced no nudge, or a revocation. Recipients learn only via my_nudges.
+ */
 export const my_receipts = spacetimedb.view(
   { name: 'my_receipts', public: true }, t.array(disclosure_receipt.rowType),
-  ctx => [...ctx.db.disclosure_receipt.iter()]
-    .filter(r => r.sender_id.isEqual(ctx.sender) || r.recipient_id.isEqual(ctx.sender))
+  ctx => [...ctx.db.disclosure_receipt.iter()].filter(r => r.sender_id.isEqual(ctx.sender))
 );
