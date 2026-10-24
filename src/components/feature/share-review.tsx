@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { SignalCandidate } from '@dor/contracts';
 import type { ReducerResult } from '@/lib/backend/ports';
 import { useLiveShared } from '@/components/shell/use-live';
@@ -8,7 +8,7 @@ import { ResultNotice } from '@/components/shell/result-notice';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { describeNotReady, newClientRequestId, prepareShare, shareRecipients } from './share-review-model';
+import { describeNotReady, prepareShare, requestIdFor, shareRecipients, type RequestIdSlot } from './share-review-model';
 
 type Props = {
   /** In memory only, from VoiceReflection's onCandidate. Never stored. */
@@ -26,22 +26,21 @@ export function ShareReview({ candidate, onClose }: Props) {
   const [pairId, setPairId] = useState<string | null>(null);
   const [result, setResult] = useState<ReducerResult | null>(null);
   const [isSending, setIsSending] = useState(false);
-  // One ID per (candidate, recipient) preview so a retry is idempotent and a new preview is a new approval.
-  const clientRequestId = useMemo(() => newClientRequestId(), [candidate, pairId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const requestId = useRef<RequestIdSlot | null>(null);
 
   const selected = recipients.find((r) => r.pairId === (pairId ?? recipients[0]?.pairId));
   const name = selected?.name ?? 'your connection';
   const ownerHex = shared.connection.phase === 'connected' ? shared.connection.identityHex : null;
   const pair = selected && shared.myPairs().find((p) => p.pairId === selected.pairId);
   const prepared = pair && ownerHex ? prepareShare({
-    candidate, ownerHex, pair, presets: shared.myPresets(), assignments: shared.myPresetAssignments(),
-    clientRequestId, now: new Date(),
+    candidate, ownerHex, pair, presets: shared.myPresets(), assignments: shared.myPresetAssignments(), now: new Date(),
   }, name) : null;
 
   const handleApprove = () => {
     if (prepared?.kind !== 'ready') return;
     setIsSending(true);
-    void shared.approveSignal(prepared.approval).then((r) => { setResult(r); setIsSending(false); });
+    requestId.current = requestIdFor(prepared.approval, requestId.current);
+    void shared.approveSignal({ ...prepared.approval, clientRequestId: requestId.current.id }).then((r) => { setResult(r); setIsSending(false); });
   };
 
   return (

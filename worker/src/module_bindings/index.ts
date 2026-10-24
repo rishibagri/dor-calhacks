@@ -35,20 +35,28 @@ import {
 
 // Import all reducer arg schemas
 import AcceptPairInviteReducer from "./accept_pair_invite_reducer";
+import ApproveActivityInterestReducer from "./approve_activity_interest_reducer";
 import ApproveSignalReducer from "./approve_signal_reducer";
 import AssignRelationshipPresetReducer from "./assign_relationship_preset_reducer";
 import BlockDiscoveryUserReducer from "./block_discovery_user_reducer";
 import BlockIntroductionParticipantReducer from "./block_introduction_participant_reducer";
 import CancelIntroductionRequestReducer from "./cancel_introduction_request_reducer";
+import CancelPlanReducer from "./cancel_plan_reducer";
 import CommitIntroductionProposalReducer from "./commit_introduction_proposal_reducer";
 import CommitNudgeReducer from "./commit_nudge_reducer";
+import CommitPlanProposalReducer from "./commit_plan_proposal_reducer";
 import CreatePairInviteReducer from "./create_pair_invite_reducer";
 import DismissIntroductionProposalReducer from "./dismiss_introduction_proposal_reducer";
 import DismissNudgeReducer from "./dismiss_nudge_reducer";
 import PublishDiscoveryProfileReducer from "./publish_discovery_profile_reducer";
+import PublishEventIntentReducer from "./publish_event_intent_reducer";
 import RegisterAccountReducer from "./register_account_reducer";
 import ReportDiscoveryUserReducer from "./report_discovery_user_reducer";
 import RespondIntroductionRequestReducer from "./respond_introduction_request_reducer";
+import RespondPlanReducer from "./respond_plan_reducer";
+import RevisePlanProposalReducer from "./revise_plan_proposal_reducer";
+import RevokeActivityInterestReducer from "./revoke_activity_interest_reducer";
+import RevokeEventIntentReducer from "./revoke_event_intent_reducer";
 import RevokeSignalReducer from "./revoke_signal_reducer";
 import RevokeSupportPreferencesReducer from "./revoke_support_preferences_reducer";
 import SendIntroductionRequestReducer from "./send_introduction_request_reducer";
@@ -62,26 +70,33 @@ import SetSupportPreferencesReducer from "./set_support_preferences_reducer";
 import SetWorkerIdentityReducer from "./set_worker_identity_reducer";
 import SnoozeNudgeReducer from "./snooze_nudge_reducer";
 import UnlinkPairReducer from "./unlink_pair_reducer";
+import UpsertCatalogueEventReducer from "./upsert_catalogue_event_reducer";
 import WithdrawDiscoveryProfileReducer from "./withdraw_discovery_profile_reducer";
 
 // Import all procedure arg schemas
 
 // Import all table schema definitions
+import CatalogueEventsRow from "./catalogue_events_table";
 import DiscoveryCardsRow from "./discovery_cards_table";
+import EventCompanionsRow from "./event_companions_table";
 import MyAccountRow from "./my_account_table";
+import MyActivityApprovalsRow from "./my_activity_approvals_table";
 import MyDiscoveryProfileRow from "./my_discovery_profile_table";
+import MyEventIntentsRow from "./my_event_intents_table";
 import MyIntroductionProposalsRow from "./my_introduction_proposals_table";
 import MyIntroductionsRow from "./my_introductions_table";
 import MyInvitesRow from "./my_invites_table";
 import MyNudgeDeliveryRow from "./my_nudge_delivery_table";
 import MyNudgesRow from "./my_nudges_table";
 import MyPairsRow from "./my_pairs_table";
+import MyPlansRow from "./my_plans_table";
 import MyPresetAssignmentsRow from "./my_preset_assignments_table";
 import MyPresetsRow from "./my_presets_table";
 import MyReceiptsRow from "./my_receipts_table";
 import MySignalsRow from "./my_signals_table";
 import MySupportPreferencesRow from "./my_support_preferences_table";
 import WorkerDeliveryRow from "./worker_delivery_table";
+import WorkerPlanCandidatesRow from "./worker_plan_candidates_table";
 import WorkerSignalContextRow from "./worker_signal_context_table";
 import WorkerSupportPreferencesRow from "./worker_support_preferences_table";
 
@@ -89,6 +104,13 @@ import WorkerSupportPreferencesRow from "./worker_support_preferences_table";
 
 /** The schema information for all tables in this module. This is defined the same was as the tables would have been defined in the server. */
 const tablesSchema = __schema({
+  catalogueEvents: __table({
+    name: 'catalogue_events',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, CatalogueEventsRow),
   discoveryCards: __table({
     name: 'discovery_cards',
     indexes: [
@@ -96,6 +118,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, DiscoveryCardsRow),
+  eventCompanions: __table({
+    name: 'event_companions',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, EventCompanionsRow),
   myAccount: __table({
     name: 'my_account',
     indexes: [
@@ -103,6 +132,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyAccountRow),
+  myActivityApprovals: __table({
+    name: 'my_activity_approvals',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyActivityApprovalsRow),
   myDiscoveryProfile: __table({
     name: 'my_discovery_profile',
     indexes: [
@@ -110,6 +146,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyDiscoveryProfileRow),
+  myEventIntents: __table({
+    name: 'my_event_intents',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyEventIntentsRow),
   myIntroductionProposals: __table({
     name: 'my_introduction_proposals',
     indexes: [
@@ -152,6 +195,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyPairsRow),
+  myPlans: __table({
+    name: 'my_plans',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyPlansRow),
   myPresetAssignments: __table({
     name: 'my_preset_assignments',
     indexes: [
@@ -194,6 +244,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, WorkerDeliveryRow),
+  workerPlanCandidates: __table({
+    name: 'worker_plan_candidates',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, WorkerPlanCandidatesRow),
   workerSignalContext: __table({
     name: 'worker_signal_context',
     indexes: [
@@ -213,20 +270,28 @@ const tablesSchema = __schema({
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
   __reducerSchema("accept_pair_invite", AcceptPairInviteReducer),
+  __reducerSchema("approve_activity_interest", ApproveActivityInterestReducer),
   __reducerSchema("approve_signal", ApproveSignalReducer),
   __reducerSchema("assign_relationship_preset", AssignRelationshipPresetReducer),
   __reducerSchema("block_discovery_user", BlockDiscoveryUserReducer),
   __reducerSchema("block_introduction_participant", BlockIntroductionParticipantReducer),
   __reducerSchema("cancel_introduction_request", CancelIntroductionRequestReducer),
+  __reducerSchema("cancel_plan", CancelPlanReducer),
   __reducerSchema("commit_introduction_proposal", CommitIntroductionProposalReducer),
   __reducerSchema("commit_nudge", CommitNudgeReducer),
+  __reducerSchema("commit_plan_proposal", CommitPlanProposalReducer),
   __reducerSchema("create_pair_invite", CreatePairInviteReducer),
   __reducerSchema("dismiss_introduction_proposal", DismissIntroductionProposalReducer),
   __reducerSchema("dismiss_nudge", DismissNudgeReducer),
   __reducerSchema("publish_discovery_profile", PublishDiscoveryProfileReducer),
+  __reducerSchema("publish_event_intent", PublishEventIntentReducer),
   __reducerSchema("register_account", RegisterAccountReducer),
   __reducerSchema("report_discovery_user", ReportDiscoveryUserReducer),
   __reducerSchema("respond_introduction_request", RespondIntroductionRequestReducer),
+  __reducerSchema("respond_plan", RespondPlanReducer),
+  __reducerSchema("revise_plan_proposal", RevisePlanProposalReducer),
+  __reducerSchema("revoke_activity_interest", RevokeActivityInterestReducer),
+  __reducerSchema("revoke_event_intent", RevokeEventIntentReducer),
   __reducerSchema("revoke_signal", RevokeSignalReducer),
   __reducerSchema("revoke_support_preferences", RevokeSupportPreferencesReducer),
   __reducerSchema("send_introduction_request", SendIntroductionRequestReducer),
@@ -240,6 +305,7 @@ const reducersSchema = __reducers(
   __reducerSchema("set_worker_identity", SetWorkerIdentityReducer),
   __reducerSchema("snooze_nudge", SnoozeNudgeReducer),
   __reducerSchema("unlink_pair", UnlinkPairReducer),
+  __reducerSchema("upsert_catalogue_event", UpsertCatalogueEventReducer),
   __reducerSchema("withdraw_discovery_profile", WithdrawDiscoveryProfileReducer),
 );
 
@@ -249,12 +315,20 @@ const proceduresSchema = __procedures(
 
 type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "tables"> & {
   tables: typeof tablesSchema.schemaType.tables & {
+    /** @deprecated Use `catalogueEvents` instead. This alias will be removed in the next major version. */
+    readonly "catalogue_events": Omit<typeof tablesSchema.schemaType.tables["catalogueEvents"], "accessorName"> & { readonly accessorName: "catalogue_events" };
     /** @deprecated Use `discoveryCards` instead. This alias will be removed in the next major version. */
     readonly "discovery_cards": Omit<typeof tablesSchema.schemaType.tables["discoveryCards"], "accessorName"> & { readonly accessorName: "discovery_cards" };
+    /** @deprecated Use `eventCompanions` instead. This alias will be removed in the next major version. */
+    readonly "event_companions": Omit<typeof tablesSchema.schemaType.tables["eventCompanions"], "accessorName"> & { readonly accessorName: "event_companions" };
     /** @deprecated Use `myAccount` instead. This alias will be removed in the next major version. */
     readonly "my_account": Omit<typeof tablesSchema.schemaType.tables["myAccount"], "accessorName"> & { readonly accessorName: "my_account" };
+    /** @deprecated Use `myActivityApprovals` instead. This alias will be removed in the next major version. */
+    readonly "my_activity_approvals": Omit<typeof tablesSchema.schemaType.tables["myActivityApprovals"], "accessorName"> & { readonly accessorName: "my_activity_approvals" };
     /** @deprecated Use `myDiscoveryProfile` instead. This alias will be removed in the next major version. */
     readonly "my_discovery_profile": Omit<typeof tablesSchema.schemaType.tables["myDiscoveryProfile"], "accessorName"> & { readonly accessorName: "my_discovery_profile" };
+    /** @deprecated Use `myEventIntents` instead. This alias will be removed in the next major version. */
+    readonly "my_event_intents": Omit<typeof tablesSchema.schemaType.tables["myEventIntents"], "accessorName"> & { readonly accessorName: "my_event_intents" };
     /** @deprecated Use `myIntroductionProposals` instead. This alias will be removed in the next major version. */
     readonly "my_introduction_proposals": Omit<typeof tablesSchema.schemaType.tables["myIntroductionProposals"], "accessorName"> & { readonly accessorName: "my_introduction_proposals" };
     /** @deprecated Use `myIntroductions` instead. This alias will be removed in the next major version. */
@@ -267,6 +341,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_nudges": Omit<typeof tablesSchema.schemaType.tables["myNudges"], "accessorName"> & { readonly accessorName: "my_nudges" };
     /** @deprecated Use `myPairs` instead. This alias will be removed in the next major version. */
     readonly "my_pairs": Omit<typeof tablesSchema.schemaType.tables["myPairs"], "accessorName"> & { readonly accessorName: "my_pairs" };
+    /** @deprecated Use `myPlans` instead. This alias will be removed in the next major version. */
+    readonly "my_plans": Omit<typeof tablesSchema.schemaType.tables["myPlans"], "accessorName"> & { readonly accessorName: "my_plans" };
     /** @deprecated Use `myPresetAssignments` instead. This alias will be removed in the next major version. */
     readonly "my_preset_assignments": Omit<typeof tablesSchema.schemaType.tables["myPresetAssignments"], "accessorName"> & { readonly accessorName: "my_preset_assignments" };
     /** @deprecated Use `myPresets` instead. This alias will be removed in the next major version. */
@@ -279,6 +355,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_support_preferences": Omit<typeof tablesSchema.schemaType.tables["mySupportPreferences"], "accessorName"> & { readonly accessorName: "my_support_preferences" };
     /** @deprecated Use `workerDelivery` instead. This alias will be removed in the next major version. */
     readonly "worker_delivery": Omit<typeof tablesSchema.schemaType.tables["workerDelivery"], "accessorName"> & { readonly accessorName: "worker_delivery" };
+    /** @deprecated Use `workerPlanCandidates` instead. This alias will be removed in the next major version. */
+    readonly "worker_plan_candidates": Omit<typeof tablesSchema.schemaType.tables["workerPlanCandidates"], "accessorName"> & { readonly accessorName: "worker_plan_candidates" };
     /** @deprecated Use `workerSignalContext` instead. This alias will be removed in the next major version. */
     readonly "worker_signal_context": Omit<typeof tablesSchema.schemaType.tables["workerSignalContext"], "accessorName"> & { readonly accessorName: "worker_signal_context" };
     /** @deprecated Use `workerSupportPreferences` instead. This alias will be removed in the next major version. */
@@ -301,21 +379,27 @@ const REMOTE_MODULE = {
 >;
 
 const tableAccessorAliases = {
+  "catalogue_events": "catalogueEvents",
   "discovery_cards": "discoveryCards",
+  "event_companions": "eventCompanions",
   "my_account": "myAccount",
+  "my_activity_approvals": "myActivityApprovals",
   "my_discovery_profile": "myDiscoveryProfile",
+  "my_event_intents": "myEventIntents",
   "my_introduction_proposals": "myIntroductionProposals",
   "my_introductions": "myIntroductions",
   "my_invites": "myInvites",
   "my_nudge_delivery": "myNudgeDelivery",
   "my_nudges": "myNudges",
   "my_pairs": "myPairs",
+  "my_plans": "myPlans",
   "my_preset_assignments": "myPresetAssignments",
   "my_presets": "myPresets",
   "my_receipts": "myReceipts",
   "my_signals": "mySignals",
   "my_support_preferences": "mySupportPreferences",
   "worker_delivery": "workerDelivery",
+  "worker_plan_candidates": "workerPlanCandidates",
   "worker_signal_context": "workerSignalContext",
   "worker_support_preferences": "workerSupportPreferences",
 } as const;
@@ -338,12 +422,20 @@ function __withTableAccessorAliases<T extends object>(target: T, freeze = false)
 
 type __DbViewBase = __DbConnectionImpl<typeof REMOTE_MODULE>["db"];
 export type DbView = __DbViewBase & {
+  /** @deprecated Use `catalogueEvents` instead. This alias will be removed in the next major version. */
+  readonly "catalogue_events": __DbViewBase["catalogueEvents"];
   /** @deprecated Use `discoveryCards` instead. This alias will be removed in the next major version. */
   readonly "discovery_cards": __DbViewBase["discoveryCards"];
+  /** @deprecated Use `eventCompanions` instead. This alias will be removed in the next major version. */
+  readonly "event_companions": __DbViewBase["eventCompanions"];
   /** @deprecated Use `myAccount` instead. This alias will be removed in the next major version. */
   readonly "my_account": __DbViewBase["myAccount"];
+  /** @deprecated Use `myActivityApprovals` instead. This alias will be removed in the next major version. */
+  readonly "my_activity_approvals": __DbViewBase["myActivityApprovals"];
   /** @deprecated Use `myDiscoveryProfile` instead. This alias will be removed in the next major version. */
   readonly "my_discovery_profile": __DbViewBase["myDiscoveryProfile"];
+  /** @deprecated Use `myEventIntents` instead. This alias will be removed in the next major version. */
+  readonly "my_event_intents": __DbViewBase["myEventIntents"];
   /** @deprecated Use `myIntroductionProposals` instead. This alias will be removed in the next major version. */
   readonly "my_introduction_proposals": __DbViewBase["myIntroductionProposals"];
   /** @deprecated Use `myIntroductions` instead. This alias will be removed in the next major version. */
@@ -356,6 +448,8 @@ export type DbView = __DbViewBase & {
   readonly "my_nudges": __DbViewBase["myNudges"];
   /** @deprecated Use `myPairs` instead. This alias will be removed in the next major version. */
   readonly "my_pairs": __DbViewBase["myPairs"];
+  /** @deprecated Use `myPlans` instead. This alias will be removed in the next major version. */
+  readonly "my_plans": __DbViewBase["myPlans"];
   /** @deprecated Use `myPresetAssignments` instead. This alias will be removed in the next major version. */
   readonly "my_preset_assignments": __DbViewBase["myPresetAssignments"];
   /** @deprecated Use `myPresets` instead. This alias will be removed in the next major version. */
@@ -368,6 +462,8 @@ export type DbView = __DbViewBase & {
   readonly "my_support_preferences": __DbViewBase["mySupportPreferences"];
   /** @deprecated Use `workerDelivery` instead. This alias will be removed in the next major version. */
   readonly "worker_delivery": __DbViewBase["workerDelivery"];
+  /** @deprecated Use `workerPlanCandidates` instead. This alias will be removed in the next major version. */
+  readonly "worker_plan_candidates": __DbViewBase["workerPlanCandidates"];
   /** @deprecated Use `workerSignalContext` instead. This alias will be removed in the next major version. */
   readonly "worker_signal_context": __DbViewBase["workerSignalContext"];
   /** @deprecated Use `workerSupportPreferences` instead. This alias will be removed in the next major version. */
@@ -376,12 +472,20 @@ export type DbView = __DbViewBase & {
 
 type __TablesBase = __QueryBuilder<typeof tablesSchema.schemaType>;
 export type Tables = __TablesBase & {
+  /** @deprecated Use `catalogueEvents` instead. This alias will be removed in the next major version. */
+  readonly "catalogue_events": __TablesBase["catalogueEvents"];
   /** @deprecated Use `discoveryCards` instead. This alias will be removed in the next major version. */
   readonly "discovery_cards": __TablesBase["discoveryCards"];
+  /** @deprecated Use `eventCompanions` instead. This alias will be removed in the next major version. */
+  readonly "event_companions": __TablesBase["eventCompanions"];
   /** @deprecated Use `myAccount` instead. This alias will be removed in the next major version. */
   readonly "my_account": __TablesBase["myAccount"];
+  /** @deprecated Use `myActivityApprovals` instead. This alias will be removed in the next major version. */
+  readonly "my_activity_approvals": __TablesBase["myActivityApprovals"];
   /** @deprecated Use `myDiscoveryProfile` instead. This alias will be removed in the next major version. */
   readonly "my_discovery_profile": __TablesBase["myDiscoveryProfile"];
+  /** @deprecated Use `myEventIntents` instead. This alias will be removed in the next major version. */
+  readonly "my_event_intents": __TablesBase["myEventIntents"];
   /** @deprecated Use `myIntroductionProposals` instead. This alias will be removed in the next major version. */
   readonly "my_introduction_proposals": __TablesBase["myIntroductionProposals"];
   /** @deprecated Use `myIntroductions` instead. This alias will be removed in the next major version. */
@@ -394,6 +498,8 @@ export type Tables = __TablesBase & {
   readonly "my_nudges": __TablesBase["myNudges"];
   /** @deprecated Use `myPairs` instead. This alias will be removed in the next major version. */
   readonly "my_pairs": __TablesBase["myPairs"];
+  /** @deprecated Use `myPlans` instead. This alias will be removed in the next major version. */
+  readonly "my_plans": __TablesBase["myPlans"];
   /** @deprecated Use `myPresetAssignments` instead. This alias will be removed in the next major version. */
   readonly "my_preset_assignments": __TablesBase["myPresetAssignments"];
   /** @deprecated Use `myPresets` instead. This alias will be removed in the next major version. */
@@ -406,6 +512,8 @@ export type Tables = __TablesBase & {
   readonly "my_support_preferences": __TablesBase["mySupportPreferences"];
   /** @deprecated Use `workerDelivery` instead. This alias will be removed in the next major version. */
   readonly "worker_delivery": __TablesBase["workerDelivery"];
+  /** @deprecated Use `workerPlanCandidates` instead. This alias will be removed in the next major version. */
+  readonly "worker_plan_candidates": __TablesBase["workerPlanCandidates"];
   /** @deprecated Use `workerSignalContext` instead. This alias will be removed in the next major version. */
   readonly "worker_signal_context": __TablesBase["workerSignalContext"];
   /** @deprecated Use `workerSupportPreferences` instead. This alias will be removed in the next major version. */

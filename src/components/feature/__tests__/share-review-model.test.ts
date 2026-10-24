@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { guardApproval } from '@dor/contracts/policy';
 import type { RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
-import { describeNotReady, prepareShare, shareRecipients, signalStatus } from '../share-review-model.ts';
+import { describeNotReady, prepareShare, requestIdFor, shareRecipients, signalStatus } from '../share-review-model.ts';
 
 const NOW = new Date('2026-10-24T12:00:00Z');
 const OWNER = 'aa'.repeat(32);
@@ -16,7 +16,7 @@ const preset = (over: Partial<RelationshipPreset> = {}): RelationshipPreset => (
 const assignment: RecipientPresetAssignment = {
   schemaVersion: 1, ownerId: OWNER, recipientId: PEER, pairId: 'pair-1', presetId: 'pol-1', assignmentVersion: 2,
 };
-const base = { ownerHex: OWNER, pair, presets: [preset()], assignments: [assignment], clientRequestId: 'req-1', now: NOW };
+const base = { ownerHex: OWNER, pair, presets: [preset()], assignments: [assignment], now: NOW };
 
 test('shareable preview yields exactly the payload and versions approve_signal will accept', () => {
   const r = prepareShare({ ...base, candidate: { supportMode: 'short_call', availability: 'today' } }, 'Sam');
@@ -29,7 +29,7 @@ test('shareable preview yields exactly the payload and versions approve_signal w
   assert.equal(r.approval.recipientPolicyVersion, 3);
   assert.equal(r.approval.presetAssignmentVersion, 2);
   // the module's own guard, on the same authoritative state, accepts the approval as built
-  const d = guardApproval({ callerId: OWNER, ...r.approval }, {
+  const d = guardApproval({ callerId: OWNER, ...r.approval, clientRequestId: 'req-1' }, {
     nowMs: NOW.getTime(),
     pair: { pairId: 'pair-1', memberA: OWNER, memberB: PEER, status: 'accepted' },
     preset: { policyId: 'pol-1', ownerId: OWNER, allowedCategories: ['support_preference'], version: 3, expiresAtMs: Date.parse('2026-12-01T00:00:00Z'), revokedAtMs: null },
@@ -42,7 +42,7 @@ test('the full candidate (with blocked availability) would be refused, so the om
   const r = prepareShare({ ...base, candidate: { supportMode: 'short_call' } }, 'Sam');
   assert.equal(r.kind, 'ready');
   if (r.kind !== 'ready') return;
-  const d = guardApproval({ callerId: OWNER, ...r.approval, availability: 'today' }, {
+  const d = guardApproval({ callerId: OWNER, ...r.approval, availability: 'today', clientRequestId: 'req-1' }, {
     nowMs: NOW.getTime(),
     pair: { pairId: 'pair-1', memberA: OWNER, memberB: PEER, status: 'accepted' },
     preset: { policyId: 'pol-1', ownerId: OWNER, allowedCategories: ['support_preference'], version: 3, expiresAtMs: Date.parse('2026-12-01T00:00:00Z'), revokedAtMs: null },
@@ -92,4 +92,18 @@ test('signal status: revoked beats expiry; expiry is strict', () => {
   assert.equal(signalStatus({ revokedAt: null, expiresAt: '2026-10-25T00:00:00Z' }, now), 'active');
   assert.equal(signalStatus({ revokedAt: '2026-10-24T00:00:00Z', expiresAt: '2026-10-25T00:00:00Z' }, now), 'revoked');
   assert.equal(signalStatus({ revokedAt: null, expiresAt: NOW.toISOString() }, now), 'expired');
+});
+
+test('request ID is reused for a retry of the same payload and fresh when versions change', () => {
+  let n = 0;
+  const mint = () => `id-${++n}`;
+  const r = prepareShare({ ...base, candidate: { supportMode: 'short_call' } }, 'Sam');
+  assert.equal(r.kind, 'ready');
+  if (r.kind !== 'ready') return;
+  const first = requestIdFor(r.approval, null, mint);
+  assert.equal(requestIdFor(r.approval, first, mint).id, first.id);
+  const bumped = prepareShare({ ...base, presets: [preset({ version: 4 })], candidate: { supportMode: 'short_call' } }, 'Sam');
+  if (bumped.kind !== 'ready') return assert.fail('expected ready');
+  assert.notEqual(bumped.approval.payloadRevision, r.approval.payloadRevision);
+  assert.notEqual(requestIdFor(bumped.approval, first, mint).id, first.id);
 });

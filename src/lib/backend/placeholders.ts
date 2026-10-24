@@ -70,9 +70,15 @@ export function createOfflineSharedState(
     setRelationshipPreset: refuse, assignRelationshipPreset: refuse, approveSignal: refuse,
     revokeSignal: refuse, dismissNudge: refuse, snoozeNudge: refuse,
     setSupportPreferences: refuse, revokeSupportPreferences: refuse, setNudgeDelivery: refuse,
+    publishDiscoveryProfile: refuse, withdrawDiscoveryProfile: refuse, setDiscoveryArea: refuse,
+    blockDiscoveryUser: refuse, sendIntroductionRequest: refuse, respondIntroductionRequest: refuse,
+    cancelIntroductionRequest: refuse, blockIntroductionParticipant: refuse, reportDiscoveryUser: refuse,
+    dismissIntroductionProposal: refuse,
     myAccount: () => null, myPairs: () => EMPTY, myInvites: () => EMPTY, myPresets: () => EMPTY,
     myPresetAssignments: () => EMPTY, myNudges: () => EMPTY, myReceipts: () => EMPTY,
-    mySignals: () => EMPTY, mySupportPreferences: () => EMPTY, myNudgeDelivery: () => EMPTY,
+    mySignals: () => EMPTY, mySupportPreferences: () => EMPTY,
+    myDiscoveryProfile: () => null, discoveryCards: () => EMPTY, myIntroductions: () => EMPTY,
+    myIntroductionProposals: () => EMPTY, unreadable: () => NO_UNREADABLE, myNudgeDelivery: () => EMPTY,
     subscribe: () => () => undefined,
     getVersion: () => 0,
     dispose: () => undefined,
@@ -80,6 +86,7 @@ export function createOfflineSharedState(
 }
 
 const EMPTY: never[] = [];
+const NO_UNREADABLE = { signals: EMPTY, supportPreferences: EMPTY, nudgeDelivery: EMPTY };
 
 function describe(status: AdapterStatus): string {
   return status.kind === 'live' ? 'offline' : status.reason;
