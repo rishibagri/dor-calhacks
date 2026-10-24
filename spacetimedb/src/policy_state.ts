@@ -45,7 +45,7 @@ export function toStoredSignal(s: SignalRow): StoredSignal {
 }
 
 // ---- Expiry markers (written by sweep_expired; views have no clock) ----
-export type ExpiryKind = 'signal' | 'preference' | 'publication' | 'area';
+export type ExpiryKind = 'signal' | 'preference' | 'publication' | 'area' | 'intent' | 'catalogue' | 'activity';
 export const expiryKey = (kind: ExpiryKind, id: string, version: number): string => `${kind}:${id}:${version}`;
 export const isExpiredMarked = (db: ReadDb, kind: ExpiryKind, id: string, version: number): boolean =>
   Boolean(db.expired_record.record_key.find(expiryKey(kind, id, version))); // find() returns null, not undefined
@@ -70,7 +70,7 @@ export function loadPreference(db: ReadDb, recipient: Identity, pairId: string):
 }
 
 // ---- C8 discovery state ----
-export type DiscoveryConfigKey = 'enabled' | 'tags' | 'areas';
+export type DiscoveryConfigKey = 'enabled' | 'tags' | 'areas' | 'source_hosts';
 export function discoveryList(db: ReadDb, key: DiscoveryConfigKey): string[] {
   return db.discovery_config.key.find(key)?.values ?? [];
 }

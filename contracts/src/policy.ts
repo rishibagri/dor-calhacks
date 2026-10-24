@@ -17,6 +17,9 @@
 import { AVAILABILITIES, DISCLOSURE_PURPOSE, SUPPORT_MODES } from './enums.js';
 export * from './enums.js';
 export * from './discovery.js';
+export * from './events-policy.js';
+export { safeCatalogueUrl } from './catalogue.js';
+export { applyPlanAction, currentPlanStatus, revisePlan, PLAN_STATUSES, type PlanState, type PlanStatus, type PlanAction, type PlanSourceCheck, type PlanRefusal, type PlanTransition } from './plan-lifecycle.js';
 import type { PolicyReason } from './ports.js';
 import type { ApprovedSignal, Nudge, SharingCategory, SupportMode } from './schemas.js';
 

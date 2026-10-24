@@ -201,6 +201,8 @@ export const DISCOVERY_RATE_LIMITS = {
   report: { windowMs: 24 * 60 * 60 * 1000, max: 10 },
   area_change: { windowMs: 24 * 60 * 60 * 1000, max: 4 },
   publish: { windowMs: 24 * 60 * 60 * 1000, max: 20 },
+  event_intent: { windowMs: 24 * 60 * 60 * 1000, max: 30 },
+  activity_approval: { windowMs: 24 * 60 * 60 * 1000, max: 20 },
 } as const;
 export type DiscoveryRateAction = keyof typeof DISCOVERY_RATE_LIMITS;
 export interface RateWindow { windowStartMs: number; count: number }

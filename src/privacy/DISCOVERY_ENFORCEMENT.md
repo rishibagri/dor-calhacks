@@ -55,3 +55,51 @@ Limits are per caller identity, in one database (one module instance), counted o
 - Rate limits are per database. A user with many accounts gets many budgets; account creation limits belong to Clerk.
 - Reports are stored, but there is no moderator tooling yet, and a reported user is not suspended automatically.
 - `same_event` proposals and event intents are CYBER-R3. Avatars are not supported (no approved media path).
+
+---
+
+# Events, intents, activity approvals and shared plans (CYBER-R3, D039)
+
+Same status and flag as above: offline harness only, `discovery_config.enabled` off until the ACKs. Guards in `contracts/src/events-policy.ts`; D034 lifecycle in `contracts/src/plan-lifecycle.ts` (adopted as-is); reducers in `spacetimedb/src/reducers/events.ts`; loaders in `spacetimedb/src/event_state.ts`.
+
+## Who can do what
+
+| Action (reducer) | Caller | Server checks | Refusals | Limit |
+|---|---|---|---|---|
+| `upsert_catalogue_event` | module owner or allow-listed worker | strict field set; allowlisted topics, coarse area (in-person only), source host; sanitized title; fetch not in the future or older than the stored one; ≤ 60 days ahead | `unauthorized: ingester only`, `invalid:*`, `stale: older_fetch` | none (server) |
+| `publish_event_intent` | account, flag on | kind allowlist; event scheduled, fresh ≤ 48 h, not started; `expected_version` | `not_found: event_not_found`, `stale: event_cancelled`/`source_stale`/`event_started`/`stale_revision`, `invalid: invalid_schema` | 30/day |
+| `revoke_event_intent` | owner (works with flag off) | idempotent; bumps version | none | none |
+| `approve_activity_interest` | pair member | accepted pair; owner's preset for this pair includes `activity_interest`, previewed versions; assignment names the counterpart; allowlisted topics; notice version; idempotent id | `not_found: pair`, `unauthorized: no_preset_category`, `stale: stale_revision`, `invalid:*` | 20/day |
+| `revoke_activity_interest` | owner | owner of the approval | `not_found: approval` | none |
+| `commit_plan_proposal` | allow-listed worker, flag on | basis current (accepted introduction / accepted pair); participants from the basis; no block; both bound intents current at the bound versions; pair basis: both C7 approvals current, naming each other, covering the event; usable event; ≥ 1 h lead; one live plan per pair and event; idempotent | `unauthorized: worker only`, `stale: basis_not_current`/`intent_not_current`/`approval_not_current`/`lead_time`/`already_planned`, `not_found: blocked`, `invalid:*` | none |
+| `revise_plan_proposal` | allow-listed worker | pending plan, `expected_revision`, sources current at the new catalogue time; clears both acceptances | `stale:*`, `not_found: plan` | none |
+| `respond_plan` | participant only | D034 `applyPlanAction` with a check recomputed now: fresh scheduled event at the bound start, both bound intents, basis (incl. approvals), no block, not expired, same revision | `not_found: plan`, `stale: stale_source`/`stale_revision`/`expired`/`closed`/`already_accepted`, `unavailable: disabled` (accept only) | none |
+| `cancel_plan` | participant only | allowed even when the plan is stale | `not_found: plan`, `stale: closed`/`expired` | none |
+
+## What each person can see
+
+| View | Rows | Never included |
+|---|---|---|
+| `catalogue_events` | registered callers; scheduled records not started or stale (sweep), ≤ 200 | any user row, intent, count or plan |
+| `my_event_intents` | own, not lapsed (withdrawn ones with `active = false`, so the client knows the version) | anyone else's |
+| `event_companions` | (card_ref, event_id) where the caller can see the card now AND both intend the same usable event | the kind (interested/going), intents for events the caller didn't mark, anyone not visible |
+| `my_activity_approvals` | own standing approvals | the counterpart never sees the topic list outside a plan |
+| `my_plans` | own plans, live status | the other's acceptance before "confirmed"; who declined/cancelled (others see "closed"); plans between blocked people |
+| `worker_plan_candidates` | worker only: basis, event, intent ids/versions, approval ids, topics, times | names, identities, titles, source text |
+
+## Finalization rule
+A plan is confirmed only when both participants accepted the same revision, and at the moment of the second acceptance all of these hold: the event is scheduled at the bound start time, our copy is ≤ 48 h old, both bound intents stand at their bound versions, the basis stands (an accepted introduction, or an accepted pair with both C7 approvals standing against unchanged presets), there's no block, and the plan hasn't expired. Revoke, unlink, re-publish, preset tightening, block, cancellation, a moved start or a stale copy after the first acceptance all refuse the second. Nothing books, RSVPs, buys or messages.
+
+## Evidence (offline)
+- `spacetimedb/tests/events.test.ts`: 24 direct reducer/view tests with a third account. They cover wrong event, user and revision, one-sided acceptance, revoke-after-first-accept (intent, approval, re-publish), block, cancelled and stale catalogue, moved events, decline privacy, C7 off-by-default and preset tightening.
+- `contracts/tests/events.test.mjs`: 11 guard tests.
+- `src/features/privacy/__tests__/event-consent-model.test.ts`: 6 copy and model tests.
+- 23 of 23 mutations caught.
+
+## Venue tags review (optional public venue tags)
+Verdict: **not added.** Venue lives only in the public catalogue record's title/source link, never in an intent, profile, card or plan field. There is no visit history: intents expire with the event and carry no venue, no cross-event aggregation is exposed, and `event_companions` is per event and mutual only. A future venue tag must be a catalogue attribute from a developer allowlist, never derived from a person's intents, and never shown as "regular at".
+
+## Not proven / open
+- No live Apify source: catalogue tests use synthetic records written through the ingester reducer. CS-R3 must call `upsert_catalogue_event` from the real, D028-guarded ingestion.
+- Views have no clock; started, stale and expired states reach them through the 60 s sweep.
+- Group plans are out of scope; pair permissions are never reused for groups.
