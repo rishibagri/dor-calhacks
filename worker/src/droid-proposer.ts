@@ -11,9 +11,17 @@ export const DROID_ALLOWED_TOOLS = ['TodoWrite'] as const;
 /** Picking among pre-approved enum options needs no frontier model; measured ~14 credits/call when cached. */
 export const DEFAULT_DROID_MODEL = 'claude-haiku-5-5';
 const MAX_STDOUT_BYTES = 64 * 1024;
+/** Less remaining JOB budget than this cannot fit a model call: fail with `timeout` instead of starting one to kill it. */
+export const MIN_CALL_BUDGET_MS = 250;
 /** Variables the subprocess may inherit. Provider keys for Claude/Cartesia and worker secrets are withheld. */
 const INHERITED_ENV = ['PATH', 'HOME', 'USER', 'LOGNAME', 'SHELL', 'LANG', 'TMPDIR', 'XDG_CONFIG_HOME',
   'FACTORY_API_KEY', 'HTTPS_PROXY', 'HTTP_PROXY', 'NO_PROXY', 'NODE_EXTRA_CA_CERTS'];
+
+/** The CLI subprocess environment allowlist applied to `source`; `withKey: false` drops FACTORY_API_KEY. */
+export function droidEnv(source: NodeJS.ProcessEnv, { withKey = true } = {}): Record<string, string> {
+  return Object.fromEntries(INHERITED_ENV.flatMap(k => source[k] === undefined || (!withKey && k === 'FACTORY_API_KEY')
+    ? [] : [[k, source[k]!]]));
+}
 
 const count = z.number().int().nonnegative().optional();
 const DroidExecResultSchema = z.object({
@@ -29,6 +37,8 @@ export interface DroidUsage {
   factoryCredits: number | null;
   cacheReadTokens: number | null;
   cacheCreationTokens: number | null;
+  /** Transport path: `ok`, or the ProviderError code the call failed with. */
+  outcome?: string;
 }
 
 export interface DroidAckProposerOptions {
@@ -45,6 +55,25 @@ export interface DroidAckProposerOptions {
   concurrency?: number;
   /** Calls allowed to wait for a slot; beyond this a call fails fast with `rate_limited`. Default 16. */
   maxQueue?: number;
+  /**
+   * Runs each call instead of spawning `droid exec` (e.g. the SDK warm-session transport in droid-sdk.ts). The
+   * runner still owns slots, the queue, deadlines and usage reporting; `spawn`, `env` and `droidPath` are unused.
+   */
+  transport?: DroidTransport;
+}
+
+/** One model call inside a slot's private, freshly emptied directory. */
+export interface DroidTransportCall {
+  slot: number;
+  cwd: string;
+  prompt: string;
+  /** Already clipped to the job deadline. */
+  timeoutMs: number;
+}
+export interface DroidTransport {
+  /** Resolves to the untrusted reply (parsed JSON when possible) plus numbers-only usage; rejects with ProviderError. */
+  call(request: DroidTransportCall): Promise<{ reply: unknown; usage: Omit<DroidUsage, 'model' | 'durationMs'> }>;
+  close(): Promise<void>;
 }
 
 export interface DroidRunOptions {
@@ -83,9 +112,23 @@ export class DroidRunner {
 
   private async runIn(slot: number, prompt: string, deadlineAt: number | undefined): Promise<unknown> {
     const cwd = await this.emptyWorkdir(slot);
-    const timeoutMs = Math.min(this.options.timeoutMs ?? 8000, deadlineAt === undefined ? Infinity : deadlineAt - Date.now());
-    if (timeoutMs <= 0) throw new ProviderError('factory', 'timeout');
+    const remaining = deadlineAt === undefined ? Infinity : deadlineAt - Date.now();
+    if (remaining < MIN_CALL_BUDGET_MS) throw new ProviderError('factory', 'timeout');
+    const timeoutMs = Math.min(this.options.timeoutMs ?? 8000, remaining);
     const started = Date.now();
+    if (this.options.transport) {
+      let outcome;
+      try {
+        outcome = await this.options.transport.call({ slot, cwd, prompt, timeoutMs });
+      } catch (error) {
+        this.options.onUsage?.({ model: this.model, durationMs: Date.now() - started, factoryCredits: null,
+          cacheReadTokens: null, cacheCreationTokens: null,
+          outcome: error instanceof ProviderError ? error.code : 'unknown' });
+        throw error;
+      }
+      this.options.onUsage?.({ model: this.model, durationMs: Date.now() - started, ...outcome.usage, outcome: 'ok' });
+      return outcome.reply;
+    }
     const stdout = await this.exec(cwd, prompt, timeoutMs);
     let envelope;
     try {
@@ -103,6 +146,7 @@ export class DroidRunner {
 
   /** Removes the slot directories. Safe to call more than once; call after in-flight runs finish. */
   async close(): Promise<void> {
+    await this.options.transport?.close();
     await Promise.all(this.slots.map(async slot => {
       const pending = slot.dir;
       slot.dir = undefined;
@@ -163,8 +207,7 @@ export class DroidRunner {
 
   private exec(sandbox: string, prompt: string, timeoutMs: number): Promise<string> {
     const spawn = this.options.spawn ?? nodeSpawn;
-    const source = this.options.env ?? process.env;
-    const env = Object.fromEntries(INHERITED_ENV.flatMap(k => source[k] === undefined ? [] : [[k, source[k]!]]));
+    const env = droidEnv(this.options.env ?? process.env);
     return new Promise((resolve, reject) => {
       let stdout = '', bytes = 0, settled = false;
       const child = spawn(this.options.droidPath ?? 'droid', this.args(sandbox, prompt),

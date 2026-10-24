@@ -5,6 +5,8 @@ import { SpacetimeWorkerConnection, type LooseBuilder } from './spacetime/connec
 import { spacetimeWorkerPorts } from './spacetime/adapters.js';
 import { SignalWatcher } from './watcher.js';
 import { PlanWatcher, runPlanJob } from './plans.js';
+import { droidEnv, type DroidTransport } from './droid-proposer.js';
+import { DroidSdkTransport, type CreateSdkSession } from './droid-sdk.js';
 
 /**
  * Worker process: one SpacetimeDB connection as the allow-listed worker identity, the bounded coordinator over
@@ -13,7 +15,8 @@ import { PlanWatcher, runPlanJob } from './plans.js';
  *
  * Env: DOR_WORKER_AUTH_TOKEN, DOR_SPACETIME_URI, DOR_SPACETIME_MODULE (default dor),
  * DOR_SPACETIME_WORKER_TOKEN, PORT (default 8787), DOR_WORKER_SWEEP_MS (default 5000),
- * DOR_DROID_MODEL / _PATH / _TIMEOUT_MS / _CONCURRENCY. FACTORY_API_KEY for droid on a deployed host.
+ * DOR_DROID_MODEL / _PATH / _TIMEOUT_MS / _CONCURRENCY / _TRANSPORT (sdk default, cli). FACTORY_API_KEY for the
+ * SDK transport and for droid on a deployed host.
  */
 function required(name: string): string {
   const value = process.env[name];
@@ -27,6 +30,29 @@ const numberEnv = (name: string, fallback: number) => {
 const log = (event: string, data: Record<string, string | number> = {}) =>
   console.log(JSON.stringify({ at: new Date().toISOString(), event, ...data }));
 
+/**
+ * Default: the SDK warm-session transport (droid-sdk.ts), which needs FACTORY_API_KEY. DOR_DROID_TRANSPORT=cli
+ * selects the per-call `droid exec` CLI instead (works with a local CLI login). Without a key the worker refuses to
+ * start rather than silently changing transport, cost and latency.
+ */
+async function droidTransport(): Promise<DroidTransport | undefined> {
+  if (process.env.DOR_DROID_TRANSPORT === 'cli') return undefined;
+  if (!process.env.FACTORY_API_KEY) throw new Error('not_configured: FACTORY_API_KEY (or set DOR_DROID_TRANSPORT=cli)');
+  const specifier = '@factory/droid-sdk/node';
+  let sdk: { createSession?: unknown };
+  try {
+    sdk = (await import(specifier)) as { createSession?: unknown };
+  } catch {
+    throw new Error('not_configured: @factory/droid-sdk is not installed');
+  }
+  if (typeof sdk.createSession !== 'function') throw new Error('not_configured: unexpected @factory/droid-sdk shape');
+  return new DroidSdkTransport({
+    createSession: sdk.createSession as CreateSdkSession, apiKey: process.env.FACTORY_API_KEY,
+    model: process.env.DOR_DROID_MODEL || undefined, droidPath: process.env.DOR_DROID_PATH || undefined,
+    env: droidEnv(process.env, { withKey: false }),
+  });
+}
+
 async function main(): Promise<void> {
   const generated = (await loadBindings()) as unknown as { DbConnection?: { builder(): LooseBuilder } };
   if (typeof generated.DbConnection?.builder !== 'function') {
@@ -38,12 +64,15 @@ async function main(): Promise<void> {
   });
   log('connected', { identityPrefix: connection.identityHex.slice(0, 8) });
 
+  const transport = await droidTransport();
+  log('droid_transport', { kind: transport ? 'sdk' : 'cli' });
   const worker = createLiveWorker({
     authToken: required('DOR_WORKER_AUTH_TOKEN'), ...spacetimeWorkerPorts(connection),
     droid: {
       model: process.env.DOR_DROID_MODEL || undefined, droidPath: process.env.DOR_DROID_PATH || undefined,
-      timeoutMs: numberEnv('DOR_DROID_TIMEOUT_MS', 10_000), concurrency: numberEnv('DOR_DROID_CONCURRENCY', 2),
-      onUsage: u => log('droid_call', { model: u.model, durationMs: u.durationMs, credits: u.factoryCredits ?? -1 }),
+      timeoutMs: numberEnv('DOR_DROID_TIMEOUT_MS', 10_000), concurrency: numberEnv('DOR_DROID_CONCURRENCY', 2), transport,
+      onUsage: u => log('droid_call', { model: u.model, durationMs: u.durationMs, credits: u.factoryCredits ?? -1,
+        ...(u.outcome ? { outcome: u.outcome } : {}) }),
     },
   });
   const watcher = new SignalWatcher(connection, {

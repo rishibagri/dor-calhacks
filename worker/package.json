@@ -25,6 +25,7 @@
   "dependencies": {
     "@dor/agents": "0.1.0",
     "@dor/contracts": "0.1.0",
+    "@factory/droid-sdk": "0.10.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {

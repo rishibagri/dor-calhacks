@@ -25,6 +25,18 @@ Checks: `ai:check` agents 67, worker 32, integration 36; `check:all` exit 0 (con
   3. Decide fallback on or off.
 - **Nimisha:** an importable `rankEvents` for `runPlanJob`.
 
+## Droid transport (2026-10-24 ~17:55Z, uncommitted)
+- The worker now defaults to the `@factory/droid-sdk` warm-session transport and needs `FACTORY_API_KEY`. `DOR_DROID_TRANSPORT=cli` restores `droid exec`.
+- Live (synthetic stand-ins): 4/4 agent-decided, call median 1.8 s versus 4.1 s on the CLI record.
+- Credits read 256 per call versus about 14 on the CLI record. This is unexplained (unit or prompt size); see `worker/README.md`.
+- Pending: Cyber review of the dependency.
+
+## Token safety (for every teammate and agent)
+- Keys stay in the gitignored `.env.local`; do not open, print or log it.
+- Offline checks spend nothing: the full dry run (inside `ai:check`) reads `.env.local` only after a shell `DOR_DRYRUN_LIVE_*` opt-in (commit `67915b4`).
+- For certainty, run with keys stripped: `env -u ANTHROPIC_API_KEY -u CARTESIA_API_KEY -u FACTORY_API_KEY npm run ai:check`.
+- Paid runs (`ai:live`, `live -w @dor/agents`, `live-droid.mjs`, live dry run) happen only with Adam's go-ahead, stating the expected call count.
+
 ## Not done
 - Introductions are not wired into `main.ts` (no source).
 - `max_tokens` right-sizing and every live run wait for keys and the go-ahead.

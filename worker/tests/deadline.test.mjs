@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 import { ProviderError } from '@dor/agents';
-import { DroidPlanProposer, DroidRunner } from '../dist/index.js';
+import { DroidPlanProposer, DroidRunner, MIN_CALL_BUDGET_MS } from '../dist/index.js';
 
 /** SYNTHETIC droid: replies after `delayMs`, or never when delayMs is Infinity. Counts spawns. */
 function fakeDroid(delayMs = 0) {
@@ -34,8 +34,9 @@ test('deadline: the per-call timeout is clipped to what is left of the job budge
   const droid = fakeDroid(Infinity);
   const runner = new DroidRunner({ spawn: droid.spawn, env: {}, timeoutMs: 10_000 });
   const started = Date.now();
-  await assert.rejects(runner.run('p', { deadlineAt: Date.now() + 80 }), isTimeout);
-  assert.ok(Date.now() - started < 1000, 'stopped at the job deadline, not the 10 s call timeout');
+  await assert.rejects(runner.run('p', { deadlineAt: Date.now() + 400 }), isTimeout);
+  assert.equal(droid.spawns(), 1);
+  assert.ok(Date.now() - started < 2000, 'stopped at the job deadline, not the 10 s call timeout');
   await runner.close();
 });
 
@@ -55,10 +56,18 @@ test('deadline: a queued call leaves the queue at its deadline and the slot goes
 test('deadline: proposers carry one job deadline across their rounds', async () => {
   const droid = fakeDroid(Infinity);
   const runner = new DroidRunner({ spawn: droid.spawn, env: {}, timeoutMs: 10_000 });
-  const proposer = new DroidPlanProposer({ runner, deadlineAt: Date.now() + 50 });
+  const proposer = new DroidPlanProposer({ runner, deadlineAt: Date.now() + 400 });
   const input = { events: [{ topics: ['hiking'], format: 'in_person', startsInHours: 30 }], round: 1 };
   await assert.rejects(proposer.propose(input, 'r'), isTimeout);
   await assert.rejects(proposer.propose({ ...input, round: 2 }, 'r'), isTimeout);
   assert.equal(droid.spawns(), 1, 'round 2 after the deadline does not spawn');
+  await runner.close();
+});
+
+test('deadline: a sliver of budget (timers can fire ~1 ms early) never starts a call it would have to kill', async () => {
+  const droid = fakeDroid();
+  const runner = new DroidRunner({ spawn: droid.spawn, env: {} });
+  await assert.rejects(runner.run('p', { deadlineAt: Date.now() + MIN_CALL_BUDGET_MS - 50 }), isTimeout);
+  assert.equal(droid.spawns(), 0);
   await runner.close();
 });

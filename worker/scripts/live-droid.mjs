@@ -1,17 +1,20 @@
 // Live Factory Droid check of the bounded exchange with synthetic fixtures.
 // REAL: droid exec subprocess and model call. OFFLINE STAND-INS (labeled in output): contracts FakeDisclosurePolicy,
 // fixture recipient preferences and delivery state. This is an isolated Droid check, not end-to-end verification.
-// Usage: node scripts/live-droid.mjs [--runs N] [--model ID]   (model also via DOR_DROID_MODEL)
+// Usage: node scripts/live-droid.mjs [--runs N] [--model ID] [--transport sdk|cli]   (model also via DOR_DROID_MODEL)
+// Default transport is the @factory/droid-sdk warm-session path (needs FACTORY_API_KEY); --transport cli uses droid exec.
 import { spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { FakeClock, FakeDisclosurePolicy } from '@dor/contracts/fakes';
 import { BoundedCoordinator } from '@dor/agents';
-import { DEFAULT_DROID_MODEL, DroidAckProposer } from '../dist/index.js';
+import { DEFAULT_DROID_MODEL, DroidAckProposer, DroidRunner, DroidSdkTransport, droidEnv } from '../dist/index.js';
 
 try { process.loadEnvFile(new URL('../../.env.local', import.meta.url)); } catch { /* optional */ }
 const arg = (name) => { const i = process.argv.indexOf(name); return i === -1 ? undefined : process.argv[i + 1]; };
 const runs = Math.max(1, Math.min(10, Number(arg('--runs')) || 1));
 const model = arg('--model') || process.env.DOR_DROID_MODEL || DEFAULT_DROID_MODEL;
+// Same default as the worker: the SDK transport; `--transport cli` measures the per-call droid exec path.
+const transportKind = arg('--transport') === 'cli' ? 'cli' : 'sdk';
 const json = async (url) => JSON.parse(await readFile(new URL(url, import.meta.url), 'utf8'));
 const scenarios = await json('../../contracts/fixtures/scenarios.json');
 const { preferences, defaultDelivery } = await json('../../src/agents/fixtures/coordination.synthetic.json');
@@ -23,12 +26,28 @@ if (version.status !== 0) {
   process.exit(0);
 }
 console.log(JSON.stringify({ check: 'factory.droid.runtime', droidVersion: version.stdout.trim(), node: process.version, model,
-  auth: process.env.FACTORY_API_KEY ? 'FACTORY_API_KEY' : 'droid CLI login' }));
+  transport: transportKind, auth: process.env.FACTORY_API_KEY ? 'FACTORY_API_KEY' : 'droid CLI login' }));
+
+let transport;
+if (transportKind === 'sdk') {
+  const specifier = '@factory/droid-sdk/node';
+  let sdk;
+  try { sdk = await import(specifier); } catch {
+    console.log(JSON.stringify({ check: 'factory.droid.sdk', status: 'SKIPPED_MISSING_RUNTIME', missing: '@factory/droid-sdk' }));
+    process.exit(0);
+  }
+  if (!process.env.FACTORY_API_KEY) {
+    console.log(JSON.stringify({ check: 'factory.droid.sdk', status: 'SKIPPED_MISSING_CREDENTIAL', missing: 'FACTORY_API_KEY' }));
+    process.exit(0);
+  }
+  transport = new DroidSdkTransport({ createSession: sdk.createSession, apiKey: process.env.FACTORY_API_KEY, model,
+    droidPath: process.env.DOR_DROID_PATH || undefined, env: droidEnv(process.env, { withKey: false }) });
+}
 
 // One proposer for the whole run, as in the worker: its reused workdir is what lets the prompt cache hit.
 const usage = [];
-const droid = new DroidAckProposer({ model, droidPath: process.env.DOR_DROID_PATH || undefined,
-  timeoutMs: Number(process.env.DOR_DROID_TIMEOUT_MS) || undefined, onUsage: (u) => usage.push(u) });
+const droid = new DroidAckProposer({ runner: new DroidRunner({ model, droidPath: process.env.DOR_DROID_PATH || undefined,
+  timeoutMs: Number(process.env.DOR_DROID_TIMEOUT_MS) || undefined, onUsage: (u) => usage.push(u), transport }) });
 
 // Friends with a sender window gives two eligible options, so the model has a real choice to make.
 const cases = [
@@ -91,8 +110,11 @@ const pct = (values, p) => {
   return sorted.length ? sorted[Math.min(sorted.length - 1, Math.ceil(p * sorted.length) - 1)] : null;
 };
 const credits = usage.map(u => u.factoryCredits).filter(n => typeof n === 'number');
-console.log(JSON.stringify({ summary: true, model, agentDecidedRuns: latencies.length, fallbacks, failures,
+const cacheRead = usage.map(u => u.cacheReadTokens).filter(n => typeof n === 'number');
+console.log(JSON.stringify({ summary: true, model, transport: transportKind, agentDecidedRuns: latencies.length, fallbacks, failures,
   coordinateMedianMs: pct(latencies, 0.5), coordinateP95Ms: pct(latencies, 0.95),
   droidCalls: usage.length, droidCallMedianMs: pct(usage.map(u => u.durationMs), 0.5),
-  creditsTotal: credits.reduce((a, b) => a + b, 0), creditsMedianPerCall: pct(credits, 0.5), creditsMaxPerCall: pct(credits, 1) }));
+  creditsTotal: credits.reduce((a, b) => a + b, 0), creditsMedianPerCall: pct(credits, 0.5), creditsMaxPerCall: pct(credits, 1),
+  cacheReadMedianPerCall: pct(cacheRead, 0.5),
+  callOutcomes: usage.reduce((acc, u) => ({ ...acc, [u.outcome ?? 'ok']: (acc[u.outcome ?? 'ok'] ?? 0) + 1 }), {}) }));
 process.exitCode = failures ? 1 : 0;

@@ -64,6 +64,16 @@ D034's `PlanParticipant.intentVersion` is per person, while the module versions 
 ## Introductions (AI-R2, D033/D038) — `src/introductions.ts`
 `runIntroductionJob(shortlist, { source, runner, eligibility, clock })` runs `IntroductionCoordinator` and commits through `commit_introduction_proposal` into the viewer's private suggestions. A refusal is recorded as `stale`; `worker only` throws. While the D038 commit accepts `shared_interest` only, event overlap is stripped before any model call (`sameEventSupported: false`). **Not wired into `main.ts`:** the module has no worker-readable source of discovery shortlists and current eligibility yet (open ask to Cyber/CS).
 
+## SDK transport (default) — `src/droid-sdk.ts`
+The worker uses `@factory/droid-sdk` sessions by default; `DOR_DROID_TRANSPORT=cli` restores the per-call `droid exec` spawn. Without `FACTORY_API_KEY` the worker refuses to start rather than silently switching transport. `DroidRunner` keeps the slots, queue, job deadline and usage reporting. Only the call itself moves to `DroidSdkTransport`.
+- **Warm pool, no shared context:** each slot keeps one started, tool-verified spare session. A session answers exactly one prompt and is then closed; the next spare warms in the background. The working directory is the slot's private directory, as with the CLI.
+- **Tool allowlist:** a new SDK session enables 16 tools by default, including `Execute`, `FetchUrl`, `WebSearch` and `Read` (measured). The SDK only has `disabledToolIds`, so every session's `listTools()` is checked against `SDK_ALLOWED_TOOLS` = `TodoWrite` + `ToolSearch`. `ToolSearch` cannot be disabled (measured); it only returns tool definitions. Extra tools are added to a learned deny-list and the session is recreated; if that fails, the session is refused (`not_configured`) and no prompt is sent.
+- **Locked down:** autonomy is `off`, `autoRejectPermissionRequests`, and builtin skills are disabled. Any `tool_call` in a turn is `invalid_output`. The deadline aborts the stream and that session is discarded. The reply is parsed from text, as on the CLI path.
+- **Usage:** per call, `factoryCredits` and cache tokens from `tokenUsage`, plus `outcome` (`ok` or the failure code). The worker logs it in `droid_call`.
+- **Dependency:** `@factory/droid-sdk@0.10.0` (exact). It nests `zod@3` (GHSA-mrhx-c7xc-m3w5, high) and `uuid@9` (GHSA-w5hq-g745-h8pq, moderate), with no non-breaking fix; Cyber review pending. Its deps only declare `prepare` hooks, which don't run on registry installs.
+- **Measured 2026-10-24, synthetic stand-ins (FakeDisclosurePolicy, fixture preferences), Haiku, droid 0.248.0:**
+  - SDK, 1 run × 4 cases: 4/4 agent-decided in round 1 with the expected template; revoked 0 calls. Call median 1.8 s (CLI record 4.1 s). **Credits: median 256 per call, 1,081 total**, against about 14 per call on the CLI record. This is unresolved: it is either a different credit unit in the SDK's `tokenUsage.factoryCredits` or a larger session prompt (about 3.8k cache-read tokens per call). Check before relying on the SDK's cost.
+
 ## Job deadline
 Every job gets one aggregate model budget (`jobDeadlineMs`/`deadlineMs`, default 25 s) covering slot wait and all rounds. Past it, `DroidRunner` fails the call with `timeout` without spawning, so the coordinator moves straight to its labeled fallback or no suggestion. A queued call leaves the queue at its deadline, so a released slot never goes to a job that has given up.
 
@@ -82,6 +92,7 @@ Every job gets one aggregate model budget (`jobDeadlineMs`/`deadlineMs`, default
 npm run ai:check                                   # offline tests + dry run over the in-process module
 npm run ai:dryrun                                  # full five-journey trace (DOR_DRYRUN_REPORT=out.md to save)
 DOR_DRYRUN_LIVE_DROID=1 npm run ai:dryrun      # same, with real droid (spends Factory credits)
+# The dry run reads .env.local only after that shell opt-in; offline runs never load provider keys.
 node worker/scripts/live-droid.mjs --runs 4        # live Droid; policy and preferences are labeled offline stand-ins
 ```
 

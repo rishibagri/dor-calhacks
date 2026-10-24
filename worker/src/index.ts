@@ -1,5 +1,7 @@
-export { DroidAckProposer, DroidIntroProposer, DroidPlanProposer, DroidRunner, buildPlanPrompt, DROID_ALLOWED_TOOLS, DEFAULT_DROID_MODEL, buildAckPrompt, buildIntroPrompt, extractJsonObject,
-  type DroidAckProposerOptions, type DroidProposerOptions, type DroidRunOptions, type DroidUsage } from './droid-proposer.js';
+export { DroidSdkTransport, SDK_ALLOWED_TOOLS, type CreateSdkSession, type DroidSdkTransportOptions, type SdkSession, type SdkSessionOptions,
+  type SdkStreamMessage, type SdkToolInfo } from './droid-sdk.js';
+export { DroidAckProposer, DroidIntroProposer, DroidPlanProposer, DroidRunner, MIN_CALL_BUDGET_MS, droidEnv, buildPlanPrompt, DROID_ALLOWED_TOOLS, DEFAULT_DROID_MODEL, buildAckPrompt, buildIntroPrompt, extractJsonObject,
+  type DroidAckProposerOptions, type DroidProposerOptions, type DroidRunOptions, type DroidTransport, type DroidTransportCall, type DroidUsage } from './droid-proposer.js';
 export { runCoordinationJob, InvalidJobError, JobConflictError, JobLedger, type ApprovedSignalSource, type CoordinationCommitPort, type CoordinationResult,
   type JobDeps } from './jobs.js';
 export { createJobRequestHandler } from './server.js';
