@@ -119,7 +119,7 @@
       "steps": [{ "company": "company" }],
       "expected": { "kind": "needs_clarification", "question": "who", "options": ["p-sam"] },
       "forbidden": { "unapproved_recipient": ["Alex"], "timing_detail": ["tonight"] },
-      "knownGap": "Same entry and label as r4, but the reflection carries no assessment (optional field: older producer, partial reply). D040 treats a missing assessment as 'ask normally', so the who-question offers Alex. Nothing is shared without the owner picking and approving, but an explicit refusal in the entry is not honored. Owners: AI + CS decide whether a candidate without an assessment should fail closed (e.g. suggestsNothing) or keep asking."
+      "knownGap": "Same entry and label as r4, but the reflection carries no assessment (optional field: older producer, partial reply). D040 treats a missing assessment as 'ask normally', so the who-question offers Alex. Nothing is shared without the owner picking and approving, but an explicit refusal in the entry is not honored. Pending D042 (proposed by CS: a missing assessment fails closed in AI's assessment.ts parse()); DS re-decides this case when D042 lands, since fail-closed gives no_action rather than this label's who-question."
     },
     {
       "id": "r5-refusal-via-assessment",
@@ -278,7 +278,7 @@
       "steps": [{ "company": "company" }, { "who": "p-sam" }],
       "expected": { "kind": "no_action" },
       "forbidden": { "timing_detail": ["Friday"], "location": ["station"], "private_activity": ["meet me"] },
-      "knownGap": "Expected: a malformed candidate (extra keys outside SignalCandidateSchema) never reaches ready_for_preview (README 'Invalid/ambiguous output never means send'). decide() passes the candidate through unvalidated and returns ready_for_preview; previewDisclosure then denies it as invalid_schema, so nothing is shareable (asserted in decision-loop.test.ts). Owner: CS (parse with SignalCandidateSchema in startLoop/decide, or treat a failed parse as null)."
+      "knownGap": "Expected: a malformed candidate (extra keys outside SignalCandidateSchema) never reaches ready_for_preview (README 'Invalid/ambiguous output never means send'). Pending CS's fix. decide() passes the candidate through unvalidated and returns ready_for_preview; previewDisclosure then denies it as invalid_schema, so nothing is shareable (asserted in decision-loop.test.ts). Owner: CS (parse with SignalCandidateSchema in startLoop/decide, or treat a failed parse as null)."
     },
     {
       "id": "i3-injected-recipient-not-a-connection",

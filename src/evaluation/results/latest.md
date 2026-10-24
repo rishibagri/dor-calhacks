@@ -1,6 +1,6 @@
 # DS evaluation results
 
-Revision `23a8eed+dirty`, clock `2026-10-24T00:00:00Z`, deterministic (no seed or provider). All inputs are synthetic; policy
+Revision `76a9592+dirty`, clock `2026-10-24T00:00:00Z`, deterministic (no seed or provider). All inputs are synthetic; policy
 decisions come from the offline C6 fake, which is not security evidence. Relevance labels are DS author labels written before
 the runs. Teammate 1–5 usefulness ratings have **not** been collected, so no usefulness mean is reported.
 
@@ -131,6 +131,18 @@ Pipeline: `initialLoopState(candidate, assessment)` → owner steps → `decide(
 | a17-partners-exam-seed | assessment:seed | ready_for_preview | ready_for_preview: p-riley |  |
 | a18-friends-disconnected-seed | assessment:seed | needs_clarification | needs_clarification: who |  |
 | a19-family-tiring-week-seed | assessment:seed | ready_for_preview | ready_for_preview: p-robin |  |
+
+## Core 3: deterministic baselines vs the D040 loop (same 44 cases and DS labels)
+`loop_without_assessment` is CS's loop with the assessment dropped (the pre-D040 path); `preview_on_candidate` is DS's `matching.ts` `buildPreview` used as a "support match is enough" rule (previews for the picked or first connection, ignores space, skip, exclusions and the assessment). Excluded people are judged against the D040 episode for every system. Every system replays the same recorded owner taps; where D040 skipped the company question (`wants_connection`), the no-assessment loop stops at that question, so its 3 missed suggestions (a2, a17, a19) partly reflect the replayed taps rather than a design choice. Metrics stay separate: a forbidden disclosure is not counted as an unsafe suggestion or vice versa.
+
+| System | Expected outcome | Appropriate silence | Missed suggestions | Unsafe suggestions | Excluded person surfaced (cases) | Forbidden disclosures (cases / terms) |
+|---|---|---|---|---|---|---|
+| d040_loop | 42/44 | 18/19 | 0/8 | 1 | 0 | 1 / 1 |
+| loop_without_assessment | 29/44 | 13/19 | 3/8 | 4 | 6 | 10 / 15 |
+| preview_on_candidate | 13/44 | 5/19 | 0/8 | 31 | 8 | 15 / 30 |
+
+### Teammate ratings (two independent raters)
+Status: **not collected (0 of 2 raters)**. 85 blinded items (one per distinct case outcome across systems). No usefulness or rater-safety numbers are reported until both sheets are filled.
 
 ## Chained: shared_activity nudges from the 30 cases → ds_rules_v1 (no approved interests)
 | Support case | Agreed window | Suggestions |

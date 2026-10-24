@@ -83,6 +83,20 @@ Status: PR #25 (open), `role/ds-context` merged with main `71c3b6a` (README core
 - **r5 resolved by the DS owner:** an owner tap on an assessment-excluded person → `no_action: no_recipient` (v1 label `needs_clarification` kept in `labelHistory`). Preferred because the excluded person must not be contacted or substituted automatically and re-asking would invite a second choice; verified against PRIVATE_ASSESSMENT.md §3, README 'Deterministic exclusion', CS `decide()` and AI's assessment test. No other label changed.
 - **Limits:** the AI fixture outputs are hand-written, not Claude, so a live run is still needed (Core 3).
 
+## Core 3 status (2026-10-24T21:15Z, uncommitted; PR #32 open)
+- **Baselines** (`decision-baselines.ts`), on the same 44 cases and labels:
+
+  | System | Expected | Silence | Missed | Unsafe | Excluded surfaced | Forbidden (cases / terms) |
+  |---|---|---|---|---|---|---|
+  | `d040_loop` | 42/44 | 18/19 | 0/8 | 1 | 0 | 1 / 1 |
+  | `loop_without_assessment` | 29/44 | 13/19 | 3/8* | 4 | 6 | 10 / 15 |
+  | `preview_on_candidate` | 13/44 | 5/19 | 0/8 | 31 | 8 | 15 / 30 |
+
+  *The 3 missed cases partly come from replaying D040's taps; see the report.
+- **Ratings:** the workflow is ready (`rate.ts --sheets` / `--score`, blinded, 85 items, κ and DS-label agreement). **No ratings have been collected yet (0 of 2 raters).**
+- **Team ask:** two teammates who didn't write the labels each fill one sheet in `src/evaluation/results/ratings/`, independently. DS then runs `node src/evaluation/rate.ts --score` and the report.
+- **Unchanged:** r4m stays a todo pending D042; i2 stays a todo pending CS's candidate validation.
+
 ## Next for DS: core-first (README "Current direction", Core 1–4)
 Discovery/event ranking work is paused. Don't expand it until the core passes live verification. The earlier "D038/D039 metrics cases" and "first-session recommendations" items are dropped.
 1. **Core 1:** before any model evaluation, define the expected owner-side outcome (`no_action` / `needs_clarification` / `ready_for_preview`, still a proposed vocabulary) for support, avoid and uncertain recipient intent, plus the forbidden-disclosure labels (unapproved party, activity, location, excuse, tension, timing). Co-define them with Adam (assessment output) and Sumedh (recipient restriction).

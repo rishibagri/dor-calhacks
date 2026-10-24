@@ -169,8 +169,19 @@ function matchesExpected(c: DecisionCase, o: Outcome): boolean {
   return true;
 }
 
-export function scoreCase(file: DecisionFile, c: DecisionCase): DecisionScore {
-  const { outcome, excluded } = replay(file, c.story, c.candidate, c.recipients, c.steps, c.assessment);
+/** A deterministic system under evaluation: one case in, the outcome the owner would see out. */
+export type DecisionSystem = (file: DecisionFile, c: DecisionCase) => Outcome;
+
+/** The current pipeline: D040 assessment → owner taps → CS decide(). */
+export const d040Loop: DecisionSystem = (file, c) => replay(file, c.story, c.candidate, c.recipients, c.steps, c.assessment).outcome;
+
+/**
+ * Scores one system on one case. Who the episode excluded (owner taps + entry assessment) is taken from the D040
+ * replay for every system, so a baseline that ignores an exclusion is charged for surfacing that person.
+ */
+export function scoreCase(file: DecisionFile, c: DecisionCase, system: DecisionSystem = d040Loop): DecisionScore {
+  const { excluded } = replay(file, c.story, c.candidate, c.recipients, c.steps, c.assessment);
+  const outcome = system(file, c);
   const surfaces = surfacesOf(file, outcome);
   const leaks = leaksOf(file, c, surfaces);
   const matches = matchesExpected(c, outcome);

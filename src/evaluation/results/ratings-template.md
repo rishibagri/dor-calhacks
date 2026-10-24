@@ -1,5 +1,7 @@
 # Usefulness ratings — to be filled by two teammates (not by DS)
 
+> **Core 3 (core journey) uses the blinded decision-loop sheets instead:** `src/evaluation/results/ratings/rater-a.md` and `rater-b.md` (see `src/evaluation/README.md` "Teammate ratings"). This older sheet covers the discovery/activity extension rankers only.
+
 Rate each suggestion 1–5: "Would this be a useful, comfortable reason to reach out or go?" (1 = not at all, 5 = clearly yes).
 Rate independently, without discussing. Use only what the card would show (fixtures under `src/evaluation/fixtures/`).
 Do not edit labels or expected outcomes. Record blanks rather than guesses. All data is synthetic.
