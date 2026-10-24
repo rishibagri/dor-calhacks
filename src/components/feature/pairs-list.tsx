@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PRESET_KINDS } from './preset-editor';
+import { PauseControls } from './pause-controls';
 import { RecipientSettings } from './recipient-settings';
 
 function PairRow({ pair }: { pair: PairView }) {
@@ -41,6 +42,7 @@ function PairRow({ pair }: { pair: PairView }) {
         </div>
       )}
       <ResultNotice result={result} />
+      {pair.status === 'accepted' && <PauseControls pairId={pair.pairId} name={name} />}
       {pair.status === 'accepted' && <RecipientSettings pairId={pair.pairId} name={name} />}
       {pair.status !== 'unlinked' && (
         <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => shared.unlinkPair(pair.pairId).then(setResult)}>Unlink</Button>

@@ -13,7 +13,7 @@ import {
 import type { ApprovedSignal, DisclosureReceipt, Nudge, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
 import { MAX_EVENT_TITLE, MAX_EVENT_TOPICS, MAX_INTEREST_TAGS, MAX_PUBLIC_NAME, validRecipientDelivery, validSupportPreferences } from '@dor/contracts/policy';
 import type {
-  ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, SignalView, SupportPreferencesView,
+  ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientPause, SignalView, SupportPreferencesView,
 } from '@/lib/backend/ports';
 import { toCamel, type LooseRow } from './bindings';
 
@@ -167,6 +167,17 @@ export const mapSupportPreferences: Mapper<SupportPreferencesView> = (row) => {
     supportModes: supportModes as SupportPreferencesView['supportModes'],
     availability: availability as SupportPreferencesView['availability'],
   };
+};
+
+export const mapRecipientPause: Mapper<RecipientPause> = (row) => {
+  const pairId = str(row, 'pair_id');
+  const version = num(row, 'version');
+  const expiresAt = str(row, 'expires_at');
+  const createdAt = str(row, 'created_at');
+  const active = get(row, 'active');
+  if (!pairId || version === null || version < 1 || !expiresAt || !createdAt || typeof active !== 'boolean') return null;
+  if (Number.isNaN(Date.parse(expiresAt))) return null;
+  return { pairId, version, expiresAt, active, createdAt };
 };
 
 export const mapNudgeDelivery: Mapper<NudgeDeliveryView> = (row) => {

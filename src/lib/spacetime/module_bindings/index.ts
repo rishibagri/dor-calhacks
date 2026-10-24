@@ -48,6 +48,7 @@ import CommitPlanProposalReducer from "./commit_plan_proposal_reducer";
 import CreatePairInviteReducer from "./create_pair_invite_reducer";
 import DismissIntroductionProposalReducer from "./dismiss_introduction_proposal_reducer";
 import DismissNudgeReducer from "./dismiss_nudge_reducer";
+import PauseRecipientReducer from "./pause_recipient_reducer";
 import PublishDiscoveryProfileReducer from "./publish_discovery_profile_reducer";
 import PublishEventIntentReducer from "./publish_event_intent_reducer";
 import RecordCatalogueRunReducer from "./record_catalogue_run_reducer";
@@ -55,6 +56,7 @@ import RegisterAccountReducer from "./register_account_reducer";
 import ReportDiscoveryUserReducer from "./report_discovery_user_reducer";
 import RespondIntroductionRequestReducer from "./respond_introduction_request_reducer";
 import RespondPlanReducer from "./respond_plan_reducer";
+import ResumeRecipientReducer from "./resume_recipient_reducer";
 import RevisePlanProposalReducer from "./revise_plan_proposal_reducer";
 import RevokeActivityInterestReducer from "./revoke_activity_interest_reducer";
 import RevokeEventIntentReducer from "./revoke_event_intent_reducer";
@@ -96,6 +98,7 @@ import MyPlansRow from "./my_plans_table";
 import MyPresetAssignmentsRow from "./my_preset_assignments_table";
 import MyPresetsRow from "./my_presets_table";
 import MyReceiptsRow from "./my_receipts_table";
+import MyRecipientPausesRow from "./my_recipient_pauses_table";
 import MySignalsRow from "./my_signals_table";
 import MySupportPreferencesRow from "./my_support_preferences_table";
 import WorkerDeliveryRow from "./worker_delivery_table";
@@ -233,6 +236,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyReceiptsRow),
+  myRecipientPauses: __table({
+    name: 'my_recipient_pauses',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyRecipientPausesRow),
   mySignals: __table({
     name: 'my_signals',
     indexes: [
@@ -293,6 +303,7 @@ const reducersSchema = __reducers(
   __reducerSchema("create_pair_invite", CreatePairInviteReducer),
   __reducerSchema("dismiss_introduction_proposal", DismissIntroductionProposalReducer),
   __reducerSchema("dismiss_nudge", DismissNudgeReducer),
+  __reducerSchema("pause_recipient", PauseRecipientReducer),
   __reducerSchema("publish_discovery_profile", PublishDiscoveryProfileReducer),
   __reducerSchema("publish_event_intent", PublishEventIntentReducer),
   __reducerSchema("record_catalogue_run", RecordCatalogueRunReducer),
@@ -300,6 +311,7 @@ const reducersSchema = __reducers(
   __reducerSchema("report_discovery_user", ReportDiscoveryUserReducer),
   __reducerSchema("respond_introduction_request", RespondIntroductionRequestReducer),
   __reducerSchema("respond_plan", RespondPlanReducer),
+  __reducerSchema("resume_recipient", ResumeRecipientReducer),
   __reducerSchema("revise_plan_proposal", RevisePlanProposalReducer),
   __reducerSchema("revoke_activity_interest", RevokeActivityInterestReducer),
   __reducerSchema("revoke_event_intent", RevokeEventIntentReducer),
@@ -363,6 +375,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_presets": Omit<typeof tablesSchema.schemaType.tables["myPresets"], "accessorName"> & { readonly accessorName: "my_presets" };
     /** @deprecated Use `myReceipts` instead. This alias will be removed in the next major version. */
     readonly "my_receipts": Omit<typeof tablesSchema.schemaType.tables["myReceipts"], "accessorName"> & { readonly accessorName: "my_receipts" };
+    /** @deprecated Use `myRecipientPauses` instead. This alias will be removed in the next major version. */
+    readonly "my_recipient_pauses": Omit<typeof tablesSchema.schemaType.tables["myRecipientPauses"], "accessorName"> & { readonly accessorName: "my_recipient_pauses" };
     /** @deprecated Use `mySignals` instead. This alias will be removed in the next major version. */
     readonly "my_signals": Omit<typeof tablesSchema.schemaType.tables["mySignals"], "accessorName"> & { readonly accessorName: "my_signals" };
     /** @deprecated Use `mySupportPreferences` instead. This alias will be removed in the next major version. */
@@ -411,6 +425,7 @@ const tableAccessorAliases = {
   "my_preset_assignments": "myPresetAssignments",
   "my_presets": "myPresets",
   "my_receipts": "myReceipts",
+  "my_recipient_pauses": "myRecipientPauses",
   "my_signals": "mySignals",
   "my_support_preferences": "mySupportPreferences",
   "worker_delivery": "workerDelivery",
@@ -473,6 +488,8 @@ export type DbView = __DbViewBase & {
   readonly "my_presets": __DbViewBase["myPresets"];
   /** @deprecated Use `myReceipts` instead. This alias will be removed in the next major version. */
   readonly "my_receipts": __DbViewBase["myReceipts"];
+  /** @deprecated Use `myRecipientPauses` instead. This alias will be removed in the next major version. */
+  readonly "my_recipient_pauses": __DbViewBase["myRecipientPauses"];
   /** @deprecated Use `mySignals` instead. This alias will be removed in the next major version. */
   readonly "my_signals": __DbViewBase["mySignals"];
   /** @deprecated Use `mySupportPreferences` instead. This alias will be removed in the next major version. */
@@ -525,6 +542,8 @@ export type Tables = __TablesBase & {
   readonly "my_presets": __TablesBase["myPresets"];
   /** @deprecated Use `myReceipts` instead. This alias will be removed in the next major version. */
   readonly "my_receipts": __TablesBase["myReceipts"];
+  /** @deprecated Use `myRecipientPauses` instead. This alias will be removed in the next major version. */
+  readonly "my_recipient_pauses": __TablesBase["myRecipientPauses"];
   /** @deprecated Use `mySignals` instead. This alias will be removed in the next major version. */
   readonly "my_signals": __TablesBase["mySignals"];
   /** @deprecated Use `mySupportPreferences` instead. This alias will be removed in the next major version. */
