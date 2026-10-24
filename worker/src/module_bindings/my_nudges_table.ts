@@ -11,17 +11,8 @@ import {
 } from "spacetimedb";
 
 export default __t.row({
-  id: __t.string().primaryKey(),
+  id: __t.string(),
   pairId: __t.string().name("pair_id"),
-  recipientId: __t.identity().name("recipient_id"),
-  sourceSignalIds: __t.array(__t.string()).name("source_signal_ids"),
-  sourceConsentVersions: __t.array(__t.u32()).name("source_consent_versions"),
   templateId: __t.string().name("template_id"),
-  createdAt: __t.timestamp().name("created_at"),
-  expiresAt: __t.timestamp().name("expires_at"),
-  dismissed: __t.bool(),
-  snoozedUntil: __t.option(__t.timestamp()).name("snoozed_until"),
-  suppressed: __t.bool(),
-  recipientConsentId: __t.string().name("recipient_consent_id"),
-  recipientConsentVersion: __t.u32().name("recipient_consent_version"),
+  visibleUntil: __t.timestamp().name("visible_until"),
 });
