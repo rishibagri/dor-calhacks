@@ -13,3 +13,5 @@ Hour 3: Cartesia and Factory runtime feasibility plus Claude candidate fixture. 
 Cyber supplies validation/consent boundary; DS supplies ranking and expected cases; CS supplies UI/storage adapters. Verify current Cartesia integration and provider retention before implementation claims.
 
 Before coding: read AGENTS.md and all contracts. Post handoffs to docs/updates/ai.md. Open small compatible PRs, include verification, and read the other role logs every hour.
+
+Handoff file: docs/handoffs/ai.md. Shared interfaces: contracts/README.md; do not fork contract types into role directories.

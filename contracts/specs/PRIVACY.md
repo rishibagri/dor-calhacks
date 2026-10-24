@@ -2,7 +2,7 @@
 ## Disclosure policy
 Default: no sharing. Approval is per recipient/pair, exact signal revision, purpose (support nudge), and expiry; default lifetime 24 hours. The owner sees the same semantic preview the other person may receive. No hidden inferred mood export. Recipient must opt into nudges too.
 
-Allowed shared fields are only those in ApprovedSignal in packages/contracts/index.ts. Use enumerated support preferences and coarse availability. No free text, source journal ID, quote, explanation, timestamp of journaling, precise schedule/location, medical/financial/sexual facts, third-party names, or embeddings. Even availability is disclosed only with explicit approval. A private candidate may be freely worded internally, but only the schema-constrained form can cross the boundary.
+Allowed shared fields are only those in ApprovedSignal in contracts/src/index.ts. Use enumerated support preferences and coarse availability. No free text, source journal ID, quote, explanation, timestamp of journaling, precise schedule/location, medical/financial/sexual facts, third-party names, or embeddings. Even availability is disclosed only with explicit approval. A private candidate may be freely worded internally, but only the schema-constrained form can cross the boundary.
 
 Deterministic code validates schema, membership, current consent version, exact approved payload, expiry, revocation, and allowed purpose before storage, each exchange, nudge generation, and delivery. Agents cannot self-approve consent. No summarization-based workaround. Reject unknown fields and nested payloads. Journal instructions are untrusted input.
 

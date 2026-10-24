@@ -13,3 +13,5 @@ Hour 3: deployed Next.js shell and authenticated SpacetimeDB identity spike. Hou
 Cyber supplies policy checks; AI supplies voice/candidate adapter; DS supplies ranking/fixtures. Do not implement around missing policy by bypassing it.
 
 Before coding: read AGENTS.md and all contracts. Post handoffs to docs/updates/cs.md. Open small compatible PRs, include verification, and read the other role logs every hour.
+
+Handoff file: docs/handoffs/cs.md. Shared interfaces: contracts/README.md; do not fork contract types into role directories.

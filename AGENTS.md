@@ -2,7 +2,13 @@
 Read this file before working, including after resuming. Human owners and their coding agents follow the same contracts.
 
 ## Read order
-README.md → docs/PLAN.md → docs/PRODUCT.md → docs/TECH_STACK.md → all docs/contracts/*.md → packages/contracts/index.ts → your docs/roles/*.md → current coordination updates.
+README.md → PRD.md → PROJECT_KNOWLEDGE.md → contracts/README.md → docs/PLAN.md → docs/TECH_STACK.md → contracts/specs/*.md → your docs/roles/<role>.md and docs/handoffs/<role>.md → all role update logs.
+
+## Contract-first development
+C1 local profile/reflection; C2 presets/recipient assignment; C3 approved disclosure; C4 agent ACK/coordination; C5 nudge/receipt; C6 policy and offline test boundary. Producer/consumer ownership is in contracts/README.md. Import only @kinetic/contracts across workstream boundaries. Do not reach into another owner's internals or duplicate wire types. Build against explicit fixtures/fakes until real adapters exist; never import fakes into production mode.
+
+## Setup and evidence
+Run `npm ci` and `npm run check` at the repository root. These verify offline contracts only. Regenerate schemas with `npm run contracts:schema` after shape changes and update fixtures in the same PR. Never claim the application runs from these commands. Record planned, implemented, deployed and live-verified status separately in PROJECT_KNOWLEDGE.md.
 
 ## Shared contract visibility
 All architecture, API, agent protocol, privacy, acceptance, and data contracts are shared on `main` and available to every teammate and agent. `main` is authoritative; do not maintain branch-specific private contracts. Merge shared contract updates from `main` into each role branch before dependent work. Separate video/presentation planning lives in docs/DEMO.md and is not required engineering-contract reading.
@@ -31,6 +37,9 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 | DS | Planned | Three synthetic scenarios, evaluation fixtures |
 | Cyber | Planned | Policy validator and ownership tests |
 | AI | Planned | Voice adapter and candidate proposal |
+
+## Ownership and handoffs
+Use the ownership table in README.md. CS owns SpacetimeDB module plumbing; Cyber owns reusable authorization semantics and reviews the boundary. Shared contract edits need affected producer/consumer review. Before pausing or handing off, update docs/handoffs/<role>.md and your role log with branch/commit, exact interface, evidence, next consumer action and blocker. Refresh PROJECT_KNOWLEDGE.md after significant merges.
 
 ## Completion checklist
 Contract compatibility, meaningful checks, privacy review for boundary changes, updated role log, reproducible verification instructions. Never mark a stub, replay, or mocked provider as live integration.

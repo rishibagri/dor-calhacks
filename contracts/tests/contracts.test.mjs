@@ -1,0 +1,80 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { ApprovedSignalSchema, LocalConnectionProfileSchema, NudgeSchema } from '../dist/index.js';
+import { FakeClock, FakeDisclosurePolicy } from '../dist/fakes.js';
+const cases = JSON.parse(await readFile(new URL('../fixtures/scenarios.json', import.meta.url), 'utf8'));
+function setup() {
+  const signal = structuredClone(cases[0].approvedSignal);
+  const state = {
+    clock: new FakeClock('2026-10-24T00:00:00Z'), linked: true, revoked: false, approved: signal,
+    preset: { schemaVersion: 1, policyId: signal.recipientPolicyId, ownerId: signal.senderId,
+      presetKind: 'partner', purpose: 'support_nudge', allowedCategories: ['support_preference','coarse_availability'],
+      approvalMode: 'each_item', version: signal.recipientPolicyVersion, expiresAt: signal.expiresAt, revokedAt: null },
+    assignment: { schemaVersion: 1, ownerId: signal.senderId, recipientId: signal.recipientId,
+      pairId: signal.pairId, presetId: signal.recipientPolicyId, assignmentVersion: signal.presetAssignmentVersion },
+  };
+  return { signal, state, policy: new FakeDisclosurePolicy(state) };
+}
+test('all three relationship fixtures satisfy the shared wire schema', () => {
+  assert.equal(cases.length, 3);
+  for (const c of cases) assert.equal(ApprovedSignalSchema.parse(c.approvedSignal).schemaVersion, 2);
+});
+test('unknown fields cannot hide private context in an approved signal', () => {
+  const { signal } = setup();
+  assert.equal(ApprovedSignalSchema.safeParse({ ...signal, journalText: 'synthetic private detail' }).success, false);
+});
+test('empty or malformed disclosure categories are rejected', () => {
+  const { signal } = setup(); delete signal.supportMode; delete signal.availability;
+  assert.equal(ApprovedSignalSchema.safeParse(signal).success, false);
+  assert.equal(ApprovedSignalSchema.safeParse({ ...signal, supportMode: 'share_everything' }).success, false);
+});
+test('support-only signal can omit blocked availability', async () => {
+  const { signal, state, policy } = setup(); delete signal.availability;
+  state.preset.allowedCategories = ['support_preference'];
+  assert.equal((await policy.check(signal, signal.recipientId)).allowed, true);
+});
+test('each recipient needs exact item approval even when a preset permits categories', async () => {
+  const { signal, state, policy } = setup(); state.approved = null;
+  assert.equal((await policy.check(signal, signal.recipientId)).reason, 'no_consent');
+});
+test('wrong recipient and altered payload do not inherit approval', async () => {
+  const { signal, policy } = setup();
+  assert.equal((await policy.check(signal, 'other-user')).reason, 'wrong_recipient');
+  assert.equal((await policy.check({ ...signal, supportMode: 'shared_activity' }, signal.recipientId)).reason, 'no_consent');
+});
+test('preset category restriction suppresses incompatible envelope', async () => {
+  const { signal, state, policy } = setup(); state.preset.allowedCategories = ['support_preference'];
+  assert.equal((await policy.check(signal, signal.recipientId)).reason, 'blocked_category');
+});
+test('preset change and recipient reassignment invalidate old pending envelopes', async () => {
+  const { signal, state, policy } = setup(); state.preset.version++;
+  assert.equal((await policy.check(signal, signal.recipientId)).reason, 'stale_policy');
+  state.preset.version--; state.assignment.assignmentVersion++;
+  assert.equal((await policy.check(signal, signal.recipientId)).reason, 'stale_policy');
+});
+test('revoked, unlinked and expired states prevent subsequent use', async () => {
+  const { signal, state, policy } = setup();
+  assert.equal((await policy.check(signal, signal.recipientId)).allowed, true);
+  state.revoked = true; assert.equal((await policy.check(signal, signal.recipientId)).reason, 'revoked');
+  state.revoked = false; state.linked = false;
+  assert.equal((await policy.check(signal, signal.recipientId)).reason, 'unlinked');
+  state.linked = true; state.clock.set('2100-01-01T00:00:00Z');
+  assert.equal((await policy.check(signal, signal.recipientId)).reason, 'expired');
+});
+test('local profile is not a shared disclosure or authorization record', () => {
+  const profile = LocalConnectionProfileSchema.parse({ schemaVersion: 1, communicationStyle: null,
+    preferredSupportModes: [], draftSharingCategories: [], rhythm: null, suggestionIntensity: null });
+  assert.equal(ApprovedSignalSchema.safeParse(profile).success, false);
+});
+test('nudge source versions must line up with their source signal IDs', () => {
+  assert.equal(NudgeSchema.safeParse({ schemaVersion: 1, id: 'n', pairId: 'p', recipientId: 'r',
+    sourceSignalIds: ['s'], sourceConsentVersions: [1,2], templateId: 'offer_note',
+    createdAt: '2026-10-24T00:00:00Z', expiresAt: '2026-10-25T00:00:00Z' }).success, false);
+});
+
+test('all non-signal interface fixtures satisfy their canonical schemas', async () => {
+  const schemas = await import('../dist/index.js');
+  const fixtures = JSON.parse(await readFile(new URL('../fixtures/interfaces.json', import.meta.url), 'utf8'));
+  for (const [name, fixture] of Object.entries(fixtures)) schemas[name + 'Schema'].parse(fixture);
+});

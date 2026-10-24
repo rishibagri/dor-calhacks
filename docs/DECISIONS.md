@@ -12,3 +12,4 @@
 - D011: User confirmed quiz personalizes all four dimensions, uses 6–8 skippable questions, and suggests relationship presets only. Sharing still requires explicit named-recipient item confirmation.
 - D012: Authentication/authorization cannot be skipped for real private data; production account polish remains deferrable.
 - D013: ApprovedSignal schema v2 binds recipient policy/preset version and connection assignment version. Future event/bandwidth fields require versioned consent contracts.
+- D014: Adopt FaultLine-inspired root PRD/project knowledge, numbered shared contract package with schemas/fixtures/fakes/checks, owner boundaries and persistent handoffs. Keep Kinetic stack, privacy model and separate video planning.

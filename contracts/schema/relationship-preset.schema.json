@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "policyId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "ownerId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "presetKind": {
+      "type": "string",
+      "enum": [
+        "partner",
+        "friend",
+        "family"
+      ]
+    },
+    "purpose": {
+      "type": "string",
+      "const": "support_nudge"
+    },
+    "allowedCategories": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "support_preference",
+          "coarse_availability"
+        ]
+      }
+    },
+    "approvalMode": {
+      "type": "string",
+      "const": "each_item"
+    },
+    "version": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+    },
+    "revokedAt": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "policyId",
+    "ownerId",
+    "presetKind",
+    "purpose",
+    "allowedCategories",
+    "approvalMode",
+    "version",
+    "expiresAt",
+    "revokedAt"
+  ],
+  "additionalProperties": false
+}

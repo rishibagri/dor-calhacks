@@ -1,0 +1,77 @@
+{
+  "LocalConnectionProfile": {
+    "schemaVersion": 1,
+    "communicationStyle": "gentle",
+    "preferredSupportModes": [
+      "short_call"
+    ],
+    "draftSharingCategories": [
+      "support_preference"
+    ],
+    "rhythm": "flexible",
+    "suggestionIntensity": "quiet"
+  },
+  "RelationshipPreset": {
+    "schemaVersion": 1,
+    "policyId": "partners-policy",
+    "ownerId": "partners-a",
+    "presetKind": "partner",
+    "purpose": "support_nudge",
+    "allowedCategories": [
+      "support_preference",
+      "coarse_availability"
+    ],
+    "approvalMode": "each_item",
+    "version": 1,
+    "expiresAt": "2099-01-01T00:00:00Z",
+    "revokedAt": null
+  },
+  "RecipientPresetAssignment": {
+    "schemaVersion": 1,
+    "ownerId": "partners-a",
+    "recipientId": "partners-b",
+    "pairId": "partners-pair",
+    "presetId": "partners-policy",
+    "assignmentVersion": 1
+  },
+  "AgentAck": {
+    "schemaVersion": 1,
+    "signalId": "partners-signal",
+    "recipientConsentId": "synthetic-recipient-consent",
+    "recipientConsentVersion": 1,
+    "decision": "compatible",
+    "supportMode": "short_call",
+    "availability": "this_week"
+  },
+  "Nudge": {
+    "schemaVersion": 1,
+    "id": "synthetic-nudge",
+    "pairId": "partners-pair",
+    "recipientId": "partners-b",
+    "sourceSignalIds": [
+      "partners-signal"
+    ],
+    "sourceConsentVersions": [
+      1
+    ],
+    "templateId": "offer_short_call",
+    "createdAt": "2026-10-24T00:00:00Z",
+    "expiresAt": "2099-01-01T00:00:00Z"
+  },
+  "DisclosureReceipt": {
+    "schemaVersion": 1,
+    "receiptId": "synthetic-receipt",
+    "signalId": "partners-signal",
+    "senderId": "partners-a",
+    "recipientId": "partners-b",
+    "categories": [
+      "support_preference",
+      "coarse_availability"
+    ],
+    "consentVersion": 1,
+    "recipientPolicyVersion": 1,
+    "presetAssignmentVersion": 1,
+    "action": "approved",
+    "createdAt": "2026-10-24T00:00:00Z"
+  }
+}

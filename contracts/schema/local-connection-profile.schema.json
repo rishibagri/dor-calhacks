@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "communicationStyle": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "direct",
+            "gentle",
+            "playful"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "preferredSupportModes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "short_call",
+          "encouraging_note",
+          "shared_activity"
+        ]
+      }
+    },
+    "draftSharingCategories": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "support_preference",
+          "coarse_availability"
+        ]
+      }
+    },
+    "rhythm": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "spontaneous",
+            "planned",
+            "flexible"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "suggestionIntensity": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "fewer",
+            "quiet",
+            "paused"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "communicationStyle",
+    "preferredSupportModes",
+    "draftSharingCategories",
+    "rhythm",
+    "suggestionIntensity"
+  ],
+  "additionalProperties": false
+}

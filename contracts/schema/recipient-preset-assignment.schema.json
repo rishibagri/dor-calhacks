@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "ownerId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "recipientId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "pairId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "presetId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "assignmentVersion": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "ownerId",
+    "recipientId",
+    "pairId",
+    "presetId",
+    "assignmentVersion"
+  ],
+  "additionalProperties": false
+}

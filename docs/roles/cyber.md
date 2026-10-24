@@ -13,3 +13,5 @@ Hour 3: vault/key design, policy signature and SpacetimeDB access spike. Hour 7:
 CS owns route plumbing; Cyber supplies reusable mandatory guards. AI consumes only validated envelopes. Security ownership includes code, not only documentation.
 
 Before coding: read AGENTS.md and all contracts. Post handoffs to docs/updates/cyber.md. Open small compatible PRs, include verification, and read the other role logs every hour.
+
+Handoff file: docs/handoffs/cyber.md. Shared interfaces: contracts/README.md; do not fork contract types into role directories.

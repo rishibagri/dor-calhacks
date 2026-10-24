@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "signalId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "recipientConsentId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "recipientConsentVersion": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "compatible",
+        "decline"
+      ]
+    },
+    "supportMode": {
+      "type": "string",
+      "enum": [
+        "short_call",
+        "encouraging_note",
+        "shared_activity"
+      ]
+    },
+    "availability": {
+      "type": "string",
+      "enum": [
+        "today",
+        "this_week",
+        "no_preference"
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "signalId",
+    "recipientConsentId",
+    "recipientConsentVersion",
+    "decision"
+  ],
+  "additionalProperties": false
+}
