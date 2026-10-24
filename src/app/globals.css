@@ -99,8 +99,17 @@
   }
   h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; text-wrap: balance; }
   p { text-wrap: pretty; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { overflow-x: clip; overflow-wrap: anywhere; }
+  main :is(h1, h2, h3, p, li, label) { overflow-wrap: anywhere; }
   :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
   ::selection { background: color-mix(in oklch, var(--primary) 25%, transparent); }
+}
+
+/* Touch devices: 44px minimum tap targets for form controls and buttons in the page. */
+@media (pointer: coarse) {
+  main :is(button, [role="button"], select, input:not([type="checkbox"], [type="radio"], [type="hidden"])) { min-height: 2.75rem; }
+  main :is(input, textarea, select) { font-size: 16px; } /* avoids iOS focus zoom */
 }
 
 @media (prefers-reduced-motion: reduce) {

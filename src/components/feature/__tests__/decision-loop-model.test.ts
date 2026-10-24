@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  MAX_QUESTIONS, NO_ACTION_COPY, QUESTION_COPY, answerCompany, answerWho, applyUnnamedExclusionGuard, decide, excludeForNow, startLoop,
+  MAX_QUESTIONS, NO_ACTION_COPY, QUESTION_COPY, answerCompany, answerWho, applyUnnamedExclusionGuard, decide, excludeForNow, failClosedWithoutAssessment, startLoop,
 } from '../decision-loop-model.ts';
 
 const SAM = { pairId: 'p-sam', name: 'Sam' };
@@ -128,4 +128,25 @@ test('all recipients left out by the guard ends in the existing no-action state'
   const { kept } = applyUnnamedExclusionGuard([UNNAMED], true);
   const s = answerCompany(startLoop(CALL), 'company');
   assert.deepEqual(decide(s, kept), { kind: 'no_action', reason: 'no_eligible_recipient' });
+});
+
+test('candidate without an assessment fails closed: assessment_missing, no question asked', () => {
+  for (const missing of [undefined, null]) {
+    const s = failClosedWithoutAssessment(startLoop(CALL), missing);
+    assert.deepEqual(decide(s, PEOPLE), { kind: 'no_action', reason: 'assessment_missing' });
+    assert.deepEqual(s.asked, []);
+  }
+  assert.match(NO_ACTION_COPY.assessment_missing, /Nothing will be shared/);
+});
+
+test('candidate with an assessment present is unchanged by the guard', () => {
+  const a = { intent: 'unclear', excludedNames: [], preferredNames: [] };
+  const s = startLoop(CALL);
+  assert.equal(failClosedWithoutAssessment(s, a), s);
+  assert.equal(decide(s, PEOPLE).kind, 'needs_clarification');
+});
+
+test('no candidate stays nothing_to_share even without an assessment', () => {
+  const s = failClosedWithoutAssessment(startLoop(null), undefined);
+  assert.deepEqual(decide(s, PEOPLE), { kind: 'no_action', reason: 'nothing_to_share' });
 });

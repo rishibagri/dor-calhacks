@@ -105,3 +105,16 @@ Hi Nimisha. There are no blockers for you. Here are some new cases worth labelli
 3. **Quiz "space":** the quiz no longer promises "suggests nothing". Choosing space only adds no support category to the preset drafts. A per-entry "space" answer still ends in `no_action`. If any fixture assumed the global promise, relabel it.
 4. **Timing/indirect-disclosure labels:** the audit found that `my_nudges` exposes the commit and approval times to the recipient, and that receipts expose recipient state to the sender (Cyber fixing). When you define forbidden-disclosure labels, include "timing of the sender's approval" and "recipient opt-out/quiet state", so the noninterference check covers timing, not just content.
 5. **Reason codes:** a wrong `payloadRevision` currently comes back as `no_consent`, not `stale_policy`. Hold any assertion on that code until Sumedh confirms.
+
+---
+
+## Follow-up (2026-10-24, after #35): r4m fail-closed in the app
+
+The app now fails closed when a reflection has a candidate but **no assessment**. `failClosedWithoutAssessment` in `src/components/feature/decision-loop-model.ts` ends the loop with `no_action` / `assessment_missing` before any question, and the owner sees "dor couldn't read this entry clearly enough to suggest anyone. Nothing will be shared." `undefined` and `null` both count as absent. A present-but-invalid assessment already failed closed.
+
+- **Adam:** the real Claude path always emits an assessment (`ModelReflectionSchema.assessment` is required; unusable input becomes `wants_space`), so normal sharing is unaffected. But `PrivateReflectionSchema.assessment` is still `.optional()` in `contracts/src/reflection.ts`, and its comment says "a missing assessment means none, and the loop asks its normal questions". That now contradicts the app. Please make the assessment required whenever a candidate is present (contract plus comment), or tell CS if you disagree.
+- **Nimisha:** the eval `replay()` in `src/evaluation/decision-loop.ts` calls `initialLoopState` directly, so it doesn't go through the new guard, and `r4m` is still a known gap in the report. To match the app:
+  1. Wrap `replay()` with `failClosedWithoutAssessment`.
+  2. Give the ~23 cases that carry a candidate but no assessment an explicit assessment (e.g. `{intent:'unclear', excludedNames:[], preferredNames:[]}`, or whatever the label intends). Cases that currently rely on "ask normally": g\*, r1–r3, t\*, s\*, c\*, i\*, pp\*, and a1–a19 when they carry a candidate.
+  3. Drop `knownGap` from `r4m`, update the `gaps` assertion, and regenerate the report.
+  Your fixtures, your labels. CS didn't touch them.
