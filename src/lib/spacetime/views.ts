@@ -1,10 +1,10 @@
 import type { DisclosureReceipt, Nudge, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
 import type {
-  ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, SignalView, SupportPreferencesView,
+  ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientPause, SignalView, SupportPreferencesView,
 } from '@/lib/backend/ports';
 import { findTable, type LooseConnection, type LooseRow, type LooseTable } from './bindings';
 import {
-  mapAccount, mapAssignment, mapInvite, mapNudge, mapNudgeDelivery, mapPair, mapPreset, mapReceipt, mapRows,
+  mapAccount, mapAssignment, mapInvite, mapNudge, mapNudgeDelivery, mapPair, mapRecipientPause, mapPreset, mapReceipt, mapRows,
   mapActivityApproval, mapCatalogueEvent, mapCatalogueStatus, mapCompanion, mapDiscoveryCard, mapEventIntent, mapIntroduction,
   mapIntroductionProposal, mapPlan, unreadableRow, mapMyDiscovery, mapSignal, mapSupportPreferences,
 } from './mappers';
@@ -12,7 +12,7 @@ import {
 /** Caller-filtered views (module defines them; all base tables are private). */
 export const VIEW_NAMES = [
   'my_account', 'my_pairs', 'my_invites', 'my_presets', 'my_preset_assignments', 'my_nudges', 'my_receipts',
-  'my_signals', 'my_support_preferences', 'my_nudge_delivery',
+  'my_signals', 'my_support_preferences', 'my_nudge_delivery', 'my_recipient_pauses',
   'my_discovery_profile', 'discovery_cards', 'my_introductions', 'my_introduction_proposals',
   'catalogue_events', 'catalogue_status', 'my_event_intents', 'event_companions', 'my_activity_approvals', 'my_plans',
 ] as const;
@@ -28,6 +28,7 @@ export interface ViewData {
   readonly signals: SignalView[];
   readonly supportPreferences: SupportPreferencesView[];
   readonly nudgeDelivery: NudgeDeliveryView[];
+  readonly pauses: RecipientPause[];
   readonly discoveryProfile: MyDiscoveryView | null;
   readonly discoveryCards: DiscoveryCardRow[];
   readonly introductions: IntroductionView[];
@@ -42,7 +43,7 @@ export interface ViewData {
 }
 
 export const EMPTY_VIEWS: ViewData = {
-  account: null, pairs: [], invites: [], presets: [], assignments: [], nudges: [], receipts: [], signals: [], supportPreferences: [], nudgeDelivery: [],
+  account: null, pairs: [], invites: [], presets: [], assignments: [], nudges: [], receipts: [], signals: [], supportPreferences: [], nudgeDelivery: [], pauses: [],
   discoveryProfile: null, discoveryCards: [], introductions: [], proposals: [],
   catalogue: [], catalogueStatus: [], eventIntents: [], companions: [], activityApprovals: [], plans: [],
   unreadable: { signals: [], supportPreferences: [], nudgeDelivery: [] },
@@ -83,6 +84,7 @@ export function readViews(conn: LooseConnection): ViewData {
     },
     supportPreferences: mapRows(rows('my_support_preferences'), mapSupportPreferences),
     nudgeDelivery: mapRows(rows('my_nudge_delivery'), mapNudgeDelivery),
+    pauses: mapRows(rows('my_recipient_pauses'), mapRecipientPause),
     discoveryProfile: mapRows(rows('my_discovery_profile'), mapMyDiscovery)[0] ?? null,
     discoveryCards: mapRows(rows('discovery_cards'), mapDiscoveryCard),
     introductions: mapRows(rows('my_introductions'), mapIntroduction),

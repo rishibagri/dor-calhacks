@@ -79,8 +79,8 @@ export function decide(s: LoopState, recipients: readonly Recipient[]): Outcome 
   if (s.company === 'space') return { kind: 'no_action', reason: 'prefers_space' };
   if (s.company === 'skip') return { kind: 'no_action', reason: 'skipped' };
   const options = eligible(s, recipients);
+  if (options.length === 0) return { kind: 'no_action', reason: 'no_eligible_recipient' }; // never ask when nobody can be offered
   if (s.company === null) return ask(s, 'company', options);
-  if (options.length === 0) return { kind: 'no_action', reason: 'no_eligible_recipient' };
   if (s.chosen === 'none') return { kind: 'no_action', reason: 'no_recipient' };
   if (s.chosen === null) return ask(s, 'who', options);
   const recipient = options.find((r) => r.pairId === s.chosen);

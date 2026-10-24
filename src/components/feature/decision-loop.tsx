@@ -10,6 +10,7 @@ import {
   NO_ACTION_COPY, QUESTION_COPY, QUESTION_NOTE, answerCompany, answerWho, applyUnnamedExclusionGuard, decide, excludeForNow,
   type LoopState,
 } from './decision-loop-model';
+import { PAUSED_NOT_OFFERED, withoutPaused } from './pause-model';
 import { shareRecipients } from './share-review-model';
 import { ShareReview } from './share-review';
 
@@ -28,8 +29,10 @@ export function DecisionLoop({ candidate, assessment, onDone }: {
 }) {
   const shared = useLiveShared();
   const [s, setS] = useState<LoopState>(() => initialLoopState(candidate, assessment));
-  const connections = shareRecipients(shared.myPairs()).map(({ pairId, name, unnamed }) => ({ pairId, name, unnamed }));
-  const { kept, leftOutUnnamed } = applyUnnamedExclusionGuard(connections, (assessment?.excludedNames.length ?? 0) > 0);
+  const { eligible: unpaused, pausedCount } = withoutPaused(
+    shareRecipients(shared.myPairs()).map(({ pairId, name, unnamed }) => ({ pairId, name, unnamed })),
+    shared.myRecipientPauses(), new Date());
+  const { kept, leftOutUnnamed } = applyUnnamedExclusionGuard(unpaused, (assessment?.excludedNames.length ?? 0) > 0);
   const recipients = assessedRecipients(kept, assessment);
   const leftOut = leftOutByAssessment(kept, assessment);
   const outcome = decide(s, recipients);
@@ -55,6 +58,7 @@ export function DecisionLoop({ candidate, assessment, onDone }: {
         <CardDescription>{QUESTION_NOTE}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        {pausedCount > 0 && <p className="text-sm text-muted-foreground">{PAUSED_NOT_OFFERED}</p>}
         {leftOut.length > 0 && (
           <p className="text-sm text-muted-foreground">
             Leaving out {leftOut.map((r) => r.name).join(', ')} for now, based on your entry.
