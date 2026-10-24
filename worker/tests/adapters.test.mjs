@@ -4,8 +4,8 @@ import { EventEmitter } from 'node:events';
 import { existsSync } from 'node:fs';
 import { PassThrough } from 'node:stream';
 import { ProviderError } from '@kinetic/agents';
-import { DroidAckProposer, SpacetimeDeliveryState, SpacetimePolicyStateReader, SpacetimeSignalSource, classifyCommitError,
-  mapRows, toSignalContext } from '../dist/index.js';
+import { DroidAckProposer, SpacetimeCommit, SpacetimeDeliveryState, SpacetimePolicyStateReader, SpacetimeRecipientPreferences,
+  SpacetimeSignalSource, classifyCommitError, mapRows, toSignalContext } from '../dist/index.js';
 
 const ts = (iso) => ({ microsSinceUnixEpoch: BigInt(Date.parse(iso)) * 1000n });
 const ident = (hex) => ({ toHexString: () => hex });
@@ -18,8 +18,8 @@ const camelRow = {
   assignmentPresetId: 'preset-1', assignmentVersion: 3, presetAllowedCategories: ['support_preference'],
   presetVersion: 2n, presetExpiresAt: ts('2099-01-01T00:00:00Z'), presetRevoked: false,
 };
-const source = (rows, delivery = []) => ({ signalContext: async () => rows, delivery: async () => delivery,
-  commitNudge: async () => {} });
+const source = (rows, delivery = [], prefs = [], commits = []) => ({ signalContext: async () => rows,
+  delivery: async () => delivery, supportPreferences: async () => prefs, commitNudge: async (args) => { commits.push(args); } });
 
 test('rows: camelCase bindings, tagged options, bigint versions map to the policy shapes', async () => {
   const loaded = await new SpacetimePolicyStateReader(source([camelRow])).load('sig-1');
@@ -65,6 +65,27 @@ test('commit errors: guard refusals are recorded; deployment and transport fault
   assert.equal(classifyCommitError(new Error('unauthorized: worker only')), null);
   assert.equal(classifyCommitError(new Error('socket hang up')), null);
   assert.equal(classifyCommitError(new Error('unavailable: bindings lack commit_nudge')), null);
+});
+
+test('preferences: a worker_support_preferences row maps to the consent record; none means no consent', async () => {
+  const row = { consentId: 'cons-1', pairId: 'pair-1', recipient: ident('bb'), supportModes: ['short_call'],
+    availability: ['today'], consentVersion: 3, expiresAt: ts('2099-01-01T00:00:00Z') };
+  const port = new SpacetimeRecipientPreferences(source([], [], [row, { ...row, consentVersion: 'x' }]));
+  assert.deepEqual(await port.current('pair-1', 'bb'), { schemaVersion: 1, consentId: 'cons-1', consentVersion: 3, pairId: 'pair-1',
+    recipientId: 'bb', purpose: 'support_nudge', supportModes: ['short_call'], availability: ['today'],
+    expiresAt: '2099-01-01T00:00:00.000Z', revokedAt: null });
+  assert.equal(await port.current('pair-1', 'cc'), null);
+});
+
+test('commit: binds the compatible ACK\'s consent; a nudge without one is refused without calling the reducer', async () => {
+  const nudge = (id, signal) => ({ id, pairId: 'pair-1', templateId: 'offer_short_call', sourceSignalIds: [signal], sourceConsentVersions: [1] });
+  const commits = [];
+  const result = { proposedNudges: [nudge('n1', 'sig-1'), nudge('n2', 'sig-2')], outcomes: [], acknowledgements: [
+    { signalId: 'sig-1', recipientConsentId: 'cons-1', recipientConsentVersion: 3, decision: 'compatible' },
+    { signalId: 'sig-2', recipientConsentId: 'cons-1', recipientConsentVersion: 3, decision: 'decline' }] };
+  const rejected = await new SpacetimeCommit(source([], [], [], commits)).commit(result);
+  assert.deepEqual(commits.map(c => [c.nudge_id, c.recipient_consent_id, c.recipient_consent_version]), [['n1', 'cons-1', 3]]);
+  assert.deepEqual(rejected, [{ nudgeId: 'n2', outcome: 'policy_denied' }]);
 });
 
 /** Fake droid whose runs stay open until released, to observe overlap. */

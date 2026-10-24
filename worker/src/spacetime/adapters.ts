@@ -1,7 +1,7 @@
 import type { PolicyStateReader } from '@kinetic/contracts';
 import type { DeliveryStatePort, RecipientPreferencesPort } from '@kinetic/agents';
 import type { ApprovedSignalSource, CommitRejection, CoordinationCommitPort, CoordinationResult } from '../jobs.js';
-import { mapRows, NOT_OPTED_IN, toApprovedSignal, toDeliveryContext, toSignalContext } from './rows.js';
+import { mapRows, NOT_OPTED_IN, toApprovedSignal, toDeliveryContext, toPreferences, toSignalContext } from './rows.js';
 
 /** commit_nudge reducer arguments (spacetimedb/src/reducers/coordination.ts). */
 export interface CommitNudgeArgs {
@@ -10,6 +10,9 @@ export interface CommitNudgeArgs {
   template_id: string;
   source_signal_ids: string[];
   source_consent_versions: number[];
+  /** The recipient preference consent the coordinator read (AgentAck), bound so a mid-generation edit fails (D035). */
+  recipient_consent_id: string;
+  recipient_consent_version: number;
 }
 
 /**
@@ -22,6 +25,8 @@ export interface WorkerStateSource {
   signalContext(): Promise<Iterable<unknown>>;
   /** Current rows of the worker_delivery view. */
   delivery(): Promise<Iterable<unknown>>;
+  /** Current rows of the worker_support_preferences view (D035). */
+  supportPreferences(): Promise<Iterable<unknown>>;
   /** Calls commit_nudge; rejects with the reducer's `code: reason` message on refusal. */
   commitNudge(args: CommitNudgeArgs): Promise<void>;
 }
@@ -59,13 +64,13 @@ export class SpacetimeDeliveryState implements DeliveryStatePort {
   }
 }
 
-/**
- * Recipient support-preference consent has no authoritative table yet (CYBER-R1). Until it does, live mode
- * has no consent record and therefore proposes no nudge. Replace with a view-backed reader, never a fixture.
- */
-export class UnavailableRecipientPreferences implements RecipientPreferencesPort {
-  async current(): Promise<null> {
-    return null;
+/** The recipient's current standing consent (D035). No row means no consent: no nudge and no model call. */
+export class SpacetimeRecipientPreferences implements RecipientPreferencesPort {
+  constructor(private readonly source: WorkerStateSource) {}
+
+  async current(pairId: string, recipientId: string) {
+    return mapRows(await this.source.supportPreferences(), toPreferences)
+      .find(p => p.pairId === pairId && p.recipientId === recipientId) ?? null;
   }
 }
 
@@ -83,17 +88,27 @@ export function classifyCommitError(error: unknown): CommitRejection['outcome'] 
   return DELIVERY_REASONS.has(reason!) ? reason as CommitRejection['outcome'] : 'policy_denied';
 }
 
-/** Commits each proposed nudge through commit_nudge, which re-runs guardNudgeCommit and dedupes on nudge_id. */
+/**
+ * Commits each proposed nudge through commit_nudge, which re-runs guardNudgeCommit (including the bound recipient
+ * consent, D035) and dedupes on nudge_id. The consent binding comes from the coordinator's compatible ACK for the
+ * nudge's source signal; a nudge without one is refused here without calling the reducer.
+ */
 export class SpacetimeCommit implements CoordinationCommitPort {
   constructor(private readonly source: WorkerStateSource) {}
 
   async commit(result: CoordinationResult): Promise<CommitRejection[]> {
     const rejections: CommitRejection[] = [];
     for (const nudge of result.proposedNudges) {
+      const ack = result.acknowledgements.find(a => a.decision === 'compatible' && nudge.sourceSignalIds.includes(a.signalId));
+      if (!ack) {
+        rejections.push({ nudgeId: nudge.id, outcome: 'policy_denied' });
+        continue;
+      }
       try {
         await this.source.commitNudge({
           nudge_id: nudge.id, pair_id: nudge.pairId, template_id: nudge.templateId,
           source_signal_ids: [...nudge.sourceSignalIds], source_consent_versions: [...nudge.sourceConsentVersions],
+          recipient_consent_id: ack.recipientConsentId, recipient_consent_version: ack.recipientConsentVersion,
         });
       } catch (error) {
         const outcome = classifyCommitError(error);
@@ -105,11 +120,11 @@ export class SpacetimeCommit implements CoordinationCommitPort {
   }
 }
 
-/** All database-backed worker ports over one source. Preferences stay fail-closed until CYBER-R1. */
-export function spacetimeWorkerPorts(source: WorkerStateSource, preferences: RecipientPreferencesPort =
-  new UnavailableRecipientPreferences()) {
+/** All database-backed worker ports over one source. */
+export function spacetimeWorkerPorts(source: WorkerStateSource) {
   return {
     policyState: new SpacetimePolicyStateReader(source), signals: new SpacetimeSignalSource(source),
-    delivery: new SpacetimeDeliveryState(source), commit: new SpacetimeCommit(source), preferences,
+    delivery: new SpacetimeDeliveryState(source), preferences: new SpacetimeRecipientPreferences(source),
+    commit: new SpacetimeCommit(source),
   };
 }

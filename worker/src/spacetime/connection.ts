@@ -26,7 +26,7 @@ export interface LooseBuilder {
   build(): LooseConnection;
 }
 
-export const WORKER_VIEWS = ['worker_signal_context', 'worker_delivery'] as const;
+export const WORKER_VIEWS = ['worker_signal_context', 'worker_delivery', 'worker_support_preferences'] as const;
 
 const camel = (snake: string) => snake.replace(/_([a-z])/g, (_m, c: string) => c.toUpperCase());
 function table(conn: LooseConnection, name: string): LooseTable {
@@ -78,11 +78,16 @@ export class SpacetimeWorkerConnection implements WorkerStateSource {
     return [...table(this.conn, 'worker_delivery').iter()];
   }
 
+  async supportPreferences() {
+    return [...table(this.conn, 'worker_support_preferences').iter()];
+  }
+
   async commitNudge(args: CommitNudgeArgs): Promise<void> {
     const reducer = this.conn.reducers.commitNudge ?? this.conn.reducers.commit_nudge;
     if (!reducer) throw new Error('unavailable: bindings lack commit_nudge');
     await reducer({ nudgeId: args.nudge_id, pairId: args.pair_id, templateId: args.template_id,
-      sourceSignalIds: args.source_signal_ids, sourceConsentVersions: args.source_consent_versions });
+      sourceSignalIds: args.source_signal_ids, sourceConsentVersions: args.source_consent_versions,
+      recipientConsentId: args.recipient_consent_id, recipientConsentVersion: args.recipient_consent_version });
   }
 
   close(): void {
