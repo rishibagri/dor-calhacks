@@ -50,6 +50,8 @@ export const ApprovedSignal = __t.object("ApprovedSignal", {
   expiresAt: __t.timestamp(),
   revokedAt: __t.option(__t.timestamp()),
   clientRequestId: __t.string(),
+  ruleId: __t.option(__t.string()),
+  ruleVersion: __t.option(__t.u32()),
 });
 export type ApprovedSignal = __Infer<typeof ApprovedSignal>;
 
@@ -411,6 +413,20 @@ export type MyRecipientPauses = __Infer<typeof MyRecipientPauses>;
 export const MySignals = __t.object("MySignals", {});
 export type MySignals = __Infer<typeof MySignals>;
 
+export const MyStandingRuleRow = __t.object("MyStandingRuleRow", {
+  pairId: __t.string(),
+  supportModes: __t.array(__t.string()),
+  availability: __t.array(__t.string()),
+  purpose: __t.string(),
+  version: __t.u32(),
+  expiresAt: __t.timestamp(),
+  active: __t.bool(),
+});
+export type MyStandingRuleRow = __Infer<typeof MyStandingRuleRow>;
+
+export const MyStandingRules = __t.object("MyStandingRules", {});
+export type MyStandingRules = __Infer<typeof MyStandingRules>;
+
 export const MySupportPreferences = __t.object("MySupportPreferences", {});
 export type MySupportPreferences = __Infer<typeof MySupportPreferences>;
 
@@ -559,6 +575,21 @@ export const SharedPlanRow = __t.object("SharedPlanRow", {
   expiresAt: __t.timestamp(),
 });
 export type SharedPlanRow = __Infer<typeof SharedPlanRow>;
+
+export const StandingRule = __t.object("StandingRule", {
+  ruleId: __t.string(),
+  owner: __t.identity(),
+  pairId: __t.string(),
+  supportModes: __t.array(__t.string()),
+  availability: __t.array(__t.string()),
+  purpose: __t.string(),
+  version: __t.u32(),
+  expiresAt: __t.timestamp(),
+  revokedAt: __t.option(__t.timestamp()),
+  createdAt: __t.timestamp(),
+  updatedAt: __t.timestamp(),
+});
+export type StandingRule = __Infer<typeof StandingRule>;
 
 export const SupportPreference = __t.object("SupportPreference", {
   consentId: __t.string(),

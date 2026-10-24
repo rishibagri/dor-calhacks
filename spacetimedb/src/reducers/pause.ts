@@ -9,6 +9,7 @@ import { requireAccount, requireMemberPair } from '../guards';
 import { newId } from '../ids';
 import { findPauseRow, fromMs, hex, pauseInForce, toMs } from '../policy_state';
 import { suppressPairWork } from '../suppress';
+import { revokeRulesInPair } from '../standing_rule';
 
 /**
  * What a pause kills, in the same transaction: every standing approval the owner made in this pair (revoked, with
@@ -17,6 +18,7 @@ import { suppressPairWork } from '../suppress';
  */
 function invalidateOwnerWork(ctx: Ctx, pairId: string): void {
   suppressPairWork(ctx, pairId, ctx.sender);
+  revokeRulesInPair(ctx, pairId, ctx.sender); // D047: pausing ends the owner's standing rule for this pair
   for (const a of [...ctx.db.activity_approval.owner.filter(ctx.sender)]) {
     if (a.pair_id === pairId && !a.revoked_at) ctx.db.activity_approval.approval_id.update({ ...a, revoked_at: ctx.timestamp });
   }

@@ -4,12 +4,12 @@ import { Timestamp, type Identity } from 'spacetimedb';
 import {
   catalogueEventUsable, currentPlanStatus, intentStands,
   DISCOVERY_CARD_LIMIT, guardDiscoveryVisibility, guardPreferenceStanding, guardSignalStanding, projectDiscoveryCard,
-  templateForSignal,
+  standingRuleActive, templateForSignal,
 } from '@dor/contracts/policy';
 import { spacetimedb, account, approved_signal, nudge, disclosure_receipt, nudge_delivery, support_preference } from './schema';
 import {
   blockedEitherWay, discoveryEnabled, hex, loadDiscoveryParty, loadPreference, loadStanding, signalExpiredMarked,
-  toStoredSignal, type ReadDb,
+  signalRuleStands, toRuleState, toStoredSignal, type ReadDb,
 } from './policy_state';
 import {
   approvalsStand, findIntentRow, loadCatalogueEvent, loadPlanCheck, toApprovalState, toCatalogueState, toIntentState, toPlanState,
@@ -222,6 +222,7 @@ export const worker_signal_context = spacetimedb.view(
     return [...ctx.db.approved_signal.iter()]
       .filter(s => !s.revoked_at && !signalExpiredMarked(ctx.db, s.signal_id) &&
         !pauseInForce(ctx.db, s.sender_id, s.pair_id, null) && // D041: paused pairs' signals are not presented
+        signalRuleStands(ctx.db, s, null) && // D047: rule revoked/expired/changed; nothing tells the worker which signals were rule-approved
         guardSignalStanding(toStoredSignal(s), loadStanding(ctx.db, s.sender_id, s.pair_id)).allowed)
       .flatMap(s => {
         const p = ctx.db.pair.pair_id.find(s.pair_id);
@@ -627,5 +628,21 @@ export const my_recipient_pauses = spacetimedb.view(
   ctx => [...ctx.db.recipient_pause.owner.filter(ctx.sender)].map(p => ({
     pair_id: p.pair_id, version: p.version, expires_at: p.expires_at, created_at: p.created_at,
     active: pauseInForce(ctx.db, ctx.sender, p.pair_id, null),
+  }))
+);
+
+const myRuleRow = t.row('MyStandingRuleRow', {
+  pair_id: t.string(), support_modes: t.array(t.string()), availability: t.array(t.string()), purpose: t.string(),
+  version: t.u32(), expires_at: t.timestamp(), active: t.bool(),
+});
+/**
+ * D047 owner-only: the caller's own standing rules. `version` is what set/revoke pass as expected_version. Nobody else,
+ * including the counterpart and the worker, has any view of this table.
+ */
+export const my_standing_rules = spacetimedb.view(
+  { name: 'my_standing_rules', public: true }, t.array(myRuleRow),
+  ctx => [...ctx.db.standing_rule.owner.filter(ctx.sender)].map(r => ({
+    pair_id: r.pair_id, support_modes: r.support_modes, availability: r.availability, purpose: r.purpose,
+    version: r.version, expires_at: r.expires_at, active: standingRuleActive(toRuleState(ctx.db, r), null),
   }))
 );

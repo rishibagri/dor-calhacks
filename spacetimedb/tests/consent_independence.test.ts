@@ -104,7 +104,7 @@ describe('support consent, pause and block stay in their own lanes', () => {
     const pair2 = pairUp(y).pairId;
     confirmPreset(y, y.alice, pair2, 'partner', ['support_preference']);
     participate(y, y.alice, 'Alice S'); participate(y, y.bob, 'Bob S');
-    // a linked pair is hidden from discovery (D046), so block via a third person's card to show block stays in discovery
+    // a linked pair is hidden from discovery (D047), so block via a third person's card to show block stays in discovery
     participate(y, y.carol, 'Carol S');
     const carolRef = mine(y, y.carol).publication_id;
     y.call(y.alice, ctx => mod.block_discovery_user(ctx, { card_ref: carolRef }));

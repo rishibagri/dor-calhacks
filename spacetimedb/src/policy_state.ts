@@ -2,7 +2,8 @@
 // Always read in the same transaction as the write the guard protects.
 import type { Identity, Timestamp } from 'spacetimedb';
 import type { InferSchema, ViewCtx } from 'spacetimedb/server';
-import { pauseActive } from '@dor/contracts/policy';
+import { pauseActive, standingRuleActive } from '@dor/contracts/policy';
+import type { StandingRuleState } from '@dor/contracts/policy';
 import type { AreaState, DeliveryGate, DiscoveryParty, PolicySnapshot, PublicationState, StoredSignal, SupportPreferenceState } from '@dor/contracts/policy';
 import type { spacetimedb } from './schema';
 import type { Ctx } from './errors';
@@ -70,7 +71,7 @@ export function toStoredSignal(s: SignalRow): StoredSignal {
 }
 
 // ---- Expiry markers (written by sweep_expired; views have no clock) ----
-export type ExpiryKind = 'signal' | 'preference' | 'publication' | 'area' | 'intent' | 'catalogue' | 'activity' | 'pause';
+export type ExpiryKind = 'signal' | 'preference' | 'publication' | 'area' | 'intent' | 'catalogue' | 'activity' | 'pause' | 'standing_rule';
 export const expiryKey = (kind: ExpiryKind, id: string, version: number): string => `${kind}:${id}:${version}`;
 export const isExpiredMarked = (db: ReadDb, kind: ExpiryKind, id: string, version: number): boolean =>
   Boolean(db.expired_record.record_key.find(expiryKey(kind, id, version))); // find() returns null, not undefined
@@ -184,4 +185,31 @@ export function connectedCounterparts(db: ReadDb, me: Identity): Set<string> {
     out.add(hex(p.member_a.isEqual(me) ? p.member_b : p.member_a));
   }
   return out;
+}
+
+// ---- D047 standing rules (owner index, then pair) ----
+type RuleRow = NonNullable<ReturnType<Ctx['db']['standing_rule']['rule_id']['find']>>;
+
+export function findRuleRow(db: ReadDb, owner: Identity, pairId: string): RuleRow | undefined {
+  for (const r of db.standing_rule.owner.filter(owner)) if (r.pair_id === pairId) return r;
+  return undefined;
+}
+
+export function toRuleState(db: ReadDb, r: RuleRow): StandingRuleState {
+  return {
+    ruleId: r.rule_id, ownerId: hex(r.owner), pairId: r.pair_id, supportModes: r.support_modes, availability: r.availability,
+    purpose: r.purpose, version: r.version, expiresAtMs: toMs(r.expires_at), revokedAtMs: r.revoked_at ? toMs(r.revoked_at) : null,
+    expiredMarked: isExpiredMarked(db, 'standing_rule', r.rule_id, r.version),
+  };
+}
+
+/**
+ * Whether the rule a signal was approved under still stands: same rule id and version, not revoked, not expired
+ * (reducer clock, or the sweep marker in views). Signals approved by hand have no rule and always pass. Fail closed:
+ * a missing rule row fails.
+ */
+export function signalRuleStands(db: ReadDb, s: SignalRow, nowMs: number | null): boolean {
+  if (s.rule_id === undefined && s.rule_version === undefined) return true;
+  const r = s.rule_id === undefined ? undefined : db.standing_rule.rule_id.find(s.rule_id);
+  return Boolean(r && r.version === s.rule_version && standingRuleActive(toRuleState(db, r), nowMs));
 }

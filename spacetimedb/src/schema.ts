@@ -105,6 +105,9 @@ export const approved_signal = table(
     expires_at: t.timestamp(),
     revoked_at: t.option(t.timestamp()),
     client_request_id: t.string(), // sender-scoped idempotency key; replays never resurrect
+    /** D047: set only when approved by a standing rule. Never in a worker or recipient view. Optional so older rows migrate. */
+    rule_id: t.option(t.string()),
+    rule_version: t.option(t.u32()),
   }
 );
 
@@ -411,6 +414,29 @@ export const recipient_pause = table(
   }
 );
 
+/**
+ * D047 standing rule: the owner's explicit, revocable, time-bounded permission to approve matching signals in ONE
+ * accepted pair without the per-item preview. One row per owner + pair, updated in place; `version` is bumped on every
+ * set and revoke. Owner-only (my_standing_rules). Off by default; created only by set_standing_rule. The preset and
+ * assignment remain the ceiling, checked again at every approval and delivery.
+ */
+export const standing_rule = table(
+  { name: 'standing_rule' },
+  {
+    rule_id: t.string().primaryKey(),
+    owner: t.identity().index('btree'),
+    pair_id: t.string().index('btree'),
+    support_modes: t.array(t.string()),
+    availability: t.array(t.string()),
+    purpose: t.string(),
+    version: t.u32(),
+    expires_at: t.timestamp(),
+    revoked_at: t.option(t.timestamp()),
+    created_at: t.timestamp(),
+    updated_at: t.timestamp(),
+  }
+);
+
 /** Allow-listed coordination worker identities (module-owner managed). Workers have no account and cannot approve. */
 export const worker_identity = table(
   { name: 'worker_identity' },
@@ -466,4 +492,5 @@ export const spacetimedb = schema({
   activity_approval,
   shared_plan,
   recipient_pause,
+  standing_rule,
 });

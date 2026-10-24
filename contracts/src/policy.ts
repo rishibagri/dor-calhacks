@@ -19,9 +19,11 @@ export * from './enums.js';
 export * from './discovery.js';
 export * from './events-policy.js';
 export * from './recipient-pause.js';
+export * from './standing-rule.js';
 export * from './opaque-id.js';
 export { safeCatalogueUrl } from './catalogue.js';
 export { applyPlanAction, currentPlanStatus, revisePlan, PLAN_STATUSES, type PlanState, type PlanStatus, type PlanAction, type PlanSourceCheck, type PlanRefusal, type PlanTransition } from './plan-lifecycle.js';
+import { STANDING_RULE_MAX_MS, STANDING_RULE_MIN_MS, STANDING_RULE_PURPOSES, standingRuleActive, type StandingRuleState } from './standing-rule.js';
 import type { PolicyReason } from './ports.js';
 import type { ApprovedSignal, Nudge, SharingCategory, SupportMode } from './schemas.js';
 
@@ -273,6 +275,87 @@ export function guardApproval(req: ApprovalRequest, s: PolicySnapshot): Approval
     ...ALLOW, recipientId, recipientPolicyId: preset.policyId, categories: ev.shared,
     expiresAtMs: Math.min(s.nowMs + SIGNAL_LIFETIME_MS, preset.expiresAtMs),
   };
+}
+
+export interface RuleCreationRequest {
+  callerId: string;
+  pairId: string;
+  supportModes: readonly string[];
+  availability: readonly string[];
+  purpose: string;
+  expiresAtMs: number;
+}
+export type RuleCreationDecision = (Allow & { recipientId: string }) | Deny;
+
+/**
+ * D047 set_standing_rule guard. The rule must be a strict, unique, enum-only subset that the owner's CURRENT preset and
+ * assignment for this recipient already allow (F3 evaluation), with an expiry inside [min, max]. It can never broaden
+ * the preset: a category the preset blocks is denied (`blocked_category`), never dropped.
+ */
+export function guardRuleCreation(req: RuleCreationRequest, s: PolicySnapshot): RuleCreationDecision {
+  if (!isId(req.callerId) || !isId(req.pairId) || !Number.isFinite(s.nowMs) || !Number.isSafeInteger(req.expiresAtMs)) return deny('invalid_schema');
+  const unique = (a: readonly unknown[]) => Array.isArray(a) && new Set(a).size === a.length;
+  if (!unique(req.supportModes) || !unique(req.availability) || !req.supportModes.every(m => isIn(SUPPORT_MODES, m)) ||
+    !req.availability.every(a => isIn(AVAILABILITIES, a)) || req.supportModes.length + req.availability.length === 0 ||
+    !isIn(STANDING_RULE_PURPOSES, req.purpose)) return deny('invalid_schema');
+  if (req.expiresAtMs < s.nowMs + STANDING_RULE_MIN_MS || req.expiresAtMs > s.nowMs + STANDING_RULE_MAX_MS) return deny('invalid_schema');
+  if (s.pair && s.pair.pairId !== req.pairId) return deny('wrong_recipient');
+  const cp = counterpart(req.callerId, s.pair);
+  if ('allowed' in cp) return cp;
+  const ev = evaluateDisclosure({
+    candidate: { supportMode: req.supportModes[0] as SupportMode | undefined, availability: req.availability[0] as DisclosurePayload['availability'] },
+    ownerId: req.callerId, recipientId: cp.recipientId ?? '', pairId: req.pairId,
+    pairStatus: cp.recipientId ? s.pair!.status : 'pending', preset: s.preset, assignment: s.assignment, nowMs: s.nowMs,
+  });
+  if (ev.kind === 'denied') return deny(ev.reason);
+  if (ev.kind !== 'shareable' || ev.blocked.length > 0) return deny('blocked_category');
+  return { ...ALLOW, recipientId: cp.recipientId! };
+}
+
+export interface RuleApprovalRequest {
+  callerId: string;
+  pairId: string;
+  supportMode?: string;
+  availability?: string;
+  ruleVersion: number;
+  clientRequestId: string;
+}
+export type RuleApprovalDecision = ApprovalDecision;
+
+/**
+ * D047 approve_signal_by_rule guard. Order: shape, pair membership (non-members get `wrong_recipient`), then the rule
+ * (exists, not revoked, not expired, version matches, payload inside it), then the SAME F3/F4 evaluation as
+ * `guardApproval` against the current preset/assignment with the versions the server reads itself, so the preset stays
+ * the ceiling. The signal expiry is clamped to the rule's. No per-item preview or `payloadRevision` is required;
+ * that is what the rule replaces. Recipient consent, opt-in, quiet hours, cooldown and pause stay checked elsewhere.
+ */
+export function guardRuleApproval(req: RuleApprovalRequest, s: PolicySnapshot & { rule: StandingRuleState | null }): RuleApprovalDecision {
+  if (!isId(req.callerId) || !isId(req.pairId) || !isId(req.clientRequestId) || !isVersion(req.ruleVersion) ||
+    !payloadShapeOk(req) || !Number.isFinite(s.nowMs)) return deny('invalid_schema');
+  if (s.pair && s.pair.pairId !== req.pairId) return deny('wrong_recipient');
+  const cp = counterpart(req.callerId, s.pair);
+  if ('allowed' in cp) return cp;
+  const rule = s.rule;
+  if (!rule) return deny('no_consent');
+  if (rule.ownerId !== req.callerId || rule.pairId !== req.pairId) return deny('wrong_recipient');
+  if (rule.revokedAtMs !== null) return deny('revoked');
+  if (!standingRuleActive(rule, s.nowMs)) return deny('expired');
+  if (rule.version !== req.ruleVersion) return deny('stale_policy');
+  if ((req.supportMode !== undefined && !rule.supportModes.includes(req.supportMode)) ||
+    (req.availability !== undefined && !rule.availability.includes(req.availability))) return deny('blocked_category');
+  if (!s.assignment || !s.preset) return deny('no_consent');
+  const versions = {
+    recipientPolicyVersion: s.preset.version, presetAssignmentVersion: s.assignment.assignmentVersion,
+    consentVersion: DISCLOSURE_CONSENT_VERSION,
+  };
+  const d = guardApproval({
+    callerId: req.callerId, pairId: req.pairId, supportMode: req.supportMode, availability: req.availability,
+    clientRequestId: req.clientRequestId, ...versions,
+    payloadRevision: payloadRevision({
+      pairId: req.pairId, recipientId: cp.recipientId ?? '', supportMode: req.supportMode, availability: req.availability, ...versions,
+    }),
+  }, s);
+  return d.allowed ? { ...d, expiresAtMs: Math.min(d.expiresAtMs, rule.expiresAtMs) } : d;
 }
 
 /**

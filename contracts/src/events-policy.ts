@@ -47,7 +47,7 @@ type Deny = { ok: false; reason: EventDenyReason };
 const no = (reason: EventDenyReason): Deny => ({ ok: false, reason });
 
 const EVENT_ID_RE = /^[a-z0-9][a-z0-9:_-]{2,127}$/;
-/** Catalogue event id shape the ingester and module accept (DS ask, D046): lowercase, 3–128 chars, `a-z0-9:_-`. */
+/** Catalogue event id shape the ingester and module accept (DS ask, D047): lowercase, 3–128 chars, `a-z0-9:_-`. */
 export const validEventId = (id: unknown): id is string => typeof id === 'string' && EVENT_ID_RE.test(id);
 const TOPIC_RE = /^[a-z][a-z0-9-]{1,31}$/;
 // Control, bidi-override and zero-width characters; markup brackets. Scraped text is display-only data.

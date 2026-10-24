@@ -32,7 +32,7 @@ export const approve_signal = spacetimedb.reducer(
     // Idempotent retry (scoped to caller): never re-approve and never resurrect a revoked signal.
     const prior = [...ctx.db.approved_signal.sender_id.filter(ctx.sender)].find(s => s.client_request_id === args.client_request_id);
     if (prior) {
-      const same = prior.pair_id === args.pair_id && prior.support_mode === args.support_mode &&
+      const same = prior.rule_id === undefined && prior.pair_id === args.pair_id && prior.support_mode === args.support_mode &&
         prior.availability === args.availability && prior.consent_version === args.consent_version &&
         prior.recipient_policy_version === args.recipient_policy_version &&
         prior.preset_assignment_version === args.preset_assignment_version;
@@ -58,7 +58,7 @@ export const approve_signal = spacetimedb.reducer(
       recipient_policy_version: args.recipient_policy_version,
       preset_assignment_version: args.preset_assignment_version,
       expires_at: new Timestamp(fromMs(d.expiresAtMs)), revoked_at: undefined,
-      client_request_id: args.client_request_id,
+      client_request_id: args.client_request_id, rule_id: undefined, rule_version: undefined,
     });
     ctx.db.disclosure_receipt.insert({
       receipt_id: newId(ctx), signal_id: signalId, sender_id: ctx.sender, recipient_id: recipient,

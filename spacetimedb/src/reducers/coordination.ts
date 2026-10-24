@@ -4,7 +4,7 @@ import { categoriesOf, guardNudgeCommit, policyErrorCode, type NudgeSource } fro
 import { spacetimedb } from '../schema';
 import { fail, type Ctx } from '../errors';
 import { newId } from '../ids';
-import { fromMs, loadDeliveryGate, loadStanding, pauseInForce, toMs, toStoredSignal } from '../policy_state';
+import { fromMs, loadDeliveryGate, loadStanding, pauseInForce, signalRuleStands, toMs, toStoredSignal } from '../policy_state';
 
 function requireWorker(ctx: Ctx): void {
   if (!ctx.db.worker_identity.identity.find(ctx.sender)) fail('unauthorized', 'worker only');
@@ -51,6 +51,9 @@ export const commit_nudge = spacetimedb.reducer(
       // D041: recheck the pause in this transaction. Same code and message as a revoked approval, so the worker,
       // its ledger and logs cannot tell a pause from an ordinary revocation.
       if (s && pauseInForce(ctx.db, s.sender_id, s.pair_id, toMs(ctx.timestamp))) fail(policyErrorCode('revoked'), 'revoked');
+      // D047: a rule-approved signal fails here the moment its rule is revoked, expired or changed. Same code and
+      // message as a revoked approval, so the worker cannot tell rule-approved from manual.
+      if (s && !signalRuleStands(ctx.db, s, toMs(ctx.timestamp))) fail(policyErrorCode('revoked'), 'revoked');
       if (s) sources.set(id, { signal: toStoredSignal(s), snapshot: { nowMs: toMs(ctx.timestamp), ...loadStanding(ctx.db, s.sender_id, s.pair_id) } });
     }
     const d = guardNudgeCommit({
