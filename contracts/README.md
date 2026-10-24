@@ -29,6 +29,7 @@ From repository root: `npm ci`, then `npm run check`. `npm run contracts:schema`
 - [Quiz and relationship presets](specs/ONBOARDING_SHARING.md)
 - [Agent protocol](specs/AGENTS_PROTOCOL.md)
 - [Acceptance/evaluation](specs/ACCEPTANCE.md)
+- [Core flow journal to nudge](specs/FLOWS.md) — executable reference `src/disclosure.ts`
 
 ## Status
 Shared setup and offline contract scaffolding only. Providers, vault encryption, SpacetimeDB reducers/views and application screens are not implemented or live-verified by this package.
