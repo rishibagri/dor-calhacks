@@ -6,13 +6,13 @@ Voice/typed private reflection for partners, friends and family separated by dis
 User-confirmed owners: **CS = you; DS = Nimisha; AI = Adam; Cyber = Sumedh.** CS additionally owns Apify public activity discovery. Matching and mutual accepted activity proposals are approved scope, gated on reviewed new consent/contracts. Calls are complemented by useful reasons/timing to connect, not promised to be replaced.
 
 ## Current baseline and evidence classification
-Inspected main includes CS work through `d4cc763`: Next.js shell/pages, app adapter ports, private SpacetimeDB module/reducers/views, client adapter, eight-question quiz and D015 fixture fix. CS handoffs report offline contract checks (14 after D015), module harness (16), app quiz checks (4), typecheck and app build. These results are attributed to the existing CS handoff, not newly rerun for this documentation change.
+Inspected main includes CS work through `c4315e3`: Next.js shell/pages, app adapter ports, private SpacetimeDB module/reducers/views, client adapter, eight-question quiz and D015 fixture fix. CS handoffs report offline contract checks (14 after D015), module harness (16), app quiz checks (4), typecheck and app build. These results are attributed to the existing CS handoff, not newly rerun for this documentation change.
 
 On inspected main, approval deliberately refuses pending Cyber policy; vault is locked placeholder; generated bindings/Clerk/module connection are not live-verified. No end-to-end deployed privacy proof exists from these harnesses. Do not rebuild completed shell/module interfaces.
 
 Adam’s remote AI role branch (`5ccd4ba` inspected) reports M1 provider/worker adapters and contract proposals, tests and limited live Droid runs with fake policy/fixture preferences. It reports missing Claude/Cartesia credentials and latency variability. This is branch-reported evidence, not a merged/live-full-pipeline claim. Preserve that branch and review its proposed shapes before integration.
 
-Nimisha and Sumedh implementation is not established by inspected main/logs. Apify source/Actor choice, ingestion and mutual-plan C7 are planning only; no source selected, API job run or production code added by the planning update.
+Nimisha and Sumedh work is not merged into inspected main, but their remote logs report matching/evaluation and guard/key-design implementations respectively; see the publication snapshot below. Apify source/Actor choice, ingestion and mutual-plan C7 are planning only; no source selected, API job run or production code added by the planning update.
 
 ## Current next handoffs
 | Owner | Next artifact | Consumer |
@@ -34,6 +34,11 @@ Live provider credentials/retention, Factory runtime/latency, Clerk identity map
 Keep knowledge current after significant merges. Report planned, implemented, offline-tested, deployed and live-verified separately; cite actual branch/commit and results. Never secrets or private journal content.
 
 ## Latest merged core flow
-Main D016–D020 and contracts/specs/FLOWS.md add CS-drafted pure previewDisclosure/nudgeDelivery/SignalCandidateSchema and 10 flow tests, not wired reducer/UI enforcement. Preview stays device-only. Recipients opt in per connection, default off; quiet hours default 22:00–08:00 at saved offset; pair cooldown is 24 hours. Space/no need yields no candidate; availability-only approval yields no nudge. Sumedh must ACK/amend semantics. Adam’s branch used D016 for an independent contract proposal; reconcile shared types and ownership by commits before merging. Planning decisions here are D021–D024 to avoid overwriting main IDs.
+Main D016–D020 and contracts/specs/FLOWS.md add CS-drafted pure previewDisclosure/nudgeDelivery/SignalCandidateSchema and 10 flow tests, not wired reducer/UI enforcement. Preview stays device-only. Recipients opt in per connection, default off; quiet hours default 22:00–08:00 at saved offset; pair cooldown is 24 hours. Space/no need yields no candidate; availability-only approval yields no nudge. Sumedh must ACK/amend semantics. Adam’s branch used D016 for an independent contract proposal; the proposal is now main D021, with consumer/schema integration still requiring review. Planning decisions here are D022–D025 to avoid overwriting main IDs.
 
 Verification for the integrated planning/main update: `npm ci --ignore-scripts` completed with no audit findings; `npm run check:all` passed 24 contract/flow checks, 16 in-process module checks, app typecheck and 4 quiz checks. Document links/phase completeness/decision IDs checked. These are offline checks; no Apify/provider/deployment call was performed.
+
+## Concurrent-work update at publication
+Main advanced to c4315e3 (PR #4) during planning: Adam’s M1, additive D021 interfaces, 12 generated schemas and worker adapters are now merged. Earlier branch-only observations above describe the earlier inspection; use this newer status. Consumer ACKs/full policy/app/provider integration still remain pending. Remote Cyber 129c31f and DS 42ff908 also report active work (guards/key design and matching/evaluation respectively); neither is merged by this planning update. Preserve those branches and consult their current handoffs. Branch logs contain independent decision labels; main IDs are authoritative.
+
+Final merged-revision verification (including PR #4): `npm run check:all` passed contracts/flows 26, module harness 16, app typecheck and quiz 4; `npm run ai:check` passed agents 34 and worker 6. Locked install reports no audit findings. Offline only; no provider, Apify Actor or deployment was run.

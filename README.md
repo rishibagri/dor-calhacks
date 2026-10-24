@@ -26,7 +26,7 @@ Quiz answers personalize communication, support, social bandwidth and draft shar
 
 ## Current implementation state — read before coding
 
-This repository has active work; it is no longer just a planning scaffold. The inspected shared baseline is main through `d4cc763`. Status below separates code on main from branch-reported work; verify newer branch heads before relying on it.
+This repository has active work; it is no longer just a planning scaffold. The inspected shared baseline is main through `c4315e3`. Status below separates code on main from branch-reported work; verify newer branch heads before relying on it.
 
 | Component | Current evidence | Next owner/action |
 |---|---|---|
@@ -34,7 +34,7 @@ This repository has active work; it is no longer just a planning scaffold. The i
 | SpacetimeDB private module and client adapter | CS M1 merged; 16 in-process module tests reported; generated bindings still placeholder in inspected handoff | CS: publish/generate and verify authenticated two-user path |
 | Signal approval | Intentionally refuses until real privacy guard lands | Sumedh: implement exact guarded approval with CS |
 | Local vault | Locked placeholder on inspected main | Sumedh: real VaultPort, keys/lock/profile/extras |
-| AI providers/worker and AI-branch proposal contracts | Adam’s remote role branch reports adapters, tests and limited Droid live checks; not merged into inspected main | Adam: preserve work, request consumer review and integrate routes/real policy |
+| AI providers/worker and AI-branch proposal contracts | Adam’s M1 adapters/worker and D021 proposal are merged via PR #4; consumer ACK/integration and full live verification remain pending | Adam: preserve work, request consumer review and integrate routes/real policy |
 | Quiz semantics | Eight questions and D015 fixture fixes merged; review ACKs still needed | Nimisha: review/own mapping and rank/evaluation |
 | Apify source/activity plans | Approved scope, documentation only; Actor/source and paid-run limits not selected | CS owns ingestion; Nimisha ranks; Adam coordinates; Sumedh guards |
 | Production deployment / real end-to-end privacy | Not established by this documentation | All: publish reproducible live evidence before claims |
@@ -248,7 +248,7 @@ No private journal, quiz answer, detailed schedule, pair identity or relationshi
 | C6 | Real policy port and offline test boundary | Authoritative guards → consumers | Sumedh; all consume |
 | C7 (planned) | Public activity catalogue + shared proposal | CS source → rank/worker/UI | CS; Nimisha/Adam consume; Sumedh consent review |
 
-The full [contract index](contracts/README.md) distinguishes executable schemas from planned interfaces. `contracts/src/schemas.ts` is the shared runtime schema source; generated schema files and fixtures change together. The app adapter seam is `src/lib/backend/ports.ts`; shared wire definitions must not fork there. Adam’s AI-branch proposal branch proposal needs review; do not overwrite it or claim it merged from a planning document.
+The full [contract index](contracts/README.md) distinguishes executable schemas from planned interfaces. `contracts/src/schemas.ts` is the shared runtime schema source; generated schema files and fixtures change together. The app adapter seam is `src/lib/backend/ports.ts`; shared wire definitions must not fork there. Adam’s D021 additive contracts have now merged through PR #4; consumer/privacy ACKs and app/worker integration remain pending.
 
 ## Privacy and safety model
 - Default deny; accepted connection plus confirmed preset plus named item approval plus current versions/expiry are required.
@@ -268,7 +268,7 @@ The full [contract index](contracts/README.md) distinguishes executable schemas 
 | `spacetimedb/` | CS module plumbing; Sumedh guard/approval review and coordinated implementation |
 | `src/vault/`, `src/privacy/` | Sumedh encryption and real authorization semantics |
 | `src/evaluation/` | Nimisha matching, evaluation and pure preference logic |
-| `src/agents/`, `worker/` | Adam provider/worker work; current implementation may be role-branch-only |
+| `src/agents/`, `worker/` | Adam provider/worker code merged via PR #4; app/policy integration pending |
 | `src/server/discovery/` | Planned CS Apify normalization/cache adapter |
 | `contracts/` | Shared schemas/types/ports, generated schemas, specs, fixtures and checks |
 | `integration/` | Cross-owner verification plan and future live smoke harnesses |
@@ -290,7 +290,7 @@ npm run dev           # local Next.js app; missing adapters remain labeled
 npm run build:app
 ```
 
-Use `npm run contracts:schema` after runtime shape changes. `npm run build` currently builds contracts; it is not the application deployment command. Current scripts are authoritative; AI branch-specific scripts become available only after those changes merge. Read bundled Next.js docs as AGENTS.md requires before coding against its APIs.
+Use `npm run contracts:schema` after runtime shape changes. `npm run build` currently builds contracts; it is not the application deployment command. Current scripts are authoritative; AI scripts `ai:build` and `ai:check` are now available after PR #4. Read bundled Next.js docs as AGENTS.md requires before coding against its APIs.
 
 Copy configuration locally from [.env.example](.env.example); never commit credentials. Clerk and a correctly configured module identity mapping are needed for actual account checks. Publishing the SpacetimeDB module and generating bindings are separate from passing the in-process harness. Read [the module guide](spacetimedb/README.md) and [client guide](src/lib/spacetime/README.md). Never hand-write placeholder bindings and call them generated/live.
 
@@ -309,3 +309,6 @@ Each person preserves their role branch and merges main into it. Never reset ano
 Core: voice/typed reflection, local vault, explicit recipient-approved context, bounded coordination, useful nudge, privacy controls, three relationship instances. Added: one Apify catalogue and consent-reviewed shared-activity matching/proposal acceptance. Gate deeper activity delivery on reviewed new contracts and working core integration. Optional later: recurring rituals, additional sources and calendar OAuth. Group matching, automatic booking/payment and native apps remain out of this sprint unless explicitly reprioritized.
 
 This setup takes its product/architecture/lifecycle/ownership/verification structure from [FaultLine](https://github.com/Jay-Thpr/FaultLine), adapted to Kinetic. It does not copy FaultLine runtime code or unrelated safety rules. Video planning stays in its own file. The repository remains private to invited collaborators; “shared contracts” means available to all four owners, not published personal data.
+
+### Publication-time status update
+While this plan was being written, Adam’s M1/D021 adapters and worker merged through PR #4 (main c4315e3). They are implemented/mostly offline-tested code, not yet the full configured app pipeline. Their runtime uses the restricted `droid exec` path; see worker/README.md for the SDK tradeoff and tested constraints. Nimisha and Sumedh also have active role-branch work; read those branches before assigning them new bootstrap work. Historical snapshots are evidence at their stated commit, not an instruction to rebuild. Main decision IDs D016–D021 remain intact; this planning scope uses D022–D025.

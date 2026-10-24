@@ -1,5 +1,7 @@
 # Message for Nimisha and her DS agent
-The Kinetic plan on main now has detailed ownership and P0–P9 phases for every person. Preserve anything you have started; fetch/merge origin/main into role/ds-context without resetting local work, then reread AGENTS.md, README.md, docs/roles/ds.md, docs/PLAN.md and contracts/README.md.
+
+Current branch status: remote role/ds-context 42ff908 reports quiz fixtures, rule matching and evaluation work. Preserve it; review current D015/flow alignment and outstanding DS-Q2/DS-Q3 instead of rebuilding the dataset or rank baseline.
+
 
 Nimisha owns preference/quiz semantics, matching and evaluation. CS owns the app and Apify source ingestion; Adam owns voice/reflection/agent coordination; Sumedh owns vault and permission enforcement. Your implementation should feed all three through explicit shared interfaces, not become an isolated analysis exercise.
 
@@ -12,3 +14,5 @@ New product depth is public activity discovery and a plan both people accept. CS
 Your guide defines DS-P# phases, checks and exact handoffs. Publish fixtures/rank hook early, use explicit synthetic inputs while adapters are incomplete, and ACK consumers when their interfaces work. Keep your log and handoff current with commit, checks, blocker and next person’s exact action.
 
 One newer main change landed during planning: read `contracts/specs/FLOWS.md` and `contracts/src/disclosure.ts` before implementing preview/delivery. Preserve device-only preview, recipient opt-in default off, quiet hours/24h cooldown, no candidate for space/no need, and no nudge for availability-only input. Sumedh reviews the CS-drafted pure semantics. Adam's branch proposal also used D016; main D016–D020 now name the core flow decisions, so reconcile types by commit instead of relying on the duplicate label.
+
+Publication update: Adam’s M1/D021 code merged into main via PR #4 while this message was drafted. Consume the merged interfaces and preserve your active branch; remaining consumer review and real-policy/app integration are still required. Nimisha/Sumedh also have active branch work: inspect current logs instead of restarting milestones.

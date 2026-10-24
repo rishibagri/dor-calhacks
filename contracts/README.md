@@ -3,10 +3,10 @@ Read this after AGENTS.md and PRD.md. This is the interface index; `src/schemas.
 
 | ID | Interface | Producer → Consumer | Responsible owner | Boundary |
 |---|---|---|---|---|
-| C1 | LocalConnectionProfile / PrivateReflectionPort | DS quiz + local UI → owner-only profile; AI transient reasoning → local vault | DS (quiz), AI (reflection), Cyber (vault) | Private; never shared-state subscription |
+| C1 | LocalConnectionProfile / PrivateReflectionPort → PrivateReflection + SignalCandidate / VoicePort → VoiceSession | DS quiz + local UI → owner-only profile; AI transient reasoning → local vault; AI voice adapter → CS routes | DS (quiz), AI (reflection, voice), Cyber (vault) | Private; never shared-state subscription. Candidate is an enum-only draft, never consent |
 | C2 | RelationshipPreset / RecipientPresetAssignment | Owner-confirmation UI → policy/reducers → preview and coordination guards | Cyber; CS consumes | Named recipient, confirmed preset, versions, no per-person overrides |
 | C3 | ApprovedSignal v2 | Guarded approval reducer → Factory/recipient agent | Cyber produces; AI consumes | Explicit minimal disclosure; no raw context |
-| C4 | AgentAck / CoordinationPort | Recipient's approved preferences → bounded coordinator | AI; DS and CS consume | Maximum two rounds; no free-form agent chat |
+| C4 | AgentAck / CoordinationPort / RecipientSupportPreferences / CoordinationJob / CoordinationOutcome | Recipient's approved preferences → bounded coordinator; content-free job → worker; sanitized outcome codes | AI; Cyber/CS produce preferences consent and jobs; DS and CS consume | Maximum two rounds; no free-form agent chat; jobs carry IDs only |
 | C5 | Nudge / DisclosureReceipt | Guarded coordination commit → caller-filtered views/UI | CS; Cyber reviews | Revalidate consent/preset before delivery |
 | C6 | DisclosurePolicyPort / fake clock/store | Cyber policy → reducers, worker and integration checks | Sumedh (Cyber); all consume | Fake implementations are offline-only and not security evidence |
 | C7 (planned) | Activity catalogue and shared-plan proposal | CS Apify ingestion → Nimisha ranking → Adam workflow → CS UI | CS owns; Sumedh privacy review | Documentation only until new schemas/consent transitions are reviewed |
@@ -14,10 +14,10 @@ Read this after AGENTS.md and PRD.md. This is the interface index; `src/schemas.
 ## Named owners and implementation locations
 - **CS (you):** module/client plumbing, caller-filtered delivery, real adapter wiring and C7 catalogue ingestion.
 - **Nimisha (DS):** quiz/profile semantics, matching, labeled scenarios and quality evaluation.
-- **Adam (AI):** transient provider reflection/voice and bounded coordination. His AI-branch proposal additions currently appear on the AI role branch; review/merge them rather than redefining parallel types.
+- **Adam (AI):** transient provider reflection/voice and bounded coordination. His additive D021 contracts and adapters are now merged through PR #4, with consumer review/integration still pending; do not redefine parallel types.
 - **Sumedh (Cyber):** vault, real authorization semantics, preset/item/assignment validation, privacy reviews and adversarial checks.
 
-See [the owner/consumer dependency matrix](../docs/PLAN.md). Current app-side adapters are declared in `src/lib/backend/ports.ts`; they are integration seams, not alternative shared wire specifications. Current `PrivateReflectionPort` on inspected main returns reflection only, while Adam’s proposed response is richer: resolve that in one reviewed change before wiring candidate extraction. The main `approve_signal` still refuses pending Sumedh's real guard.
+See [the owner/consumer dependency matrix](../docs/PLAN.md). Current app-side adapters are declared in `src/lib/backend/ports.ts`; they are integration seams, not alternative shared wire specifications. The current app-side `ReflectionPort` still returns reflection only; Adam’s merged PrivateReflection response is richer than the app-side ReflectionPort: reconcile that app seam in one reviewed change before wiring candidate extraction. The main `approve_signal` still refuses pending Sumedh's real guard.
 
 ## Interface lifecycle and review
 1. Producer claims the change with affected consumers. For cross-role changes, include a phase task ID and exact files in the update log.
@@ -43,6 +43,8 @@ From repository root: `npm ci`, then `npm run check`. `npm run contracts:schema`
 - Changing an interface requires the producer and affected consuming owner to review the same PR; Cyber reviews privacy boundaries. Update inferred types, generated schemas, fixtures, checks, docs and handoffs together. Breaking wire changes bump schemaVersion.
 - Source-of-truth order: user decisions → PRD/decision log → interface spec/schema → measured verification → older handoffs. Conflicts must be resolved, not silently overridden.
 
+Merged via PR #4 (D021; CS/Cyber/DS review still pending): the C1 additions `PrivateReflection` (`src/reflection.ts`; it reuses FLOWS.md's `SignalCandidateSchema`, with null for nothing to share), `VoiceSession` and `VoicePort`, and the C4 additions `RecipientSupportPreferences`, `CoordinationJob`, `CoordinationOutcome` and `CoordinationPort.outcomes` (codes include FLOWS.md F5's `not_opted_in` and `quiet_hours`). All are additive; no existing wire shape or schemaVersion changes.
+
 ## Detailed contracts
 - [Architecture](specs/ARCHITECTURE.md)
 - [API/reducers/views](specs/API.md)
@@ -53,4 +55,4 @@ From repository root: `npm ci`, then `npm run check`. `npm run contracts:schema`
 - [Core flow journal to nudge](specs/FLOWS.md) — executable reference `src/disclosure.ts`
 
 ## Status
-The shared package has executable schemas/fixtures/offline checks; app and module code are now merged separately. Vault and exact approval remain missing on inspected main. Provider/worker work is reported on Adam’s role branch and requires review/integration. Package checks do not establish live deployment or privacy enforcement. C7 is planned, with no executable schema added by this documentation change.
+The shared package has executable schemas/fixtures/offline checks; app and module code are now merged separately. Vault and exact approval remain missing on inspected main. Provider/worker work is now merged via PR #4 but still needs consumer review, real policy wiring and app integration. Package checks do not establish live deployment or privacy enforcement. C7 is planned, with no executable schema added by this documentation change.

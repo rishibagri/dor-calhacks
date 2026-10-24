@@ -12,7 +12,7 @@ Deliver a useful voice reflection loop and a real bounded agent workflow that ac
 Sumedh supplies authoritative policy; your workflow rechecks it and cannot replace it. Nimisha supplies ranking; CS supplies catalogue, shared-state adapters and result reducers. Private reflection receives only selected disclosed text; Factory receives approved enums/data, not journals, private quiz extras, identity details or provider keys.
 
 ## Current starting point
-Remote `role/ai-voice` at 5ccd4ba reports M1 adapters, worker and contract proposals, offline tests and limited live Droid checks. These are branch-reported and not yet merged into the inspected main. Preserve this work; do not recreate it. The branch log reports Claude/Cartesia missing credentials and variable Droid latency. Review latest branch log/handoff before following these phases.
+Remote `role/ai-voice` at 5ccd4ba reports M1 adapters, worker and contract proposals, offline tests and limited live Droid checks. M1 and additive D021 contracts are now merged into main through c4315e3; tests/live measurements remain attributed to Adam’s handoff. Preserve this work; do not recreate it. The branch log reports Claude/Cartesia missing credentials and variable Droid latency. Review latest branch log/handoff before following these phases.
 
 ## Your first action
 Compare your branch to latest main and preserve AI-branch proposal work. Resolve shared ReflectionPort/PrivateReflection response and worker ports with CS, get Sumedh’s review of policy/recipient-preference consent, then complete authenticated routes and browser voice loop. Publish remaining credential/runtime blockers without secrets.
@@ -83,7 +83,7 @@ Each phase has a named artifact, a check, and a consumer. Open small PRs every 2
 - **Hand off:** Team: final provider status and follow-up bugs.
 
 ## Verification you own
-- Existing branch `ai:check` and related scripts are branch-specific until merged; inspect package.json before invoking. Main has contract/module/app scripts.
+- `npm run ai:check` is available on main after PR #4; inspect package.json for current scripts. Main also has contract/module/app checks.
 - Selected-text-only provider requests, malicious-output rejection, typed fallback and stop/cancel behavior.
 - Worker authenticated requests, no private-session data, bounded rounds/tools, replay/idempotency and live consent rechecks.
 - Record current median/p95 and timeout/no-action rates; distinguish fixture-policy Droid tests from real end-to-end privacy validation.

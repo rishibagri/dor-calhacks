@@ -14,6 +14,9 @@ No journal content reaches Apify, shared state, peer agent prompts or Factory se
 ## Current starting point
 `approve_signal` deliberately refuses on main. Existing module guards/views and suppression logic require your review, not a fresh module rewrite. Vault is a locked placeholder. The local app `VaultPort` includes profile and quiz-extra persistence. D015 fixture changes await your review.
 
+## Latest role-branch evidence
+Current branch status: remote role/cyber-privacy 129c31f reports real disclosure guards, authoritative approve_signal and vault key design (offline only). Preserve it; reconcile its policy implementation with main disclosure.ts/FLOWS.md and decision IDs, then focus on real VaultPort, worker commit/identity and consumer ACKs. Do not implement a second parallel policy.
+
 ## Your first action
 Inspect `src/lib/backend/ports.ts`, `spacetimedb/src/guards.ts`, `reducers/signals.ts`, `views.ts`, `schema.ts` and CS handoff questions. Publish exact VaultPort and policy integration steps; resolve issuer/audience checks and internal-worker identity with CS/Adam.
 

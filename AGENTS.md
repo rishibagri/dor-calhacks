@@ -34,9 +34,9 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 | Role / person | Current status | Next handoff |
 |---|---|---|
 | CS — you | M1/D015 plus core flow draft merged through d4cc763; disclosure.ts and FLOWS.md exist, not reducer/UI-wired; live bindings/auth pending | CS-P1/P2: wire reviewed F3/F4/F5/F7 flow: device-only preview, guarded approval, per-pair opt-in/delivery gate and commit; own Apify source/catalogue per docs/features/ACTIVITY_DISCOVERY.md |
-| DS — Nimisha | Quiz starter and fixtures exist; DS implementation not established on inspected main | DS-P1/P2: review D015 and previewDisclosure/nudgeDelivery expectations (space, opt-in, quiet hours, cooldown), claim quiz semantics, publish rank hook |
-| Cyber — Sumedh | Vault placeholder and approve_signal refusal on inspected main | CYBER-P1/P2: ACK/amend CS-drafted disclosure.ts/FLOWS.md; real VaultPort incl. extras; coordinate authoritative guards; reconcile AI branch schemas with main |
-| AI — Adam | AI branch reports M1/proposed contracts/worker and limited Droid tests; not merged into inspected main | AI-P1/P2: preserve branch, reconcile branch proposal with main SignalCandidateSchema and D016–D020 flows, authenticated provider routes, real policy/worker ports; note missing keys/latency |
+| DS — Nimisha | Active DS branch 42ff908 reports fixtures/matching/evaluation; not yet merged | DS-P1/P2: review D015 and previewDisclosure/nudgeDelivery expectations (space, opt-in, quiet hours, cooldown), claim quiz semantics, publish rank hook |
+| Cyber — Sumedh | Cyber branch 129c31f reports guards/approval/key design; main still refuses until reviewed integration | CYBER-P1/P2: reconcile existing Cyber policy with CS-drafted disclosure.ts/FLOWS.md, preserve branch guards; real VaultPort incl. extras; review merged AI D021 |
+| AI — Adam | M1/D021 adapters and worker merged via PR #4; limited Droid tests, full policy/app integration pending | AI-P1/P2: preserve branch, review merged D021 interfaces against main SignalCandidateSchema and D016–D020 flows, authenticated provider routes, real policy/worker ports; note missing keys/latency |
 
 Detailed shared phases are in README.md; per-owner phases in docs/roles/*.md; exact producer/consumer dependencies in docs/PLAN.md. These are current planning assignments, not completion evidence. Merge main into your active role branch; do not reset or force-update other roles.
 

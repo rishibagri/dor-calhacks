@@ -14,6 +14,9 @@ CS owns Apify collection, catalogue endpoint and app UI rendering. You own norma
 ## Current starting point
 An eight-question app quiz and D015 mapping already exist on main. Fixtures include confirmed presets and recipient assignments; friends omit availability, family sharing is explicit beyond the suggested preset. Q1 space is local-only `prefersSpace`; Q5/Q6/Q8 remain in local vault extras. Review this before replacing any mapping.
 
+## Latest role-branch evidence
+Current branch status: remote role/ds-context 42ff908 reports quiz fixtures, rule matching and evaluation work. Preserve it; review current D015/flow alignment and outstanding DS-Q2/DS-Q3 instead of rebuilding the dataset or rank baseline.
+
 ## Your first action
 Inspect D015, `src/components/feature/quiz-model.ts`, local quiz extras, and all three scenario fixtures. ACK or identify a concrete mapping issue. Deliver deterministic expected profiles, no-action cases and the proposed ranking input/output to CS and Adam before advanced scoring.
 
