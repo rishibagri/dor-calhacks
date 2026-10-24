@@ -18,7 +18,9 @@
     "build": "tsc -p tsconfig.json",
     "test": "node --test tests/*.test.mjs",
     "check": "npm run build && npm test",
-    "live": "node scripts/live-droid.mjs"
+    "live": "node scripts/live-droid.mjs",
+    "start": "node dist/main.js",
+    "test:integration": "vitest run --config integration/vitest.config.ts"
   },
   "dependencies": {
     "@kinetic/agents": "0.1.0",
@@ -27,6 +29,8 @@
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
-    "typescript": "^5.7.2"
+    "spacetimedb": "2.13.0",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.0"
   }
 }

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "requestId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "proposed",
+        "no_candidates",
+        "not_eligible",
+        "no_fit",
+        "stale",
+        "proposer_failed_fallback",
+        "proposer_failed_no_suggestion"
+      ]
+    },
+    "shortlisted": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3
+    },
+    "eligible": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3
+    },
+    "rounds": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2
+    },
+    "modelCalls": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2
+    },
+    "decidedBy": {
+      "type": "string",
+      "enum": [
+        "none",
+        "deterministic",
+        "agent",
+        "fixed_template"
+      ]
+    },
+    "proposalId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "requestId",
+    "outcome",
+    "shortlisted",
+    "eligible",
+    "rounds",
+    "modelCalls",
+    "decidedBy"
+  ],
+  "additionalProperties": false
+}
