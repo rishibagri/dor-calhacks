@@ -33,6 +33,8 @@
         "preferences_unavailable",
         "no_intersection",
         "recipient_declined",
+        "not_opted_in",
+        "quiet_hours",
         "cooldown",
         "proposer_failed_fallback",
         "proposer_failed_no_suggestion"

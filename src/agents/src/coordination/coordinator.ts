@@ -1,13 +1,13 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { AgentAckSchema, ApprovedSignalSchema, CoordinationOutcomeSchema, NudgeSchema,
-  RecipientSupportPreferencesSchema, type AgentAck, type ApprovedSignal, type Availability, type Clock,
-  type CoordinationOutcome, type CoordinationOutcomeCode, type CoordinationPort, type DisclosurePolicyPort,
-  type Nudge, type RecipientSupportPreferences, type SupportMode } from '@kinetic/contracts';
-import { eligibleOptions, sameOption, TEMPLATE_BY_MODE, type AckOption } from './eligibility.js';
+import { AgentAckSchema, ApprovedSignalSchema, CoordinationOutcomeSchema, NUDGE_COOLDOWN_MS, NudgeSchema,
+  RecipientSupportPreferencesSchema, nudgeDelivery, templateForSignal, type AgentAck, type ApprovedSignal,
+  type Availability, type Clock, type CoordinationOutcome, type CoordinationOutcomeCode, type CoordinationPort,
+  type DisclosurePolicyPort, type Nudge, type RecipientDelivery, type RecipientSupportPreferences,
+  type SupportMode } from '@kinetic/contracts';
+import { eligibleOptions, sameOption, type AckOption } from './eligibility.js';
 
 export const MAX_ROUNDS = 2;
-export const NUDGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 /** Everything a recipient agent may see: approved enums and pre-filtered options. No IDs, no vault data. */
 export interface AckProposalInput {
@@ -29,13 +29,16 @@ export interface RecipientPreferencesPort {
   /** Authoritative current consent record for this recipient in this pair, or null. */
   current(pairId: string, recipientId: string): Promise<unknown>;
 }
+export interface DeliveryStatePort {
+  current(pairId: string, recipientId: string): Promise<{ delivery: RecipientDelivery; lastNudgeAt: Date | null }>;
+}
 export interface CoordinatorDeps {
   policy: DisclosurePolicyPort;
   preferences: RecipientPreferencesPort;
   proposer: AckProposerPort;
   clock: Clock;
-  /** Most recent delivered nudge for this pair and recipient; enforces one per 24 hours. */
-  lastNudgeAt?: (pairId: string, recipientId: string) => Promise<Date | null>;
+  /** Recipient's delivery settings and last nudge for this pair (FLOWS.md F5: opt-in, quiet hours, cooldown). */
+  delivery: DeliveryStatePort;
   /** DS ranking hook. It may reorder or drop options; anything it adds is ignored. */
   rank?: (options: AckOption[], signal: ApprovedSignal) => AckOption[];
   /** Use the top-ranked option when both rounds fail. Policy is still rechecked first. Default true. */
@@ -45,8 +48,8 @@ export interface CoordinatorDeps {
 interface PairResult { ack?: AgentAck; nudge?: Nudge; outcome: CoordinationOutcome }
 
 /**
- * Bounded exchange: policy check → cooldown → recipient consent → deterministic intersection → at most two
- * proposer rounds → policy and consent recheck → schema-checked ACK and nudge proposal. Nothing is committed
+ * Bounded exchange: policy check → delivery gate (opt-in, cooldown, quiet hours) → recipient consent → deterministic intersection → at most two
+ * proposer rounds → policy, delivery and consent recheck → schema-checked ACK and nudge proposal. Nothing is committed
  * here; the caller passes the result to a version-checked reducer, which revalidates again.
  */
 export class BoundedCoordinator implements CoordinationPort {
@@ -81,7 +84,8 @@ export class BoundedCoordinator implements CoordinationPort {
     for (const signal of signals) if (await this.allowed(signal)) allowed.push(signal);
     if (allowed.length === 0) return { outcome: outcome('policy_denied') };
 
-    if (await this.inCooldown(pairId, recipientId)) return { outcome: outcome('cooldown') };
+    const gate = await this.deliveryGate(pairId, recipientId);
+    if (gate) return { outcome: outcome(gate) };
 
     const prefs = await this.currentPreferences(pairId, recipientId);
     if (!prefs) return { outcome: outcome('preferences_unavailable') };
@@ -117,13 +121,17 @@ export class BoundedCoordinator implements CoordinationPort {
       choice = options[0]!; decidedBy = 'fixed_template'; code = 'proposer_failed_fallback';
     }
 
-    // Consent may have been revoked or changed while the proposer ran.
+    // Consent or delivery settings may have changed while the proposer ran.
     if (!(await this.allowed(signal))) return { outcome: outcome('policy_denied', rounds) };
+    const lateGate = await this.deliveryGate(pairId, recipientId);
+    if (lateGate) return { outcome: outcome(lateGate, rounds) };
     const fresh = await this.currentPreferences(pairId, recipientId);
     if (!fresh || fresh.consentId !== prefs.consentId || fresh.consentVersion !== prefs.consentVersion ||
       !eligibleOptions(signal, fresh).some(o => sameOption(o, choice)))
       return { outcome: outcome('preferences_unavailable', rounds) };
 
+    const templateId = templateForSignal(signal);
+    if (!templateId) return { outcome: outcome('no_intersection', rounds) };
     const now = this.deps.clock.now();
     const ack = AgentAckSchema.parse({ schemaVersion: 1, signalId: signal.signalId, recipientConsentId: fresh.consentId,
       recipientConsentVersion: fresh.consentVersion, decision: 'compatible', supportMode: choice.supportMode,
@@ -131,7 +139,7 @@ export class BoundedCoordinator implements CoordinationPort {
     const expiresAt = Math.min(Date.parse(signal.expiresAt), Date.parse(fresh.expiresAt), now.getTime() + NUDGE_COOLDOWN_MS);
     const nudge = NudgeSchema.parse({ schemaVersion: 1, id: nudgeId(requestId, pairId, recipientId), pairId, recipientId,
       sourceSignalIds: [signal.signalId], sourceConsentVersions: [signal.consentVersion],
-      templateId: TEMPLATE_BY_MODE[choice.supportMode], createdAt: now.toISOString(),
+      templateId, createdAt: now.toISOString(),
       expiresAt: new Date(expiresAt).toISOString() });
     return { ack, nudge, outcome: outcome(code, rounds, decidedBy, nudge.id) };
   }
@@ -145,13 +153,14 @@ export class BoundedCoordinator implements CoordinationPort {
     }
   }
 
-  private async inCooldown(pairId: string, recipientId: string): Promise<boolean> {
-    if (!this.deps.lastNudgeAt) return false;
+  /** Contracts' nudgeDelivery decides; an unreadable delivery state is treated as not opted in (D017). */
+  private async deliveryGate(pairId: string, recipientId: string): Promise<'not_opted_in' | 'quiet_hours' | 'cooldown' | null> {
     try {
-      const last = await this.deps.lastNudgeAt(pairId, recipientId);
-      return last !== null && this.deps.clock.now().getTime() - last.getTime() < NUDGE_COOLDOWN_MS;
+      const { delivery, lastNudgeAt } = await this.deps.delivery.current(pairId, recipientId);
+      const decision = nudgeDelivery(delivery, lastNudgeAt, this.deps.clock.now());
+      return decision.deliver ? null : decision.reason;
     } catch {
-      return true;
+      return 'not_opted_in';
     }
   }
 

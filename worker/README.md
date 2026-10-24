@@ -29,7 +29,7 @@ Read root AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md and your 
 - `ApprovedSignalSource.approvedSignals(pairId, signalIds)`: worker-identity SpacetimeDB read.
 - `RecipientPreferencesPort.current(pairId, recipientId)`
 - `CoordinationCommitPort.commit(result, job)`: a version-checked reducer that revalidates.
-- `lastNudgeAt(pairId, recipientId)`
+- `DeliveryStatePort.current(pairId, recipientId)` → `{ delivery: RecipientDelivery, lastNudgeAt }`, from the reducer that backs D017/D018.
 
 **Cyber must supply** the real `DisclosurePolicyPort`. No process entrypoint exists yet: there are no production adapters to wire, and fakes must not be wired.
 

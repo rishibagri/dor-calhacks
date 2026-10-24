@@ -22,7 +22,7 @@ From repository root: `npm ci`, then `npm run check`. `npm run contracts:schema`
 - Changing an interface requires the producer and affected consuming owner to review the same PR; Cyber reviews privacy boundaries. Update inferred types, generated schemas, fixtures, checks, docs and handoffs together. Breaking wire changes bump schemaVersion.
 - Source-of-truth order: user decisions → PRD/decision log → interface spec/schema → measured verification → older handoffs. Conflicts must be resolved, not silently overridden.
 
-Proposed on `role/ai-voice` (D016, pending CS/Cyber/DS review): the C1 additions `PrivateReflection`, `SignalCandidate`, `VoiceSession` and `VoicePort`, and the C4 additions `RecipientSupportPreferences`, `CoordinationJob`, `CoordinationOutcome` and `CoordinationPort.outcomes`. All are additive; no existing wire shape or schemaVersion changes.
+Proposed on `role/ai-voice` (D021, pending CS/Cyber/DS review): the C1 additions `PrivateReflection` (`src/reflection.ts`; it reuses FLOWS.md's `SignalCandidateSchema`, with null for nothing to share), `VoiceSession` and `VoicePort`, and the C4 additions `RecipientSupportPreferences`, `CoordinationJob`, `CoordinationOutcome` and `CoordinationPort.outcomes` (codes include FLOWS.md F5's `not_opted_in` and `quiet_hours`). All are additive; no existing wire shape or schemaVersion changes.
 
 ## Detailed contracts
 - [Architecture](specs/ARCHITECTURE.md)
@@ -31,6 +31,7 @@ Proposed on `role/ai-voice` (D016, pending CS/Cyber/DS review): the C1 additions
 - [Quiz and relationship presets](specs/ONBOARDING_SHARING.md)
 - [Agent protocol](specs/AGENTS_PROTOCOL.md)
 - [Acceptance/evaluation](specs/ACCEPTANCE.md)
+- [Core flow journal to nudge](specs/FLOWS.md) — executable reference `src/disclosure.ts`
 
 ## Status
 Shared setup and offline contract scaffolding only. Providers, vault encryption, SpacetimeDB reducers/views and application screens are not implemented or live-verified by this package.

@@ -1,6 +1,7 @@
 {
   "synthetic": true,
   "source": "C4 bounded-coordination expectations over contracts/fixtures/scenarios.json. DS: extend with ranking cases; CS/Cyber: these are the inputs the worker expects from authoritative state.",
+  "defaultDelivery": { "optedIn": true, "quietStartMinute": null, "quietEndMinute": null, "utcOffsetMinutes": 0 },
   "preferences": {
     "partners": { "schemaVersion": 1, "consentId": "partners-b-consent", "consentVersion": 1, "pairId": "partners-pair", "recipientId": "partners-b", "purpose": "support_nudge", "supportModes": ["short_call", "encouraging_note"], "availability": ["this_week"], "expiresAt": "2099-01-01T00:00:00Z", "revokedAt": null },
     "friends": { "schemaVersion": 1, "consentId": "friends-b-consent", "consentVersion": 1, "pairId": "friends-pair", "recipientId": "friends-b", "purpose": "support_nudge", "supportModes": ["shared_activity"], "availability": ["today", "this_week"], "expiresAt": "2099-01-01T00:00:00Z", "revokedAt": null },
@@ -16,6 +17,9 @@
     { "id": "revoked-before-use", "scenario": "partners", "state": { "revoked": true }, "proposer": [], "expect": { "outcome": "policy_denied", "rounds": 0, "proposerCalls": 0 } },
     { "id": "revoked-during-generation", "scenario": "partners", "revokeOnProposerCall": true, "proposer": [{ "decision": "compatible", "optionIndex": 0 }], "expect": { "outcome": "policy_denied", "rounds": 1, "nudge": false } },
     { "id": "recipient-preferences-revoked", "scenario": "partners", "preferencesOverride": { "revokedAt": "2026-10-23T00:00:00Z" }, "proposer": [], "expect": { "outcome": "preferences_unavailable", "rounds": 0 } },
-    { "id": "cooldown", "scenario": "partners", "lastNudgeHoursAgo": 3, "proposer": [], "expect": { "outcome": "cooldown", "rounds": 0 } }
+    { "id": "cooldown", "scenario": "partners", "lastNudgeHoursAgo": 3, "proposer": [], "expect": { "outcome": "cooldown", "rounds": 0 } },
+    { "id": "recipient-not-opted-in", "scenario": "partners", "deliveryOverride": { "optedIn": false }, "proposer": [], "expect": { "outcome": "not_opted_in", "rounds": 0, "proposerCalls": 0 } },
+    { "id": "quiet-hours", "scenario": "partners", "deliveryOverride": { "quietStartMinute": 0, "quietEndMinute": 1439 }, "proposer": [], "expect": { "outcome": "quiet_hours", "rounds": 0, "proposerCalls": 0 } },
+    { "id": "availability-only-no-nudge", "scenario": "partners", "signalOmit": ["supportMode"], "proposer": [], "expect": { "outcome": "no_intersection", "rounds": 0, "proposerCalls": 0, "ack": "decline" } }
   ]
 }

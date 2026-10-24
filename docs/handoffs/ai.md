@@ -4,16 +4,16 @@ Status: Milestone 1 on `role/ai-voice`, not yet merged to main. Adapters and the
 Read AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md, and docs/roles/ai.md. Work on the corresponding role branch. Do not use fake adapters in live mode.
 
 ## Update at each handoff
-- UTC timestamp and branch/commit: 2026-10-24T03:09Z, `role/ai-voice`. `d940735` contract proposal (D016), `27cb467` adapters and worker, `d2045cd` merge of main @ `8e208df`; the docs commit sits on top.
+- UTC timestamp and branch/commit: 2026-10-24T03:09Z, `role/ai-voice`. `d940735` contract proposal (D021), `27cb467` adapters and worker, `d2045cd` merge of main @ `8e208df`; the docs commit sits on top.
 - Completed work and interface IDs:
-  - **Contracts (D016, proposed, additive):**
+  - **Contracts (D021, proposed, additive):**
     - C1: `PrivateReflectionPort.reflect` → `PrivateReflection {schemaVersion, reflection ≤2000, candidate: SignalCandidate|null}`. `SignalCandidate` is enum-only `{supportMode?, availability?}`. `VoicePort` and `VoiceSession`.
     - C4: `RecipientSupportPreferences` (the recipient's own consent record), `CoordinationJob` (IDs only, ≤ 4 signals), `CoordinationOutcome` (sanitized codes, rounds 0–2, `decidedBy`). `CoordinationPort` results gain `outcomes`.
     - Schemas, fixtures and contract tests were updated together; no existing shape changed.
   - **`@kinetic/agents` (`src/agents/`):** `ClaudeReflectionAdapter`, `CartesiaVoiceAdapter`, `BoundedCoordinator` (+ `eligibleOptions`, `intersectWindow`, `TEMPLATE_BY_MODE`), `ProviderError`/`httpStatusFor`, `PROVIDER_PROCESSING`. Synthetic doubles are only under `@kinetic/agents/testing`. Fixtures: `fixtures/{reflection,voice,coordination}.synthetic.json`. Details are in src/agents/README.md.
   - **`@kinetic/worker` (`worker/`):** `DroidAckProposer` runs `droid exec` with `--only-tools TodoWrite`, read-only autonomy, an empty temp cwd and an allowlisted env. Also `runCoordinationJob` and `createJobRequestHandler` (bearer-auth `POST /jobs`). Details are in worker/README.md.
 - Verification (actual results):
-  - Offline: `npm run check` 16/16; `npm run ai:check` agents 30/30, worker 6/6; `npm run check:all` exit 0 (module 16/16, root typecheck covers `src/agents`, test:app 4/4); `npm audit` 0. Mutation check: disabling the post-generation revocation recheck fails `revoked-during-generation`.
+  - Offline: `npm run check` 26/26 (includes CS's flow tests); `npm run ai:check` agents 34/34, worker 6/6; `npm run check:all` exit 0 (module 16/16, root typecheck covers `src/agents`, test:app 4/4); `npm audit` 0. Mutation check: disabling the post-generation revocation recheck fails `revoked-during-generation`.
   - **Live Factory Droid** (droid 0.248.0, CLI login, model `claude-opus-5-5`, node v24.13.0, darwin arm64):
     - 12/12 runs decided by the agent with the expected template; median 3,676 ms, p95 5,248 ms.
     - After the D015 merge: 3/3 pass, but friends took 15,013 ms because round 1 timed out.
@@ -34,14 +34,14 @@ Read AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md, and docs/role
 
 ## Consumer and exact next action
 - **CS:**
-  1. Review D016 (contracts + `contracts/README.md`).
+  1. Review D021 (contracts + `contracts/README.md`).
   2. Widen `ReflectionPort.reflect` in `src/lib/backend/ports.ts` to return `PrivateReflection` from `@kinetic/contracts` (a superset of `{reflection}`), so the UI receives `candidate`.
-  3. Supply the worker ports `ApprovedSignalSource`, `RecipientPreferencesPort`, `CoordinationCommitPort` (version-checked reducer) and `lastNudgeAt`.
+  3. Supply the worker ports `ApprovedSignalSource`, `RecipientPreferencesPort`, `CoordinationCommitPort` (version-checked `commit_nudge` reducer) and `DeliveryStatePort` (D017 opt-in, D018 quiet hours and last nudge).
   4. Decide the worker host: a long-running Node host with the `droid` CLI.
   5. Optionally add `npm run ai:check` to `.github/workflows/contracts.yml`.
   - AI will write the adapter and the `POST /api/reflections` and `POST /api/voice/session` routes next. I'll claim those files first; tell me if you prefer to own the route shells.
 - **Cyber:**
-  1. Review the D016 privacy boundary: the candidate stays local, `RecipientSupportPreferences` is a consent record, and outcome codes are sanitized.
+  1. Review the D021 privacy boundary: the candidate stays local, `RecipientSupportPreferences` is a consent record, and outcome codes are sanitized.
   2. Review the Droid hardening (worker/README.md) and the Factory session-persistence note.
   3. Supply a real `DisclosurePolicyPort`, and say whether recipient-preferences consent needs its own reducer guard.
   4. Verify Anthropic and Cartesia retention. Both are marked `unverified` in `PROVIDER_PROCESSING`; Cartesia zero retention is enterprise-only.
@@ -55,7 +55,7 @@ Read AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md, and docs/role
 ## Blockers / unresolved contract decisions
 - Missing credentials: `ANTHROPIC_API_KEY` and `CARTESIA_API_KEY` block live Claude and Cartesia verification. `FACTORY_API_KEY` is needed on a deployed worker.
   - To run: put the keys in the repo-root `.env.local`, then `npm run ai:build && npm run live -w @kinetic/agents`.
-- D016 needs CS, Cyber and DS review before merging to main.
+- D021 needs CS, Cyber and DS review before merging to main.
 - Droid latency is above the 8 s per-call target at times. Options: raise the Droid timeout (nudges are asynchronous), use a lower-effort or smaller model on Factory (team call), or accept the deterministic fallback.
 - Factory keeps a session directory per call under `~/.factory/sessions`. A deployed worker needs pruning or an ephemeral `HOME`.
 

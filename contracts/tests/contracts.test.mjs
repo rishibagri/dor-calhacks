@@ -81,7 +81,8 @@ test('all non-signal interface fixtures satisfy their canonical schemas', async 
 
 test('private reflection candidates are enum-only and never carry journal text', async () => {
   const { PrivateReflectionSchema, SignalCandidateSchema } = await import('../dist/index.js');
-  assert.equal(SignalCandidateSchema.safeParse({}).success, false);
+  assert.equal(PrivateReflectionSchema.safeParse({ schemaVersion: 1, reflection: 'r', candidate: {} }).success, false,
+    'nothing to share is null, never an empty candidate (D019)');
   assert.equal(SignalCandidateSchema.safeParse({ supportMode: 'short_call', note: 'synthetic detail' }).success, false);
   assert.equal(PrivateReflectionSchema.safeParse({ schemaVersion: 1, reflection: 'r', candidate: null }).success, true);
   assert.equal(PrivateReflectionSchema.safeParse({ schemaVersion: 1, reflection: 'r', candidate: null,

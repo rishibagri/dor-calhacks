@@ -50,15 +50,6 @@ export const DisclosureReceiptSchema = z.object({
   action: z.enum(['approved', 'used', 'revoked', 'suppressed']), createdAt: time,
 }).strict();
 const unique = <T>(v: T[]) => new Set(v).size === v.length;
-/** C1 owner-only output of transient reflection. Persist only in the local vault; never a shared, peer or Factory payload. */
-export const SignalCandidateSchema = z.object({
-  supportMode: SupportModeSchema.optional(), availability: AvailabilitySchema.optional(),
-}).strict().refine(c => c.supportMode !== undefined || c.availability !== undefined,
-  'A candidate proposes at least one category');
-export const PrivateReflectionSchema = z.object({
-  schemaVersion: z.literal(1), reflection: z.string().min(1).max(2000),
-  candidate: SignalCandidateSchema.nullable(),
-}).strict();
 /** C1 browser voice session from POST /api/voice/session. Short-lived scoped token, never the provider master key. */
 export const VoiceSessionSchema = z.object({
   schemaVersion: z.literal(1), provider: z.literal('cartesia'), accessToken: z.string().min(1).max(4096),
@@ -79,7 +70,8 @@ export const CoordinationJobSchema = z.object({
   signalIds: z.array(id).min(1).max(4).refine(unique, 'Duplicate signal IDs'), createdAt: time,
 }).strict();
 export const CoordinationOutcomeCodeSchema = z.enum(['nudge_proposed', 'policy_denied', 'preferences_unavailable',
-  'no_intersection', 'recipient_declined', 'cooldown', 'proposer_failed_fallback', 'proposer_failed_no_suggestion']);
+  'no_intersection', 'recipient_declined', 'not_opted_in', 'quiet_hours', 'cooldown', 'proposer_failed_fallback',
+  'proposer_failed_no_suggestion']);
 /** C4 sanitized result record: codes, IDs and versions only. */
 export const CoordinationOutcomeSchema = z.object({
   schemaVersion: z.literal(1), requestId: id, pairId: id, signalIds: z.array(id).min(1),
@@ -97,8 +89,6 @@ export type LocalConnectionProfile = z.infer<typeof LocalConnectionProfileSchema
 export type AgentAck = z.infer<typeof AgentAckSchema>;
 export type Nudge = z.infer<typeof NudgeSchema>;
 export type DisclosureReceipt = z.infer<typeof DisclosureReceiptSchema>;
-export type SignalCandidate = z.infer<typeof SignalCandidateSchema>;
-export type PrivateReflection = z.infer<typeof PrivateReflectionSchema>;
 export type VoiceSession = z.infer<typeof VoiceSessionSchema>;
 export type RecipientSupportPreferences = z.infer<typeof RecipientSupportPreferencesSchema>;
 export type CoordinationJob = z.infer<typeof CoordinationJobSchema>;

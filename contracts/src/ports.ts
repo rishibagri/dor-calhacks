@@ -1,5 +1,5 @@
-import type { ApprovedSignal, AgentAck, CoordinationOutcome, Nudge, PrivateReflection,
-  VoiceSession } from './schemas.js';
+import type { ApprovedSignal, AgentAck, CoordinationOutcome, Nudge, VoiceSession } from './schemas.js';
+import type { PrivateReflection } from './reflection.js';
 
 /** Local selected data may enter the disclosed transient provider route, never shared coordination. */
 export interface PrivateReflectionPort {

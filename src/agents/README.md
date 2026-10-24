@@ -11,7 +11,7 @@ Read root AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md and your 
 | `ClaudeReflectionAdapter` | C1 `PrivateReflectionPort` → `PrivateReflection` | CS `POST /api/reflections` | Implemented, offline-tested. **Not live-verified** (no `ANTHROPIC_API_KEY`). |
 | `CartesiaVoiceAdapter` | C1 `VoicePort` (`createSession`, `transcribe`, `synthesize`) | CS `POST /api/voice/session` (+ optional clip proxy) | Implemented, offline-tested. **Not live-verified** (no `CARTESIA_API_KEY`). |
 | `BoundedCoordinator` | C4 `CoordinationPort` | `worker/` | Implemented, offline-tested; live with Factory Droid using offline policy stand-ins. |
-| `eligibleOptions`, `intersectWindow`, `TEMPLATE_BY_MODE` | Deterministic C4 intersection | DS ranking, evaluation | Implemented. |
+| `eligibleOptions`, `intersectWindow` | Deterministic C4 intersection | DS ranking, evaluation | Implemented. |
 | `ProviderError`, `httpStatusFor` | Sanitized error codes → API error envelope | CS routes | Implemented. |
 | `PROVIDER_PROCESSING` | Facts for provider-processing notices | CS copy, Cyber review | Retention is **unverified** for both providers. |
 
@@ -33,22 +33,22 @@ Read root AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md and your 
 - **Not built yet:** browser microphone capture and the streaming STT/TTS WebSocket client (hour 7 milestone).
 
 ### Coordination
-`new BoundedCoordinator({ policy, preferences, proposer, clock, lastNudgeAt?, rank?, fallbackOnProposerFailure? })`:
+`new BoundedCoordinator({ policy, preferences, delivery, proposer, clock, rank?, fallbackOnProposerFailure? })` implements FLOWS.md F5–F6 using the contracts functions `nudgeDelivery` and `templateForSignal`:
 1. `policy.check` every envelope. A throw or a non-`true` result denies.
-2. 24 h cooldown per pair and recipient via `lastNudgeAt`. A throw counts as cooldown.
+2. Delivery gate (`delivery.current` → `nudgeDelivery`): the recipient must have opted in for this pair (D017, default off), plus quiet hours and the 24 h cooldown (D018). A throw counts as `not_opted_in`.
 3. Load the recipient's `RecipientSupportPreferences`. Wrong pair or recipient, revoked, or expired → `preferences_unavailable`.
-4. Deterministic intersection (`eligibleOptions`). No overlap → decline ACK, `no_intersection`, zero model calls.
+4. Deterministic intersection (`eligibleOptions`). No overlap, or an availability-only signal (it has no template) → decline ACK, `no_intersection`, zero model calls.
 5. At most 2 proposer rounds. The proposer sees `{ approved: {supportMode?, availability?}, options, round }` only. Output must match `AckProposalSchema` and index an existing option.
 6. If both rounds fail: the top-ranked option (`fixed_template`), or no suggestion when `fallbackOnProposerFailure: false`.
-7. Recheck policy and recipient consent version before returning. Changes during generation suppress the nudge.
-8. Return a schema-checked `AgentAck` and `Nudge` with a request-stable `nudge_…` ID, plus a sanitized `CoordinationOutcome`. Nothing is committed here.
+7. Recheck policy, the delivery gate and the recipient consent version before returning. Changes during generation suppress the nudge.
+8. Return a schema-checked `AgentAck` and a `Nudge` whose template comes from `templateForSignal`, with a request-stable `nudge_…` ID, plus a sanitized `CoordinationOutcome`. Nothing is committed here.
 
 Availability intersection: `no_preference` defers to the other side, equal windows match, and `today` ∩ `this_week` = `today`. Availability is matched only when the recipient consented to share it; otherwise the ACK omits it. The DS `rank` hook may reorder or drop options; anything it adds is ignored.
 
 ## Fixtures (synthetic)
 - `fixtures/reflection.synthetic.json`: six C1 cases (three relationships, wants-space, injection, crisis language). Outputs are hand-written examples, not recorded model output.
 - `fixtures/voice.synthetic.json`: `VoiceSession`, transcribe and synthesize shapes, plus the live round-trip phrase.
-- `fixtures/coordination.synthetic.json`: recipient preferences for all three scenarios and ten expected C4 outcomes.
+- `fixtures/coordination.synthetic.json`: recipient preferences for all three scenarios and thirteen expected C4 outcomes, including opt-in, quiet hours and availability-only.
 
 ## Commands
 ```sh

@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { AgentAckSchema, CoordinationOutcomeSchema, NudgeSchema } from '@kinetic/contracts';
+import { AgentAckSchema, CoordinationOutcomeSchema, NUDGE_COOLDOWN_MS, NudgeSchema } from '@kinetic/contracts';
 import { FakeClock, FakeDisclosurePolicy } from '@kinetic/contracts/fakes';
-import { BoundedCoordinator, eligibleOptions, intersectWindow, NUDGE_COOLDOWN_MS } from '../dist/index.js';
+import { BoundedCoordinator, eligibleOptions, intersectWindow } from '../dist/index.js';
 import { ScriptedAckProposer } from '../dist/testing.js';
 
 const json = async (url) => JSON.parse(await readFile(new URL(url, import.meta.url), 'utf8'));
@@ -11,10 +11,11 @@ const scenarios = await json('../../../contracts/fixtures/scenarios.json');
 const fixture = await json('../fixtures/coordination.synthetic.json');
 const signalFor = (scenario) => structuredClone(scenarios.find(s => s.scenario === scenario).approvedSignal);
 
-function setup(scenario, { signalPatch = {}, state: stateOverrides = {}, preferences = {}, preferencesPort, proposer = [], onCall,
-  lastNudgeAt, ...deps } = {}) {
+function setup(scenario, { signalPatch = {}, signalOmit = [], state: stateOverrides = {}, preferences = {}, preferencesPort,
+  proposer = [], onCall, lastNudgeAt = null, delivery = {}, deliveryPort, ...deps } = {}) {
   const clock = new FakeClock('2026-10-24T00:00:00Z');
   const signal = { ...signalFor(scenario), ...signalPatch };
+  for (const field of signalOmit) delete signal[field];
   const state = {
     clock, linked: true, revoked: false, approved: structuredClone(signal),
     preset: { schemaVersion: 1, policyId: signal.recipientPolicyId, ownerId: signal.senderId, presetKind: 'partner',
@@ -28,7 +29,8 @@ function setup(scenario, { signalPatch = {}, state: stateOverrides = {}, prefere
   const scripted = new ScriptedAckProposer(proposer, onCall && ((round) => onCall(state, round)));
   const coordinator = new BoundedCoordinator({
     policy: new FakeDisclosurePolicy(state), clock, proposer: scripted,
-    preferences: preferencesPort ?? { current: async () => prefs }, lastNudgeAt, ...deps,
+    preferences: preferencesPort ?? { current: async () => prefs },
+    delivery: deliveryPort ?? { current: async () => ({ delivery: { ...fixture.defaultDelivery, ...delivery }, lastNudgeAt }) }, ...deps,
   });
   return { clock, signal, state, prefs, proposer: scripted, coordinator };
 }
@@ -37,9 +39,10 @@ for (const c of fixture.cases) {
   test(`fixture case ${c.id}`, async () => {
     const hours = c.lastNudgeHoursAgo;
     const { clock, signal, proposer, coordinator } = setup(c.scenario, {
-      state: c.state, preferences: c.preferencesOverride, proposer: c.proposer,
+      state: c.state, preferences: c.preferencesOverride, proposer: c.proposer, signalOmit: c.signalOmit,
+      delivery: c.deliveryOverride,
       onCall: c.revokeOnProposerCall ? (state) => { state.revoked = true; } : undefined,
-      lastNudgeAt: hours === undefined ? undefined : async () => new Date(Date.parse('2026-10-24T00:00:00Z') - hours * 3600e3),
+      lastNudgeAt: hours === undefined ? null : new Date(Date.parse('2026-10-24T00:00:00Z') - hours * 3600e3),
     });
     const result = await coordinator.coordinate([signal], `req-${c.id}`);
     const [outcome] = result.outcomes;
@@ -155,7 +158,18 @@ test('availability intersection and support-only envelopes', () => {
   const signal = signalFor('partners'); delete signal.availability;
   assert.deepEqual(eligibleOptions(signal, fixture.preferences.partners), [{ supportMode: 'short_call' }]);
   const availabilityOnly = signalFor('partners'); delete availabilityOnly.supportMode;
-  assert.deepEqual(eligibleOptions(availabilityOnly, fixture.preferences.partners), [
-    { supportMode: 'short_call', availability: 'this_week' }, { supportMode: 'encouraging_note', availability: 'this_week' },
-  ]);
+  assert.deepEqual(eligibleOptions(availabilityOnly, fixture.preferences.partners), [], 'no template, so no options (FLOWS.md)');
+});
+
+test('delivery settings that change during generation suppress the nudge, and unreadable settings deny', async () => {
+  let optedIn = true;
+  const { signal, coordinator } = setup('partners', {
+    proposer: [{ decision: 'compatible', optionIndex: 0 }], onCall: () => { optedIn = false; },
+    deliveryPort: { current: async () => ({ delivery: { ...fixture.defaultDelivery, optedIn }, lastNudgeAt: null }) },
+  });
+  const late = await coordinator.coordinate([signal], 'req-optout');
+  assert.equal(late.outcomes[0].outcome, 'not_opted_in');
+  assert.equal(late.proposedNudges.length, 0);
+  const broken = setup('partners', { deliveryPort: { current: async () => { throw new Error('store down'); } } });
+  assert.equal((await broken.coordinator.coordinate([broken.signal], 'r')).outcomes[0].outcome, 'not_opted_in');
 });

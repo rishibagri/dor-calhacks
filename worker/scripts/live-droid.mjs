@@ -13,8 +13,8 @@ const runsArg = process.argv.indexOf('--runs');
 const runs = runsArg === -1 ? 1 : Math.max(1, Math.min(10, Number(process.argv[runsArg + 1]) || 1));
 const json = async (url) => JSON.parse(await readFile(new URL(url, import.meta.url), 'utf8'));
 const scenarios = await json('../../contracts/fixtures/scenarios.json');
-const { preferences } = await json('../../src/agents/fixtures/coordination.synthetic.json');
-const standIns = { policy: 'offline FakeDisclosurePolicy', preferences: 'synthetic fixture', commit: 'none' };
+const { preferences, defaultDelivery } = await json('../../src/agents/fixtures/coordination.synthetic.json');
+const standIns = { policy: 'offline FakeDisclosurePolicy', preferences: 'synthetic fixture', delivery: 'synthetic opted-in fixture', commit: 'none' };
 
 const version = spawnSync(process.env.KINETIC_DROID_PATH || 'droid', ['--version'], { encoding: 'utf8' });
 if (version.status !== 0) {
@@ -37,7 +37,8 @@ function coordinatorFor(signal, { revoked = false } = {}) {
     timeoutMs: Number(process.env.KINETIC_DROID_TIMEOUT_MS) || undefined });
   const proposer = { propose: (input, id) => { proposerCalls++; return droid.propose(input, id); } };
   const coordinator = new BoundedCoordinator({ policy: new FakeDisclosurePolicy(state), clock, proposer,
-    preferences: { current: async () => preferences[scenarios.find(s => s.approvedSignal === signal).scenario] } });
+    preferences: { current: async () => preferences[scenarios.find(s => s.approvedSignal === signal).scenario] },
+    delivery: { current: async () => ({ delivery: defaultDelivery, lastNudgeAt: null }) } });
   return { coordinator, calls: () => proposerCalls };
 }
 
