@@ -1,11 +1,14 @@
 /**
- * DS consumer proposal for C8 discovery (contracts/specs/DISCOVERY.md). NOT a contract type: these shapes state what
- * the shortlist and the discover-results component need from CS's authorized candidate query and Sumedh's guards.
- * Replace with the reviewed `@kinetic/contracts` C8 exports once they land; do not publish these as wire schemas.
+ * DS ranker input for C8 discovery (contracts/specs/DISCOVERY.md). The wire shape is Cyber's reviewed
+ * `DiscoveryCardProjection` (`@kinetic/contracts/policy`, served by the `discovery_cards` view); `fromDiscoveryCards`
+ * (./adapters.ts) is the only way real rows become a `DiscoveryCandidate`. The extra fields below are either not in
+ * that projection yet (avatar, event intents: no producer) or server-enforced state the ranker re-checks defensively.
+ * These are DS-internal shapes, not wire schemas.
  *
  * Every field is either a published (opted-in) profile/intent field or a server-computed eligibility flag.
  * There is no location, distance, journal, support preference, quiz extra or contact detail anywhere here.
  */
+import { DISCOVERY_REASON_CODES, type DiscoveryReasonCode } from '@kinetic/contracts';
 
 /** Published per-event intention (C8 EventIntent projection). "interested"/"going" is self-declared, never attendance. */
 export interface PublishedEventIntent {
@@ -28,8 +31,10 @@ export interface DiscoveryCandidate {
   tags: string[];
   /** Currently published event intents. */
   eventIntents: PublishedEventIntent[];
+  /** The projection's `revision`. */
   publicationVersion: number;
-  publicationExpiresAt: string;
+  /** Null when the expiry is enforced server-side only (the C8 projection does not expose it). */
+  publicationExpiresAt: string | null;
   /** Computed by the server for this viewer. The ranker re-checks them; it never relaxes one. */
   withdrawn: boolean;
   /** Either direction. */
@@ -51,9 +56,9 @@ export type DiscoveryMode =
   /** `eventTags`: the event's normalized catalogue topics (public data), used only for the overlap reason. */
   | { kind: 'event'; eventId: string; eventTags: string[] };
 
-/** Allowed explanation codes. There is no compatibility percentage. */
-export const REASON_CODES = ['shared_interest', 'same_event', 'event_fits_shared_interest'] as const;
-export type ReasonCode = typeof REASON_CODES[number];
+/** Allowed explanation codes (shared with the AI introduction step). There is no compatibility percentage. */
+export const REASON_CODES = DISCOVERY_REASON_CODES;
+export type ReasonCode = DiscoveryReasonCode;
 
 export interface ShortlistEntry {
   ref: string;
