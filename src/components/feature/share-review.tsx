@@ -13,6 +13,8 @@ import { describeNotReady, prepareShare, requestIdFor, shareRecipients, type Req
 type Props = {
   /** In memory only, from VoiceReflection's onCandidate. Never stored. */
   candidate: SignalCandidate;
+  /** The one person the owner chose in the private step. Never defaulted: a different person needs a new preview. */
+  recipientPairId: string;
   onClose: () => void;
 };
 
@@ -20,15 +22,14 @@ type Props = {
  * F3/F4: preview on this device exactly what one named connection may learn, then approve or decline.
  * Nothing is sent until "Approve"; declining sends nothing at all.
  */
-export function ShareReview({ candidate, onClose }: Props) {
+export function ShareReview({ candidate, recipientPairId, onClose }: Props) {
   const shared = useLiveShared();
   const recipients = shareRecipients(shared.myPairs());
-  const [pairId, setPairId] = useState<string | null>(null);
   const [result, setResult] = useState<ReducerResult | null>(null);
   const [isSending, setIsSending] = useState(false);
   const requestId = useRef<RequestIdSlot | null>(null);
 
-  const selected = recipients.find((r) => r.pairId === (pairId ?? recipients[0]?.pairId));
+  const selected = recipients.find((r) => r.pairId === recipientPairId);
   const name = selected?.name ?? 'your connection';
   const ownerHex = shared.connection.phase === 'connected' ? shared.connection.identityHex : null;
   const pair = selected && shared.myPairs().find((p) => p.pairId === selected.pairId);
@@ -50,16 +51,7 @@ export function ShareReview({ candidate, onClose }: Props) {
         <CardDescription>Checked on this device. Nothing leaves until you approve, and you can revoke later in Privacy.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {recipients.length === 0 && <p className="text-sm text-muted-foreground">You have no accepted connections yet, so there is no one to share with.</p>}
-        {recipients.length > 1 && (
-          <div className="flex items-center gap-2">
-            <label htmlFor="share-recipient" className="text-sm">Share with</label>
-            <select id="share-recipient" className="h-8 rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-              value={selected?.pairId} onChange={(e) => { setPairId(e.target.value); setResult(null); }}>
-              {recipients.map((r) => <option key={r.pairId} value={r.pairId}>{r.name}</option>)}
-            </select>
-          </div>
-        )}
+        {!selected && <p className="text-sm text-muted-foreground">This person is no longer one of your accepted connections, so nothing can be shared.</p>}
         {selected && !ownerHex && <p className="text-sm text-muted-foreground">Not connected to the server, so this cannot be checked yet.</p>}
         {prepared?.kind === 'not_ready' && <p className="text-sm">{describeNotReady(prepared)}</p>}
         {prepared?.kind === 'ready' && (

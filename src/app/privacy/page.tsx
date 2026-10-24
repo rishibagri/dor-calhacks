@@ -3,6 +3,7 @@
 import { ApprovedSignals } from '@/components/feature/approved-signals';
 import { DiscoveryStatus } from '@/components/feature/discovery-status';
 import { EventPrivacy } from '@/components/feature/event-privacy';
+import { areExtensionsEnabled } from '@/lib/config';
 import { useLiveShared } from '@/components/shell/use-live';
 import { IntegrationStatus } from '@/components/shell/integration-status';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -16,6 +17,12 @@ const FACTS = [
   ['Providers process content', 'Our processing providers handle audio and text to provide the service.'],
   ['Nudges can still imply', 'A nudge may let someone infer that you would welcome support.'],
 ] as const;
+
+function hasDiscoveryFootprint(shared: ReturnType<typeof useLiveShared>): boolean {
+  const me = shared.myDiscoveryProfile();
+  return Boolean(me?.published && !me.withdrawn) || shared.myEventIntents().some((i) => i.active) ||
+    shared.myActivityApprovals().length > 0;
+}
 
 export default function PrivacyPage() {
   const vault = useVault();
@@ -42,8 +49,8 @@ export default function PrivacyPage() {
         </AlertDescription>
       </Alert>
       <ApprovedSignals />
-      <DiscoveryStatus />
-      <EventPrivacy />
+      {/* Extensions: shown when enabled, or whenever there is still something of yours to withdraw. */}
+      {(areExtensionsEnabled || hasDiscoveryFootprint(shared)) && <><DiscoveryStatus /><EventPrivacy /></>}
       <Card>
         <CardHeader>
           <CardTitle>Receipts</CardTitle>

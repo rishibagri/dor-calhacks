@@ -14,6 +14,7 @@ import { isDiscoverySynthetic } from '@/lib/config';
 import { DiscoveryResults } from '@/features/discovery/discovery-results';
 import { IntroductionControls } from '@/features/privacy/introduction-controls';
 import { runAction } from '@/features/privacy/introduction-model';
+import { ExtensionGate } from '@/components/feature/extension-gate';
 
 export default function DiscoverPage() {
   const shared = useLiveShared();
@@ -49,7 +50,12 @@ export default function DiscoverPage() {
 
   const handleEmptyAction = () => document.getElementById('discovery-profile')?.scrollIntoView({ behavior: 'smooth' });
 
+  const safetyControls = (
+    <IntroductionControls introductions={toControlRows(shared.myIntroductions())} discoverable={isDiscoverable} actions={introductionActions(shared)} />
+  );
+
   return (
+    <ExtensionGate title="Discover" controls={safetyControls}>
     <div className="mx-auto max-w-3xl space-y-8">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Discover</h1>
@@ -85,7 +91,8 @@ export default function DiscoverPage() {
         </>
       )}
       {/* Always rendered: withdraw, block and report keep working even when discovery is switched off (D038). */}
-      <IntroductionControls introductions={toControlRows(shared.myIntroductions())} discoverable={isDiscoverable} actions={introductionActions(shared)} />
+      {safetyControls}
     </div>
+    </ExtensionGate>
   );
 }
