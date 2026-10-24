@@ -119,3 +119,18 @@ test('error codes: block, self and area mismatch look like not_found (no block o
   assert.equal(validSlugAllowlist(['ok-tag'], 'tag'), true);
   assert.equal(validSlugAllowlist([], 'area'), false);
 });
+
+test('D046: tag allowlists refuse sensitive labels (health, grief, sexuality, religion, status), allow ordinary ones', async () => {
+  const { looksSensitiveTag, validTopicAllowlist } = await import('../dist/index.js');
+  for (const ok of ['starting-college', 'new-to-city', 'new-job', 'recent-grad', 'board-games', 'hiking', 'transit-fans', 'coffee', 'books']) {
+    assert.equal(looksSensitiveTag(ok), false, ok);
+  }
+  for (const bad of ['divorce', 'recently-divorced', 'rehab', 'sober-living', 'grief-support', 'lgbtq-meetup', 'trans-social',
+    'church-group', 'new-immigrant', 'mental-health', 'self-harm', 'cancer-survivors', 'job-unemployed']) {
+    assert.equal(looksSensitiveTag(bad), true, bad);
+    assert.equal(validSlugAllowlist(['hiking', bad], 'tag'), false, bad);
+    assert.equal(validTopicAllowlist(['hiking', bad]), false, bad);
+  }
+  assert.equal(validSlugAllowlist(['starting-college', 'new-to-city', 'hiking'], 'tag'), true);
+  assert.equal(validSlugAllowlist(['church-street'], 'area'), true); // areas are places, not personal labels
+});

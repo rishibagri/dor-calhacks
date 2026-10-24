@@ -27,7 +27,7 @@ Limits are per caller identity, in one database (one module instance), counted o
 
 | View | Rows | Fields | Never included |
 |---|---|---|---|
-| `discovery_cards` | other participants visible to the caller now, read through the area index, in card-ref order after the caller's own `discovery_page` cursor, excluding people with an accepted introduction (CS #22), ≤ 50 | `card_ref, display_name, interest_tags, shared_tags, revision` | identity, area key, expiry, pair/preset/signal/preference, quiz, journal, location |
+| `discovery_cards` | other participants visible to the caller now, read through the area index, in card-ref order after the caller's own `discovery_page` cursor, excluding people already connected: an accepted introduction (CS #22) or an accepted pair (D046), ≤ 50 | `card_ref, display_name, interest_tags, shared_tags, revision` | identity, area key, expiry, pair/preset/signal/preference, quiz, journal, location |
 | `my_discovery_profile` | the caller's own | own publication, own area key and status | anyone else's |
 | `my_introductions` | introductions the caller is in, unless blocked either way | `intro_id, direction, status, counterpart_name, shared_tags, created_at, expires_at` | identities, card refs, area; incoming pending shown only while the sender's profile stands unchanged; outgoing never shows a decline (accepted / pending / closed); recipient name only after acceptance |
 | `my_introduction_proposals` | the caller's own AI suggestions, while the candidate is still visible and both revisions unchanged | `proposal_id, candidate_ref, reason_code, shared_tags, opener_id, decided_by, expires_at` | anything about the candidate beyond their card ref; candidates never see proposals about them |
