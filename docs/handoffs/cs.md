@@ -114,3 +114,29 @@ npm run dev            # http://localhost:3000, unconfigured mode without env
 
 ## PR #23 merge reconciliation
 Merged main 6093b2a into this branch, retaining both chronological CS update logs. Main already includes recipient settings, ShareReview/revocation, Discover and newer generated bindings; those implementations are preserved. Earlier missing-feature notes above are historical. Remaining branch changes are saved-entry refresh, relationship-safety regression/docs and voice lifecycle follow-ups. Adam retains SDK ownership; no SDK implementation changed. Core-first planning remains in PR #26.
+
+## Core 3 Stage C handoff — 2026-10-24T18:50Z (CS → AI, Cyber)
+Status: environment prepared, **nothing live-verified**. No provider was called. The two/three-account smoke was deferred by the owner and is part of Stage C.
+
+**Published (Rishi's machine, local only):**
+- Server `dor-local` = `http://127.0.0.1:3100` (`spacetime start --listen-addr 127.0.0.1:3100`); module `dor`; published from main `126f072`.
+- Bootstrap: `npm run setup:module -- --server dor-local --run`. Reset: `npm run setup:module -- --server dor-local --run --reset --i-understand-this-deletes-data`, then rerun `setup:worker`.
+- Worker identity: `npm run setup:worker -- --server dor-local --run` (prefix `c200bdbc`), token in `.cache/worker-token` (never printed).
+- Regenerated app and worker bindings are identical to the committed ones.
+- A local DB is not reachable from another machine. If Stage C runs elsewhere, the runner repeats RUNBOOK steps 1–2 against their own server (local or `maincloud` after `spacetime login`). Admin calls must use the same login that published.
+
+**Auth:** issuer `DOR_CLERK_ISSUER` = Clerk dev Frontend API origin; `DOR_AUTH_AUDIENCE` = the current Clerk `spacetimedb` template `aud`, which is still the pre-rename value. Doctor warns about the name. Renaming both is optional and must be done together.
+
+**Env names configured (values in `.env.local` only, never in git):** `NEXT_PUBLIC_SPACETIMEDB_URI`, `NEXT_PUBLIC_SPACETIMEDB_MODULE`, `DOR_CLERK_ISSUER`, `DOR_AUTH_AUDIENCE`, `DOR_SPACETIME_URI`, `DOR_SPACETIME_MODULE`, `DOR_SPACETIME_WORKER_TOKEN`, `DOR_WORKER_AUTH_TOKEN`, `DOR_WORKER_URL`. Not set: `FACTORY_API_KEY`, `ANTHROPIC_API_KEY`, `CARTESIA_API_KEY` (Adam supplies). `DOR_DROID_TRANSPORT` is unset (SDK default).
+
+**Doctor:** core 0 errors (warn: audience name, Claude and Cartesia keys). `--worker`: 1 error, `FACTORY_API_KEY` missing, which is expected until Adam sets it.
+
+**Worker check:** started once with the env above; logged `connected` (identity `c200bdbc`) and `listening` 8787; `/healthz` returned `{"ok":true}`; then stopped. During that check the transport was `cli` (since removed), so `droid_transport` = sdk is not yet observed. There were 0 approved signals, so no Droid call happened.
+
+**Accounts:** none created. Clerk sign-up runs on the hosted Clerk page and is a human step. Stage C creates synthetic A, B (paired; B opts into nudge delivery and records support-preference consent) and C (unpaired, denied).
+
+**D041 pause:** not on main (requirements only, `docs/features/RECIPIENT_PAUSE.md`). Stage C runs without the pause cases and repeats them once Cyber's reducers and view land and CS adds the controls.
+
+**Found live, needs Cyber:** `sweep_expired` throws `unauthorized: scheduler only` every minute on the real host. SDK 2.13 never sets `senderAuth.isInternal` for scheduled calls (only the test harness does), so views would never hide expired records. A local fix (also admit calls with no connection whose sender is the database identity) is drafted on Rishi's machine, uncommitted and unreviewed. Sumedh: review the same pattern in `admin.ts` `requireOwner` (falls back to `isInternal`) and `events.ts` `requireIngester`.
+
+**Worker safety:** while the worker runs, any standing approved signal triggers a paid Droid call. Revoke test signals before starting it and never leave it running unattended.
