@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 
 export function describeStatus(s: AdapterStatus): { label: string; detail: string } {
   switch (s.kind) {
-    case 'live': return { label: 'live', detail: 'Connected to a real adapter.' };
+    case 'live': return { label: 'wired', detail: 'Real adapter connected in code; provider and deployment availability are verified separately.' };
     case 'unconfigured': return { label: 'unconfigured', detail: s.reason };
     case 'not_implemented': return { label: `not implemented (${s.owner})`, detail: s.reason };
     case 'error': return { label: 'error', detail: s.reason };

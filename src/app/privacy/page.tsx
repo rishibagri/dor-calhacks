@@ -3,7 +3,8 @@
 import { useLiveShared } from '@/components/shell/use-live';
 import { IntegrationStatus } from '@/components/shell/integration-status';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { useVault } from '@/lib/backend';
+import { VaultControls } from '@/features/privacy/vault-controls';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const FACTS = [
@@ -14,6 +15,7 @@ const FACTS = [
 ] as const;
 
 export default function PrivacyPage() {
+  const vault = useVault();
   const receipts = useLiveShared().myReceipts();
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -54,11 +56,7 @@ export default function PrivacyPage() {
           </ul>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader><CardTitle>Journal deletion</CardTitle>
-          <CardDescription>Placeholder: needs the local vault (Cyber). Local deletion cannot promise provider deletion.</CardDescription></CardHeader>
-        <CardContent><Button variant="destructive" disabled>Delete journal entries (vault pending)</Button></CardContent>
-      </Card>
+      <VaultControls vault={vault} />
       <Card>
         <CardHeader><CardTitle>Integration status</CardTitle></CardHeader>
         <CardContent><IntegrationStatus /></CardContent>

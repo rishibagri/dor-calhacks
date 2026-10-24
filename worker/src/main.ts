@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import * as bindings from './module_bindings/index.js';
+import { loadBindings } from './bindings.js';
 import { createLiveWorker } from './live.js';
 import { SpacetimeWorkerConnection, type LooseBuilder } from './spacetime/connection.js';
 import { spacetimeWorkerPorts } from './spacetime/adapters.js';
@@ -27,7 +27,7 @@ const log = (event: string, data: Record<string, string | number> = {}) =>
   console.log(JSON.stringify({ at: new Date().toISOString(), event, ...data }));
 
 async function main(): Promise<void> {
-  const generated = bindings as unknown as { DbConnection?: { builder(): LooseBuilder } };
+  const generated = (await loadBindings()) as unknown as { DbConnection?: { builder(): LooseBuilder } };
   if (typeof generated.DbConnection?.builder !== 'function') {
     throw new Error('worker bindings not generated: see worker/src/module_bindings/index.ts');
   }

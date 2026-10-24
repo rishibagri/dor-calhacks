@@ -1,0 +1,16 @@
+{
+  "//": "Generated SpacetimeDB bindings use extensionless imports and bundler-style resolution, which NodeNext rejects. Compile them separately with Bundler resolution and rewrite the emitted specifiers so Node ESM can load them (scripts/fix-bindings-imports.mjs).",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "declaration": false,
+    "outDir": "dist/module_bindings",
+    "rootDir": "src/module_bindings",
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/module_bindings/**/*.ts"
+  ]
+}

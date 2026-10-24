@@ -10,6 +10,8 @@ C7 includes executable catalogue-input/link guards but shared activity types rem
 C1 local profile/reflection; C2 presets/recipient assignment; C3 approved disclosure; C4 agent ACK/coordination; C5 nudge/receipt; C6 policy and offline test boundary. Producer/consumer ownership is in contracts/README.md. Import only @dor/contracts across workstream boundaries. Do not reach into another owner's internals or duplicate wire types. Build against explicit fixtures/fakes until real adapters exist; never import fakes into production mode.
 
 ## Setup and evidence
+User preference: keep checks minimal and targeted to the changed behavior. Do not rerun broad suites for docs/config-only changes; use focused setup checks. Reserve full integration checks for integration or release changes. Never run paid-provider tests merely to verify configuration.
+
 Run `npm ci` and `npm run check` at the repository root. These verify offline contracts only. Regenerate schemas with `npm run contracts:schema` after shape changes and update fixtures in the same PR. Never claim the application runs from these commands. Record planned, implemented, deployed and live-verified status separately in PROJECT_KNOWLEDGE.md.
 
 ## Shared contract visibility

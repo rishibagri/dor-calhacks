@@ -1,3 +1,11 @@
+# Local Desktop reconciliation — pushed in codex/cs-app-integration PR
+
+Current workspace now contains GitHub main `250d4bf` plus uncommitted source changes from `/Users/rishii3/Desktop/calhacks` (generated bindings and worker build/runtime loader). Desktop source, its local configuration, SESSION.md and phase-2 stash remain untouched. Local ignored configuration was imported with owner-only permissions; variable names match DOR_* while configured values were preserved. Never commit configuration or local session notes.
+
+Offline verification: check:all passes (95 contracts, 84 module, 158 app + 1 known TODO), ai:check passes (64 agent, 21 worker, 19 integration). No live provider run. Clerk is configured; provider/worker credentials still need completion. Generated bindings exist but are not proof of a published, correctly authorized end-to-end app. The newer main rename supersedes the Desktop package/env names. Review historical instructions below by commit rather than treating old pending items as current.
+
+---
+
 # Planning reset notice — current main d7285eb
 
 Read `docs/roles/cs.md` and README **R0–R6** for current assignments. The historical implementation handoff below is preserved; statements such as “not merged” describe its original commit. Current status is in PROJECT_KNOWLEDGE.md. This notice is not a consumer ACK or evidence of live verification. New scope: existing connections + opted-in nearby public profiles + local-event introductions. One-time approximate location; no inherited pair consent. Forwardable update: `docs/team-messages/cs.md`.
