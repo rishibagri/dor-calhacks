@@ -82,3 +82,21 @@ Verdict: **implemented as proposed guards and module transitions behind the same
 - AI proposals: the worker commit rechecks everything at commit time; the view rechecks again live; `same_event` is refused until event intents exist.
 
 **Rejection cases consumers must keep:** third-account action on someone else's introduction; sender accepting; recipient cancelling; replay after decline; request-id reuse for another person; accept after expiry, withdrawal, profile edit or block; request to an unseen, other-area or own card; free-text report reason; proposal after withdrawal, block, area move or edit during generation; proposal tags outside the overlap; `same_event` before R3; non-worker commit.
+
+## 2026-10-24: D034 plan lifecycle (Adam) and C7/C8 events (CYBER-R3, D039)
+Verdict on D034: **ACK; adopted as the reducer finalization guard, unchanged.** `applyPlanAction` takes the actor from `ctx.sender`, and the reducer computes `PlanSourceCheck` in the same transaction:
+- `eventScheduled` also requires a fresh copy (≤ 48 h) and an unmoved start time.
+- `intentsCurrent` also requires both bound intent versions and the basis (accepted introduction, or pair + both C7 approvals).
+
+Two conditions for consumers:
+1. Show acceptance state only to its owner until "confirmed".
+2. Never turn a confirmed plan into an external action.
+
+**C7 (ACTIVITY_CONSENT.md §2) as implemented:**
+- `activity_interest` is preset-only. It is not in `SHARING_CATEGORIES`, so ApprovedSignal v2 can't carry it.
+- The quiz can't nominate it; it is off until the owner adds it to a preset.
+- The item approval names the counterpart, exact topics and previewed preset versions, lasts ≤ 24 h and is revocable. It is rechecked at commit and at every acceptance.
+
+**Venue tags:** not added (see the matrix's venue review). No habitual-visit disclosure is possible from the shipped fields.
+
+**Rejection cases consumers must keep:** third-account plan action; wrong revision; repeat accept; one-sided acceptance at expiry; second acceptance after intent revoke, re-publish, approval revoke, preset tightening, block, event cancellation, moved start or stale copy; commit with a non-participant's intent, a stale intent version, an unaccepted basis, approvals on an introduction basis, < 1 h lead or a duplicate live plan; user-written catalogue records; unsafe source links; free topics; intent for a cancelled, stale or started event.

@@ -1,6 +1,6 @@
 import { t } from 'spacetimedb/server';
 import { ScheduleAt } from 'spacetimedb';
-import { validSlugAllowlist } from '@dor/contracts/policy';
+import { validHostAllowlist, validSlugAllowlist } from '@dor/contracts/policy';
 import { spacetimedb } from '../schema';
 import { fail, type Ctx } from '../errors';
 import { SWEEP_INTERVAL_MICROS } from '../constants';
@@ -76,6 +76,8 @@ export const set_discovery_config = spacetimedb.reducer(
       if (!(values.length === 0 || (values.length === 1 && values[0] === 'true'))) fail('invalid', 'enabled');
     } else if (key === 'tags' || key === 'areas') {
       if (!validSlugAllowlist(values, key === 'tags' ? 'tag' : 'area')) fail('invalid', 'allowlist');
+    } else if (key === 'source_hosts') {
+      if (!validHostAllowlist(values)) fail('invalid', 'allowlist'); // catalogue source links (D039)
     } else {
       fail('invalid', 'unknown key');
     }

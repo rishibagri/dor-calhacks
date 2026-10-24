@@ -1,6 +1,6 @@
 # src/features/privacy — privacy controls component (Cyber)
 
-Status: vault controls **implemented and offline-verified over the real `LocalVault`**; introduction controls (CYBER-R2) **implemented, model-tested only, not composed into a page or seen in a real browser.**
+Status: vault controls **implemented and offline-verified over the real `LocalVault`**; introduction controls (CYBER-R2) and event privacy controls (CYBER-R3) **implemented, model-tested only, not composed into a page or seen in a real browser.**
 
 | File | What it is |
 |---|---|
@@ -9,6 +9,9 @@ Status: vault controls **implemented and offline-verified over the real `LocalVa
 | `__tests__/vault-controller.test.ts` | 10 tests: validation, show-once code, constant error copy, backoff, recovery rotation, passphrase change, typed delete, vault-initiated lock, StrictMode re-mount. |
 | `introduction-model.ts` | CYBER-R2: groups `my_introductions` rows, report reason labels (same allowlist as the server), fixed copy for refusals (server text is never shown). |
 | `introduction-controls.tsx` | `<IntroductionControls introductions={rows} discoverable={bool} actions={port} />`: accept / decline / block / report on incoming requests, cancel outgoing, block/report connections, "stop being discoverable now". |
+| `event-consent-model.ts` | CYBER-R3: exact preview copy for event intents, C7 activity approvals and plan acceptance; truthful source age; plan status copy; fixed refusal copy. |
+| `event-privacy-controls.tsx` | `<EventPrivacyControls intents approvals eventTitle pairName actions />`: every shared event intent and activity approval with an immediate withdraw/revoke. |
+| `__tests__/event-consent-model.test.ts` | 6 tests: copy states audience, privacy of kind, duration, no external action; no live-feed claim; no decision leak. |
 | `__tests__/introduction-model.test.ts` | 5 tests: grouping, fixed copy, no decline wording, reasons match the server, `runAction` never throws. |
 
 ## CS: how to compose it
@@ -39,6 +42,12 @@ const actions: IntroductionActionsPort = {
 - Regenerate bindings after the module change; the reducer and view names above come from D038. The `useLiveShared` hooks are illustrative: use whatever CS's live layer exposes.
 - Card-level block/report on the Discover page uses `block_discovery_user({card_ref})` and `report_discovery_user({target_kind:'card', ...})`.
 - The server decides everything; the component only renders the view and shows fixed copy. Never add a "declined" state for the sender.
+
+## CS: events (D039)
+- Before `publish_event_intent`, show `intentPreviewCopy(title)`. Before `approve_activity_interest`, show `activityApprovalPreviewCopy(name, topics)`. Next to Accept, show `planAcceptCopy(name)`. Use them verbatim; changing the wording means bumping the relevant notice version with Cyber.
+- Show `sourceAgeLabel(fetchedAt, now)` on every event card. Never label synthetic or cached events as live.
+- Compose `<EventPrivacyControls>` on the privacy page with `revokeIntent: (eventId) => reducers.revokeEventIntent({ eventId })` and `revokeApproval: (approvalId) => reducers.revokeActivityInterest({ approvalId })`.
+- `my_plans.status` comes from the server; render it with `PLAN_STATUS_COPY`. Never show the other person's acceptance before "confirmed".
 
 ## What it guarantees, and what it doesn't
 - The recovery code exists only in controller memory until the user retypes its last group. It is never persisted, logged or sent.

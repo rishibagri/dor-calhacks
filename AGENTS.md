@@ -39,7 +39,7 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 |---|---|---|
 | CS — you | App/quiz/client adapter implemented; app composition still uses placeholders; actual bindings/auth/deployment unverified | CS-R1: compose real vault/voice features and generate bindings; CS-R2/R3: coarse-area discovery state and one Apify catalogue |
 | DS — Nimisha | role/ds-context b077a1e (local, unpushed): `rankNearby` shortlist + `src/features/discovery` components + 15 nearby cases; rankActivities uses safeCatalogueUrl/allowInPerson. Offline/synthetic | CS: compose DiscoveryResults/EventResults and ship C8 candidate query matching `src/features/discovery/types.ts`; Sumedh: confirm projection; Adam: ≤3-entry shortlist; team: ratings |
-| Cyber — Sumedh | role/cyber-privacy (uncommitted, on main 030ead2): CYBER-R2 introduction request/accept/cancel with no decline oracle, block/report with cascades, per-caller repeat-probe limits, worker-guarded AI proposal commit, `IntroductionControls` component, enforcement matrix (D038). Offline only: contracts 105, module 113, app 186, ai 104; flag off, not published | CS: ACK D038, regenerate bindings, compose `IntroductionControls`. Adam: `commit_introduction_proposal`. Nimisha: D038 no-action evals. Cyber next: CYBER-R3 event intents/plan finalization |
+| Cyber — Sumedh | role/cyber-privacy (on main 2b8e59b): CYBER-R3 guarded catalogue ingestion, C8 event intents (mutual-only overlap), C7 activity approvals (preset-only, off by default), D034 plan finalization with current-source rechecks, `EventPrivacyControls` + exact preview copy (D039). R2 merged (#18). Offline only: contracts 116, module 137, app 193, ai 104; flag off, not published | CS: ACK D039, bindings, ingestion → `upsert_catalogue_event`, preview copy, preset toggle. Adam: `commit_plan_proposal` from `worker_plan_candidates`. Nimisha: `event_companions`. Cyber next: CYBER-R4 adversarial suite |
 | AI — Adam | PR #7 merged: routes/browser helpers, real-policy worker factory, replay ledger and cheaper Droid; isolated Droid evidence only | AI-R1: voice component + worker database adapters; R2/R3: bounded introduction/event workflow; R4: call budgets |
 
 R0–R6 replace the old P-phase schedule without resetting code or the original deadline. Detailed shared phases are in README.md; per-owner phases in docs/roles/*.md; exact producer/consumer dependencies in docs/PLAN.md. These are current planning assignments, not completion evidence. Merge main into your active role branch; do not reset or force-update other roles.
@@ -230,3 +230,16 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - CS: regenerate bindings and compose the controls.
   - Adam: commit proposals through the guarded reducer.
   - Nimisha: D038 rejection cases as no-action evals.
+
+### 2026-10-24T18:30Z | Cyber → CS, AI, DS | CYBER-R3: events, intents, C7 approvals, plan finalization (D039)
+- **Status:** implemented and offline-verified, NOT live; discovery flag stays off; no live Apify source.
+- **Interfaces:**
+  - Reducers: `upsert_catalogue_event` (ingester only), `publish_event_intent`, `revoke_event_intent`, `approve_activity_interest`, `revoke_activity_interest`, `respond_plan`, `cancel_plan`, worker-only `commit_plan_proposal` / `revise_plan_proposal`.
+  - Views: `catalogue_events`, `my_event_intents`, `event_companions`, `my_activity_approvals`, `my_plans`, worker-only `worker_plan_candidates`.
+  - AI's D034 `applyPlanAction` is adopted unchanged as the finalization guard.
+  - Copy and controls: `src/features/privacy/event-*`. Matrix: `src/privacy/DISCOVERY_ENFORCEMENT.md` (events section).
+- **Evidence:** `check:all` and `ai:check` exit 0; 23/23 mutations caught.
+- **Next:**
+  - CS: regenerate bindings and wire ingestion.
+  - Adam: commit plans from the worker view.
+  - Nimisha: companions from `event_companions` only.

@@ -268,6 +268,93 @@ export const rate_window = table(
   { limit_key: t.string().primaryKey(), window_start: t.timestamp(), count: t.u32() }
 );
 
+/**
+ * Public catalogue records (C7, D039). Written only by the module owner or an allow-listed worker (the
+ * ingester); public, untrusted source data, never permission. No venue, organizer or attendee fields.
+ */
+export const catalogue_event = table(
+  { name: 'catalogue_event' },
+  {
+    event_id: t.string().primaryKey(),
+    title: t.string(), // sanitized display text, never fed to a model
+    starts_at: t.timestamp(),
+    ends_at: t.option(t.timestamp()),
+    status: t.string(), // scheduled | cancelled | unknown
+    fetched_at: t.timestamp(),
+    topics: t.array(t.string()),
+    format: t.string(), // in_person | online
+    area_key: t.option(t.string()), // configured coarse area for in-person events
+    source_url: t.option(t.string()), // safeCatalogueUrl output only
+    updated_at: t.timestamp(),
+  }
+);
+
+/** One person's explicit event intent (C8). Ends with the event; never inferred from scraping or calendars. */
+export const event_intent = table(
+  { name: 'event_intent' },
+  {
+    intent_id: t.string().primaryKey(),
+    owner: t.identity(),
+    event_id: t.string(),
+    kind: t.string(), // interested | going
+    version: t.u32(),
+    expires_at: t.timestamp(),
+    revoked_at: t.option(t.timestamp()),
+    updated_at: t.timestamp(),
+  }
+);
+
+/** C7 item consent for an existing pair: named recipient, exact topics, bound preset versions, <= 24 h. Immutable. */
+export const activity_approval = table(
+  { name: 'activity_approval' },
+  {
+    approval_id: t.string().primaryKey(),
+    owner: t.identity(),
+    recipient: t.identity(),
+    pair_id: t.string(),
+    topics: t.array(t.string()),
+    recipient_policy_version: t.u32(),
+    preset_assignment_version: t.u32(),
+    consent_version: t.u32(),
+    client_request_id: t.string(),
+    expires_at: t.timestamp(),
+    revoked_at: t.option(t.timestamp()),
+    created_at: t.timestamp(),
+  }
+);
+
+/**
+ * Shared plan proposals (D034 lifecycle, D039 guards). Worker-committed; each participant accepts their own
+ * copy of the current revision. Participants are derived from the basis, never from request fields.
+ */
+export const shared_plan = table(
+  { name: 'shared_plan' },
+  {
+    plan_id: t.string().primaryKey(),
+    revision: t.u32(),
+    basis_kind: t.string(), // introduction | existing_connection
+    basis_ref: t.string(), // intro_id or pair_id
+    participant_a: t.identity(),
+    participant_b: t.identity(),
+    intent_a: t.string(),
+    intent_a_version: t.u32(),
+    intent_b: t.string(),
+    intent_b_version: t.u32(),
+    approval_a: t.option(t.string()), // C7 approvals (existing_connection only)
+    approval_b: t.option(t.string()),
+    event_id: t.string(),
+    event_starts_at: t.timestamp(),
+    source_fetched_at: t.timestamp(),
+    accepted_a: t.bool(),
+    accepted_b: t.bool(),
+    status: t.string(), // pending | confirmed | declined | cancelled | expired | stale
+    closed_by: t.option(t.identity()), // who declined/cancelled; shown only to them
+    decided_by: t.string(),
+    created_at: t.timestamp(),
+    expires_at: t.timestamp(),
+  }
+);
+
 /** Allow-listed coordination worker identities (module-owner managed). Workers have no account and cannot approve. */
 export const worker_identity = table(
   { name: 'worker_identity' },
@@ -315,4 +402,8 @@ export const spacetimedb = schema({
   introduction_proposal,
   discovery_report,
   rate_window,
+  catalogue_event,
+  event_intent,
+  activity_approval,
+  shared_plan,
 });
