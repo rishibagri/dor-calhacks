@@ -32,7 +32,7 @@ let correct = 0, nudges = 0, falseNudges = 0, noActionExpected = 0, noActionCorr
 const shared: { id: string; availability?: string }[] = [];
 for (const c of support.cases) {
   const preset = RelationshipPresetSchema.parse(c.preset), assignment = RecipientPresetAssignmentSchema.parse(c.assignment);
-  buildPreview({ candidate: c.candidate, preset, assignment, recipientId: c.deliverTo, prefersSpace: c.ownerLocal.prefersSpace });
+  buildPreview({ candidate: c.candidate, preset, assignment, recipientId: c.deliverTo });
   const policy = c.submittedSignal === null ? null : await new FakeDisclosurePolicy({ clock: new FakeClock(support.clock),
     linked: c.state.linked, revoked: c.state.revoked, preset, assignment, approved: c.approvedSignal }).check(c.submittedSignal, c.deliverTo);
   const m = matchSignal({ signal: c.submittedSignal, policy, ack: c.ack, now: new Date(support.clock),

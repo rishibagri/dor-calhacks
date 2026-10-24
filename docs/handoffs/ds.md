@@ -106,8 +106,15 @@ Status: PR #25 (open), `role/ds-context` merged with main `71c3b6a` (README core
   - **r4m:** pending D042.
   - **nn1/nn2:** nickname exclusions fail open (AI).
   - **Approval-timing row:** todo pending Cyber's `my_nudges` fix.
-  - **f4 quiz "space":** the old global promise; needs a DS owner decision.
+  - **f4 quiz "space":** resolved, see below.
   - **a3:** Cyber.
+
+## f4 quiz-space relabel (2026-10-24T19:55Z, added to PR #36; not merged)
+- **Decision (DS owner):** quiz Q1 "space" only leaves support out of the preset drafts (CS `427cd3f`, core3-audit.md item 3). It is neither a standing suppressor nor an authorization (README: the quiz never grants consent).
+- **f4:** expected preview is now `preview {supportMode: encouraging_note}` (owner-only). The match stays `no_nudge: no_signal`. The v1 label is in `labelHistory`.
+- **`matching.ts`:** `buildPreview` has no `prefersSpace` input and no `owner_prefers_space` reason. Per-entry `wants_space`, refusals, pauses, approval and recipient consent are unchanged; regression tests cover each path.
+- **Results:** support baseline 29/30 (a3); decision loop 52/55; check:all and ai:check exit 0.
+- **Still open:** the `quiz-profiles.json` space notes / derived `supportAction: none` describe the old suppression (flagged, not changed). Main #37 (D042) is not merged yet; r4m needs re-deciding after the merge.
 
 ## Next for DS: core-first (README "Current direction", Core 1–4)
 Discovery/event ranking work is paused. Don't expand it until the core passes live verification. The earlier "D038/D039 metrics cases" and "first-session recommendations" items are dropped.

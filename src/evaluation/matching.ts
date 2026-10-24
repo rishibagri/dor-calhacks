@@ -23,7 +23,7 @@ export const TEMPLATE_FOR: Record<SupportMode, Nudge['templateId']> = {
 };
 
 export interface PreviewFields { supportMode?: SupportMode; availability?: Availability }
-export type NoSignalReason = 'owner_prefers_space' | 'no_assignment' | 'no_candidate' | 'no_allowed_category';
+export type NoSignalReason = 'no_assignment' | 'no_candidate' | 'no_allowed_category';
 export type PreviewResult =
   | { kind: 'preview'; fields: PreviewFields }
   | { kind: 'no_signal'; reason: NoSignalReason };
@@ -35,8 +35,9 @@ export interface PreviewInput {
   /** Assignment of `preset` to the named recipient, or null when none exists. */
   assignment: RecipientPresetAssignment | null;
   recipientId: string;
-  /** Local quiz Q1 "space" (LocalQuizExtras.prefersSpace). Can only suppress. */
-  prefersSpace: boolean;
+  // No quiz input: Q1 "space" (LocalQuizExtras.prefersSpace) only leaves support out of the preset drafts (CS 427cd3f,
+  // core3-audit.md item 3). It neither suppresses a later entry nor grants consent; "space" for one moment is the
+  // per-entry assessment (wants_space → no_action) in the decision loop, before any candidate reaches this function.
 }
 
 /**
@@ -45,7 +46,6 @@ export interface PreviewInput {
  */
 export function buildPreview(input: PreviewInput): PreviewResult {
   const noSignal = (reason: NoSignalReason): PreviewResult => ({ kind: 'no_signal', reason });
-  if (input.prefersSpace) return noSignal('owner_prefers_space');
   const a = input.assignment;
   if (!a || a.recipientId !== input.recipientId || a.ownerId !== input.preset.ownerId || a.presetId !== input.preset.policyId)
     return noSignal('no_assignment');

@@ -173,3 +173,12 @@ test('timing (sender_approval_timing): the nudge row the recipient can subscribe
     assert.deepEqual(early, late);
   });
 
+
+test('per-entry space still ends in no_action (unaffected by the f4 quiz relabel)', () => {
+  for (const id of ['a11-wants-space', 'a12-wants-space-overrides-a-candidate', 'c1-changed-to-space']) {
+    const s = scoreCase(file, byId(id));
+    assert.equal(s.outcome.kind, 'no_action', id);
+    assert.equal(s.matches, true, id);
+    assert.deepEqual(surfacesOf(file, s.outcome).recipient, [], id);
+  }
+});

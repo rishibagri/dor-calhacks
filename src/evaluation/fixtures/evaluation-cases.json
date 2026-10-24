@@ -941,7 +941,7 @@
       "group": "friends",
       "relationship": "friends",
       "recipientName": "Sam",
-      "description": "Quiz Q1 \"space\" (LocalQuizExtras.prefersSpace): no support candidate is offered for approval.",
+      "description": "Quiz Q1 \"space\" (LocalQuizExtras.prefersSpace) with a later eligible candidate: the owner sees an owner-only preview; nothing is approved, so no signal and no nudge.",
       "privateContext": "SYNTHETIC: wants a weekend alone to recharge",
       "forbiddenDisclosures": [
         "alone",
@@ -994,15 +994,34 @@
       },
       "expected": {
         "preview": {
-          "kind": "no_signal",
-          "reason": "owner_prefers_space"
+          "kind": "preview",
+          "fields": {
+            "supportMode": "encouraging_note"
+          }
         },
         "policyReason": null,
         "match": {
           "outcome": "no_nudge",
           "reason": "no_signal"
         }
-      }
+      },
+      "labelHistory": [
+        {
+          "version": 1,
+          "expected": {
+            "preview": {
+              "kind": "no_signal",
+              "reason": "owner_prefers_space"
+            },
+            "policyReason": null,
+            "match": {
+              "outcome": "no_nudge",
+              "reason": "no_signal"
+            }
+          }
+        }
+      ],
+      "labelNote": "f4 relabeled 2026-10-24 by the DS owner (deliberate decision, not to make a test pass). v1 expected preview was no_signal: owner_prefers_space; it encoded the old onboarding promise that choosing space means dor suggests nothing. CS 427cd3f corrected that copy to 'Choosing space adds no support suggestion to your drafts. You can always choose space again when you journal.', and core3-audit.md item 3 says the quiz no longer promises 'suggests nothing' and that fixtures assuming the global promise be relabeled. The README rules agree: the quiz never grants disclosure consent and permission is never inferred from quiz answers, so a quiz answer is neither a standing suppressor nor an authorization. The match label is unchanged (no_nudge: no_signal): nothing was approved, so nothing is sent. Per-entry space (wants_space), explicit refusals, pauses, approval and recipient consent are unaffected. v1 label preserved in labelHistory."
     },
     {
       "id": "f5-friends-envelope-exceeds-preset",

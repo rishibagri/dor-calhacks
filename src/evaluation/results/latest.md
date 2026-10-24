@@ -1,6 +1,6 @@
 # DS evaluation results
 
-Revision `342a800+dirty`, clock `2026-10-24T00:00:00Z`, deterministic (no seed or provider). All inputs are synthetic; policy
+Revision `86ccbec+dirty`, clock `2026-10-24T00:00:00Z`, deterministic (no seed or provider). All inputs are synthetic; policy
 decisions come from the offline C6 fake, which is not security evidence. Relevance labels are DS author labels written before
 the runs. Teammate 1–5 usefulness ratings have **not** been collected, so no usefulness mean is reported.
 

@@ -32,7 +32,7 @@ export const previewOnCandidate: DecisionSystem = (file, c): Outcome => {
     schemaVersion: 1, ownerId: file.ownerId, recipientId: person.recipientId, pairId: recipient.pairId,
     presetId: preset.policyId, assignmentVersion: 1,
   });
-  const p = buildPreview({ candidate: c.candidate, preset, assignment, recipientId: person.recipientId, prefersSpace: false });
+  const p = buildPreview({ candidate: c.candidate, preset, assignment, recipientId: person.recipientId });
   return p.kind === 'preview'
     ? { kind: 'ready_for_preview', recipient, candidate: p.fields }
     : decide({ candidate: null, company: null, chosen: null, excluded: [], asked: [] }, people);

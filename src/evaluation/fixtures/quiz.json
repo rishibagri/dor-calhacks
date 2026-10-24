@@ -12,7 +12,7 @@
         { "value": "encouraging_note", "profileValue": "encouraging_note" },
         { "value": "shared_activity", "profileValue": "shared_activity" },
         { "value": "space", "profileValue": null, "extras": { "prefersSpace": true },
-          "note": "Not exclusive in the app. Contributes no support mode; DS matching treats prefersSpace as no-action even when other modes are present." }
+          "note": "Not exclusive in the app. Contributes no support mode, so support_preference is left out of the preset drafts when no other mode is chosen (CS 427cd3f). It is not a standing no-action rule and never grants consent: a later eligible candidate can still reach an owner-only preview, and space for one moment is the per-entry answer (wants_space → no_action)." }
       ]
     },
     {
