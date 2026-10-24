@@ -37,6 +37,14 @@ Neither stops an already-approved signal or a queued worker job. A pause must.
 - Owner reducers to set and clear a pause, plus an owner-only view listing their own pauses (counterpart and end time). CS adds pause/resume controls in Connections and Privacy, and shows the end time.
 - Copy rules: no reason prompt, and no "they will/won't be told" promises beyond "they are not notified".
 
+## Build on CS's index work (PR #30)
+
+#30 adds btree indexes on owner, sender, recipient and pair columns, plus a `pair_member` lookup table, and moves per-user views and hot reducers to index ranges.
+- Do pause lookups in `approve_signal`, `commit_nudge`, `my_nudges` and other per-user views the same way: by owner/pair index, with **no new whole-table scans**.
+- Worker-only views and the expiry sweep may scan, as #30 documents.
+- If #30 is not merged when you start, merge main again after it lands, before opening your PR.
+- CI on main runs `check:all`, the schema drift check, `ai:check` and `next build`.
+
 ## Tests expected (Cyber)
 
 Direct reducer and view calls with a third account, in the style of `spacetimedb/tests/*.test.ts`:
