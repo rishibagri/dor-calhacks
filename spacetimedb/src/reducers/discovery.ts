@@ -4,7 +4,7 @@ import { t } from 'spacetimedb/server';
 import { Timestamp } from 'spacetimedb';
 import {
   AREA_MAX_LIFETIME_MS, discoveryErrorCode, guardAreaKey, guardDiscoveryVisibility, guardPublicationDraft,
-} from '@kinetic/contracts/policy';
+} from '@dor/contracts/policy';
 import { spacetimedb } from '../schema';
 import { fail, type Ctx } from '../errors';
 import { requireAccount } from '../guards';

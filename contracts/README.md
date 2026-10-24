@@ -1,4 +1,4 @@
-# @kinetic/contracts — shared interface specification
+# @dor/contracts — shared interface specification
 Read this after AGENTS.md and PRD.md. This is the interface index; `src/schemas.ts` is the canonical source for wire shapes, `src/ports.ts` defines adapter boundaries, `schema/` contains generated JSON Schema, and `fixtures/` holds synthetic valid examples. Every role uses this one package on main; no branch-private contracts.
 
 | ID | Interface | Producer → Consumer | Responsible owner | Boundary |
@@ -8,7 +8,7 @@ Read this after AGENTS.md and PRD.md. This is the interface index; `src/schemas.
 | C3 | ApprovedSignal v2 | Guarded approval reducer → Factory/recipient agent | Cyber produces; AI consumes | Explicit minimal disclosure; no raw context |
 | C4 | AgentAck / CoordinationPort / RecipientSupportPreferences / CoordinationJob / CoordinationOutcome | Recipient's approved preferences → bounded coordinator; content-free job → worker; sanitized outcome codes | AI; Cyber/CS produce preferences consent and jobs; DS and CS consume | Maximum two rounds; no free-form agent chat; jobs carry IDs only |
 | C5 | Nudge / DisclosureReceipt | Guarded coordination commit → caller-filtered views/UI | CS; Cyber reviews | Revalidate consent/preset before delivery |
-| C6 | Disclosure guards (`@kinetic/contracts/policy`), DisclosurePolicy / DisclosurePolicyPort; fake clock/store | Cyber policy → reducers, worker and integration checks | Sumedh (Cyber); all consume | Guards are dependency-free and run inside reducers; fakes are offline-only and not security evidence. See src/privacy/README.md |
+| C6 | Disclosure guards (`@dor/contracts/policy`), DisclosurePolicy / DisclosurePolicyPort; fake clock/store | Cyber policy → reducers, worker and integration checks | Sumedh (Cyber); all consume | Guards are dependency-free and run inside reducers; fakes are offline-only and not security evidence. See src/privacy/README.md |
 | C7 (partial) | Public catalogue input/link guards; catalogue and shared-plan types pending | CS Apify ingestion → Nimisha ranking → Adam workflow → CS UI | CS owns catalogue; Sumedh guards | D028 guards executable; shared activity/event delivery still requires reviewed schemas/consent |
 | C8 (proposed) | Discovery publication, coarse area, public profiles, event intent and introductions | Owner opt-in → Cyber/CS guarded state → DS/AI shortlist → authorized UI | CS state/UI; Cyber consent; DS ranking; AI workflow | Separate from pair support; public-profile preview before invite acceptance; runtime shapes not yet exported |
 
@@ -36,7 +36,7 @@ Before an activity proposal is shared, CS, Nimisha, Adam and Sumedh must agree o
 From repository root: `npm ci`, then `npm run check`. `npm run contracts:schema` regenerates schemas after a shape change. All checks are offline; no provider calls, deployment, journal access or external messages.
 
 ## Rules
-- Import production types/schemas/ports from `@kinetic/contracts`. Tests may explicitly import `@kinetic/contracts/fakes`; production adapters must not. The SpacetimeDB module imports guards from `@kinetic/contracts/policy` (no Zod in its bundle).
+- Import production types/schemas/ports from `@dor/contracts`. Tests may explicitly import `@dor/contracts/fakes`; production adapters must not. The SpacetimeDB module imports guards from `@dor/contracts/policy` (no Zod in its bundle).
 - Zod strict schemas reject extra fields. Top-level wire records carry `schemaVersion`. Missing optional fields are omitted; never invent a value to bypass a blocked category.
 - UTC ISO timestamps with timezone; injected clocks for deterministic examples. The synthetic fixture's far-future expiry is not a runtime default.
 - Schema validity is not permission. Authoritative reducers verify identity, relationship, preset assignment/version, exact owner approval, purpose, expiry and revocation on each use.

@@ -1,4 +1,4 @@
-# worker — `@kinetic/worker`
+# worker — `@dor/worker`
 
 AI-owned Factory Droid worker. It receives content-free `CoordinationJob`s (C4) and approved signals, runs the bounded coordinator with a Droid-backed recipient agent, and returns sanitized outcomes. It never receives raw vault context.
 
@@ -6,9 +6,9 @@ Read root AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md and your 
 
 ## Runtime requirements (tested)
 - Node.js ≥ 20 (tested on v24.13.0, darwin arm64). Long-running process outside Vercel.
-- `droid` CLI on `PATH` (tested 0.248.0; 0.249.0 is available). Override the path with `KINETIC_DROID_PATH`.
+- `droid` CLI on `PATH` (tested 0.248.0; 0.249.0 is available). Override the path with `DOR_DROID_PATH`.
 - Auth: `droid exec` works with the CLI login (tested). For deployment, set `FACTORY_API_KEY`. The `@factory/droid-sdk` TypeScript SDK (0.10.0) requires `FACTORY_API_KEY` and does not use the CLI login. It also only offers a deny-list for tools and pulls in vulnerable nested `zod@3` and `uuid@9`. We therefore call `droid exec` directly.
-- Model `claude-haiku-5-5` by default (`KINETIC_DROID_MODEL` / `--model` to override), reasoning effort `low`, 8 s timeout per call (`KINETIC_DROID_TIMEOUT_MS`).
+- Model `claude-haiku-5-5` by default (`DOR_DROID_MODEL` / `--model` to override), reasoning effort `low`, 8 s timeout per call (`DOR_DROID_TIMEOUT_MS`).
 
 ## Droid hardening (`DroidAckProposer`)
 - `--only-tools TodoWrite`: the one allowlisted tool is a planning list with no file, shell, network or web access. Default read-only autonomy; never `--auto` or `--skip-permissions-unsafe`.
@@ -26,11 +26,11 @@ Droid's system prompt includes the working directory, so a new directory per cal
 | Opus 5.5, reused directory | median 570, max 1,964 | 9,448 | 12/12 | 4.1 s / 5.6 s |
 | **Haiku 5.5, reused directory (default)** | **median 14, max 45** | **289** | **12/12** | 4.1 s / 6.1 s |
 
-Each benchmark ran 3 × (partners, friends, family, and a two-option friends case), plus a revoked case with 0 Droid calls, using offline policy and preference stand-ins. Latency did not improve because about 3.5 s is Droid CLI startup; `droid daemon` is the next lever. Pass `onUsage` to `DroidAckProposer` to record numbers-only usage (credits, cache tokens, duration). The Factory auto router (`KINETIC_DROID_MODEL=auto`) is not used: routing can move the enums to non-Claude providers, which the processing notice would then need to list, and it makes latency and quality measurements unstable.
+Each benchmark ran 3 × (partners, friends, family, and a two-option friends case), plus a revoked case with 0 Droid calls, using offline policy and preference stand-ins. Latency did not improve because about 3.5 s is Droid CLI startup; `droid daemon` is the next lever. Pass `onUsage` to `DroidAckProposer` to record numbers-only usage (credits, cache tokens, duration). The Factory auto router (`DOR_DROID_MODEL=auto`) is not used: routing can move the enums to non-Claude providers, which the processing notice would then need to list, and it makes latency and quality measurements unstable.
 
 ## Job transport
 `createJobRequestHandler({ authToken, signals, coordinator, commit })` handles `POST /jobs`:
-- Requires `Authorization: Bearer <KINETIC_WORKER_AUTH_TOKEN>` (≥ 32 chars, timing-safe compare).
+- Requires `Authorization: Bearer <DOR_WORKER_AUTH_TOKEN>` (≥ 32 chars, timing-safe compare).
 - Accepts a strict `CoordinationJob` body (≤ 4 KiB). Returns `{ outcomes: CoordinationOutcome[] }` with `cache-control: no-store`.
 - Errors use the API envelope `{error:{code,message,requestId}}` (401/404/409/413/422/503). Bodies are never logged or echoed.
 - **Replay protection (`JobLedger`):**
@@ -56,10 +56,10 @@ Rows are mapped by `src/spacetime/rows.ts`, which accepts snake_case harness row
 
 **Live wiring:** `createLiveWorker({ authToken, policyState, signals, preferences, delivery, commit, rank?, droid? })` builds Cyber's real `DisclosurePolicy` over `policyState`. It has no parameter for a policy object, so a fake cannot be wired in. It returns `{ handler, runJob, coordinator, close }`; `runJob` shares the handler's `JobLedger`.
 
-## Process (`src/main.ts`, `npm start -w @kinetic/worker`)
-- One SpacetimeDB connection as the worker identity, plus `SignalWatcher`: every `KINETIC_WORKER_SWEEP_MS` (default 5 s) it starts one job per newly visible approved signal, with `requestId = signalId`. Nudge IDs are therefore stable across restarts, `commit_nudge` dedupes them, and the cooldown pre-check skips Droid for a pair it already nudged.
+## Process (`src/main.ts`, `npm start -w @dor/worker`)
+- One SpacetimeDB connection as the worker identity, plus `SignalWatcher`: every `DOR_WORKER_SWEEP_MS` (default 5 s) it starts one job per newly visible approved signal, with `requestId = signalId`. Nudge IDs are therefore stable across restarts, `commit_nudge` dedupes them, and the cooldown pre-check skips Droid for a pair it already nudged.
 - `POST /jobs` (above) and `GET /healthz`. Logs are JSON codes and counts only.
-- Env: `KINETIC_WORKER_AUTH_TOKEN`, `KINETIC_SPACETIME_URI`, `KINETIC_SPACETIME_MODULE`, `KINETIC_SPACETIME_WORKER_TOKEN`, `PORT`, `KINETIC_DROID_{MODEL,PATH,TIMEOUT_MS,CONCURRENCY}`, `FACTORY_API_KEY`.
+- Env: `DOR_WORKER_AUTH_TOKEN`, `DOR_SPACETIME_URI`, `DOR_SPACETIME_MODULE`, `DOR_SPACETIME_WORKER_TOKEN`, `PORT`, `DOR_DROID_{MODEL,PATH,TIMEOUT_MS,CONCURRENCY}`, `FACTORY_API_KEY`.
 - **Refuses to start** until the module is published and bindings are generated into `src/module_bindings` (`spacetime generate --lang typescript --out-dir worker/src/module_bindings --module-path spacetimedb`). The admin then runs `set_worker_identity` for the worker token's identity.
 
 ## Droid concurrency
@@ -68,8 +68,8 @@ Rows are mapped by `src/spacetime/rows.ts`, which accepts snake_case harness row
 ## Commands
 ```sh
 npm run ai:check                                   # offline tests + dry run over the in-process module
-npm run ai:dryrun                                  # full five-journey trace (KINETIC_DRYRUN_REPORT=out.md to save)
-KINETIC_DRYRUN_LIVE_DROID=1 npm run ai:dryrun      # same, with real droid (spends Factory credits)
+npm run ai:dryrun                                  # full five-journey trace (DOR_DRYRUN_REPORT=out.md to save)
+DOR_DRYRUN_LIVE_DROID=1 npm run ai:dryrun      # same, with real droid (spends Factory credits)
 node worker/scripts/live-droid.mjs --runs 4        # live Droid; policy and preferences are labeled offline stand-ins
 ```
 

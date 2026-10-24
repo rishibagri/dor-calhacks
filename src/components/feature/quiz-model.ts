@@ -1,5 +1,5 @@
-import { LocalConnectionProfileSchema } from '@kinetic/contracts';
-import type { LocalConnectionProfile, SharingCategory } from '@kinetic/contracts';
+import { LocalConnectionProfileSchema } from '@dor/contracts';
+import type { LocalConnectionProfile, SharingCategory } from '@dor/contracts';
 import type { ConnectActivity, LocalQuizExtras } from '@/lib/backend/ports';
 
 export type SupportMode = LocalConnectionProfile['preferredSupportModes'][number];

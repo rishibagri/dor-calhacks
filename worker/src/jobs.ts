@@ -1,5 +1,5 @@
 import { ApprovedSignalSchema, CoordinationJobSchema, CoordinationOutcomeSchema, type CoordinationJob,
-  type CoordinationOutcome, type CoordinationOutcomeCode, type CoordinationPort } from '@kinetic/contracts';
+  type CoordinationOutcome, type CoordinationOutcomeCode, type CoordinationPort } from '@dor/contracts';
 
 export type CoordinationResult = Awaited<ReturnType<CoordinationPort['coordinate']>>;
 

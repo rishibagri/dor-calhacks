@@ -3,7 +3,7 @@
  * users: never put secrets here. Next inlines each variable by literal name,
  * so every access below must be a direct `process.env.NEXT_PUBLIC_X` read.
  */
-const DEFAULT_MODULE = 'kinetic';
+const DEFAULT_MODULE = 'dor';
 const DEFAULT_JWT_TEMPLATE = 'spacetimedb';
 
 function clean(value: string | undefined): string | null {

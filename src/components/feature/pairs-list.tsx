@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { RelationshipPresetKind } from '@kinetic/contracts';
+import type { RelationshipPresetKind } from '@dor/contracts';
 import type { PairView, ReducerResult } from '@/lib/backend/ports';
 import { useLiveShared } from '@/components/shell/use-live';
 import { ResultNotice } from '@/components/shell/result-notice';

@@ -1,18 +1,18 @@
-// FULL AI DRY RUN across the three Kinetic experiences. Prints a step trace labeled by evidence kind:
+// FULL AI DRY RUN across the three dor experiences. Prints a step trace labeled by evidence kind:
 //   module    = the real SpacetimeDB module (Cyber/CS reducers, views, guards) running in-process
 //   real      = production AI code (route handler, coordinators, worker adapters, LocalVault)
 //   synthetic = a labeled stand-in (accounts, provider replies, C8/C7 state that has no module yet)
-//   live      = a real provider call (opt-in: KINETIC_DRYRUN_LIVE_CLAUDE=1, KINETIC_DRYRUN_LIVE_DROID=1; costs credits)
+//   live      = a real provider call (opt-in: DOR_DRYRUN_LIVE_CLAUDE=1, DOR_DRYRUN_LIVE_DROID=1; costs credits)
 // Offline by default. Not a published module, deployed worker or browser run.
-// KINETIC_DRYRUN_REPORT=<path> also writes the trace as Markdown.
+// DOR_DRYRUN_REPORT=<path> also writes the trace as Markdown.
 import { writeFileSync } from 'node:fs';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 import { afterAll, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
-import { applyPlanAction } from '@kinetic/contracts/plan-lifecycle';
-import { ClaudeReflectionAdapter, IntroductionCoordinator, PlanCoordinator, handleReflectionRequest } from '@kinetic/agents';
-import { SyntheticReflectionAdapter } from '@kinetic/agents/testing';
+import { applyPlanAction } from '@dor/contracts/plan-lifecycle';
+import { ClaudeReflectionAdapter, IntroductionCoordinator, PlanCoordinator, handleReflectionRequest } from '@dor/agents';
+import { SyntheticReflectionAdapter } from '@dor/agents/testing';
 import { DroidIntroProposer, DroidPlanProposer, DroidRunner, SignalWatcher, createLiveWorker, spacetimeWorkerPorts,
   type WorkerStateSource } from '../dist/index.js';
 import { LocalVault } from '../../src/vault/local-vault.ts';
@@ -23,8 +23,8 @@ import { allSignals, approveArgs, confirmPreset, grantPrefs, jwtAuth, mod, pairU
   from '../../spacetimedb/tests/helpers';
 
 try { process.loadEnvFile(new URL('../../.env.local', import.meta.url)); } catch { /* optional */ }
-const LIVE_CLAUDE = process.env.KINETIC_DRYRUN_LIVE_CLAUDE === '1' && Boolean(process.env.ANTHROPIC_API_KEY);
-const LIVE_DROID = process.env.KINETIC_DRYRUN_LIVE_DROID === '1';
+const LIVE_CLAUDE = process.env.DOR_DRYRUN_LIVE_CLAUDE === '1' && Boolean(process.env.ANTHROPIC_API_KEY);
+const LIVE_DROID = process.env.DOR_DRYRUN_LIVE_DROID === '1';
 const droidMode = LIVE_DROID ? 'live' : 'synthetic';
 
 type Kind = 'module' | 'real' | 'synthetic' | 'live';
@@ -37,7 +37,7 @@ async function step<T>(journey: string, name: string, kinds: Kind[], fn: () => P
   return value;
 }
 
-/** SYNTHETIC droid subprocess replying in order; counts calls. Replaced by real droid with KINETIC_DRYRUN_LIVE_DROID=1. */
+/** SYNTHETIC droid subprocess replying in order; counts calls. Replaced by real droid with DOR_DRYRUN_LIVE_DROID=1. */
 function scriptedRunner(replies: string[]) {
   let calls = 0;
   const spawn = (() => {
@@ -67,7 +67,7 @@ function relationshipWorld(kind: 'partner' | 'friend' | 'family', cats: string[]
   const w = setup();
   const { pairId } = pairUp(w);
   confirmPreset(w, w.alice, pairId, kind, cats);
-  const worker = jwtAuth('kinetic-worker', 50n, 'https://worker.spacetimedb.example');
+  const worker = jwtAuth('dor-worker', 50n, 'https://worker.spacetimedb.example');
   const workerId = w.h.withReducerTx(worker, ctx => ctx.sender);
   w.h.withReducerTx(w.admin, ctx => mod.set_worker_identity(ctx, { worker: workerId, enabled: true }));
   w.call(w.bob, ctx => mod.set_nudge_delivery(ctx, { pair_id: pairId, opted_in: true, quiet_start_minute: undefined,
@@ -79,7 +79,7 @@ function relationshipWorld(kind: 'partner' | 'friend' | 'family', cats: string[]
 
 async function reflect(journey: string, caseId: string) {
   const fixture = reflectionFixtures.cases.find(c => c.id === caseId)!;
-  const port = LIVE_CLAUDE ? new ClaudeReflectionAdapter({ model: process.env.KINETIC_CLAUDE_MODEL || undefined })
+  const port = LIVE_CLAUDE ? new ClaudeReflectionAdapter({ model: process.env.DOR_CLAUDE_MODEL || undefined })
     : new SyntheticReflectionAdapter(fixture.output as never);
   return step(journey, 'reflect via POST /api/reflections handler', ['real', LIVE_CLAUDE ? 'live' : 'synthetic'], async () => {
     const res = await handleReflectionRequest(new Request('http://dry/api/reflections', { method: 'POST',
@@ -217,5 +217,5 @@ afterAll(() => {
   const md = [`AI dry run ${new Date().toISOString()} — Claude ${LIVE_CLAUDE ? 'LIVE' : 'synthetic'}, Droid ${LIVE_DROID ? 'LIVE' : 'synthetic'}`,
     '', '| Journey | Step | Evidence | Result | Model calls | ms |', '|---|---|---|---|---|---|', ...rows].join('\n');
   console.log('\n' + md + '\n');
-  if (process.env.KINETIC_DRYRUN_REPORT) writeFileSync(process.env.KINETIC_DRYRUN_REPORT, md + '\n');
+  if (process.env.DOR_DRYRUN_REPORT) writeFileSync(process.env.DOR_DRYRUN_REPORT, md + '\n');
 });

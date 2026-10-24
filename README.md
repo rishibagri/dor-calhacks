@@ -1,10 +1,10 @@
-# Kinetic
+# dor
 
 ### AI that helps people connect with people
 
-Kinetic helps people build new connections and keep existing ones alive. A person can reflect privately, discover people with shared interests nearby, or find company for a local event. Their agent helps find a useful opening; the people choose whether to act.
+dor helps people build new connections and keep existing ones alive. A person can reflect privately, discover people with shared interests nearby, or find company for a local event. Their agent helps find a useful opening; the people choose whether to act.
 
-The product thesis is that AI should help someone leave a conversation with a bot and start a conversation with a person. This is a design goal to validate, not a claim that AI causes isolation for everyone. Kinetic complements calls and meeting up by reducing the effort of finding the person, reason and moment.
+The product thesis is that AI should help someone leave a conversation with a bot and start a conversation with a person. This is a design goal to validate, not a claim that AI causes isolation for everyone. dor complements calls and meeting up by reducing the effort of finding the person, reason and moment.
 
 > Private reflection → explicitly approved context → a useful human connection.
 
@@ -18,7 +18,7 @@ The product thesis is that AI should help someone leave a conversation with a bo
 
 ## The three experiences we are building
 
-| Experience | Example | What Kinetic does | Human decision |
+| Experience | Example | What dor does | Human decision |
 |---|---|---|---|
 | Keep a connection | A partner away from home, an old friend or a family member | Private voice/typed reflection, exact approved signal, bounded agent coordination and a useful nudge | Approve sharing; choose whether to call, send a note or make a plan |
 | Meet nearby people | Someone has just moved to a neighborhood or campus | One-time approximate location, opted-in public profiles and matching on published interests | Publish a profile; inspect people before inviting; accept or decline an introduction |
@@ -70,7 +70,7 @@ flowchart TD
   H --> I[People choose an introduction or shared plan]
 ```
 
-“Nearby agents” means logical Kinetic agents for users who opted into discovery. It does not mean scanning phones, Wi-Fi, Bluetooth, private contacts or nonusers. Area matching is eligibility, not proof that someone is physically present. Public event interest is self-declared; scraping a listing does not reveal who will attend.
+“Nearby agents” means logical dor agents for users who opted into discovery. It does not mean scanning phones, Wi-Fi, Bluetooth, private contacts or nonusers. Area matching is eligibility, not proof that someone is physically present. Public event interest is self-declared; scraping a listing does not reveal who will attend.
 
 No journals, transcripts, inferred sensitive facts, embeddings, exact coordinates or habitual movement histories enter shared agent prompts. Publication allows only deliberately selected fields. Private tables plus caller-filtered views remain the database model; location is not made globally public to simplify matching.
 
@@ -85,7 +85,7 @@ Each person owns implementation, a usable feature surface, tests and a handoff. 
 | Adam — AI | Voice/reflection, worker/database adapters, bounded proposals and efficiency | `src/features/voice/`: record/stop/correct/reflection experience | Provider component + database-backed worker and call metrics |
 | Sumedh — Cyber | Vault, consent/policy, recipient preferences, discovery/abuse guards and tests | `src/features/privacy/`: create/unlock/recovery/privacy controls | Drop-in privacy component + authoritative guards/views |
 
-New component paths are assignments, not existing implementation. Claim files before editing; CS retains shared navigation/layout. Cyber's existing claims for signals/delivery/coordination/policy/views remain intact. All cross-role wire types are exported from `@kinetic/contracts`, not duplicated in a feature folder. Shared package reviews require affected producer/consumer ACKs; this plan does not forge those ACKs.
+New component paths are assignments, not existing implementation. Claim files before editing; CS retains shared navigation/layout. Cyber's existing claims for signals/delivery/coordination/policy/views remain intact. All cross-role wire types are exported from `@dor/contracts`, not duplicated in a feature folder. Shared package reviews require affected producer/consumer ACKs; this plan does not forge those ACKs.
 
 ## Revised execution phases — remaining work only
 

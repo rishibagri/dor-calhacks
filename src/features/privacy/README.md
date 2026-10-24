@@ -12,7 +12,7 @@ Status: **implemented, offline-verified over the real `LocalVault`; not composed
 ```tsx
 // Per signed-in account (call vault.lock() on identity change / sign-out):
 const vault = useMemo(() => new LocalVault({
-  store: new IndexedDbVaultStore(indexedDB, 'kinetic-vault:' + sha256Hex(clerkUserId)),
+  store: new IndexedDbVaultStore(indexedDB, 'dor-vault:' + sha256Hex(clerkUserId)),
 }), [clerkUserId]);
 <VaultControls vault={vault} />
 ```

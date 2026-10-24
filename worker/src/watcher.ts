@@ -1,4 +1,4 @@
-import type { CoordinationJob, CoordinationOutcome } from '@kinetic/contracts';
+import type { CoordinationJob, CoordinationOutcome } from '@dor/contracts';
 import type { WorkerStateSource } from './spacetime/adapters.js';
 import { mapRows, toSignalContext } from './spacetime/rows.js';
 

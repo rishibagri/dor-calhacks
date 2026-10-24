@@ -1,5 +1,5 @@
 import { t } from 'spacetimedb/server';
-import { validRecipientDelivery } from '@kinetic/contracts/policy';
+import { validRecipientDelivery } from '@dor/contracts/policy';
 import { spacetimedb } from '../schema';
 import { fail } from '../errors';
 import { requireAccount, requireAcceptedPair } from '../guards';

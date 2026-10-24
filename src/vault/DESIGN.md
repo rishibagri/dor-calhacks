@@ -5,7 +5,7 @@ Status: **implemented, offline-verified** in `src/vault/` (`LocalVault`, `Indexe
 Implementation differences from the original proposal:
 - **No `encryptions` counter is stored.** A random 96-bit IV is safe for far more seals than a single-device journal will make.
 - **Reflections store text only.** The candidate is never persisted (REVIEWS.md D021 #1).
-- **Shared browser profiles.** `IndexedDbVaultStore(indexedDB, name)` takes a DB name. CS should namespace it per signed-in account, e.g. `kinetic-vault:<sha256(clerk userId)>`, and call `lock()` on identity change.
+- **Shared browser profiles.** `IndexedDbVaultStore(indexedDB, name)` takes a DB name. CS should namespace it per signed-in account, e.g. `dor-vault:<sha256(clerk userId)>`, and call `lock()` on identity change.
 
 ## What it protects, and what it does not
 | In scope | Out of scope (state honestly in UI/claims) |
@@ -29,15 +29,15 @@ DEK: random AES-GCM-256, unwrapped as NON-extractable, memory only ──► enc
 ```
 - **DEK**: `generateKey(AES-GCM, 256)` once at vault creation. It is extractable only during the creation call so it can be wrapped twice. Every unlock re-imports it via `unwrapKey(..., extractable=false, ['encrypt','decrypt'])`.
 - **KEK_pass**: PBKDF2-HMAC-SHA-256, 600,000 iterations (OWASP 2023 guidance for PBKDF2-SHA256), with a random 16-byte salt per vault. The passphrase is NFKC-normalised. Web Crypto has no Argon2; a WASM Argon2id is a possible later upgrade, signalled by `kdf.name`.
-- **KEK_rec**: HKDF-SHA-256 over a 160-bit random recovery code, with salt = vault salt and info = `kinetic-vault/v1/recovery`. The code is shown once as 8 groups of 4 base32 characters. It has full entropy, so it needs no stretching.
-- **Wrapping**: AES-GCM `wrapKey`/`unwrapKey` with a fresh 12-byte IV and AAD `kinetic-vault/v1/<vaultId>/wrap/<passphrase|recovery>`. A wrong passphrase fails GCM authentication, so no passphrase hash or verifier is stored.
+- **KEK_rec**: HKDF-SHA-256 over a 160-bit random recovery code, with salt = vault salt and info = `dor-vault/v1/recovery`. The code is shown once as 8 groups of 4 base32 characters. It has full entropy, so it needs no stretching.
+- **Wrapping**: AES-GCM `wrapKey`/`unwrapKey` with a fresh 12-byte IV and AAD `dor-vault/v1/<vaultId>/wrap/<passphrase|recovery>`. A wrong passphrase fails GCM authentication, so no passphrase hash or verifier is stored.
 
-## Stored layout (IndexedDB database `kinetic-vault`)
+## Stored layout (IndexedDB database `dor-vault`)
 - `meta` (single plaintext row, contains no secrets): `{schemaVersion:1, vaultId, kdf:{name:'PBKDF2', hash:'SHA-256', iterations, salt}, wraps:{passphrase:{iv,ct}, recovery:{iv,ct}}, encryptions}`.
 - `records` stores `journal`, `profile`, `quizExtras`, `reflection`. Each row is `{v:1, id, iv, ct}`.
   - `id`: a random UUID. The UI's `localId` is that UUID, never derived from content.
   - Plaintext JSON, including `createdAt`, lives inside `ct`. No titles, dates or lengths are stored in clear beyond what ciphertext size reveals.
-  - AAD is `kinetic-vault/v1/<vaultId>/<store>/<id>`, so a record moved to another id, store or vault fails to decrypt.
+  - AAD is `dor-vault/v1/<vaultId>/<store>/<id>`, so a record moved to another id, store or vault fails to decrypt.
   - IV: 12 random bytes per encryption via `crypto.getRandomValues`. Editing re-encrypts with a new IV. The `encryptions` counter triggers DEK rotation at 2^30, far below the 2^32 random-IV bound.
 - Nothing is in `localStorage`/`sessionStorage`, no key material is persisted, and no plaintext cache exists.
 

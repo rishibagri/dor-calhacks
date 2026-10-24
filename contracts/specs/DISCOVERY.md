@@ -3,7 +3,7 @@
 **Status: proposed shared contract, no executable schema in this reset.** Product choices are confirmed; exact shapes/defaults need CS/DS/AI/Cyber review. Preserve C1–C6 and D028 guards unchanged. Do not import ad hoc proposed shapes into production.
 
 ## Producers and consumers
-CS produces publication/area/invitation UI and module integration; Cyber owns guards and consent records; DS consumes authorized projections for matching; AI consumes bounded options and returns untrusted proposals. Every reviewed shape belongs in `@kinetic/contracts`, with generated schemas, fixtures and versioned rejection tests.
+CS produces publication/area/invitation UI and module integration; Cyber owns guards and consent records; DS consumes authorized projections for matching; AI consumes bounded options and returns untrusted proposals. Every reviewed shape belongs in `@dor/contracts`, with generated schemas, fixtures and versioned rejection tests.
 
 ## Proposed records (names are design vocabulary, not exports)
 | Record | Minimum meaning | Visibility and guard |

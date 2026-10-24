@@ -1,7 +1,7 @@
 // Live provider checks with synthetic inputs. Statuses: LIVE_PASS, LIVE_FAIL, SKIPPED_MISSING_CREDENTIAL.
 // Never prints credentials or tokens. Reads repo-root .env.local when present.
 import { readFile } from 'node:fs/promises';
-import { PrivateReflectionSchema, VoiceSessionSchema } from '@kinetic/contracts';
+import { PrivateReflectionSchema, VoiceSessionSchema } from '@dor/contracts';
 import { CartesiaVoiceAdapter, ClaudeReflectionAdapter, ProviderError } from '../dist/index.js';
 
 try { process.loadEnvFile(new URL('../../../.env.local', import.meta.url)); } catch { /* optional */ }
@@ -15,7 +15,7 @@ async function claude() {
   if (!process.env.ANTHROPIC_API_KEY)
     return report({ check: 'claude.reflection', status: 'SKIPPED_MISSING_CREDENTIAL', missing: 'ANTHROPIC_API_KEY' });
   const { cases } = await json('../fixtures/reflection.synthetic.json');
-  const adapter = new ClaudeReflectionAdapter({ model: process.env.KINETIC_CLAUDE_MODEL || undefined });
+  const adapter = new ClaudeReflectionAdapter({ model: process.env.DOR_CLAUDE_MODEL || undefined });
   for (const c of cases) {
     try {
       const [out, latencyMs] = await timed(() => adapter.reflect(c.input, `live-${c.id}`));

@@ -1,13 +1,13 @@
-# Kinetic — human connection, with AI doing the preparation
+# dor — human connection, with AI doing the preparation
 
 ## Product promise
-Help people start and sustain human connections. Kinetic supports existing partners, friends and family, people new to a neighborhood/campus, and people seeking company at a local event. AI helps find a useful person, reason and moment; people decide whether to connect.
+Help people start and sustain human connections. dor supports existing partners, friends and family, people new to a neighborhood/campus, and people seeking company at a local event. AI helps find a useful person, reason and moment; people decide whether to connect.
 
 This expands the original distance-focused product without discarding it. Private journaling is optional for discovery. The thesis is worth testing: reducing coordination effort and uncertainty could produce more real conversations and shared plans. Do not present demand, loneliness reduction or retention as proven.
 
 ## Three committed experiences
 1. **Existing connections:** skippable 6–8-question quiz; editable local preferences; typed/Cartesia voice reflection with disclosed Claude processing; local encrypted history; exact named-recipient approval under confirmed partner/friend/family presets; bounded agent exchange; recipient-opted-in nudge; revoke/unlink and minimized receipts. Preserve all three relationship examples.
-2. **Nearby introductions:** user grants one-time approximate location and separately publishes selected profile fields. Coarsen a location sample on device and discard precise coordinates. Match only opted-in Kinetic profiles in a permitted area, using explicit interests and approved broad availability. Show opted-in public profiles before invite acceptance, as the user requested. Private journals/quiz labels/routine histories never become discovery fields automatically.
+2. **Nearby introductions:** user grants one-time approximate location and separately publishes selected profile fields. Coarsen a location sample on device and discard precise coordinates. Match only opted-in dor profiles in a permitted area, using explicit interests and approved broad availability. Show opted-in public profiles before invite acceptance, as the user requested. Private journals/quiz labels/routine histories never become discovery fields automatically.
 3. **Same-event connections:** collect a public local event catalogue via Apify; users separately choose to publish an interested/going intention for an event. Find people with compatible explicit intentions and suggest an introduction or shared plan. “Going” is self-declared, not verified attendance. Both people independently accept the same current proposal revision; no auto-RSVP, booking, personal message or purchase.
 
 ## First-session experience

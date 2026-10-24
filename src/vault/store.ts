@@ -4,7 +4,7 @@
  */
 import type { Bytes, Sealed, WrapPurpose } from './crypto.ts';
 
-export const DB_NAME = 'kinetic-vault';
+export const DB_NAME = 'dor-vault';
 const DB_VERSION = 1;
 export const RECORD_STORES = ['journal', 'reflection', 'profile', 'quizExtras'] as const;
 export type RecordStore = (typeof RECORD_STORES)[number];

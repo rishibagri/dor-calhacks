@@ -1,6 +1,6 @@
 /**
  * DS ranker input for C8 discovery (contracts/specs/DISCOVERY.md). The wire shape is Cyber's reviewed
- * `DiscoveryCardProjection` (`@kinetic/contracts/policy`, served by the `discovery_cards` view); `fromDiscoveryCards`
+ * `DiscoveryCardProjection` (`@dor/contracts/policy`, served by the `discovery_cards` view); `fromDiscoveryCards`
  * (./adapters.ts) is the only way real rows become a `DiscoveryCandidate`. The extra fields below are either not in
  * that projection yet (avatar, event intents: no producer) or server-enforced state the ranker re-checks defensively.
  * These are DS-internal shapes, not wire schemas.
@@ -8,7 +8,7 @@
  * Every field is either a published (opted-in) profile/intent field or a server-computed eligibility flag.
  * There is no location, distance, journal, support preference, quiz extra or contact detail anywhere here.
  */
-import { DISCOVERY_REASON_CODES, type DiscoveryReasonCode } from '@kinetic/contracts';
+import { DISCOVERY_REASON_CODES, type DiscoveryReasonCode } from '@dor/contracts';
 
 /** Published per-event intention (C8 EventIntent projection). "interested"/"going" is self-declared, never attendance. */
 export interface PublishedEventIntent {

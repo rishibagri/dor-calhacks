@@ -3,8 +3,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { DISCOVERY_REASON_CODES } from '@kinetic/contracts';
-import { projectDiscoveryCard, type PublicationState } from '@kinetic/contracts/policy';
+import { DISCOVERY_REASON_CODES } from '@dor/contracts';
+import { projectDiscoveryCard, type PublicationState } from '@dor/contracts/policy';
 import { fromDiscoveryCard, fromDiscoveryCards, rankDiscoveryCards } from '../adapters.ts';
 import { REASON_CODES, type DiscoveryCandidate, type DiscoveryViewer } from '../types.ts';
 import { rankNearby } from '../../../evaluation/nearby.ts';

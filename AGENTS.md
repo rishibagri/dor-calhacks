@@ -7,7 +7,7 @@ README.md → PRD.md → PROJECT_KNOWLEDGE.md → contracts/README.md → docs/P
 ## Contract-first development
 C7 includes executable catalogue-input/link guards but shared activity types remain pending; C8 discovery publication/area/event-intent is proposed in contracts/specs/DISCOVERY.md. New scope never silently broadens C3 or D028.
 
-C1 local profile/reflection; C2 presets/recipient assignment; C3 approved disclosure; C4 agent ACK/coordination; C5 nudge/receipt; C6 policy and offline test boundary. Producer/consumer ownership is in contracts/README.md. Import only @kinetic/contracts across workstream boundaries. Do not reach into another owner's internals or duplicate wire types. Build against explicit fixtures/fakes until real adapters exist; never import fakes into production mode.
+C1 local profile/reflection; C2 presets/recipient assignment; C3 approved disclosure; C4 agent ACK/coordination; C5 nudge/receipt; C6 policy and offline test boundary. Producer/consumer ownership is in contracts/README.md. Import only @dor/contracts across workstream boundaries. Do not reach into another owner's internals or duplicate wire types. Build against explicit fixtures/fakes until real adapters exist; never import fakes into production mode.
 
 ## Setup and evidence
 Run `npm ci` and `npm run check` at the repository root. These verify offline contracts only. Regenerate schemas with `npm run contracts:schema` after shape changes and update fixtures in the same PR. Never claim the application runs from these commands. Record planned, implemented, deployed and live-verified status separately in PROJECT_KNOWLEDGE.md.
@@ -16,7 +16,7 @@ Run `npm ci` and `npm run check` at the repository root. These verify offline co
 All architecture, API, agent protocol, privacy, acceptance, and data contracts are shared on `main` and available to every teammate and agent. `main` is authoritative; do not maintain branch-specific private contracts. Merge shared contract updates from `main` into each role branch before dependent work. Separate video/presentation planning lives in docs/DEMO.md and is not required engineering-contract reading.
 
 ## Selected stack
-Kinetic uses Next.js/React/TypeScript, Tailwind/shadcn, SpacetimeDB reducers/private tables/caller-filtered views, Claude, Factory Droid, Cartesia, TypeScript/Zod, and IndexedDB/Web Crypto. Read docs/TECH_STACK.md before choosing dependencies. Never reintroduce server-stored journals or assume a quiz grants disclosure consent.
+dor uses Next.js/React/TypeScript, Tailwind/shadcn, SpacetimeDB reducers/private tables/caller-filtered views, Claude, Factory Droid, Cartesia, TypeScript/Zod, and IndexedDB/Web Crypto. Read docs/TECH_STACK.md before choosing dependencies. Never reintroduce server-stored journals or assume a quiz grants disclosure consent.
 
 ## Operating rules
 - Work only on your role branch. Sync main before integration. Small PRs every 2–3 hours; CS owns integration and does not become the sole implementer.
@@ -64,11 +64,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **Branch/commit:** `role/cyber-privacy` @ `129c31f` (based on main @ `8e208df`). PR to main pending; read the remote role branch until merged.
 - **Status:** implemented and offline-verified, NOT live. `npm run check:all` exit 0 (contracts 40/40, module 36/36, typecheck, app tests 4/4); `next build` ok; audit 0. The SpacetimeDB module has never been published.
 - **Interfaces:**
-  - `@kinetic/contracts/policy` (no runtime dependencies; safe inside reducers) exports:
+  - `@dor/contracts/policy` (no runtime dependencies; safe inside reducers) exports:
     - `guardApproval`, `guardSignalUse`, `guardSignalStanding`, `guardNudgeCommit`
     - `payloadRevision`, `policyErrorCode`
     - constants `SIGNAL_LIFETIME_MS` and `DISCLOSURE_CONSENT_VERSION`
-  - `DisclosurePolicy` (`@kinetic/contracts`) is the real `DisclosurePolicyPort` for routes and the worker.
+  - `DisclosurePolicy` (`@dor/contracts`) is the real `DisclosurePolicyPort` for routes and the worker.
   - `approve_signal` enforces the guard and the table gained `client_request_id`.
   - New sender-only `my_signals` view; `my_receipts` is now sender-only; `my_nudges` rechecks that each source signal is still valid.
   - Decision D026.
@@ -88,7 +88,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - No recipient nudge opt-in.
   - No rate limiting.
   - JWT `aud` is not checked.
-  - The CLI bundler's resolution of `@kinetic/contracts/policy` is untested.
+  - The CLI bundler's resolution of `@dor/contracts/policy` is untested.
 - **Details:** `docs/handoffs/cyber.md`, `docs/updates/cyber.md`, `src/privacy/README.md`.
 
 ### 2026-10-24T05:30Z | Cyber → CS, AI, DS | CYBER-P2/P3: one policy, F5/F7 enforcement, real vault, C7 boundary
@@ -105,7 +105,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - `src/vault/**`, `src/privacy/**`, `contracts/src/{policy,policy-port,catalogue}.ts`
 - **CS next:**
   1. ACK D026, D028 and the VaultPort additions in `src/lib/backend/ports.ts`.
-  2. Swap `placeholderVault` for `new LocalVault({ store: new IndexedDbVaultStore(indexedDB, 'kinetic-vault:' + sha256(userId)) })`. Subscribe with `useSyncExternalStore(vault.subscribe, vault.getVersion)`. Add create / unlock / show-recovery-code-once / recover screens.
+  2. Swap `placeholderVault` for `new LocalVault({ store: new IndexedDbVaultStore(indexedDB, 'dor-vault:' + sha256(userId)) })`. Subscribe with `useSyncExternalStore(vault.subscribe, vault.getVersion)`. Add create / unlock / show-recovery-code-once / recover screens.
   3. Device preview via `previewDisclosure`, then `approve_signal` with `payloadRevision` (src/privacy/README.md).
   4. Recipient opt-in UI (`set_nudge_delivery`, default off).
   5. Apify adapter must build inputs only via `guardPublicCatalogueQuery`.
@@ -137,7 +137,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - Labels come from one DS annotator who also designed the rankers, so the numbers are optimistic. Human 1–5 ratings have NOT been collected.
   - A temporary `/ds-preview` page rendered both components from fixtures under `next start` and was then removed. This is not evidence for the composed app.
 - **Interfaces:**
-  - `src/features/discovery/types.ts`: DS **consumer proposal** for C8 (`DiscoveryCandidate`, `DiscoveryViewer`, `PublishedEventIntent`, `DiscoveryMode`, `ReasonCode`, `DiscoveryShortlist`). These are not contract types; replace them with reviewed `@kinetic/contracts` C8 exports when those land.
+  - `src/features/discovery/types.ts`: DS **consumer proposal** for C8 (`DiscoveryCandidate`, `DiscoveryViewer`, `PublishedEventIntent`, `DiscoveryMode`, `ReasonCode`, `DiscoveryShortlist`). These are not contract types; replace them with reviewed `@dor/contracts` C8 exports when those land.
   - Candidate card fields: opaque `ref`, `displayName` (≤60), `avatarMediaId|null` (no URLs), `tags` (allowlisted slugs, ≤10), `eventIntents [{eventId, intent: interested|going, expiresAt}]`, `publicationVersion`, `publicationExpiresAt`, `withdrawn`, `blocked` (either direction), `alreadyConnected`. Any extra field (coordinates, distance, areaKey, support or journal fields) rejects the card as `invalid_card`.
   - `rankNearby({viewer, candidates, mode, allowedTags, now})` (`src/evaluation/nearby.ts`):
     - Pure; returns ≤3 entries `{ref, reasons, sharedTags, sharedEventId, theirIntent}` and never reads display names.
@@ -211,3 +211,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - Integration tests type-check with 0 errors.
   - `next build` ok; audit 0.
 - **Adam:** review `worker/src/spacetime/adapters.ts`. **CS:** generated bindings must include the new view and the new `commit_nudge` args.
+
+### 2026-10-24T09:30Z | Cyber → CS, AI, DS | Product renamed to dor (D037)
+- **What changed:** the product name is **dor** (lowercase), replacing Kinetic/Closer. Packages `@kinetic/*` → `@dor/*`, env vars `KINETIC_*` → `DOR_*`, module/audience defaults `dor` / `dor-spacetimedb`, vault labels `dor-vault`, payload domain `dor-payload-v1`. D001 and CS's D036 (capitalised "Dor", copy only) are kept as history; D037 completes the rename in lowercase.
+- **Evidence:** `check:all` and `ai:check` exit 0; `next build` ok; audit 0.
+- **Everyone next:** merge main, `npm install`, replace any `@kinetic/` imports or `KINETIC_` env names on your branch (`git grep -l '@kinetic/\|KINETIC_'`), and update local `.env` files.

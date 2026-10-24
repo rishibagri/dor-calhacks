@@ -1,4 +1,4 @@
-# Kinetic — current project knowledge
+# dor — current project knowledge
 
 ## Reset baseline and priority
 Inspected main **d7285eb** includes Cyber's real vault/F5/F7 work plus AI PR #7 and DS PR #8. The user requested a README/phase reset, not a code reset. Old P-phase assignments are superseded by README/docs/roles R0–R6; historical logs/handoffs retain their original commit-specific evidence. No teammate branch is reset.

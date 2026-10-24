@@ -5,7 +5,7 @@ import { InvalidJobError, JobConflictError, JobLedger, runCoordinationJob, type 
 const MAX_BODY_BYTES = 4096;
 
 /**
- * POST /jobs with `Authorization: Bearer <KINETIC_WORKER_AUTH_TOKEN>` and a CoordinationJob body.
+ * POST /jobs with `Authorization: Bearer <DOR_WORKER_AUTH_TOKEN>` and a CoordinationJob body.
  * Responds with sanitized outcome codes only. Bodies are never logged or echoed. Retries of the same job ID
  * are deduplicated by a JobLedger (one per handler unless supplied).
  */

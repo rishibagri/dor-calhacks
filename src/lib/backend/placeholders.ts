@@ -1,7 +1,7 @@
 /**
  * PLACEHOLDER adapters. Each is explicit about not being real; UI must show
  * the non-live status. None persist anything. This file must NOT import
- * '@kinetic/contracts/fakes'.
+ * '@dor/contracts/fakes'.
  */
 import type {
   AdapterStatus, ConnectionState, JournalEntrySummary, ReducerResult, ReflectionPort, VaultPort,

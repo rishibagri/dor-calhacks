@@ -1,4 +1,4 @@
-import type { PrivateReflection, SignalCandidate } from '@kinetic/contracts';
+import type { PrivateReflection, SignalCandidate } from '@dor/contracts';
 
 /**
  * Pure rules for the voice/reflection feature (AI-owned). No React, no network: the component composes these.

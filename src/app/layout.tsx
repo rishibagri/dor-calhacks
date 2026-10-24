@@ -11,7 +11,7 @@ const sans = Geist({ subsets: ['latin'], variable: '--font-geist-sans', display:
 const mono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono', display: 'swap' });
 
 export const metadata: Metadata = {
-  title: 'Dor',
+  title: 'dor',
   description: 'A private voice journal with owner-approved, minimal signals.',
 };
 

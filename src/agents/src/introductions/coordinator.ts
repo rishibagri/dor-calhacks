@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { IntroductionOutcomeSchema, IntroductionProposalSchema, IntroductionShortlistSchema, type Clock,
   type IntroductionCandidate, type IntroductionOutcome, type IntroductionOutcomeCode, type IntroductionProposal,
-  type IntroductionShortlist, type DiscoveryReasonCode } from '@kinetic/contracts';
+  type IntroductionShortlist, type DiscoveryReasonCode } from '@dor/contracts';
 
 export const INTRO_MAX_ROUNDS = 2;
 /** A suggestion goes stale after a day; the viewer can always ask again. */

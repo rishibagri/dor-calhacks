@@ -1,5 +1,5 @@
 import { DEFAULT_RECIPIENT_DELIVERY, type ApprovedSignal, type PolicySnapshot, type RecipientDelivery,
-  type RecipientSupportPreferences, type StoredSignal } from '@kinetic/contracts';
+  type RecipientSupportPreferences, type StoredSignal } from '@dor/contracts';
 
 /**
  * Pure mappers from the worker-only views (spacetimedb/src/views.ts: worker_signal_context, worker_delivery)

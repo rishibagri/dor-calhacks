@@ -15,5 +15,5 @@
   },
   "transcribe": { "request": { "audio": "<wav|webm|ogg|mp3|flac|m4a bytes, <= 10 MiB>" }, "response": { "text": "Synthetic check-in: today felt long but okay." } },
   "synthesize": { "request": { "text": "Synthetic check-in: today felt long but okay." }, "response": { "mimeType": "audio/wav", "encoding": "pcm_s16le", "sampleRate": 24000 } },
-  "liveRoundTripPhrase": "Kinetic voice check. Today felt long, but I am okay."
+  "liveRoundTripPhrase": "dor voice check. Today felt long, but I am okay."
 }

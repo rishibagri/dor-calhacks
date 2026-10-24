@@ -1,6 +1,6 @@
 /**
  * PROPOSED shared-plan lifecycle (D034; Cyber guard review and CS state review pending). Runtime-dependency-free
- * so a reducer can import it (`@kinetic/contracts/plan-lifecycle`). It is the transition rule only: the
+ * so a reducer can import it (`@dor/contracts/plan-lifecycle`). It is the transition rule only: the
  * reducer supplies the authenticated actor, an authoritative clock and CURRENT source checks, and owns storage.
  *
  * A plan is confirmed only when both participants accepted the SAME revision while the event is still

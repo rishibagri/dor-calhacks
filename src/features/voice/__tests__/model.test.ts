@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PrivateReflectionSchema } from '@kinetic/contracts';
+import { PrivateReflectionSchema } from '@dor/contracts';
 import { MAX_REFLECT_CHARS, MAX_SPEAK_CHARS, describeCandidate, insertTranscript, reflectFailureCopy, speakableText,
   splitReflection, textToReflect, voiceFailureCopy } from '../model.ts';
 

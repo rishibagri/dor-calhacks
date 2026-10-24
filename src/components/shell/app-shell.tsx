@@ -39,7 +39,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[15rem_1fr]">
       <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r bg-card/50 p-4 md:flex">
-        <Link href="/" className="rounded-md px-3 pt-1 font-display text-xl font-semibold tracking-tight focus-visible:ring-2 focus-visible:ring-ring">Dor</Link>
+        <Link href="/" className="rounded-md px-3 pt-1 font-display text-xl font-semibold tracking-tight focus-visible:ring-2 focus-visible:ring-ring">dor</Link>
         <nav aria-label="Primary"><NavLinks vertical /></nav>
         <div className="mt-auto flex flex-col items-start gap-3 border-t px-3 pt-4">
           <ConnectionPill />
@@ -48,7 +48,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
       <div className="flex min-w-0 flex-col pb-24 md:pb-0">
         <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-background/95 px-4 py-3 md:hidden">
-          <Link href="/" className="font-display text-lg font-semibold tracking-tight">Dor</Link>
+          <Link href="/" className="font-display text-lg font-semibold tracking-tight">dor</Link>
           <div className="flex items-center gap-2"><ConnectionPill /><AccountArea /></div>
         </header>
         <main className="page-enter mx-auto w-full max-w-3xl flex-1 px-4 py-6 md:px-10 md:py-12">{children}</main>

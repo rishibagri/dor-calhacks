@@ -1,10 +1,10 @@
 /**
  * Browser voice helpers: microphone capture, streaming Cartesia STT (`ink-2`, turn detection) and interruptible TTS.
  * Uses only the short-lived scoped token from POST /api/voice/session. Audio and transcripts are never sent to
- * Kinetic servers or persisted here; the caller stores the final transcript in the owner's local vault.
+ * dor servers or persisted here; the caller stores the final transcript in the owner's local vault.
  * Wire protocol per @cartesia/cartesia-js 4.2.0 (`/stt/turns/websocket`, raw PCM frames, `{"type":"close"}`).
  */
-import type { VoiceSession } from '@kinetic/contracts';
+import type { VoiceSession } from '@dor/contracts';
 
 export const CARTESIA_HTTP_BASE = 'https://api.cartesia.ai';
 export const CARTESIA_STT_WS_URL = 'wss://api.cartesia.ai/stt/turns/websocket';
@@ -283,10 +283,10 @@ function routeErrorCode(error: unknown): VoiceErrorCode {
 
 const browserSocket: SocketFactory = (url) => new WebSocket(url) as unknown as SocketLike;
 
-const PCM_WORKLET = `class KineticPcm extends AudioWorkletProcessor {
+const PCM_WORKLET = `class DorPcm extends AudioWorkletProcessor {
   process(inputs) { const ch = inputs[0] && inputs[0][0]; if (ch) this.port.postMessage(ch.slice(0)); return true; }
 }
-registerProcessor('kinetic-pcm', KineticPcm);`;
+registerProcessor('dor-pcm', DorPcm);`;
 
 /** Mono microphone capture via AudioWorklet. Throws VoiceError('mic_denied' | 'mic_unavailable'). */
 export const startMicCapture: MicStarter = async (onFrame) => {
@@ -302,7 +302,7 @@ export const startMicCapture: MicStarter = async (onFrame) => {
     const moduleUrl = URL.createObjectURL(new Blob([PCM_WORKLET], { type: 'application/javascript' }));
     try { await context.audioWorklet.addModule(moduleUrl); } finally { URL.revokeObjectURL(moduleUrl); }
     const source = context.createMediaStreamSource(stream);
-    const node = new AudioWorkletNode(context, 'kinetic-pcm');
+    const node = new AudioWorkletNode(context, 'dor-pcm');
     const mute = context.createGain();
     mute.gain.value = 0;
     node.port.onmessage = (ev: MessageEvent<Float32Array>) => onFrame(ev.data, context.sampleRate);

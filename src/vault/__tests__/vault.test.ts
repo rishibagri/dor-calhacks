@@ -6,7 +6,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { LocalVault, VaultError } from '../local-vault.ts';
 import { IndexedDbVaultStore } from '../store.ts';
 import { PBKDF2_ITERATIONS, newDek, sealRecord } from '../crypto.ts';
-import type { LocalConnectionProfile } from '@kinetic/contracts';
+import type { LocalConnectionProfile } from '@dor/contracts';
 import type { LocalQuizExtras } from '../../lib/backend/ports.ts';
 
 const PASS = 'correct horse battery staple';

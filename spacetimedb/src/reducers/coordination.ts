@@ -1,6 +1,6 @@
 import { t } from 'spacetimedb/server';
 import { Timestamp } from 'spacetimedb';
-import { categoriesOf, guardNudgeCommit, policyErrorCode, type NudgeSource } from '@kinetic/contracts/policy';
+import { categoriesOf, guardNudgeCommit, policyErrorCode, type NudgeSource } from '@dor/contracts/policy';
 import { spacetimedb } from '../schema';
 import { fail, type Ctx } from '../errors';
 import { newId } from '../ids';

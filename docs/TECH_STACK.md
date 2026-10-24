@@ -1,4 +1,4 @@
-# Kinetic — selected tech stack
+# dor — selected tech stack
 User-selected stack; replaces the earlier Postgres proposal. This is a planning contract, not a claim that integrations are implemented.
 
 | Component | Technology | Responsibility | Sponsor |
@@ -37,4 +37,4 @@ User-selected stack; replaces the earlier Postgres proposal. This is a planning 
 The three experiences are existing connections, nearby introductions and same-local-event connections. Preserve private voice reflection → exact approval → recipient-specific nudge. Add one-time device-coarsened location and opted-in public profiles visible before invitation acceptance through reviewed C8 rules. C7 covers public event catalogue and shared plans; event intent is explicit, not scraped attendance. CS owns ingestion/state; Nimisha matching/discovery component; Adam coordination/voice component; Sumedh consent/privacy component. Runtime C7/C8 changes require review before shared delivery. Bandwidth aura and group matching remain uncommitted candidates. Start calendars with synthetic .ics schedules. Group sharing must never inherit pair consent; it needs explicit audience membership and consent per recipient.
 
 ## Apify processing boundary
-Server-only token and configured public source; no journals, private quiz extras, pair IDs or person-specific context in Actor input. Collect a generic public catalogue and match inside Kinetic. See docs/features/ACTIVITY_DISCOVERY.md. No source/Actor or paid run is selected by this plan.
+Server-only token and configured public source; no journals, private quiz extras, pair IDs or person-specific context in Actor input. Collect a generic public catalogue and match inside dor. See docs/features/ACTIVITY_DISCOVERY.md. No source/Actor or paid run is selected by this plan.

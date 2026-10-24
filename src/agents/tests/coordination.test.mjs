@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { AgentAckSchema, CoordinationOutcomeSchema, NUDGE_COOLDOWN_MS, NudgeSchema } from '@kinetic/contracts';
-import { FakeClock, FakeDisclosurePolicy } from '@kinetic/contracts/fakes';
+import { AgentAckSchema, CoordinationOutcomeSchema, NUDGE_COOLDOWN_MS, NudgeSchema } from '@dor/contracts';
+import { FakeClock, FakeDisclosurePolicy } from '@dor/contracts/fakes';
 import { BoundedCoordinator, eligibleOptions, intersectWindow } from '../dist/index.js';
 import { ScriptedAckProposer } from '../dist/testing.js';
 

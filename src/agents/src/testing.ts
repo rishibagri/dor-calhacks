@@ -3,7 +3,7 @@
  * and never report results produced with them as live integration.
  */
 import { PrivateReflectionSchema, VoiceSessionSchema, type PrivateReflection, type PrivateReflectionPort,
-  type VoicePort, type VoiceSession } from '@kinetic/contracts';
+  type VoicePort, type VoiceSession } from '@dor/contracts';
 import type { AckProposalInput, AckProposerPort } from './coordination/coordinator.js';
 
 export class SyntheticReflectionAdapter implements PrivateReflectionPort {

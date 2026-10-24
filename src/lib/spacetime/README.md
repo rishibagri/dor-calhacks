@@ -12,7 +12,7 @@ reports `{ kind: 'unconfigured', reason: 'SpacetimeDB bindings not generated: ru
 views empty) until BOTH bindings are generated AND `NEXT_PUBLIC_SPACETIMEDB_URI` is set.
 
 ## Go live
-1. Module deployed: `spacetime publish kinetic --module-path spacetimedb` (name = `NEXT_PUBLIC_SPACETIMEDB_MODULE`).
+1. Module deployed: `spacetime publish dor --module-path spacetimedb` (name = `NEXT_PUBLIC_SPACETIMEDB_MODULE`).
    Module must allow the Clerk issuer for the JWT template.
 2. Generate bindings (replaces the whole `module_bindings/` dir; only that dir changes):
    `spacetime generate --lang typescript --out-dir src/lib/spacetime/module_bindings --module-path spacetimedb`

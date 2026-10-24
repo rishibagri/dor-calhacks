@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { ProviderError, type AckProposalInput, type AckProposerPort, type IntroProposalInput, type IntroProposerPort,
-  type PlanProposalInput, type PlanProposerPort } from '@kinetic/agents';
+  type PlanProposalInput, type PlanProposerPort } from '@dor/agents';
 
 /** The only tool the Droid may use: a planning list with no file, shell, network or web access. */
 export const DROID_ALLOWED_TOOLS = ['TodoWrite'] as const;
@@ -123,7 +123,7 @@ export class DroidRunner {
 
   private async emptyWorkdir(slot: number): Promise<string> {
     const state = this.slots[slot]!;
-    state.dir ??= mkdtemp(join(tmpdir(), 'kinetic-droid-'));
+    state.dir ??= mkdtemp(join(tmpdir(), 'dor-droid-'));
     const dir = await state.dir;
     for (const entry of await readdir(dir)) await rm(join(dir, entry), { recursive: true, force: true });
     return dir;
@@ -232,7 +232,7 @@ export function buildPlanPrompt(input: PlanProposalInput): string {
     `${i}: topics ${JSON.stringify(e.topics)}; ${e.format === 'online' ? 'online' : 'in person'}; starts in about ${e.startsInHours} hours`).join('\n');
   return [
     input.round === 2 ? 'Your previous reply could not be used. Follow the reply format exactly.\n' : '',
-    'Two people in Kinetic both said they are interested in these public events. Suggest the one that makes the easiest first plan together, or none.',
+    'Two people in dor both said they are interested in these public events. Suggest the one that makes the easiest first plan together, or none.',
     'Prefer in-person events with enough notice to arrange; do not pick an event just because it is soonest.',
     `Options, already ranked:\n${options}`,
     'Reply with one JSON object and nothing else: {"decision":"suggest","eventIndex":N} or {"decision":"none"}. Do not use tools.',
@@ -244,7 +244,7 @@ export function buildIntroPrompt(input: IntroProposalInput): string {
     `${JSON.stringify(c.sharedTags)}; ${c.sharedEvent ? 'both plan to attend the same event' : 'no shared event'}`).join('\n');
   return [
     input.round === 2 ? 'Your previous reply could not be used. Follow the reply format exactly.\n' : '',
-    'You help one person in Kinetic decide whether to introduce themselves to someone nearby. You see only interests both people chose to publish.',
+    'You help one person in dor decide whether to introduce themselves to someone nearby. You see only interests both people chose to publish.',
     'Pick the person and the single opening most likely to lead to a comfortable first conversation, or reply none if no option is a real fit.',
     'A shared event is a concrete opening; a specific shared interest beats a generic one.',
     `Options, already ranked:\n${options}`,
@@ -257,7 +257,7 @@ export function buildAckPrompt(input: AckProposalInput): string {
   const options = input.options.map((o, i) => `${i}: ${JSON.stringify(o)}`).join('\n');
   return [
     input.round === 2 ? 'Your previous reply could not be used. Follow the reply format exactly.\n' : '',
-    'You are the recipient-side agent in Kinetic, one bounded coordination step. You see only what both people approved.',
+    'You are the recipient-side agent in dor, one bounded coordination step. You see only what both people approved.',
     'Pick the option that would be the gentlest, lowest-pressure way for the recipient to reach out, or decline if none fits.',
     `Approved by the sender: ${JSON.stringify(input.approved)}`,
     `Options the recipient already agreed to offer, most preferred first:\n${options}`,

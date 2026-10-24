@@ -1,5 +1,5 @@
 import Cartesia, { toFile } from '@cartesia/cartesia-js';
-import { VoiceSessionSchema, type VoicePort, type VoiceSession } from '@kinetic/contracts';
+import { VoiceSessionSchema, type VoicePort, type VoiceSession } from '@dor/contracts';
 import { ProviderError, toProviderError } from '../errors.js';
 
 /** Version the pinned SDK sends; browser WebSocket clients pass the same value as `cartesia_version`. */

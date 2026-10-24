@@ -3,7 +3,7 @@
  * `evaluateDisclosure` in policy.ts (D016, D020, D026): this file only parses the untrusted
  * candidate with Zod and renders owner/recipient wording, so preview and reducers cannot drift.
  * Delivery (`nudgeDelivery`), `templateForSignal`, `matchesPreviewPayload` and SIGNAL_LIFETIME_MS live
- * in policy.ts (zod-free, reducer-safe) and are re-exported from `@kinetic/contracts`.
+ * in policy.ts (zod-free, reducer-safe) and are re-exported from `@dor/contracts`.
  *
  * Pure: no I/O, no clock reads, no identity. A `shareable` result is necessary, never sufficient:
  * approve_signal re-runs the same evaluation on authoritative rows via `guardApproval`.

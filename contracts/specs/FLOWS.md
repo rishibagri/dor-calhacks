@@ -26,7 +26,7 @@ Status: proposed by CS (D016–D020); Cyber ACKed with reconciliation (D026, src
 Malformed/free-text/nested candidate (`invalid_schema`); wrong recipient; pending or unlinked pair; missing, stale, revoked or expired preset; candidate wholly outside the preset (`blocked_category`, never downgraded); decline; recipient not opted in; quiet hours; cooldown; revoke between F4 and F7; retry of a stale approval.
 
 ## Not yet decided / not implemented
-- Module wiring (role/cyber-privacy, offline harness only, not published): `approve_signal`, `set_nudge_delivery`, `set_support_preferences`/`revoke_support_preferences`, `set_worker_identity`, `commit_nudge`, `sweep_expired` and the worker views are implemented. The module imports `@kinetic/contracts/policy`, which has no Zod; whether the `spacetime` CLI bundler resolves it is untested until publish.
+- Module wiring (role/cyber-privacy, offline harness only, not published): `approve_signal`, `set_nudge_delivery`, `set_support_preferences`/`revoke_support_preferences`, `set_worker_identity`, `commit_nudge`, `sweep_expired` and the worker views are implemented. The module imports `@dor/contracts/policy`, which has no Zod; whether the `spacetime` CLI bundler resolves it is untested until publish.
 - Recipient support-preferences consent (D021 `RecipientSupportPreferences`) is stored in the recipient-owned `support_preference` table and bound into `commit_nudge` (D035; offline harness only).
 - Coordination outcomes and ACKs describe the recipient and must never be shown to the sender (REVIEWS.md D021 #5).
 - DST: quiet hours use the UTC offset captured when set (D018); recipient must re-save after a DST change until IANA zones are supported.

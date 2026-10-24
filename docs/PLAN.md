@@ -33,7 +33,7 @@ These tracks run in parallel, but neither may bypass identity/consent. New disco
 - Adam owns `src/agents/`, `worker/`, existing provider route files and new `src/features/voice/`. Worker-side bindings mapping is Adam's implementation; CS supplies generated bindings and connection configuration.
 - Sumedh owns `src/vault/`, `src/privacy/`, new `src/features/privacy/`, and previously claimed policy/delivery/coordination reducers and worker views. He implements new preference/expiry/audience guards in claimed files, not merely reviews CS work.
 - Shared `schema.ts`, `views.ts`, `admin.ts`, exports and `src/lib/backend/ports.ts` need exact section/file claims before edits. One person integrates a shared file at a time; agree the patch rather than editing concurrently.
-- Production cross-workstream types come from `@kinetic/contracts`. DS's current ActivityItem is a consumer proposal; do not export it as a second wire schema. Package the pure rank port deliberately before AI imports it.
+- Production cross-workstream types come from `@dor/contracts`. DS's current ActivityItem is a consumer proposal; do not export it as a second wire schema. Package the pure rank port deliberately before AI imports it.
 
 ## Gates and fallback
 R0: owners/seams agreed; R1: existing-flow adapter implementations plus new reviewed contracts; R2: nearby public-profile introduction; R3: source-backed same-event plan; R4: measured quality/efficiency and adversarial checks; R5: real providers/identity/database/browser; R6: stable release/reset/runbook.

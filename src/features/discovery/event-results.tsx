@@ -4,7 +4,7 @@
  * Public event suggestions (DS). Props only. Titles are untrusted catalogue text rendered as plain text; links go
  * through Cyber's safeCatalogueUrl and carry nothing we add. No RSVP, booking or attendance is implied.
  */
-import { safeCatalogueUrl } from '@kinetic/contracts';
+import { safeCatalogueUrl } from '@dor/contracts';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';

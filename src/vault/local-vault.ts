@@ -8,7 +8,7 @@
  * NOT guaranteed: protection from script running in this origin while unlocked (XSS), extensions,
  * malware, provider processing, or secure erase of IndexedDB's on-disk residue.
  */
-import { LocalConnectionProfileSchema, type LocalConnectionProfile } from '@kinetic/contracts';
+import { LocalConnectionProfileSchema, type LocalConnectionProfile } from '@dor/contracts';
 import type {
   AdapterStatus, JournalEntrySummary, LocalQuizExtras, VaultErrorCode, VaultPort, VaultState,
 } from '../lib/backend/ports.ts';

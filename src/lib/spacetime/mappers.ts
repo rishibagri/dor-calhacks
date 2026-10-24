@@ -8,8 +8,8 @@ import {
   NudgeSchema,
   RecipientPresetAssignmentSchema,
   RelationshipPresetSchema,
-} from '@kinetic/contracts';
-import type { DisclosureReceipt, Nudge, RecipientPresetAssignment, RelationshipPreset } from '@kinetic/contracts';
+} from '@dor/contracts';
+import type { DisclosureReceipt, Nudge, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
 import type { InviteView, PairView } from '@/lib/backend/ports';
 import { toCamel, type LooseRow } from './bindings';
 

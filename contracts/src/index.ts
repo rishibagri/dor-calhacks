@@ -8,5 +8,5 @@ export * from './reflection.js';
 export * from './introduction.js';
 export * from './plan.js';
 export * from './plan-lifecycle.js';
-// Test doubles are deliberately exposed only through @kinetic/contracts/fakes.
-// Zod-free guards are also exposed as @kinetic/contracts/policy for the SpacetimeDB module bundle.
+// Test doubles are deliberately exposed only through @dor/contracts/fakes.
+// Zod-free guards are also exposed as @dor/contracts/policy for the SpacetimeDB module bundle.

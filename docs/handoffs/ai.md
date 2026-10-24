@@ -32,7 +32,7 @@ Checks at `ba354ef`: `npm run check` 74/74, `npm run ai:check` agents 64 + worke
 - **Sumedh:**
   1. A recipient support-preference consent view the worker can read (`RecipientSupportPreferences` shape). Until then live coordination returns `preferences_unavailable` by design.
   2. Review `classifyCommitError`: which reducer refusals are recorded and which are retried.
-  3. Decide whether reducers adopt `@kinetic/contracts/plan-lifecycle` as the plan finalization guard.
+  3. Decide whether reducers adopt `@dor/contracts/plan-lifecycle` as the plan finalization guard.
   4. Decide whether the intro/plan fallback (`fixed_template`) is acceptable or must be off.
   5. Supply a `DiscoveryEligibilityPort` / `PlanCurrentStatePort` backing once C8 guards exist.
 - **Nimisha:**
@@ -43,7 +43,7 @@ Checks at `ba354ef`: `npm run check` 74/74, `npm run ai:check` agents 64 + worke
 ## Not done / next (R4–R5)
 - Aggregate per-job deadline and reflection in-flight dedupe.
 - Right-size `max_tokens` (still 16000).
-- Live runs: Claude, Cartesia, Droid via `KINETIC_DRYRUN_LIVE_*`.
+- Live runs: Claude, Cartesia, Droid via `DOR_DRYRUN_LIVE_*`.
 - Browser mic and TTS check.
 - Worker entrypoint against a published module.
 
@@ -68,7 +68,7 @@ Status: AI-P1–P3 partially complete on `role/ai-voice` @ `a7316d5`, based on m
 | Fixture-policy worker | `createLiveWorker` with a stubbed authoritative `PolicyStateReader` and fake Droid spawn | Approved work reaches Droid and is proposed; revoked work and altered envelopes return `policy_denied` with no Droid call |
 | Isolated live Droid (fake policy and preferences) | `node worker/scripts/live-droid.mjs --runs 3 --model …` | Haiku: 12/12 agent-decided, 289 credits total (median 14/call), coordinate median 4.1 s, p95 6.1 s. Opus with reused dir: 12/12, 9,448 credits, 4.1 s / 5.6 s. M1 Opus with a new dir per call: ~9,900 credits/call cold. Revoked case: 0 Droid calls |
 | App build/runtime | `npm run build:app`; `next start` + curl | Both routes compile as dynamic. Without Clerk: 503 `Authentication is not configured`, `no-store`; GET 405; request text absent from server logs |
-| Missing credentials | `npm run live -w @kinetic/agents` | `SKIPPED_MISSING_CREDENTIAL` for `ANTHROPIC_API_KEY` and `CARTESIA_API_KEY` |
+| Missing credentials | `npm run live -w @dor/agents` | `SKIPPED_MISSING_CREDENTIAL` for `ANTHROPIC_API_KEY` and `CARTESIA_API_KEY` |
 | Not yet run | Browser mic/AudioWorklet/Web Audio; signed-in route calls; real SpacetimeDB job → commit | No evidence yet |
 
 ## Latency limitation (unchanged, measured)
@@ -78,7 +78,7 @@ The 8 s per-call target is usually met but not guaranteed. Earlier direct Droid 
 - **CS:**
   1. **ACK the route-file claim** for `src/app/api/reflections/route.ts` and `src/app/api/voice/session/route.ts`. They are thin, Clerk `auth()` → `handle*Request`; move or centralize the session helper as you prefer.
   2. Change `ReflectionPort.reflect` in `src/lib/backend/ports.ts` to return `PrivateReflection` (merged in contracts).
-  3. Swap `placeholderReflection` for an adapter around `createReflectionClient()` from `@kinetic/agents/client`.
+  3. Swap `placeholderReflection` for an adapter around `createReflectionClient()` from `@dor/agents/client`.
   4. Bind the journal UI to `VoiceDictation` (`onChange` snapshot; typed entry on any `error`) and `speak()`.
   5. Provide the worker adapters for `createLiveWorker`: `PolicyStateReader` (with Sumedh), `ApprovedSignalSource`, `RecipientPreferencesPort`, `DeliveryStatePort` and `CoordinationCommitPort`.
   6. Build a `commit_nudge` reducer restricted to the worker identity that calls `guardNudgeCommit` and dedupes on `nudge.id`.
@@ -106,8 +106,8 @@ Read AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md, and docs/role
     - C1: `PrivateReflectionPort.reflect` → `PrivateReflection {schemaVersion, reflection ≤2000, candidate: SignalCandidate|null}`. `SignalCandidate` is enum-only `{supportMode?, availability?}`. `VoicePort` and `VoiceSession`.
     - C4: `RecipientSupportPreferences` (the recipient's own consent record), `CoordinationJob` (IDs only, ≤ 4 signals), `CoordinationOutcome` (sanitized codes, rounds 0–2, `decidedBy`). `CoordinationPort` results gain `outcomes`.
     - Schemas, fixtures and contract tests were updated together; no existing shape changed.
-  - **`@kinetic/agents` (`src/agents/`):** `ClaudeReflectionAdapter`, `CartesiaVoiceAdapter`, `BoundedCoordinator` (+ `eligibleOptions`, `intersectWindow`, `TEMPLATE_BY_MODE`), `ProviderError`/`httpStatusFor`, `PROVIDER_PROCESSING`. Synthetic doubles are only under `@kinetic/agents/testing`. Fixtures: `fixtures/{reflection,voice,coordination}.synthetic.json`. Details are in src/agents/README.md.
-  - **`@kinetic/worker` (`worker/`):** `DroidAckProposer` runs `droid exec` with `--only-tools TodoWrite`, read-only autonomy, an empty temp cwd and an allowlisted env. Also `runCoordinationJob` and `createJobRequestHandler` (bearer-auth `POST /jobs`). Details are in worker/README.md.
+  - **`@dor/agents` (`src/agents/`):** `ClaudeReflectionAdapter`, `CartesiaVoiceAdapter`, `BoundedCoordinator` (+ `eligibleOptions`, `intersectWindow`, `TEMPLATE_BY_MODE`), `ProviderError`/`httpStatusFor`, `PROVIDER_PROCESSING`. Synthetic doubles are only under `@dor/agents/testing`. Fixtures: `fixtures/{reflection,voice,coordination}.synthetic.json`. Details are in src/agents/README.md.
+  - **`@dor/worker` (`worker/`):** `DroidAckProposer` runs `droid exec` with `--only-tools TodoWrite`, read-only autonomy, an empty temp cwd and an allowlisted env. Also `runCoordinationJob` and `createJobRequestHandler` (bearer-auth `POST /jobs`). Details are in worker/README.md.
 - Verification (actual results):
   - Offline: `npm run check` 26/26 (includes CS's flow tests); `npm run ai:check` agents 34/34, worker 6/6; `npm run check:all` exit 0 (module 16/16, root typecheck covers `src/agents`, test:app 4/4); `npm audit` 0. Mutation check: disabling the post-generation revocation recheck fails `revoked-during-generation`.
   - **Live Factory Droid** (droid 0.248.0, CLI login, model `claude-opus-5-5`, node v24.13.0, darwin arm64):
@@ -117,7 +117,7 @@ Read AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md, and docs/role
     - Revoked-before-use made 0 Droid calls.
     - Policy and preferences were the offline `FakeDisclosurePolicy` and fixtures, so this is **not** end-to-end.
   - **Factory session audit:** 15 persisted transcripts contain only the enum prompt; 0 pair, signal or consent IDs, keys or repo paths.
-  - **Live Claude and Cartesia:** `npm run live -w @kinetic/agents` reports `SKIPPED_MISSING_CREDENTIAL` for both.
+  - **Live Claude and Cartesia:** `npm run live -w @dor/agents` reports `SKIPPED_MISSING_CREDENTIAL` for both.
 
 ### Tested runtime requirements
 | Component | Requirement | Tested |
@@ -131,7 +131,7 @@ Read AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md, and docs/role
 ### Consumer and exact next action
 - **CS:**
   1. Review D021 (contracts + `contracts/README.md`).
-  2. Widen `ReflectionPort.reflect` in `src/lib/backend/ports.ts` to return `PrivateReflection` from `@kinetic/contracts` (a superset of `{reflection}`), so the UI receives `candidate`.
+  2. Widen `ReflectionPort.reflect` in `src/lib/backend/ports.ts` to return `PrivateReflection` from `@dor/contracts` (a superset of `{reflection}`), so the UI receives `candidate`.
   3. Supply the worker ports `ApprovedSignalSource`, `RecipientPreferencesPort`, `CoordinationCommitPort` (version-checked `commit_nudge` reducer) and `DeliveryStatePort` (D017 opt-in, D018 quiet hours and last nudge).
   4. Decide the worker host: a long-running Node host with the `droid` CLI.
   5. Optionally add `npm run ai:check` to `.github/workflows/contracts.yml`.
@@ -150,7 +150,7 @@ Read AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md, and docs/role
 
 ### Blockers / unresolved contract decisions
 - Missing credentials: `ANTHROPIC_API_KEY` and `CARTESIA_API_KEY` block live Claude and Cartesia verification. `FACTORY_API_KEY` is needed on a deployed worker.
-  - To run: put the keys in the repo-root `.env.local`, then `npm run ai:build && npm run live -w @kinetic/agents`.
+  - To run: put the keys in the repo-root `.env.local`, then `npm run ai:build && npm run live -w @dor/agents`.
 - D021 is merged via PR #4; CS, Cyber and DS consumer review remains pending.
 - Droid latency is above the 8 s per-call target at times. Options: raise the Droid timeout (nudges are asynchronous), use a lower-effort or smaller model on Factory (team call), or accept the deterministic fallback.
 - Factory keeps a session directory per call under `~/.factory/sessions`. A deployed worker needs pruning or an ephemeral `HOME`.

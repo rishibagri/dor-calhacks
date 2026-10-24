@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
 import { AvailabilitySchema, PrivateReflectionSchema, SupportModeSchema, type PrivateReflection,
-  type PrivateReflectionPort, type SignalCandidate } from '@kinetic/contracts';
+  type PrivateReflectionPort, type SignalCandidate } from '@dor/contracts';
 import { ProviderError, toProviderError } from '../errors.js';
 import { REFLECTION_SYSTEM_PROMPT } from './prompt.js';
 

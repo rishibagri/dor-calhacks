@@ -1,6 +1,6 @@
-import { DisclosurePolicy, type Clock, type PolicyStateReader } from '@kinetic/contracts';
+import { DisclosurePolicy, type Clock, type PolicyStateReader } from '@dor/contracts';
 import { BoundedCoordinator, type CoordinatorDeps, type DeliveryStatePort, type RecipientPreferencesPort }
-  from '@kinetic/agents';
+  from '@dor/agents';
 import { DroidAckProposer, type DroidAckProposerOptions } from './droid-proposer.js';
 import { JobLedger, runCoordinationJob, type ApprovedSignalSource, type CoordinationCommitPort } from './jobs.js';
 import { createJobRequestHandler } from './server.js';
@@ -10,7 +10,7 @@ import { createJobRequestHandler } from './server.js';
  * way to pass a policy object, so a fake policy cannot be wired into live mode.
  */
 export interface LiveWorkerConfig {
-  /** KINETIC_WORKER_AUTH_TOKEN, at least 32 characters. */
+  /** DOR_WORKER_AUTH_TOKEN, at least 32 characters. */
   authToken: string;
   /** Cyber/CS: authoritative signal + pair/assignment/preset state for DisclosurePolicy (never the presented envelope). */
   policyState: PolicyStateReader;

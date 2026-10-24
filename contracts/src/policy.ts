@@ -4,7 +4,7 @@
  * SpacetimeDB reducers/views, Next.js routes and the worker all call into this file.
  *
  * Runtime-dependency-free (no Zod, no Date.now, no I/O) so the same rules run inside
- * authoritative SpacetimeDB reducers/views. Import from `@kinetic/contracts/policy` inside the
+ * authoritative SpacetimeDB reducers/views. Import from `@dor/contracts/policy` inside the
  * SpacetimeDB module to keep Zod out of its bundle.
  *
  * These functions decide; they do not authenticate or load state. Callers MUST pass:
@@ -193,7 +193,7 @@ export interface PayloadRevisionInput {
  * The authenticated owner is the authority; every other condition is checked independently.
  */
 export function payloadRevision(p: PayloadRevisionInput): number {
-  const canonical = ['kinetic-payload-v1', p.pairId, p.recipientId, DISCLOSURE_PURPOSE,
+  const canonical = ['dor-payload-v1', p.pairId, p.recipientId, DISCLOSURE_PURPOSE,
     p.supportMode ?? '-', p.availability ?? '-', p.recipientPolicyVersion,
     p.presetAssignmentVersion, p.consentVersion].join('\u001f');
   let h = 0x811c9dc5;
