@@ -20,6 +20,8 @@ import type {
   RelationshipPreset,
   RelationshipPresetKind,
   SharingCategory,
+  SupportMode,
+  Availability,
 } from '@dor/contracts';
 
 export type { AgentAck, ApprovedSignal, DisclosureReceipt, LocalConnectionProfile, Nudge };
@@ -51,6 +53,28 @@ export interface PairView {
 export interface InviteView {
   inviteToken: string;
   expiresAt: string;
+}
+
+/**
+ * The caller's OWN recipient consent in one pair (`my_support_preferences`, D035). Written only by the
+ * recipient; every change bumps consentVersion. No row = no consent (worker fails closed).
+ */
+export interface SupportPreferencesView {
+  pairId: string;
+  supportModes: SupportMode[];
+  availability: Availability[];
+  consentVersion: number;
+  expiresAt: string;
+  revokedAt: string | null;
+}
+
+/** The caller's OWN delivery settings as a recipient in one pair (`my_nudge_delivery`, D017/D018). */
+export interface NudgeDeliveryView {
+  pairId: string;
+  optedIn: boolean;
+  quietStartMinute: number | null;
+  quietEndMinute: number | null;
+  utcOffsetMinutes: number;
 }
 
 export type ReducerResult = { ok: true } | { ok: false; code: ReducerErrorCode; message: string };
@@ -105,6 +129,17 @@ export interface SharedStatePort {
   revokeSignal(signalId: string): Promise<ReducerResult>; // revoke_signal
   dismissNudge(nudgeId: string): Promise<ReducerResult>; // dismiss_nudge
   snoozeNudge(nudgeId: string, until: string): Promise<ReducerResult>; // snooze_nudge
+  /** Caller's own recipient consent; expectedVersion 0 creates. */
+  setSupportPreferences(input: {
+    pairId: string;
+    supportModes: SupportMode[];
+    availability: Availability[];
+    expiresAt: string;
+    expectedVersion: number;
+  }): Promise<ReducerResult>; // set_support_preferences
+  revokeSupportPreferences(pairId: string): Promise<ReducerResult>; // revoke_support_preferences
+  /** Caller's own opt-in; default (no row) is off. */
+  setNudgeDelivery(input: NudgeDeliveryView): Promise<ReducerResult>; // set_nudge_delivery
 
   // caller-filtered views
   myAccount(): { displayName: string } | null; // my_account
@@ -114,6 +149,8 @@ export interface SharedStatePort {
   myPresetAssignments(): RecipientPresetAssignment[]; // my_preset_assignments
   myNudges(): Nudge[]; // my_nudges
   myReceipts(): DisclosureReceipt[]; // my_receipts
+  mySupportPreferences(): SupportPreferencesView[]; // my_support_preferences
+  myNudgeDelivery(): NudgeDeliveryView[]; // my_nudge_delivery
 
   subscribe(listener: () => void): () => void;
 }

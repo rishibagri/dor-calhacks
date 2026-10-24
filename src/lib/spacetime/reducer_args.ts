@@ -6,14 +6,18 @@
 import { Timestamp } from 'spacetimedb';
 import type { SharedStatePort } from '@/lib/backend/ports';
 
-type Input<K extends 'setRelationshipPreset' | 'assignRelationshipPreset' | 'approveSignal'> = Parameters<
+type Input<K extends 'setRelationshipPreset' | 'assignRelationshipPreset' | 'approveSignal' | 'setSupportPreferences' | 'setNudgeDelivery'> = Parameters<
   SharedStatePort[K]
 >[0];
 
+function date(iso: string): Date {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) throw new Error('invalid: bad timestamp');
+  return d;
+}
+
 function ts(iso: string): Timestamp {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) throw new Error('invalid: bad timestamp');
-  return Timestamp.fromDate(date);
+  return Timestamp.fromDate(date(iso));
 }
 
 export const reducerArgs = {
@@ -35,4 +39,21 @@ export const reducerArgs = {
   revokeSignal: (signalId: string) => ({ signalId }),
   dismissNudge: (nudgeId: string) => ({ nudgeId }),
   snoozeNudge: (nudgeId: string, until: string) => ({ nudgeId, until: ts(until) }),
+  // expires_at is a string arg on this reducer (parsed server-side), not a Timestamp.
+  setSupportPreferences: (i: Input<'setSupportPreferences'>) => ({
+    pairId: i.pairId,
+    supportModes: [...i.supportModes],
+    availability: [...i.availability],
+    expiresAt: date(i.expiresAt).toISOString(),
+    expectedVersion: i.expectedVersion,
+  }),
+  revokeSupportPreferences: (pairId: string) => ({ pairId }),
+  // SDK options: undefined = none.
+  setNudgeDelivery: (i: Input<'setNudgeDelivery'>) => ({
+    pairId: i.pairId,
+    optedIn: i.optedIn,
+    quietStartMinute: i.quietStartMinute ?? undefined,
+    quietEndMinute: i.quietEndMinute ?? undefined,
+    utcOffsetMinutes: i.utcOffsetMinutes,
+  }),
 };
