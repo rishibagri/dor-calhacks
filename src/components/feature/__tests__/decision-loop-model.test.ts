@@ -22,6 +22,21 @@ test('no candidate means no questions at all', () => {
   assert.deepEqual(decide(startLoop(null), PEOPLE), { kind: 'no_action', reason: 'nothing_to_share' });
 });
 
+test('candidate with an extra key is dropped: no_action, never preview', () => {
+  const bad = { supportMode: 'short_call', recipientId: 'friend-alex' } as never;
+  assert.deepEqual(decide(startLoop(bad), PEOPLE), { kind: 'no_action', reason: 'nothing_to_share' });
+});
+
+test('candidate with an invalid supportMode is dropped', () => {
+  const bad = { supportMode: 'send_now' } as never;
+  assert.deepEqual(decide(startLoop(bad), PEOPLE), { kind: 'no_action', reason: 'nothing_to_share' });
+});
+
+test('a valid candidate is kept unchanged', () => {
+  const c = { supportMode: 'short_call' as const, availability: 'today' as const };
+  assert.deepEqual(startLoop(c).candidate, c);
+});
+
 test('explicit exclusion: "not Alex tonight" removes Alex and never auto-picks another friend', () => {
   let s = answerCompany(startLoop(CALL), 'company');
   s = excludeForNow(s, ALEX.pairId);

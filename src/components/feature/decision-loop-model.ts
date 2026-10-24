@@ -15,7 +15,7 @@
  * - Answers, exclusions and the candidate are never persisted or sent; the caller drops this state on lock,
  *   pagehide, sign-out and account switch.
  */
-import type { SignalCandidate } from '@dor/contracts';
+import { SignalCandidateSchema, type SignalCandidate } from '@dor/contracts';
 
 export const MAX_QUESTIONS = 2;
 
@@ -67,8 +67,10 @@ export type Outcome =
   | { kind: 'needs_clarification'; question: keyof typeof QUESTION_COPY; options: readonly Recipient[] }
   | { kind: 'ready_for_preview'; recipient: Recipient; candidate: SignalCandidate };
 
+/** Invalid output never means send: a candidate that fails the strict schema (extra keys, bad values) becomes null. */
 export function startLoop(candidate: SignalCandidate | null): LoopState {
-  return { candidate, company: null, chosen: null, excluded: [], asked: [] };
+  const parsed = candidate === null ? null : SignalCandidateSchema.safeParse(candidate);
+  return { candidate: parsed?.success ? parsed.data : null, company: null, chosen: null, excluded: [], asked: [] };
 }
 
 const eligible = (s: LoopState, recipients: readonly Recipient[]) => recipients.filter((r) => !s.excluded.includes(r.pairId));
