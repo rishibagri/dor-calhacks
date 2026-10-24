@@ -1,5 +1,5 @@
 /**
- * PROPOSED C7 privacy boundary for public activity discovery (Cyber, D027; CS/DS/AI review pending).
+ * PROPOSED C7 privacy boundary for public activity discovery (Cyber, D028; CS/DS/AI review pending).
  * Not a C7 catalogue/proposal type and not an activity-sharing permission: it only constrains what may
  * be SENT to Apify and which source URLs may be SHOWN. Runtime-dependency-free.
  *

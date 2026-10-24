@@ -12,12 +12,12 @@
     "node": ">=20"
   },
   "scripts": {
-    "predev": "npm run build -w @kinetic/contracts",
+    "predev": "npm run build -w @kinetic/contracts && npm run build -w @kinetic/agents",
     "dev": "next dev",
-    "prebuild:app": "npm run build -w @kinetic/contracts",
+    "prebuild:app": "npm run build -w @kinetic/contracts && npm run build -w @kinetic/agents",
     "build:app": "next build",
     "start": "next start",
-    "typecheck": "npm run build -w @kinetic/contracts && tsc --noEmit",
+    "typecheck": "npm run build -w @kinetic/contracts && npm run build -w @kinetic/agents && tsc --noEmit",
     "build": "npm run build -w @kinetic/contracts",
     "test": "npm run test -w @kinetic/contracts",
     "check": "npm run check -w @kinetic/contracts",

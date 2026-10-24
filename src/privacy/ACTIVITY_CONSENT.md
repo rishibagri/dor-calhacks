@@ -1,4 +1,4 @@
-# Activity-sharing consent boundary (C7) — Cyber definition, D027
+# Activity-sharing consent boundary (C7) — Cyber definition, D028
 
 Status: **proposed boundary; no activity sharing is implemented or permitted.**
 - The executable part is limited to what may be sent to Apify and which source links may be shown (`contracts/src/catalogue.ts`, tested in `contracts/tests/catalogue.test.mjs`).

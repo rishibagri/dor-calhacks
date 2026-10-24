@@ -2126,7 +2126,7 @@
           "reason": "invalid_schema"
         }
       },
-      "knownGap": "Expected values are the desired outcome (reject). Current schema + fake policy return ok and the baseline would build a nudge whose sourceSignalIds leak the reason. Needs server-minted opaque IDs (Cyber/CS). Tracked as a todo test."
+      "knownGap": "Expected values are the desired outcome (reject). Current schema + fake policy return ok and the baseline would build a nudge whose sourceSignalIds leak the reason. Mitigated upstream since main 9096f81: approve_signal mints signal_id with newId(ctx) (Cyber/CS, in-process harness only, not live). The pure schema, C6 fake and DisclosurePolicy still accept a client-chosen ID, so this offline pipeline keeps it as a todo test until signal IDs are validated as opaque at the boundary."
     },
     {
       "id": "a4-attack-pair-id-tamper",

@@ -8,20 +8,36 @@ Read root AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md and your 
 - Node.js ≥ 20 (tested on v24.13.0, darwin arm64). Long-running process outside Vercel.
 - `droid` CLI on `PATH` (tested 0.248.0; 0.249.0 is available). Override the path with `KINETIC_DROID_PATH`.
 - Auth: `droid exec` works with the CLI login (tested). For deployment, set `FACTORY_API_KEY`. The `@factory/droid-sdk` TypeScript SDK (0.10.0) requires `FACTORY_API_KEY` and does not use the CLI login. It also only offers a deny-list for tools and pulls in vulnerable nested `zod@3` and `uuid@9`. We therefore call `droid exec` directly.
-- Model `claude-opus-5-5`, reasoning effort `low`, 8 s timeout per call (`KINETIC_DROID_TIMEOUT_MS`).
+- Model `claude-haiku-5-5` by default (`KINETIC_DROID_MODEL` / `--model` to override), reasoning effort `low`, 8 s timeout per call (`KINETIC_DROID_TIMEOUT_MS`).
 
 ## Droid hardening (`DroidAckProposer`)
 - `--only-tools TodoWrite`: the one allowlisted tool is a planning list with no file, shell, network or web access. Default read-only autonomy; never `--auto` or `--skip-permissions-unsafe`.
-- `--disable-builtin-skills`; `--cwd` is a fresh empty temp directory, deleted after each call.
+- `--disable-builtin-skills`; `--cwd` is one private `mkdtemp` directory per proposer, emptied before every call and removed by `close()`.
 - The subprocess env is allowlisted (`PATH`, `HOME`, locale/proxy vars, `FACTORY_API_KEY`). Claude, Cartesia, Clerk and worker secrets are withheld.
 - The prompt contains only approved enums and pre-filtered option enums: no signal, pair, user or consent IDs. stderr is discarded; stdout is capped at 64 KiB.
 - **Known:** Factory persists a session transcript per call (locally under `~/.factory/sessions`, one directory per temp cwd, and per Factory's own retention). Audit of 15 live sessions: enum prompt only; zero IDs, keys or repo paths. A deployed worker needs session pruning or an ephemeral `HOME` (possible with `FACTORY_API_KEY` auth).
+
+## Credit usage (measured 2026-10-24)
+Droid's system prompt includes the working directory, so a new directory per call defeats Factory's prompt cache. The task is choosing among pre-approved enum options, which needs no frontier model.
+
+| Configuration | Credits per call | 12-call total | Agent-decided | Coordinate median / p95 |
+|---|---|---|---|---|
+| Opus 5.5, new directory per call (M1) | ~9,900 cold (1 measured call) | ~118,000 (est.) | 12/12 | 3.7 s / 5.2 s |
+| Opus 5.5, reused directory | median 570, max 1,964 | 9,448 | 12/12 | 4.1 s / 5.6 s |
+| **Haiku 5.5, reused directory (default)** | **median 14, max 45** | **289** | **12/12** | 4.1 s / 6.1 s |
+
+Each benchmark ran 3 × (partners, friends, family, and a two-option friends case), plus a revoked case with 0 Droid calls, using offline policy and preference stand-ins. Latency did not improve because about 3.5 s is Droid CLI startup; `droid daemon` is the next lever. Pass `onUsage` to `DroidAckProposer` to record numbers-only usage (credits, cache tokens, duration). The Factory auto router (`KINETIC_DROID_MODEL=auto`) is not used: routing can move the enums to non-Claude providers, which the processing notice would then need to list, and it makes latency and quality measurements unstable.
 
 ## Job transport
 `createJobRequestHandler({ authToken, signals, coordinator, commit })` handles `POST /jobs`:
 - Requires `Authorization: Bearer <KINETIC_WORKER_AUTH_TOKEN>` (≥ 32 chars, timing-safe compare).
 - Accepts a strict `CoordinationJob` body (≤ 4 KiB). Returns `{ outcomes: CoordinationOutcome[] }` with `cache-control: no-store`.
-- Errors use the API envelope `{error:{code,message,requestId}}` (401/404/413/422/503). Bodies are never logged or echoed.
+- Errors use the API envelope `{error:{code,message,requestId}}` (401/404/409/413/422/503). Bodies are never logged or echoed.
+- **Replay protection (`JobLedger`):**
+  - Concurrent or retried requests with the same `jobId` share one coordination and one commit, and a completed job returns its recorded outcomes.
+  - The same `jobId` with a different pair, request or signals returns 409.
+  - A failed job is not recorded, so a retry runs fresh. It reuses the same `requestId`, so the nudge ID is identical.
+  - Across worker restarts, `commit_nudge` must dedupe on `nudge.id`.
 
 `runCoordinationJob(job, deps)` keeps only schema-valid envelopes from the job's pair whose IDs were requested, coordinates, then calls `commit.commit(result, job)`.
 
@@ -31,7 +47,9 @@ Read root AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md and your 
 - `CoordinationCommitPort.commit(result, job)`: a version-checked reducer that revalidates.
 - `DeliveryStatePort.current(pairId, recipientId)` → `{ delivery: RecipientDelivery, lastNudgeAt }`, from the reducer that backs D017/D018.
 
-**Cyber must supply** the real `DisclosurePolicyPort`. No process entrypoint exists yet: there are no production adapters to wire, and fakes must not be wired.
+**Live wiring:** `createLiveWorker({ authToken, policyState, signals, preferences, delivery, commit, rank?, droid? })` builds Cyber's real `DisclosurePolicy` over `policyState: PolicyStateReader`, the authoritative signal and pair/assignment/preset rows. There is no parameter for a policy object, so a fake cannot be wired in. It returns `{ handler, coordinator, close }`.
+- Tested with a stubbed authoritative reader: approved work reaches Droid; revoked work and altered envelopes are denied with no Droid call.
+- **Still missing:** a process entrypoint (`http.createServer(handler)`), which waits on CS's SpacetimeDB worker-identity adapters.
 
 ## Commands
 ```sh

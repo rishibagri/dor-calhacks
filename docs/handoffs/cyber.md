@@ -18,7 +18,7 @@ Status: CYBER-P2/P3 implemented on `role/cyber-privacy` @ `34e70f7`. Offline-ver
   - `commit_nudge` (worker-only): source recheck, template ↔ approved mode, quiet hours, 24h cooldown counting all nudges, idempotent, no resurrection
   - views: `my_signals`/`my_receipts` sender-only, `my_nudges` standing recheck, `my_nudge_delivery`, worker-only `worker_signal_context`/`worker_delivery`
 - **Real vault:** `src/vault/` `LocalVault` implements `VaultPort` (journals, reflections text-only, profile, quiz extras) with create/unlock/lock/auto-lock/recover/changePassphrase/destroy. Design: `src/vault/DESIGN.md`.
-- **C7/Apify boundary (D027):** `guardPublicCatalogueQuery`, `safeCatalogueUrl`, `src/privacy/ACTIVITY_CONSENT.md`.
+- **C7/Apify boundary (D028):** `guardPublicCatalogueQuery`, `safeCatalogueUrl`, `src/privacy/ACTIVITY_CONSENT.md`.
 - **Reviews:** `src/privacy/REVIEWS.md`. D016–D020 ACKed; D021 ACKed with conditions (#4 preferences storage gap, #5 outcomes never sender-visible); D015 ACKed.
 
 ## Verification (actual, offline)
@@ -34,7 +34,7 @@ Status: CYBER-P2/P3 implemented on `role/cyber-privacy` @ `34e70f7`. Offline-ver
 
 ## Consumer and exact next action
 - **CS:**
-  1. ACK D026/D027, the VaultPort additions and the file claims (AGENTS.md handoff log).
+  1. ACK D026/D028, the VaultPort additions and the file claims (AGENTS.md handoff log).
   2. Wire `LocalVault` with a per-account `IndexedDbVaultStore` name, plus vault screens.
   3. Device preview, then `approve_signal` with `payloadRevision`.
   4. Opt-in UI.

@@ -9,13 +9,13 @@ export const PROVIDER_PROCESSING = {
     settings: 'SDK logging off; no identifiers or metadata sent with the request',
   },
   voice: {
-    provider: 'Cartesia', sends: 'recorded audio for transcription and reply text for speech', returns: 'a transcript and synthesized audio',
+    provider: 'Cartesia', sends: 'recorded audio for transcription (streamed from the browser) and reply text for speech', returns: 'a transcript and synthesized audio',
     kineticStores: 'nothing server-side; audio is transient', retention: 'unverified (zero data retention is an enterprise-only Cartesia setting)',
     settings: 'TTS save=false; browser sessions use 60-second scoped access tokens',
   },
   coordination: {
     provider: 'Factory (Droid) running a Claude model', sends: 'approved support-mode and availability enums only', returns: 'a choice among pre-approved options',
     kineticStores: 'sanitized outcome codes', retention: 'Factory persists session transcripts; they contain only the approved enums',
-    settings: 'single no-I/O tool allowlisted; empty working directory; provider keys withheld from the subprocess',
+    settings: 'claude-haiku-5-5 by default; single no-I/O tool allowlisted; private empty working directory (emptied before every call); provider keys withheld from the subprocess',
   },
 } as const;

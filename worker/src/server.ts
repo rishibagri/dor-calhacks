@@ -1,16 +1,18 @@
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { InvalidJobError, runCoordinationJob, type JobDeps } from './jobs.js';
+import { InvalidJobError, JobConflictError, JobLedger, runCoordinationJob, type JobDeps } from './jobs.js';
 
 const MAX_BODY_BYTES = 4096;
 
 /**
  * POST /jobs with `Authorization: Bearer <KINETIC_WORKER_AUTH_TOKEN>` and a CoordinationJob body.
- * Responds with sanitized outcome codes only. Bodies are never logged or echoed.
+ * Responds with sanitized outcome codes only. Bodies are never logged or echoed. Retries of the same job ID
+ * are deduplicated by a JobLedger (one per handler unless supplied).
  */
 export function createJobRequestHandler(deps: JobDeps & { authToken: string }) {
   if (deps.authToken.length < 32) throw new Error('Worker auth token must be at least 32 characters');
   const expected = digest(deps.authToken);
+  const jobDeps: JobDeps = { ...deps, ledger: deps.ledger ?? new JobLedger() };
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const requestId = randomUUID();
     const fail = (status: number, code: string, message: string) =>
@@ -28,8 +30,9 @@ export function createJobRequestHandler(deps: JobDeps & { authToken: string }) {
     }
     let outcomes;
     try {
-      outcomes = await runCoordinationJob(body, deps);
+      outcomes = await runCoordinationJob(body, jobDeps);
     } catch (error) {
+      if (error instanceof JobConflictError) return fail(409, 'job_conflict', 'Job ID reused with different contents');
       return error instanceof InvalidJobError ? fail(422, 'invalid_job', 'Invalid coordination job')
         : fail(503, 'coordination_unavailable', 'Coordination unavailable');
     }

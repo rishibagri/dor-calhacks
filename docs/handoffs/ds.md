@@ -5,40 +5,49 @@ Read your updated detailed plan in docs/roles/ds.md and shared README.md phases.
 ---
 
 # DS handoff
-Status: quiz fixtures, rule-based matching baseline and 30-case evaluation set implemented and verified offline in the working tree; not committed/pushed (awaiting owner approval). Nothing here is live.
-
-Read AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md, and docs/roles/ds.md. Work on the corresponding role branch. Do not use fake adapters in live mode.
+Status: rank hook, activity ranking, 12 labeled activity cases + baseline report and the 30-case support evaluation are committed on `role/ds-context` and verified offline with synthetic data. Nothing here is live: no catalogue source, provider, deployment or real policy wiring was exercised.
 
 ## Update at each handoff
-- UTC timestamp and branch/commit: 2026-10-24T03:24Z, `role/ds-context` @ `8e208df` (origin/main merged, no conflicts) + uncommitted changes.
-- Completed work and interface IDs:
-  - `src/evaluation/fixtures/quiz.json` v2: Q1–Q8 mapped on the app's `QuizAnswers` keys to C1 `LocalConnectionProfile` and app-side `LocalQuizExtras` (D015). No question grants consent or confirms/assigns a preset.
-  - `src/evaluation/fixtures/quiz-profiles.json` v2 (CS): 8 complete `QuizAnswers` cases (partner/friend/family-leaning, space-only, space-with-modes, skip-all = `EMPTY_ANSWERS`, partial skip, note-without-other) with expected `profile`, `extras`, `supportAction`; 4 invalid answers.
-  - `src/evaluation/matching.ts`: rule-based baseline. `buildPreview` narrows an owner-only candidate to the confirmed preset of the named, assigned recipient (quiz drafts are not an input); `matchSignal` takes the `DisclosurePolicyPort` result as input and never grants consent; `intersectAvailability`; `buildNudge` (C5, expiry ≤ 24h and ≤ signal expiry).
-  - `src/evaluation/fixtures/evaluation-cases.json` (AI/Cyber): 30 synthetic cases — 6 partners, 6 friends, 6 family, 6 privacy attacks, 6 no-action (revoked, expired, unlinked, quiet hours, cooldown, incompatible). Each has privateContext, forbiddenDisclosures, candidate, preset + assignment, submitted vs approved envelope, recipient ACK, delivery state and expected preview / policy reason / match. Seeds: p1 partners, f1 friends, fa3 family (mirrors contracts/fixtures/scenarios.json family).
-  - `src/evaluation/__tests__/{quiz-fixtures,evaluation}.test.ts`, picked up by `npm run test:app`.
-  - Removed `relationship-scenarios.json` and `tests/fixtures.test.mjs` (superseded; their cases live on as p1, f1, f5, fa2, fa3).
-- Verification (offline only, actual results): after `npm ci`, `npm run check:all` exit 0 — contracts 14/14, module 16/16, typecheck clean, test:app 62 pass / 0 fail / 1 todo. The todo is case a3 (known gap below), not a pass. One-off conformance run of quiz-profiles.json against CS `buildProfile`/`buildQuizExtras`: 8/8 equal; 3/4 invalid answers rejected (auto-share-review accepted by CS). Policy outcomes come from the C6 fake: not security evidence.
+- 2026-10-24T03:55Z, `role/ds-context` @ `af2fb9b` (code) on top of main `9096f81`, plus a docs commit.
+- **DS-P2/P3 delivered:**
+  - `src/evaluation/rank.ts`
+    - `rankAckOptions(options, signal) → options`: AI coordinator `rank` hook. It is pure and only reorders or drops: duplicates, other modes, windows broader than the approved one, or a window when the sender approved none. Ordering is `today` → `this_week` → `no_preference` → none, keeping the recipient's order on ties. Inputs are the approved envelope and consented options only.
+    - `rankActivities(input) → { kind: 'ranked', suggestions: [{activityId, score, rationale[]}], excluded } | { kind: 'no_suggestion', reason, excluded }`. Input: `agreed` (option both sides agreed to, or null), `catalogue` (untrusted rows), `approvedInterests` (`{sender, recipient}` from reviewed C7 consent; null today), `now`, `utcOffsetMinutes` (recipient's, from delivery state), `allowedSourceSites`, `limit` (default 3).
+    - Exclusion reasons: `invalid_item`, `unsafe_url`, `source_not_allowed`, `format_out_of_scope` (in-person; online-only increment), `expired_source` (>72h or `expired`), `duplicate`, `time_unverified`, `already_started`, `starts_too_soon` (<30 min), `outside_window`. "Today" ends at the recipient's local midnight; `this_week` is 7 days; none/`no_preference` is a 14-day horizon.
+    - No-suggestion reasons: `no_agreed_option`, `not_shared_activity`, `empty_catalogue`, `no_eligible_activity`, `no_strong_match` (score < 2).
+    - Rationale codes: `scheduled_moment` +2, `on_demand` +1, `short_duration` (≤90 min) +1, `mutual_interest` +3 (both sides), `cached_source` −1.
+  - `ActivityItem` (in rank.ts) is a DS consumer proposal for C7: `activityId, sourceUrl (https, host = sourceSite), sourceSite, title, summary, format, categories[ACTIVITY_CATEGORIES], schedule {scheduled startAt/endAt | on_demand | unknown}, durationMinutes|null, fetchedAt, freshness`. It is not a contract type.
+  - Fixtures: `activity-catalogue.json` (17 synthetic rows), `activity-cases.json` (12 cases, labels written before runs). `metrics.ts` + `report.ts` → `src/evaluation/results/latest.md`.
+- **Mapping questions resolved (D027):** DS-Q2 keeps the mapping and changes only the Q2 copy (CS edit). DS-Q3: `no_preference` = no scheduling information; family fixture kept. Q5 `activities` remains local and never reaches the ranker.
+
+## Results (actual, `results/latest.md` @ af2fb9b)
+| Case set | Metric | DS | Baseline |
+|---|---|---|---|
+| Support, 30 cases (`matching.ts`) | Expected outcome | 29/30 | — |
+| Support | False nudges | 1 (a3, known gap) | — |
+| Support | Correct no-action | 22/23 | — |
+| Activities, 12 cases | Top-1 relevant | 6/6 | 1/6 (soonest-first) |
+| Activities | Mean precision@3 | 0.78 | 0.36 |
+| Activities | Cases with false suggestion | 0/12 | 9/12 |
+| Activities | Correct no-action | 6/6 | 3/6 |
+
+Caveats: one annotator (DS), who also designed the ranker, so the activity numbers are optimistic. Teammate 1–5 usefulness ratings have not been collected, so no usefulness mean exists. The precision@3 loss is `act-injection-text`, a valid listing with an instruction-like title that ranks 2nd in ac1/ac3/ac10/ac12. The text is inert (tested), but it should not be shown: CS sanitize/flag defect.
 
 ## Consumer and exact next action
-- **CS:** (1) Add a test under `src/components/feature/__tests__/` that loops `src/evaluation/fixtures/quiz-profiles.json`: `deepEqual(buildProfile(c.answers).data, c.expected.profile)` and `deepEqual(buildQuizExtras(c.answers), c.expected.extras)`; for `invalidAnswers` (patches over `EMPTY_ANSWERS`) expect rejection. (2) Validate `LocalQuizExtras` at runtime before `saveQuizExtras` (`reviewComfort: "auto_share"` currently passes). (3) Answer DS-Q2. (4) Mint signal IDs server-side in `approve_signal` (case a3).
-- **AI:** The coordinator must reproduce `expected.match` for all 30 cases. Inputs per case: `submittedSignal`, the policy result, `ack`, `delivery`, clock `2026-10-24T00:00:00Z`. Check order: `matchCheckOrder`. Rules: no intersection of support modes = no nudge (never ask for more detail); windows intersect (`today` ⊂ `this_week`, `no_preference` = any) and are never invented when one side omits them; one nudge per pair per 24h; quiet hours suppress; `LocalQuizExtras.prefersSpace` = offer no candidate. Candidate fields outside the enums (e.g. `reason`, `friday_after_exam`) must never be copied. Nothing in `forbiddenDisclosures` may appear in any envelope, ACK or nudge.
-- **Cyber:** Review the evaluation-cases privacy boundary (a1–a6), the a3 gap and DS-Q3. Use the cases as fixtures for the real `approve_signal` guard; the expected policy reasons match the C6 fake today.
+- **AI (Adam):** Construct `BoundedCoordinator` with `rank: rankAckOptions`. Scratchpad check at af2fb9b: 13/13 AI fixture cases give the same outcome with the hook, and the two-window friends case orders `today` first. Agree an import path (`src/evaluation` is app-side; options: move `rankAckOptions` into contracts, or a small `@kinetic/ranking` workspace). For activity proposals, call `rankActivities` only after a compatible ACK, and send only `activityId` + rationale codes to the proposal step.
+- **CS:** (1) Q2 copy in `src/app/onboarding/page.tsx`: "2. When you've gone quiet for a while, what would you like from a friend?" (2) Compare C7 `ActivityCatalogueItem` with `ActivityItem` fields; DS needs `format`, normalized `categories`, a `schedule` that distinguishes on-demand from unknown, `durationMinutes|null`, `fetchedAt` and `freshness`. (3) Sanitize or flag instruction-like titles before display. (4) Still open: test looping `quiz-profiles.json`; `LocalQuizExtras` runtime validation.
+- **Cyber (Sumedh):** Review D027(d). Propose an `activity_interest` consent category whose record fills `approvedInterests`; until then it stays null. Pure-guard opaque signalId check would let case a3 pass offline.
+- **Team:** Rate the top-3 of ac1, ac2, ac3, ac10, ac11 and ac12 on a 1–5 scale (2 raters) and record the ratings in `results/`.
 
-## Blockers / unresolved contract decisions
-- **a3 (privacy gap):** `ApprovedSignal.signalId` accepts any string, so a client-chosen `exam-friday-panic` passes schema and fake policy and would reach the recipient in `Nudge.sourceSignalIds`. Needs server-minted opaque IDs (CS/Cyber). Tracked as a `todo` test.
-- **DS-Q2 (CS):** Q2 "when a friend goes quiet" describes how the owner reaches out but is merged into `preferredSupportModes` (what the owner wants to receive). DS recommends local-only; fixtures follow main until decided.
-- **DS-Q3 (Cyber):** the family seed shares `availability: no_preference`. Keep it, or omit availability unless it narrows the window?
-- `LocalQuizExtras` has no runtime schema (CS/Cyber).
-- D015 still lists Cyber/AI review as pending.
-- DS-local vocabulary: `presetConfirmation: "owner_narrowed_suggestion"` (case p6) extends D015's two values.
-
-## Planned work
-Hour 7: profile-aware ranking adapter on top of `matching.ts` (use `preferredSupportModes`, `suggestionIntensity`), sample .ics coarse-availability parsing, cooldown fixtures. Hour 17–22: score AI outputs against the 30 cases versus this baseline; usefulness ratings (2 raters, 1–5) on eligible positive cases; report sample size honestly.
+## Blockers
+- No C7 schema or activity-interest consent: person-specific activity delivery is blocked (catalogue read-only per PLAN.md G6).
+- No live catalogue (CS-P0/P1 Actor not yet selected), so every activity result is synthetic.
+- a3 stays a todo offline (mitigated in `approve_signal` via server `newId`, harness-only).
 
 ## Run
 ```sh
 npm ci
-npm run check:all                                    # includes DS tests via test:app
-node --test "src/evaluation/__tests__/*.test.ts"     # DS only (after npm run build)
+npm run check:all                                   # includes DS tests via test:app
+npm run build && node --test "src/evaluation/__tests__/*.test.ts"
+node src/evaluation/report.ts --write              # regenerates results/latest.md
 ```

@@ -5,11 +5,50 @@ Read your updated detailed plan in docs/roles/ai.md and shared README.md phases.
 ---
 
 # AI handoff
-Status update: Milestone 1 merged via PR #4 into main c4315e3; the following evidence was recorded on `role/ai-voice`. Adapters and the bounded coordinator are implemented and offline-verified. **Factory Droid execution is live-verified**, using offline policy and preference stand-ins. **Claude and Cartesia are not live-verified**: there are no credentials. No app route uses these adapters yet.
+Status: AI-P1–P3 partially complete on `role/ai-voice` @ `a7316d5`, based on main @ `9096f81`; not yet in a PR. Here is what is done and what each piece has been verified against:
+- **Implemented and unit-tested:** authenticated reflection and voice-session routes, browser voice helpers, and the worker wired to Cyber's real `DisclosurePolicy` with replay protection.
+- **Measured live:** Droid credit optimization.
+- **Not live:** Claude and Cartesia (no credentials), and full end-to-end coordination (no SpacetimeDB adapters yet).
+
+## Evidence, kept separate by kind
+| Kind | What ran | Result |
+|---|---|---|
+| Offline unit/contract | `npm run check`, `npm run ai:check`, `npm run check:all` from a clean `npm ci` | contracts 52/52; agents 45/45; worker 10/10; module 36/36; app 62/63 (1 `todo`, not AI); typecheck clean; `npm audit` 0 |
+| Fixture-policy worker | `createLiveWorker` with a stubbed authoritative `PolicyStateReader` and fake Droid spawn | Approved work reaches Droid and is proposed; revoked work and altered envelopes return `policy_denied` with no Droid call |
+| Isolated live Droid (fake policy and preferences) | `node worker/scripts/live-droid.mjs --runs 3 --model …` | Haiku: 12/12 agent-decided, 289 credits total (median 14/call), coordinate median 4.1 s, p95 6.1 s. Opus with reused dir: 12/12, 9,448 credits, 4.1 s / 5.6 s. M1 Opus with a new dir per call: ~9,900 credits/call cold. Revoked case: 0 Droid calls |
+| App build/runtime | `npm run build:app`; `next start` + curl | Both routes compile as dynamic. Without Clerk: 503 `Authentication is not configured`, `no-store`; GET 405; request text absent from server logs |
+| Missing credentials | `npm run live -w @kinetic/agents` | `SKIPPED_MISSING_CREDENTIAL` for `ANTHROPIC_API_KEY` and `CARTESIA_API_KEY` |
+| Not yet run | Browser mic/AudioWorklet/Web Audio; signed-in route calls; real SpacetimeDB job → commit | No evidence yet |
+
+## Latency limitation (unchanged, measured)
+The 8 s per-call target is usually met but not guaranteed. Earlier direct Droid calls ranged from 4.3 to 18.7 s, and some runs needed round 2. About 3.5 s of every call is Droid CLI startup, whatever the model. When rounds fail, the coordinator stays correct through round 2 and then the deterministic fallback. Next lever: `droid daemon`.
+
+## Integration needs (exact)
+- **CS:**
+  1. **ACK the route-file claim** for `src/app/api/reflections/route.ts` and `src/app/api/voice/session/route.ts`. They are thin, Clerk `auth()` → `handle*Request`; move or centralize the session helper as you prefer.
+  2. Change `ReflectionPort.reflect` in `src/lib/backend/ports.ts` to return `PrivateReflection` (merged in contracts).
+  3. Swap `placeholderReflection` for an adapter around `createReflectionClient()` from `@kinetic/agents/client`.
+  4. Bind the journal UI to `VoiceDictation` (`onChange` snapshot; typed entry on any `error`) and `speak()`.
+  5. Provide the worker adapters for `createLiveWorker`: `PolicyStateReader` (with Sumedh), `ApprovedSignalSource`, `RecipientPreferencesPort`, `DeliveryStatePort` and `CoordinationCommitPort`.
+  6. Build a `commit_nudge` reducer restricted to the worker identity that calls `guardNudgeCommit` and dedupes on `nudge.id`.
+  7. Choose a long-running Node host with the `droid` CLI.
+- **Sumedh (Cyber):**
+  1. Confirm the `PolicyStateReader` source: worker-identity view vs reducer read.
+  2. Decide whether `RecipientSupportPreferences` needs its own consent guard or reuses the D017 opt-in.
+  3. Review the route error and log boundary (codes only, no echo) and the browser token in the WebSocket query string (Cartesia's documented browser pattern; 60 s token).
+  4. Verify Anthropic and Cartesia retention.
+- **Nimisha (DS):** publish `rank(options, signal)` for `createLiveWorker({ rank })`; it may reorder or drop options, never add. Your `matchSignal` and my `eligibleOptions` should agree on `today ∩ this_week = today` and on availability-only giving no nudge. A shared fixture test would pin that.
+- **Activity scope (AI-P6):** not started by design. It waits for CS's reviewed C7 `ActivityCatalogueItem`/`ActivityProposal` contract and Sumedh's activity consent categories. My side will be bounded proposals and counters chosen from catalogue IDs only. Scraped text is treated as data, gets no tools and no URL fetches, and both humans must accept the same proposal revision. There is no booking or messaging.
+
+## Blockers
+- `ANTHROPIC_API_KEY` and `CARTESIA_API_KEY` block live reflection, STT/TTS and the browser voice run. `FACTORY_API_KEY` is needed on a deployed worker.
+- The real job → commit path waits on the CS/Cyber adapters above.
+
+## History: M1 handoff (2026-10-24T03:09Z, superseded)
 
 Read AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md, and docs/roles/ai.md. Work on the corresponding role branch. Do not use fake adapters in live mode.
 
-## Update at each handoff
+### Update at each handoff
 - UTC timestamp and branch/commit: 2026-10-24T03:09Z, `role/ai-voice`. `d940735` contract proposal (D021), `27cb467` adapters and worker, `d2045cd` merge of main @ `8e208df`; the docs commit sits on top.
 - Completed work and interface IDs:
   - **Contracts (D021, proposed, additive):**
@@ -29,7 +68,7 @@ Read AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md, and docs/role
   - **Factory session audit:** 15 persisted transcripts contain only the enum prompt; 0 pair, signal or consent IDs, keys or repo paths.
   - **Live Claude and Cartesia:** `npm run live -w @kinetic/agents` reports `SKIPPED_MISSING_CREDENTIAL` for both.
 
-## Tested runtime requirements
+### Tested runtime requirements
 | Component | Requirement | Tested |
 |---|---|---|
 | Node | ≥ 20, ESM | v24.13.0 |
@@ -38,7 +77,7 @@ Read AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md, and docs/role
 | Factory | `droid` CLI on PATH (0.248.0; 0.249.0 available), CLI login or `FACTORY_API_KEY`, long-running host outside Vercel | Live |
 | Not used | `@factory/droid-sdk@0.10.0`: needs `FACTORY_API_KEY`, offers only a tool deny-list, nested vulnerable `zod@3`/`uuid@9` | Probed, rejected |
 
-## Consumer and exact next action
+### Consumer and exact next action
 - **CS:**
   1. Review D021 (contracts + `contracts/README.md`).
   2. Widen `ReflectionPort.reflect` in `src/lib/backend/ports.ts` to return `PrivateReflection` from `@kinetic/contracts` (a superset of `{reflection}`), so the UI receives `candidate`.
@@ -58,12 +97,12 @@ Read AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md, and docs/role
   4. Reflection fixtures can seed the 30-case evaluation.
 - **Team decision:** self-harm language makes the reflection point to emergency or crisis support (988 in the US) and forces `candidate: null`. Confirm the behavior and the copy.
 
-## Blockers / unresolved contract decisions
+### Blockers / unresolved contract decisions
 - Missing credentials: `ANTHROPIC_API_KEY` and `CARTESIA_API_KEY` block live Claude and Cartesia verification. `FACTORY_API_KEY` is needed on a deployed worker.
   - To run: put the keys in the repo-root `.env.local`, then `npm run ai:build && npm run live -w @kinetic/agents`.
 - D021 is merged via PR #4; CS, Cyber and DS consumer review remains pending.
 - Droid latency is above the 8 s per-call target at times. Options: raise the Droid timeout (nudges are asynchronous), use a lower-effort or smaller model on Factory (team call), or accept the deterministic fallback.
 - Factory keeps a session directory per call under `~/.factory/sessions`. A deployed worker needs pruning or an ephemeral `HOME`.
 
-## Planned work
+### Planned work
 Hour 7 milestone: app reflection and voice routes, then browser mic capture plus a streaming `ink-2` STT client with turn detection and stop/interrupt, plus TTS playback. After that: typed fallback paths, latency measurements over ≥ 10 seeded runs per provider once keys exist, and a worker process entrypoint once CS and Cyber adapters exist.

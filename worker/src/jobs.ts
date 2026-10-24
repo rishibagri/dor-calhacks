@@ -15,10 +15,52 @@ export interface JobDeps {
   signals: ApprovedSignalSource;
   coordinator: CoordinationPort;
   commit: CoordinationCommitPort;
+  /** Replay protection; omit only in tests that exercise a single run. */
+  ledger?: JobLedger;
 }
 
 export class InvalidJobError extends Error {
   constructor() { super('invalid_job'); this.name = 'InvalidJobError'; }
+}
+/** Same jobId, different pair, request or signals: refuse rather than guess which one is real. */
+export class JobConflictError extends Error {
+  constructor() { super('job_conflict'); this.name = 'JobConflictError'; }
+}
+
+/**
+ * Per-process replay protection. Concurrent duplicates share one run; a completed job returns its recorded
+ * outcomes without coordinating or committing again; a failed job is not recorded, so a retry runs fresh.
+ * Across restarts, the commit_nudge reducer must also dedupe on the request-stable nudge ID.
+ */
+export class JobLedger {
+  private readonly inFlight = new Map<string, { key: string; result: Promise<CoordinationOutcome[]> }>();
+  private readonly done = new Map<string, { key: string; outcomes: CoordinationOutcome[]; at: number }>();
+  constructor(private readonly limits = { maxEntries: 1000, ttlMs: 15 * 60 * 1000 },
+    private readonly now: () => number = Date.now) {}
+
+  run(job: CoordinationJob, work: () => Promise<CoordinationOutcome[]>): Promise<CoordinationOutcome[]> {
+    const key = JSON.stringify([job.pairId, job.requestId, [...job.signalIds].sort()]);
+    this.prune();
+    const done = this.done.get(job.jobId);
+    if (done) {
+      if (done.key !== key) return Promise.reject(new JobConflictError());
+      return Promise.resolve(structuredClone(done.outcomes));
+    }
+    const active = this.inFlight.get(job.jobId);
+    if (active) return active.key === key ? active.result : Promise.reject(new JobConflictError());
+    const result = work().then(outcomes => {
+      this.done.set(job.jobId, { key, outcomes: structuredClone(outcomes), at: this.now() });
+      return outcomes;
+    }).finally(() => this.inFlight.delete(job.jobId));
+    this.inFlight.set(job.jobId, { key, result });
+    return result;
+  }
+
+  private prune(): void {
+    const cutoff = this.now() - this.limits.ttlMs;
+    for (const [id, entry] of this.done) if (entry.at < cutoff) this.done.delete(id);
+    while (this.done.size > this.limits.maxEntries) this.done.delete(this.done.keys().next().value!);
+  }
 }
 
 /** Runs one content-free job. Throws InvalidJobError so the transport can answer 422. */
@@ -26,6 +68,10 @@ export async function runCoordinationJob(rawJob: unknown, deps: JobDeps): Promis
   const parsedJob = CoordinationJobSchema.safeParse(rawJob);
   if (!parsedJob.success) throw new InvalidJobError();
   const job = parsedJob.data;
+  return deps.ledger ? deps.ledger.run(job, () => coordinateJob(job, deps)) : coordinateJob(job, deps);
+}
+
+async function coordinateJob(job: CoordinationJob, deps: JobDeps): Promise<CoordinationOutcome[]> {
   const wanted = new Set(job.signalIds);
   const signals = (await deps.signals.approvedSignals(job.pairId, job.signalIds)).flatMap(raw => {
     const parsed = ApprovedSignalSchema.safeParse(raw);

@@ -1,4 +1,4 @@
-// Proposed C7 boundary (D027): what may be sent to Apify and which source links may be shown. Synthetic.
+// Proposed C7 boundary (D028): what may be sent to Apify and which source links may be shown. Synthetic.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { guardPublicCatalogueQuery, safeCatalogueUrl, validTopicAllowlist } from '../dist/index.js';
