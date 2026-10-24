@@ -200,3 +200,15 @@ Verdict: **PASS with two copy fixes owed (MEDIUM, owners' files).** Offline code
 - Residual (LOW, by design): each account's encrypted vault DB stays on disk under a hashed name, so a shared browser shows that *some* account used it. Contents stay encrypted.
 
 **Not covered (needs live/browser):** real-browser rendering, IndexedDB contents on disk, phone/PWA, live network trace. Those are Core 3/R5 items.
+
+## 2026-10-25: D028 review of CS Apify ingestion (`src/lib/catalogue/*`, `scripts/ingest-catalogue.ts`), README D045 Phase 1
+Verdict: **ACK with two conditions.**
+- **Holds:**
+  - Every request is built by `feedQueries` → `guardPublicCatalogueQuery`, and the POST body is only `{searchTerms: [allowlisted topic], maxItems, language}`.
+  - The token travels in an `authorization` header and is never printed; errors carry only the HTTP status.
+  - Records pass the same `guardCatalogueEvent` the module runs, and instruction-like titles are dropped.
+  - Topics come from the query, never scraped text. Event ids are stable source-scoped hashes.
+  - Commits use `execFileSync` argument arrays (no shell).
+  - Single-flight lock and a 6 h refresh window.
+- **Condition 1:** the regional source lives in the Apify *task's* saved input (`APIFY_TASK_ID`), outside the repo, so it can't be reviewed. Record the Actor id, pinned build and region/search string (non-secret) in `feeds.ts` or `docs/RUNBOOK.md`, and pin the build.
+- **Condition 2:** confirm the task input holds only a developer-chosen public region and source, with no personal or test-account data. README D045 Phase 1 compares a Luma and a Meetup Actor; whichever is chosen, its hosts must be in `SOURCE_HOSTS` and in the module's `source_hosts` config, and its field map must stay the minimal `title/startDate/endDate/url/isCancelled`.
