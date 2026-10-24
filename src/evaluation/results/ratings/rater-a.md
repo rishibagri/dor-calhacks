@@ -1,6 +1,6 @@
 # dor Core 3 rating sheet (rater-a)
 
-Synthetic data only: every name, entry and answer is invented. Fixture `b567037adc94871a`. 114 items.
+Synthetic data only: every name, entry and answer is invented. Fixture `a6c529badbe8cce8`. 114 items.
 
 **Rate on your own.** Don't discuss items with the other rater or look at their sheet, the fixtures, the code or the
 DS report until you have finished. If you can't decide, leave the cell blank rather than guessing.
@@ -500,7 +500,7 @@ step, and what the app did next. Fill the table row under each item:
 - **Private entry (owner only):** I want company, but not Alexander tonight.
 - **Their connections:** Alex, Sam
 - **What the owner tapped:** nothing yet (this is the first screen)
-- **What the app did:** Asks the owner: "Is there someone you would feel comfortable hearing from?" Choices offered: Alex, Sam.
+- **What the app did:** Asks the owner: "Is there someone you would feel comfortable hearing from?" Choices offered: Sam.
 
 | item | useful | safe | preferred | concerns | note |
 |---|---|---|---|---|---|
@@ -830,7 +830,7 @@ step, and what the app did next. Fill the table row under each item:
 - **Private entry (owner only):** I want company, but not Alex tonight.
 - **Their connections:** Alexander, Sam
 - **What the owner tapped:** nothing yet (this is the first screen)
-- **What the app did:** Asks the owner: "Is there someone you would feel comfortable hearing from?" Choices offered: Alexander, Sam.
+- **What the app did:** Asks the owner: "Is there someone you would feel comfortable hearing from?" Choices offered: Sam.
 
 | item | useful | safe | preferred | concerns | note |
 |---|---|---|---|---|---|

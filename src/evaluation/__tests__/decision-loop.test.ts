@@ -54,7 +54,7 @@ for (const c of file.cases) {
 
 test('known gaps still fail as labeled (remove knownGap when this test breaks)', () => {
   const gaps = file.cases.filter((c) => c.knownGap);
-  assert.deepEqual(gaps.map((c) => c.id).sort(), ['nn1-nickname-alexander-excludes-alex', 'nn2-nickname-alex-excludes-alexander']);
+  assert.deepEqual(gaps.map((c) => c.id).sort(), []);
   for (const c of gaps) assert.equal(scoreCase(file, c).matches, false, c.id);
 });
 
@@ -205,5 +205,14 @@ test('D042 neutral assessment reproduces the old "ask normally" path exactly', (
     const withNeutral = replay(file, c.story, c.candidate, c.recipients, c.steps, NEUTRAL, c.pauses).outcome;
     const oldMissing = replay(file, c.story, c.candidate, c.recipients, c.steps, null, c.pauses, false).outcome;
     assert.deepEqual(withNeutral, oldMissing, c.id);
+  }
+});
+
+test('nickname exclusions (AI PR #38): "not Alexander" / "not Alex" leave out both spellings, labels unchanged', () => {
+  for (const id of ['nn1-nickname-alexander-excludes-alex', 'nn2-nickname-alex-excludes-alexander']) {
+    const s = scoreCase(file, byId(id));
+    assert.ok(s.matches, id);
+    assert.deepEqual(s.leaks, [], id);
+    assert.deepEqual(surfacesOf(file, s.outcome).offered, ['p-sam'], id);
   }
 });

@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import fixtures from '../../../agents/fixtures/reflection.synthetic.json' with { type: 'json' };
 import { answerCompany, answerWho, decide, excludeForNow, type LoopState, type Recipient }
   from '../../../components/feature/decision-loop-model.ts';
-import { assessedRecipients, initialLoopState, leftOutByAssessment, nameMatches, suggestsNothing } from '../assessment.ts';
+import { assessedRecipients, exclusionMatches, initialLoopState, leftOutByAssessment, nameMatches, suggestsNothing, unmatchedExclusions }
+  from '../assessment.ts';
 
 // SYNTHETIC connections. Two Alexes exercise the ambiguous-exclusion rule.
 const SAM = { pairId: 'p-sam', name: 'Sam Rivera' };
@@ -28,7 +29,7 @@ test('names match whole words only, case- and accent-insensitive; never prefixes
   assert.equal(nameMatches('', 'Alex Kim'), false);
 });
 
-test('no assessment: the loop is exactly CS behavior (asks company first, offers everyone)', () => {
+test('no assessment: the loop is exactly CS behavior (asks company first, offers everyone); r4m is an open decision', () => {
   const s = initialLoopState(CALL, undefined);
   assert.deepEqual(view(s, undefined), { kind: 'needs_clarification', question: 'company', options: PEOPLE });
 });
@@ -118,4 +119,30 @@ test('synthetic Claude fixtures drive the loop as the spec table says', () => {
   assert.deepEqual(notAlex.kind === 'needs_clarification' && notAlex.options.map(r => r.pairId), [SAM.pairId, JO.pairId]);
   const sam = first('positive-sam');
   assert.equal(sam.kind === 'needs_clarification' && sam.options[0]?.pairId, SAM.pairId);
+});
+
+test('exclusions also match nicknames by 3+ letter prefix in either direction; preferences stay strict (CS audit)', () => {
+  const ALEXANDER = { pairId: 'p-alexander', name: 'Alexander Reyes' };
+  const SAMANTHA = { pairId: 'p-samantha', name: 'Samantha' };
+  assert.equal(exclusionMatches('Alexander', 'Alex Kim'), true, '"not Alexander" leaves out "Alex"');
+  assert.equal(exclusionMatches('Alex', 'Alexander Reyes'), true, '"not Alex" leaves out "Alexander"');
+  assert.equal(exclusionMatches('Al', 'Alex Kim'), false, 'two letters never match');
+  assert.equal(exclusionMatches('Alexander Moreno', 'Alex Kim'), false, 'every written word must match');
+  assert.equal(nameMatches('Alexander', 'Alex Kim'), false, 'preferences keep strict whole words');
+  const a = A('wants_connection', ['Alexander']);
+  const s = initialLoopState(CALL, a);
+  const people = [ALEX, SAM, ALEXANDER, SAMANTHA];
+  const out = view(s, a, people);
+  assert.deepEqual(out.kind === 'needs_clarification' && out.options.map(r => r.pairId), [SAM.pairId, SAMANTHA.pairId],
+    'every Alex-like connection is left out; never substituted');
+  const pref = A('wants_connection', [], ['Sam']);
+  const ordered = view(initialLoopState(CALL, pref), pref, [SAMANTHA, SAM]);
+  assert.equal(ordered.kind === 'needs_clarification' && ordered.options[0]!.pairId, SAM.pairId, 'strict match orders Sam first');
+});
+
+test('unmatchedExclusions names exclusions that matched no connection, so CS can ask the owner', () => {
+  const a = A('wants_connection', ['Bob', 'Alex']);
+  assert.deepEqual(unmatchedExclusions(PEOPLE, a), ['Bob'], 'a nickname like Bob ↔ Robert cannot be matched by spelling');
+  assert.deepEqual(unmatchedExclusions(PEOPLE, undefined), []);
+  assert.deepEqual(unmatchedExclusions(PEOPLE, A('send_now', ['Bob'])), [], 'invalid assessments are already no action');
 });

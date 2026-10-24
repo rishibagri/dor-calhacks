@@ -42,6 +42,12 @@ npm run ai:build && npm start -w @dor/worker   # worker, with the DOR_* worker e
 ```
 The worker's Droid calls use the **Factory Droid SDK** by default and need `FACTORY_API_KEY` on the worker host; without it the worker refuses to start. Set `DOR_DROID_TRANSPORT=cli` only to fall back to `droid exec` (a CLI login works there). See worker/README.md "SDK transport". `npm run setup:doctor -- --worker` checks this.
 
+Run the worker under a supervisor that restarts it on a non-zero exit (pm2, systemd, a container restart policy, or `until npm start -w @dor/worker; do sleep 2; done` locally).
+- The worker reconnects automatically after a dropped database connection, and does nothing while disconnected.
+- If the database stays unreachable for `DOR_WORKER_MAX_OFFLINE_MS` (default 2 min), or the SDK gives up, the worker exits with code 1 so the supervisor restarts it.
+- `GET /healthz` is 200 `{"ok":true}` when connected and 503 while disconnected.
+- **Paid-run safety:** while the worker runs, every standing approved signal triggers a Droid call. Revoke test signals before starting it, and don't leave it running unattended.
+
 ## Reset (synthetic data only)
 ```sh
 npm run setup:module -- --server dor-local --run --reset --i-understand-this-deletes-data

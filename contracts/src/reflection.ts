@@ -28,9 +28,14 @@ export const PrivateReflectionSchema = z.object({
   schemaVersion: z.literal(1), reflection: z.string().min(1).max(2000),
   candidate: SignalCandidateSchema.refine(c => c.supportMode !== undefined || c.availability !== undefined,
     'Use null when there is nothing to share').nullable(),
-  /** Optional (D040): a missing assessment means "none", and the loop asks its normal questions. */
+  /**
+   * D040 owner-only assessment. D042: required whenever there is a candidate, so a refusal written in the entry
+   * ("not Alex") can always be honored; optional only when there is nothing to share (`candidate: null`). The app
+   * also fails closed on a missing one (CS `failClosedWithoutAssessment`), and our Claude adapter always sets it.
+   */
   assessment: PrivateAssessmentSchema.optional(),
-}).strict();
+}).strict().refine(r => r.candidate === null || r.assessment !== undefined,
+  { message: 'A candidate needs an assessment (D042)', path: ['assessment'] });
 export type PrivateAssessment = z.infer<typeof PrivateAssessmentSchema>;
 export type RecipientIntent = (typeof RECIPIENT_INTENTS)[number];
 export type PrivateReflection = z.infer<typeof PrivateReflectionSchema>;

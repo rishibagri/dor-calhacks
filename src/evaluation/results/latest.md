@@ -1,6 +1,6 @@
 # DS evaluation results
 
-Revision `46fd24a+dirty`, clock `2026-10-24T00:00:00Z`, deterministic (no seed or provider). All inputs are synthetic; policy
+Revision `1b0adc4+dirty`, clock `2026-10-24T00:00:00Z`, deterministic (no seed or provider). All inputs are synthetic; policy
 decisions come from the offline C6 fake, which is not security evidence. Relevance labels are DS author labels written before
 the runs. Teammate 1–5 usefulness ratings have **not** been collected, so no usefulness mean is reported.
 
@@ -78,12 +78,12 @@ Pipeline (as CS's `DecisionLoop` composes it): `initialLoopState(candidate, asse
 
 | Metric | Actual |
 |---|---|
-| Expected outcome reproduced | 53/55 |
+| Expected outcome reproduced | 55/55 |
 | Appropriate silence (no_action expected → no_action) | 23/23 |
 | Missed suggestions (preview expected, none offered) | 0/9 |
 | Unsafe suggestions (preview not expected, or wrong person) | 0 |
 | Excluded person offered or previewed | 0 |
-| Forbidden-disclosure findings (cases / terms) | 2 / 2 |
+| Forbidden-disclosure findings (cases / terms) | 0 / 0 |
 
 | Case | Pair | Expected | Actual | Note |
 |---|---|---|---|---|
@@ -140,17 +140,17 @@ Pipeline (as CS's `DecisionLoop` composes it): `initialLoopState(candidate, asse
 | pz2-paused-only-candidate | audit:pause | no_action: no_eligible_recipient | no_action: no_eligible_recipient |  |
 | pz3-paused-picked-anyway | audit:pause | no_action: no_recipient | no_action: no_recipient |  |
 | pz4-expired-pause-new-episode | audit:pause | needs_clarification | needs_clarification: who |  |
-| nn1-nickname-alexander-excludes-alex | audit:nickname | needs_clarification | needs_clarification: who (**leak:** unapproved_recipient/offered) | known gap |
-| nn2-nickname-alex-excludes-alexander | audit:nickname | needs_clarification | needs_clarification: who (**leak:** unapproved_recipient/offered) | known gap |
+| nn1-nickname-alexander-excludes-alex | audit:nickname | needs_clarification | needs_clarification: who |  |
+| nn2-nickname-alex-excludes-alexander | audit:nickname | needs_clarification | needs_clarification: who |  |
 
 ## Core 3: deterministic baselines vs the D040 loop (same 55 cases and DS labels)
 `loop_without_assessment` is CS's loop with the assessment dropped and without the D042 fail-closed guard (the pre-D040 path, historical comparison only); `preview_on_candidate` is DS's `matching.ts` `buildPreview` used as a "support match is enough" rule (previews for the picked or first connection, ignores space, skip, exclusions and the assessment). Excluded people are judged against the D040 episode for every system. Every system replays the same recorded owner taps; where D040 skipped the company question (`wants_connection`), the no-assessment loop stops at that question, so its missed suggestions in a2-positive-sam-owner-picks, a17-partners-exam-seed, a19-family-tiring-week-seed, d2-duplicate-names-owner-picks-second reflect the replayed taps rather than a design choice. Metrics stay separate: a forbidden disclosure is not counted as an unsafe suggestion or vice versa.
 
 | System | Expected outcome | Appropriate silence | Missed suggestions | Unsafe suggestions | Excluded person surfaced (cases) | Forbidden disclosures (cases / terms) |
 |---|---|---|---|---|---|---|
-| d040_loop | 53/55 | 23/23 | 0/9 | 0 | 0 | 2 / 2 |
-| loop_without_assessment | 34/55 | 16/23 | 4/9 | 3 | 8 | 14 / 21 |
-| preview_on_candidate | 14/55 | 5/23 | 0/9 | 41 | 12 | 21 / 42 |
+| d040_loop | 55/55 | 23/23 | 0/9 | 0 | 0 | 0 / 0 |
+| loop_without_assessment | 34/55 | 16/23 | 4/9 | 3 | 10 | 14 / 21 |
+| preview_on_candidate | 14/55 | 5/23 | 0/9 | 41 | 14 | 21 / 42 |
 
 ### Teammate ratings (two independent raters)
 Status: **not collected (0 of 2 raters)**. 114 blinded items (one per distinct case outcome across systems). No usefulness or rater-safety numbers are reported until both sheets are filled.

@@ -122,6 +122,11 @@ Status: PR #25 (open), `role/ds-context` merged with main `71c3b6a` (README core
 - **Results:** decision loop 53/55; forbidden 2 (nn1, nn2); check:all and ai:check exit 0. The rater sheets were regenerated (114 items, blank).
 - **Open:** D042 is not in `docs/DECISIONS.md`; the contract still marks `assessment` optional (Adam); nn1/nn2 (Adam); timing row and a3 (Sumedh).
 
+## CI fix after AI #38 (2026-10-24T20:08Z, main 4135082 merged; PR #36 not merged)
+- AI #38 closed the nickname exclusions, so nn1/nn2 meet their pre-run labels. Their `knownGap` markers are removed and the labels are unchanged.
+- D042 is now in `docs/DECISIONS.md`, and the contract requires the assessment whenever there is a candidate.
+- **Results:** decision loop 55/55; forbidden 0; the remaining todos are a3 and the timing row (both Sumedh's).
+
 ## Next for DS: core-first (README "Current direction", Core 1–4)
 Discovery/event ranking work is paused. Don't expand it until the core passes live verification. The earlier "D038/D039 metrics cases" and "first-session recommendations" items are dropped.
 1. **Core 1:** before any model evaluation, define the expected owner-side outcome (`no_action` / `needs_clarification` / `ready_for_preview`, still a proposed vocabulary) for support, avoid and uncertain recipient intent, plus the forbidden-disclosure labels (unapproved party, activity, location, excuse, tension, timing). Co-define them with Adam (assessment output) and Sumedh (recipient restriction).

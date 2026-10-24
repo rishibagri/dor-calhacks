@@ -1,6 +1,7 @@
 import type { CoordinationJob, CoordinationOutcome } from '@dor/contracts';
 import type { WorkerStateSource } from './spacetime/adapters.js';
 import { mapRows, toSignalContext } from './spacetime/rows.js';
+import { isDisconnected } from './spacetime/connection.js';
 
 export interface SignalWatcherOptions {
   /** Runs one job (normally runCoordinationJob with a JobLedger). */
@@ -8,7 +9,11 @@ export interface SignalWatcherOptions {
   /** Numbers/codes only; never log rows. */
   onOutcome?: (outcomes: CoordinationOutcome[]) => void;
   onError?: (error: unknown) => void;
-  /** Attempts per signal before it is left alone until the process restarts. Default 3. */
+  /**
+   * Attempts per signal before it is left alone until the process restarts. Default 3. A dropped database
+   * connection is not counted: the job is simply retried after reconnecting, and commit_nudge dedupes the
+   * request-stable nudge ID if the first commit had already landed.
+   */
   maxAttempts?: number;
 }
 
@@ -45,7 +50,7 @@ export class SignalWatcher {
         this.attempts.delete(signal.signalId);
         this.options.onOutcome?.(outcomes);
       } catch (error) {
-        this.attempts.set(signal.signalId, (this.attempts.get(signal.signalId) ?? 0) + 1);
+        if (!isDisconnected(error)) this.attempts.set(signal.signalId, (this.attempts.get(signal.signalId) ?? 0) + 1);
         this.options.onError?.(error);
       }
     }

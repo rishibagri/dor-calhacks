@@ -137,10 +137,11 @@ test('baselines: dropping the assessment re-offers an entry-excluded person; the
 });
 
 test('baselines: metrics stay separate (an unsafe suggestion is not a leak and vice versa)', () => {
-  // nn1 (known gap): Alex is offered (a leak) but nothing is previewed (not unsafe). r4m played this role before D042.
-  const nn1 = scoreCase(file, file.cases.find((c) => c.id === 'nn1-nickname-alexander-excludes-alex')!);
-  assert.equal(nn1.unsafe, false);
-  assert.ok(nn1.leaks.length > 0);
+  // Without the assessment, r4's who-question offers the refused Alex (a leak) but previews nobody (not unsafe). Uses the
+  // frozen pre-D040 baseline so the example does not disappear when the current loop closes a gap.
+  const r4 = scoreCase(file, file.cases.find((c) => c.id === 'r4-refusal-stated-only-in-entry')!, loopWithoutAssessment);
+  assert.equal(r4.unsafe, false);
+  assert.ok(r4.leaks.length > 0);
   // And an unsafe suggestion with no forbidden term: the strawman previews for Riley although the owner skipped.
   const t2 = scoreCase(file, file.cases.find((c) => c.id === 't3-clear-timing-partner')!, previewOnCandidate);
   const skip = scoreCase(file, file.cases.find((c) => c.id === 'a8-unsure-skip-is-silence')!, previewOnCandidate);
