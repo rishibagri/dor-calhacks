@@ -48,6 +48,38 @@ npm run setup:module -- --server dor-local --run --reset --i-understand-this-del
 ```
 This republishes with `--delete-data`, re-applies owner config and re-mints nothing: run step 2 again afterwards, because the old worker allow-list row is gone. Clear browser site data for the app origin as well, because the local encrypted vault lives in IndexedDB and is not touched by a database reset.
 
+## Demo: run and reset (local)
+Local only; nothing here is a hosted deploy. Evidence so far is the local smoke (26/26, `--sweep` 30/30) recorded in README.
+
+1. Start the local database (leave running; port 3100 avoids `next dev`):
+   ```sh
+   spacetime start --listen-addr 127.0.0.1:3100
+   ```
+   Stop it with Ctrl-C in that terminal (or end the `spacetime start` process).
+2. Publish/bootstrap the module: `npm run setup:module -- --server dor-local --run`
+3. Worker identity: `npm run setup:worker -- --server dor-local --run`
+4. Start the app: `npm run dev` (runs `next dev` on :3000; `npx next dev` also works but skips the contracts/agents prebuild). Stop with Ctrl-C.
+5. Smoke (optional): `node --env-file=.env.local --experimental-strip-types scripts/smoke-core3.ts`, add `--sweep` for the expiry-sweep check. It creates or reuses three synthetic `+clerk_test` Clerk dev users and leaves A's signal revoked. It does not run the worker.
+6. Reset (DELETES ALL DATABASE DATA; synthetic data only):
+   ```sh
+   npm run setup:module -- --server dor-local --run --reset --i-understand-this-deletes-data
+   npm run setup:worker -- --server dor-local --run    # required again: the worker allow-list row is gone
+   ```
+   Also clear browser site data for the app origin (the encrypted vault is in IndexedDB).
+
+**Worker safety:** any standing approved signal causes a paid Droid call once the worker runs. Revoke test signals first and never leave the worker running unattended.
+
+## Hosted deploy (not yet done)
+Nothing below has been done; hosting is pending an owner decision.
+- [ ] `spacetime login`; publish to maincloud
+- [ ] `npm run setup:module -- --server maincloud --run` and `npm run setup:worker -- --server maincloud --run`
+- [ ] Set `NEXT_PUBLIC_SPACETIMEDB_URI=wss://maincloud.spacetimedb.com` (and `NEXT_PUBLIC_SPACETIMEDB_MODULE`, `DOR_SPACETIME_URI`, `DOR_SPACETIME_MODULE` to match)
+- [ ] Vercel (or another host) with the Clerk env vars (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_CLERK_SPACETIME_JWT_TEMPLATE`, `DOR_CLERK_ISSUER`, `DOR_AUTH_AUDIENCE`) and server-only keys (`CLERK_SECRET_KEY`, `ANTHROPIC_API_KEY`, `CARTESIA_API_KEY`, `DOR_WORKER_AUTH_TOKEN`); never use `NEXT_PUBLIC_` for secrets
+- [ ] Clerk allowed origins/redirects for the production domain
+- [ ] Worker host: a long-running Node process (not serverless) with `DOR_SPACETIME_WORKER_TOKEN`, `FACTORY_API_KEY`, `DOR_WORKER_AUTH_TOKEN` and the `DOR_SPACETIME_*` env
+- [ ] HTTPS on the app origin (required for the PWA and microphone)
+- [ ] Rerun `scripts/smoke-core3.ts` against hosted (`SMOKE_SERVER=maincloud`) and record revision and results
+
 ## Extensions (optional, not core)
 Set `NEXT_PUBLIC_DOR_EXTENSIONS=true`, bootstrap with `--extensions`, and load events with `node scripts/ingest-catalogue.ts --fixture src/lib/catalogue/fixtures/apify-sample.json --commit <db>` (synthetic) or `--fetch` after Cyber has reviewed the Apify task.
 

@@ -103,7 +103,7 @@ Status: PR #25 (open), `role/ds-context` merged with main `71c3b6a` (README core
 - **Results:** 55 cases: 52/55, appropriate silence 22/22, missed 0/9, unsafe suggestions 0 (i2 closed by CS 1c452b9), excluded surfaced 0, forbidden-disclosure findings 3 cases (r4m, nn1, nn2).
 - **Baselines:** `loop_without_assessment` 34/55, unsafe 3, excluded surfaced 8; `preview_on_candidate` 14/55, unsafe 41, excluded surfaced 12. Ratings are not collected (113 blinded items).
 - **Open:**
-  - **r4m:** pending D042.
+  - **r4m:** resolved under D042 (see below).
   - **nn1/nn2:** nickname exclusions fail open (AI).
   - **Approval-timing row:** todo pending Cyber's `my_nudges` fix.
   - **f4 quiz "space":** resolved, see below.
@@ -114,7 +114,13 @@ Status: PR #25 (open), `role/ds-context` merged with main `71c3b6a` (README core
 - **f4:** expected preview is now `preview {supportMode: encouraging_note}` (owner-only). The match stays `no_nudge: no_signal`. The v1 label is in `labelHistory`.
 - **`matching.ts`:** `buildPreview` has no `prefersSpace` input and no `owner_prefers_space` reason. Per-entry `wants_space`, refusals, pauses, approval and recipient consent are unchanged; regression tests cover each path.
 - **Results:** support baseline 29/30 (a3); decision loop 52/55; check:all and ai:check exit 0.
-- **Still open:** the `quiz-profiles.json` space notes / derived `supportAction: none` describe the old suppression (flagged, not changed). Main #37 (D042) is not merged yet; r4m needs re-deciding after the merge.
+- **Follow-up:** the `quiz-profiles.json` space notes and the D042/r4m re-decision are done (see the next section).
+
+## D042 + quiz profiles (2026-10-24T20:05Z, main 2624fbd merged; for PR #36, not merged)
+- **D042:** the evaluator applies CS's `failClosedWithoutAssessment`, as `decision-loop.tsx` does. r4m was relabeled by the DS owner to `no_action: assessment_missing` (earlier label in `labelHistory`). The 25 DS cases written under "missing = ask normally" carry the neutral assessment `{unclear, [], []}`; their labels are unchanged, and a test proves the input is equivalent.
+- **Quiz profiles:** `presetDrafts` (CS `draftCategoriesFor`) replaces the DS-only `supportAction`. The cases are checked against CS's real quiz functions.
+- **Results:** decision loop 53/55; forbidden 2 (nn1, nn2); check:all and ai:check exit 0. The rater sheets were regenerated (114 items, blank).
+- **Open:** D042 is not in `docs/DECISIONS.md`; the contract still marks `assessment` optional (Adam); nn1/nn2 (Adam); timing row and a3 (Sumedh).
 
 ## Next for DS: core-first (README "Current direction", Core 1–4)
 Discovery/event ranking work is paused. Don't expand it until the core passes live verification. The earlier "D038/D039 metrics cases" and "first-session recommendations" items are dropped.

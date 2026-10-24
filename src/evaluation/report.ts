@@ -141,7 +141,7 @@ ${nearbyCases.cases.map((c, i) => `| ${c.id} | ${nearby.map(s => {
 }).join(' | ')} |`).join('\n')}
 
 ## Core 1/2 decision loop (D040 assessment → CS decide()), ${scored.length} labeled cases (${scored.filter(x => (x.c as { reflectionRef?: string }).reflectionRef).length} from AI's reflection fixture)
-Pipeline (as CS's \`DecisionLoop\` composes it): \`initialLoopState(candidate, assessment)\` → owner steps; recipients → \`withoutPaused\` (D041) → \`applyUnnamedExclusionGuard\` → \`assessedRecipients\` → \`decide\`. AI fixture outputs are hand-written, not recorded Claude responses, so this measures the loop given an assessment, not Claude's accuracy.
+Pipeline (as CS's \`DecisionLoop\` composes it): \`initialLoopState(candidate, assessment)\` → \`failClosedWithoutAssessment\` (D042) → owner steps; recipients → \`withoutPaused\` (D041) → \`applyUnnamedExclusionGuard\` → \`assessedRecipients\` → \`decide\`. AI fixture outputs are hand-written, not recorded Claude responses, so this measures the loop given an assessment, not Claude's accuracy.
 
 | Metric | Actual |
 |---|---|
@@ -154,10 +154,10 @@ Pipeline (as CS's \`DecisionLoop\` composes it): \`initialLoopState(candidate, a
 
 | Case | Pair | Expected | Actual | Note |
 |---|---|---|---|---|
-${scored.map(({ c, s }) => `| ${c.id} | ${c.pair} | ${c.expected.kind}${c.expected.reason ? `: ${c.expected.reason}` : ''} | ${outcomeOf(s.outcome)}${s.leaks.length ? ` (**leak:** ${s.leaks.map(l => `${l.label}/${l.surface}`).join(', ')})` : ''} | ${s.matches ? '' : c.knownGap ? 'known gap' : '**mismatch**'}${(c as { labelHistory?: unknown[] }).labelHistory ? ' relabeled by DS owner (v1 label in labelHistory)' : ''} |`).join('\n')}
+${scored.map(({ c, s }) => `| ${c.id} | ${c.pair} | ${c.expected.kind}${c.expected.reason ? `: ${c.expected.reason}` : ''} | ${outcomeOf(s.outcome)}${s.leaks.length ? ` (**leak:** ${s.leaks.map(l => `${l.label}/${l.surface}`).join(', ')})` : ''} | ${s.matches ? '' : c.knownGap ? 'known gap' : '**mismatch**'}${(c as { labelHistory?: unknown[] }).labelHistory ? ' relabeled by DS owner (earlier label in labelHistory)' : ''} |`).join('\n')}
 
 ## Core 3: deterministic baselines vs the D040 loop (same ${decisions.cases.length} cases and DS labels)
-\`loop_without_assessment\` is CS's loop with the assessment dropped (the pre-D040 path); \`preview_on_candidate\` is DS's \`matching.ts\` \`buildPreview\` used as a "support match is enough" rule (previews for the picked or first connection, ignores space, skip, exclusions and the assessment). Excluded people are judged against the D040 episode for every system. Every system replays the same recorded owner taps; where D040 skipped the company question (\`wants_connection\`), the no-assessment loop stops at that question, so its missed suggestions in ${replayArtifacts.join(', ') || 'no case'} reflect the replayed taps rather than a design choice. Metrics stay separate: a forbidden disclosure is not counted as an unsafe suggestion or vice versa.
+\`loop_without_assessment\` is CS's loop with the assessment dropped and without the D042 fail-closed guard (the pre-D040 path, historical comparison only); \`preview_on_candidate\` is DS's \`matching.ts\` \`buildPreview\` used as a "support match is enough" rule (previews for the picked or first connection, ignores space, skip, exclusions and the assessment). Excluded people are judged against the D040 episode for every system. Every system replays the same recorded owner taps; where D040 skipped the company question (\`wants_connection\`), the no-assessment loop stops at that question, so its missed suggestions in ${replayArtifacts.join(', ') || 'no case'} reflect the replayed taps rather than a design choice. Metrics stay separate: a forbidden disclosure is not counted as an unsafe suggestion or vice versa.
 
 | System | Expected outcome | Appropriate silence | Missed suggestions | Unsafe suggestions | Excluded person surfaced (cases) | Forbidden disclosures (cases / terms) |
 |---|---|---|---|---|---|---|

@@ -1,6 +1,6 @@
 // DS quiz fixture checks (offline). Runs under `npm run test:app`.
 // The interpreter below is a test-only reading of quiz.json; the app mapping is CS's
-// buildProfile/buildQuizExtras, which must produce the same expected outputs.
+// buildProfile/buildQuizExtras/draftCategoriesFor, which are checked against the same expected outputs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -8,6 +8,7 @@ import {
   AgentAckSchema, ApprovedSignalSchema, DisclosureReceiptSchema, LocalConnectionProfileSchema,
   RecipientPresetAssignmentSchema, RelationshipPresetSchema,
 } from '@dor/contracts';
+import { buildProfile, buildQuizExtras, draftCategoriesFor } from '../../components/feature/quiz-model.ts';
 
 const load = async (name: string) => JSON.parse(await readFile(new URL(`../fixtures/${name}`, import.meta.url), 'utf8'));
 const quiz = await load('quiz.json');
@@ -52,7 +53,10 @@ function mapAnswers(answers: Record<string, unknown>) {
     scheduleSuggestions: oneOf('scheduleSuggestions', values(question('scheduleSuggestions')), a.scheduleSuggestions),
     reviewComfort: oneOf('reviewComfort', values(question('reviewComfort')), a.reviewComfort),
   };
-  return { profile, extras, supportAction: extras.prefersSpace ? 'none' : 'eligible' };
+  // Unsaved preset draft (CS draftCategoriesFor): support_preference only with a support mode. Space is not read.
+  const presetDrafts = profile.preferredSupportModes.length > 0 ? profile.draftSharingCategories
+    : profile.draftSharingCategories.filter((c) => c !== 'support_preference');
+  return { profile, extras, presetDrafts };
 }
 
 const wireSchemas = { ApprovedSignalSchema, RelationshipPresetSchema, RecipientPresetAssignmentSchema, AgentAckSchema, DisclosureReceiptSchema };
@@ -71,6 +75,14 @@ for (const c of profiles.cases) {
   test(`quiz case ${c.id} maps deterministically to profile + local extras`, () => {
     assert.deepEqual(mapAnswers(c.answers), c.expected);
     assert.deepEqual(mapAnswers(structuredClone(c.answers)), mapAnswers(c.answers));
+  });
+
+  test(`quiz case ${c.id} matches CS's buildProfile / buildQuizExtras / draftCategoriesFor`, () => {
+    const profile = buildProfile(c.answers);
+    assert.ok(profile.success);
+    assert.deepEqual(profile.data, c.expected.profile);
+    assert.deepEqual(buildQuizExtras(c.answers), c.expected.extras);
+    assert.deepEqual(draftCategoriesFor(null, profile.data).categories, c.expected.presetDrafts);
   });
 
   test(`quiz case ${c.id} output is not a consent or sharing record`, () => {
@@ -92,3 +104,29 @@ test('skip-all yields an empty profile with no draft categories', () => {
 for (const c of profiles.invalidAnswers) {
   test(`invalid quiz answers rejected (${c.rejectedBy}): ${c.id}`, () => assert.throws(() => mapAnswers(c.answers)));
 }
+
+// core3-audit.md item 3 (CS 427cd3f): quiz "space" adds no support suggestion to the drafts and nothing more.
+test('quiz space: no support draft without a mode, and a saved preset is never overridden', () => {
+  const space = profiles.cases.find((c: { id: string }) => c.id === 'space-only');
+  assert.equal(space.expected.extras.prefersSpace, true);
+  assert.ok(space.answers.categories.includes('support_preference'));
+  assert.deepEqual(space.expected.presetDrafts, []);
+  // A preset the owner already confirmed is the only thing that counts; the quiz cannot narrow or widen it.
+  const saved = { allowedCategories: ['support_preference' as const] };
+  assert.deepEqual(draftCategoriesFor(saved, space.expected.profile).categories, ['support_preference']);
+});
+
+test('quiz space alongside modes changes neither the profile nor the drafts', () => {
+  const withSpace = profiles.cases.find((c: { id: string }) => c.id === 'space-with-other-modes');
+  const without = { ...withSpace.answers, afterLongDay: withSpace.answers.afterLongDay.filter((v: string) => v !== 'space') };
+  const a = mapAnswers(withSpace.answers), b = mapAnswers(without);
+  assert.deepEqual(a.profile, b.profile);
+  assert.deepEqual(a.presetDrafts, b.presetDrafts);
+  assert.equal(a.extras.prefersSpace, true);
+  assert.equal(b.extras.prefersSpace, false);
+});
+
+test('quiz drafts are suggestions, not consent: no expected output is an approval, preset or assignment', () => {
+  for (const c of profiles.cases) for (const [name, schema] of Object.entries(wireSchemas))
+    assert.equal(schema.safeParse({ categories: c.expected.presetDrafts }).success, false, `${c.id} drafts parsed as ${name}`);
+});

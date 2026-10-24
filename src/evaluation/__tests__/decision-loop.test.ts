@@ -16,6 +16,8 @@ const raw = await json('../fixtures/decision-cases.json');
 const reflections = await json('../../agents/fixtures/reflection.synthetic.json');
 const file = resolveCases(raw, reflections);
 const byId = (id: string) => file.cases.find((c) => c.id === id)!;
+/** The neutral D040 assessment: the loop asks its normal questions (what a missing assessment meant before D042). */
+const NEUTRAL = { intent: 'unclear', excludedNames: [], preferredNames: [] };
 
 test('fixture: labels use the README vocabulary and every case covers a pair', () => {
   const kinds = new Set(['no_action', 'needs_clarification', 'ready_for_preview']);
@@ -52,8 +54,7 @@ for (const c of file.cases) {
 
 test('known gaps still fail as labeled (remove knownGap when this test breaks)', () => {
   const gaps = file.cases.filter((c) => c.knownGap);
-  assert.deepEqual(gaps.map((c) => c.id).sort(), ['nn1-nickname-alexander-excludes-alex', 'nn2-nickname-alex-excludes-alexander',
-    'r4m-refusal-in-entry-assessment-missing']);
+  assert.deepEqual(gaps.map((c) => c.id).sort(), ['nn1-nickname-alexander-excludes-alex', 'nn2-nickname-alex-excludes-alexander']);
   for (const c of gaps) assert.equal(scoreCase(file, c).matches, false, c.id);
 });
 
@@ -141,7 +142,7 @@ test('pause noninterference (D041): pausing a third person changes nothing about
   const steps = [{ company: 'company' as const }, { who: 'p-sam' }];
   const pause = { pairId: 'p-alex', version: 1, expiresAt: '2026-10-25T06:00:00Z', active: true, createdAt: '2026-10-24T17:00:00Z' };
   const run = (pauses: typeof pause[]) => {
-    const { outcome } = replay(file, 'SYNTHETIC: a short call with Sam would help.', { supportMode: 'short_call' }, ['p-sam', 'p-alex'], steps, null, pauses);
+    const { outcome } = replay(file, 'SYNTHETIC: a short call with Sam would help.', { supportMode: 'short_call' }, ['p-sam', 'p-alex'], steps, NEUTRAL, pauses);
     return JSON.stringify({ outcome, surfaces: surfacesOf(file, outcome) });
   };
   assert.equal(run([pause]), run([]));
@@ -180,5 +181,29 @@ test('per-entry space still ends in no_action (unaffected by the f4 quiz relabel
     assert.equal(s.outcome.kind, 'no_action', id);
     assert.equal(s.matches, true, id);
     assert.deepEqual(surfacesOf(file, s.outcome).recipient, [], id);
+  }
+});
+
+test('D042: a candidate without an assessment never reaches a question or a preview, at any step', () => {
+  const c = byId('r4m-refusal-in-entry-assessment-missing');
+  assert.equal(c.assessment, null);
+  for (const r of prefixes(c)) {
+    assert.deepEqual(r.outcome, { kind: 'no_action', reason: 'assessment_missing' });
+    assert.deepEqual(surfacesOf(file, r.outcome).offered, []);
+  }
+  // Same entry and taps with the assessment r4 carries: Alex is left out and Sam is asked about.
+  assert.equal(scoreCase(file, byId('r4-refusal-stated-only-in-entry')).outcome.kind, 'needs_clarification');
+  // Every candidate case with a missing assessment fails closed, whatever the owner taps.
+  for (const k of file.cases.filter((k) => k.assessment == null && k.candidate != null))
+    assert.equal(scoreCase(file, k).outcome.kind, 'no_action', k.id);
+});
+
+test('D042 neutral assessment reproduces the old "ask normally" path exactly', () => {
+  const neutral = file.cases.filter((c) => JSON.stringify(c.assessment) === JSON.stringify(NEUTRAL));
+  assert.ok(neutral.length >= 25, `${neutral.length}`); // 25 DS cases + AI reference cases that carry the same assessment
+  for (const c of neutral) {
+    const withNeutral = replay(file, c.story, c.candidate, c.recipients, c.steps, NEUTRAL, c.pauses).outcome;
+    const oldMissing = replay(file, c.story, c.candidate, c.recipients, c.steps, null, c.pauses, false).outcome;
+    assert.deepEqual(withNeutral, oldMissing, c.id);
   }
 });

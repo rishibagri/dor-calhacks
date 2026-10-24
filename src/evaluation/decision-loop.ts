@@ -18,7 +18,7 @@ import {
   previewDisclosure, type DisclosurePreview, type RelationshipPreset, type SignalCandidate,
 } from '@dor/contracts';
 import {
-  NO_ACTION_COPY, QUESTION_COPY, QUESTION_NOTE, answerCompany, answerWho, applyUnnamedExclusionGuard, decide, excludeForNow,
+  NO_ACTION_COPY, QUESTION_COPY, QUESTION_NOTE, answerCompany, answerWho, applyUnnamedExclusionGuard, decide, excludeForNow, failClosedWithoutAssessment,
   type CompanyAnswer, type LoopState, type Outcome, type Recipient,
 } from '../components/feature/decision-loop-model.ts';
 import { withoutPaused } from '../components/feature/pause-model.ts';
@@ -107,16 +107,19 @@ export function recipientsOf(file: DecisionFile, ids: readonly string[]): Recipi
 
 /**
  * Starts from a full PrivateReflection (the journal seam) so the story is present but must stay unread. Inputs the
- * contract rejects are passed through raw, so what is measured is the loop's own handling of them.
+ * contract rejects are passed through raw, so what is measured is the loop's own handling of them. Like CS's
+ * `DecisionLoop`, a candidate without an assessment fails closed (D042); `failClosed: false` is only for the
+ * pre-D040 comparison baseline.
  */
 export function replay(file: DecisionFile, story: string, candidate: unknown, recipientIds: readonly string[],
-  steps: readonly Step[], assessment: unknown = null, pauses: readonly RecipientPause[] = [],
+  steps: readonly Step[], assessment: unknown = null, pauses: readonly RecipientPause[] = [], failClosed = true,
 ): { state: LoopState; outcome: Outcome; excluded: string[] } {
   const reflection = PrivateReflectionSchema.safeParse({ schemaVersion: 1, reflection: story, candidate,
     ...(assessment === null ? {} : { assessment }) });
   const c = reflection.success ? reflection.data.candidate : (candidate as SignalCandidate | null);
   const a = reflection.success ? reflection.data.assessment : assessment;
   let s = initialLoopState(c, a);
+  if (failClosed) s = failClosedWithoutAssessment(s, a);
   for (const step of steps) {
     if ('company' in step) s = answerCompany(s, step.company);
     else if ('who' in step) s = answerWho(s, step.who);
