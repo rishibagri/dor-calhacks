@@ -5,7 +5,7 @@ import { spacetimedb } from '../schema';
 import { fail } from '../errors';
 import { otherMember, requireAccount } from '../guards';
 import { newId } from '../ids';
-import { fromMs, hex, loadStanding, toMs } from '../policy_state';
+import { fromMs, hex, loadStanding, toMs, pauseInForce } from '../policy_state';
 
 /**
  * C3 approval. Authoritative: a direct reducer call gets exactly the same checks as the API.
@@ -26,6 +26,9 @@ export const approve_signal = spacetimedb.reducer(
   },
   (ctx, args) => {
     requireAccount(ctx);
+    // D041: nothing can be approved for a counterpart the owner is pausing, not even a replayed request.
+    // Owner-only refusal: only the owner calls approve_signal, so this reveals nothing to the counterpart.
+    if (pauseInForce(ctx.db, ctx.sender, args.pair_id, toMs(ctx.timestamp))) fail('unauthorized', 'recipient_paused');
     // Idempotent retry (scoped to caller): never re-approve and never resurrect a revoked signal.
     const prior = [...ctx.db.approved_signal.sender_id.filter(ctx.sender)].find(s => s.client_request_id === args.client_request_id);
     if (prior) {

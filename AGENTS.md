@@ -39,7 +39,7 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 |---|---|---|
 | CS — you | role/cs-app (offline only): core-first separation (extensions hidden by default) + private decision loop before exact-recipient preview (docs/features/PRIVATE_DECISION_LOOP.md); R1–R3 code preserved | Core 3: publish/auth/worker config and two-account + denied-third run. Adam: assessment → LoopState seam. Sumedh: durable pause contract → CS controls |
 | DS — Nimisha | On main: DS-R0–R3 extension work (PRs #9/#13/#17/#25; `/discover` + `/events` consume DS rankers; offline/synthetic). PR #32 open: Core 1/2 decision-loop eval, now v2 through D040 (`initialLoopState` → `assessedRecipients` → `decide`): 44 labeled cases (19 from AI's reflection fixture), 42/44, appropriate silence 18/19, missed 0/8, 1 unsafe suggestion (i2), 1 forbidden-disclosure case (r4m), 0 excluded surfaced; r5 resolved to `no_action` | Adam + CS: missing-assessment refusal (r4m). CS: validate candidate in the loop (i2). Sumedh: labels vs D041 pause; a3. DS next: Core 3 ratings + baseline |
-| Cyber — Sumedh | role/cyber-privacy (on main 2b8e59b): CYBER-R3 guarded catalogue ingestion, C8 event intents (mutual-only overlap), C7 activity approvals (preset-only, off by default), D034 plan finalization with current-source rechecks, `EventPrivacyControls` + exact preview copy (D039). R2 merged (#18). Offline only: contracts 116, module 137, app 193, ai 104; flag off, not published | CS: ACK D039, bindings, ingestion → `upsert_catalogue_event`, preview copy, preset toggle. Adam: `commit_plan_proposal` from `worker_plan_candidates`. Nimisha: `event_companions`. Cyber next: CYBER-R4 adversarial suite |
+| Cyber — Sumedh | role/cyber-privacy (on main 126f072): **Core 2 D041 durable recipient pause** implemented offline: `pause_recipient` / `resume_recipient` / `my_recipient_pauses`, enforced at approve, worker view, commit (same refusal as revocation) and `my_nudges`; revokes pre-pause approvals so nothing resurrects. Reviews: #30 ACK (no leak), D040 ACK-with-conditions. check:all + ai:check green (keys stripped); 16/16 mutations | CS: bindings + pause controls/copy. Adam: no worker change; add 4 integration pause cases. Nimisha: paired pause evals. Cyber next: Core 3 live two-account + denied-third run |
 | AI — Adam | On main (#27): Droid SDK worker default, 25 s job budget, reflection dedupe, plan/intro extension paths. role/ai-voice (PR pending): **D040 private assessment**, i.e. Claude returns an owner-only `assessment` (intent + explicit name exclusions/preferences) that only narrows CS's decision loop (docs/features/PRIVATE_ASSESSMENT.md); doctor now requires FACTORY_API_KEY for the SDK default. Offline only | Cyber: durable pause per docs/features/RECIPIENT_PAUSE.md (D041). CS: review the DecisionLoop/journal wiring. DS: evaluate the assessment cases. Adam next: live Claude run on synthetic cases (needs key + go-ahead) |
 
 R0–R6 replace the old P-phase schedule without resetting code or the original deadline. Detailed shared phases are in README.md; per-owner phases in docs/roles/*.md; exact producer/consumer dependencies in docs/PLAN.md. These are current planning assignments, not completion evidence. Merge main into your active role branch; do not reset or force-update other roles.
@@ -374,3 +374,16 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **DS next:** Core 3: two teammate ratings, compared with the deterministic baseline.
 - **Run:** `node --test src/evaluation/__tests__/decision-loop.test.ts`; `node src/evaluation/report.ts --write`.
 - **Details:** `docs/updates/ds.md`, `docs/handoffs/ds.md`, `src/evaluation/results/latest.md`.
+
+### 2026-10-24T23:30Z | Cyber → CS, AI, DS | Core 2: D041 durable recipient pause (implemented offline) + #30/D040 reviews
+- **Interfaces:** `pause_recipient({pair_id, expires_at, expected_version})`, `resume_recipient({pair_id, expected_version})`, owner-only view `my_recipient_pauses {pair_id, version, expires_at, active, created_at}`.
+  - `approve_signal` refuses with `unauthorized: recipient_paused`.
+  - Paused signals are absent from `worker_signal_context`.
+  - `commit_nudge` refuses with `stale: revoked`; there is no new worker field.
+- **Guarantees:** owner-only, reason-free, 15 min to 30 days; pre-pause approvals are revoked, so nothing resurrects; silent to the counterpart; fail closed; expiry via the sweep.
+- **Reviews:** #30 ACK (no leak); D040 ACK with conditions (`src/privacy/REVIEWS.md`).
+- **Next:**
+  - CS: bindings and controls.
+  - Adam: integration cases only.
+  - Nimisha: paired evals.
+  - Details: `docs/handoffs/cyber.md`, `docs/features/RECIPIENT_PAUSE.md`.

@@ -1,6 +1,20 @@
 # Recipient pause — requirements for the Cyber contract
 
-**Owner of the design and implementation:** Sumedh (Cyber). **Requested by:** Adam (AI) and CS, for README Core 2. **Status:** requirements only, not implemented; proposed decision **D041** (Cyber to write). This page says what must hold and what other roles will consume. Sumedh chooses the schema, reducer and view names, and documents any deviation here.
+**Owner of the design and implementation:** Sumedh (Cyber). **Requested by:** Adam (AI) and CS, for README Core 2. **Status:** **implemented offline (D041)** on `role/cyber-privacy`; not published or live-verified. Exact names are below under "As implemented". This page says what must hold and what other roles will consume. Sumedh chooses the schema, reducer and view names, and documents any deviation here.
+
+## As implemented (D041, Cyber)
+
+| Piece | Name / shape |
+|---|---|
+| Table (private) | `recipient_pause {pause_id, owner (btree), pair_id, target, version u32, expires_at, resumed_at?, created_at, updated_at}`. One row per owner + pair. No reason or text field. |
+| Set / extend | `pause_recipient({pair_id: string, expires_at: ISO string, expected_version: u32})`. Pair member only; 15 min ≤ duration ≤ 30 days; `expected_version` = current `version` (0 for none). Revokes the owner's standing approvals in the pair, suppresses their nudges and revokes the owner's C7 activity approvals there. |
+| Resume | `resume_recipient({pair_id: string, expected_version: u32})`. Owner only; restores nothing. |
+| Owner view | `my_recipient_pauses → {pair_id, version, expires_at, active: bool, created_at}[]`. Join `pair_id` to `my_pairs` for the name. |
+| Errors (owner) | `not_found: pair`, `invalid: too_long` / `too_short` / `invalid_schema` / `pair_not_accepted`, `stale: pause version changed`, `not_found: pause` (resume with none); `approve_signal` while paused → `unauthorized: recipient_paused`. |
+| Worker | **Preferred design, no worker change.** Paused pairs' signals are absent from `worker_signal_context`; `commit_nudge` refuses a late pause with the same `stale: revoked` as a revoked approval, which `classifyCommitError` treats as `policy_denied`. No new worker-visible field. |
+| Expiry | `sweep_expired` marks lapsed pauses (`expired_record` key `pause:<id>:<version>`); views treat an unmarked lapsed pause as in force (fail closed) for at most one sweep interval. |
+
+Tests: `spacetimedb/tests/pause.test.ts` (19). Contract guards: `contracts/src/recipient-pause.ts` with `contracts/tests/recipient-pause.test.mjs` (7).
 
 ## Why
 
