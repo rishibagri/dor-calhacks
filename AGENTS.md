@@ -33,10 +33,10 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 
 | Role | Current status | Next handoff |
 |---|---|---|
-| CS | Planned | Auth, pair model, API skeleton |
-| DS | Planned | Three synthetic scenarios, evaluation fixtures |
-| Cyber | Planned | Policy validator and ownership tests |
-| AI | Planned | Voice adapter and candidate proposal |
+| CS | M1 merged (PR #1); D015 fixture/quiz fix on role/cs-app @ d6e9a6b, PR pending. Shell, SpacetimeDB module (16 harness tests), Clerk-JWT adapter written; nothing live yet | Logic/flow review (signal preview + approval loop) before API work; then publish module + live two-account smoke test |
+| DS | Planned | Build fixtures on updated `contracts/fixtures/scenarios.json` (each scenario now has `confirmedPreset` + `presetAssignment`; friends omits availability). Use quiz `prefersSpace` / empty `preferredSupportModes` as a no-action case. Ref: D015 |
+| Cyber | Planned | Review D015 fixture preset records (privacy boundary). Implement `VaultPort` in `src/vault/` incl. `saveQuizExtras`/`loadQuizExtras` (`src/lib/backend/ports.ts`). Policy guard inside `approve_signal` (`spacetimedb/src/reducers/signals.ts`). Review `spacetimedb/src/guards.ts`. Open questions in docs/handoffs/cs.md |
+| AI | Planned | Implement `ReflectionPort` (`src/lib/backend/ports.ts`) behind authenticated `POST /api/reflections` + voice session route. Note: friends `approvedSignal` fixture no longer has `availability` |
 
 ## Ownership and handoffs
 Use the ownership table in README.md. CS owns SpacetimeDB module plumbing; Cyber owns reusable authorization semantics and reviews the boundary. Shared contract edits need affected producer/consumer review. Before pausing or handing off, update docs/handoffs/<role>.md and your role log with branch/commit, exact interface, evidence, next consumer action and blocker. Refresh PROJECT_KNOWLEDGE.md after significant merges.
