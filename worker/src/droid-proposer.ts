@@ -1,0 +1,115 @@
+import { spawn as nodeSpawn } from 'node:child_process';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { z } from 'zod';
+import { ProviderError, type AckProposalInput, type AckProposerPort } from '@kinetic/agents';
+
+/** The only tool the Droid may use: a planning list with no file, shell, network or web access. */
+export const DROID_ALLOWED_TOOLS = ['TodoWrite'] as const;
+export const DEFAULT_DROID_MODEL = 'claude-opus-5-5';
+const MAX_STDOUT_BYTES = 64 * 1024;
+/** Variables the subprocess may inherit. Provider keys for Claude/Cartesia and worker secrets are withheld. */
+const INHERITED_ENV = ['PATH', 'HOME', 'USER', 'LOGNAME', 'SHELL', 'LANG', 'TMPDIR', 'XDG_CONFIG_HOME',
+  'FACTORY_API_KEY', 'HTTPS_PROXY', 'HTTP_PROXY', 'NO_PROXY', 'NODE_EXTRA_CA_CERTS'];
+
+const DroidExecResultSchema = z.object({
+  type: z.literal('result'), subtype: z.string(), is_error: z.boolean(), result: z.string(),
+});
+
+export interface DroidAckProposerOptions {
+  droidPath?: string;
+  model?: string;
+  reasoningEffort?: 'low' | 'medium' | 'high';
+  timeoutMs?: number;
+  /** Injection point for tests; defaults to node:child_process spawn. */
+  spawn?: typeof nodeSpawn;
+  env?: NodeJS.ProcessEnv;
+}
+
+/**
+ * Recipient agent backed by a headless `droid exec` run. It receives approved enums and pre-filtered options
+ * only, runs in an empty temporary directory, and its reply is untrusted input to the bounded coordinator.
+ */
+export class DroidAckProposer implements AckProposerPort {
+  constructor(private readonly options: DroidAckProposerOptions = {}) {}
+
+  async propose(input: AckProposalInput, _requestId: string): Promise<unknown> {
+    const sandbox = await mkdtemp(join(tmpdir(), 'kinetic-droid-'));
+    try {
+      const stdout = await this.exec(sandbox, buildAckPrompt(input));
+      let envelope;
+      try {
+        envelope = DroidExecResultSchema.parse(JSON.parse(stdout));
+      } catch {
+        throw new ProviderError('factory', 'invalid_output');
+      }
+      if (envelope.is_error || envelope.subtype !== 'success') throw new ProviderError('factory', 'unavailable');
+      return extractJsonObject(envelope.result);
+    } finally {
+      await rm(sandbox, { recursive: true, force: true });
+    }
+  }
+
+  /** Arguments for one run; exported shape is asserted in tests so the allowlist cannot silently widen. */
+  args(sandbox: string, prompt: string): string[] {
+    return ['exec', '--output-format', 'json', '--only-tools', DROID_ALLOWED_TOOLS.join(','), '--disable-builtin-skills',
+      '--model', this.options.model ?? DEFAULT_DROID_MODEL, '--reasoning-effort', this.options.reasoningEffort ?? 'low',
+      '--cwd', sandbox, prompt];
+  }
+
+  private exec(sandbox: string, prompt: string): Promise<string> {
+    const spawn = this.options.spawn ?? nodeSpawn;
+    const source = this.options.env ?? process.env;
+    const env = Object.fromEntries(INHERITED_ENV.flatMap(k => source[k] === undefined ? [] : [[k, source[k]!]]));
+    return new Promise((resolve, reject) => {
+      let stdout = '', bytes = 0, settled = false;
+      const child = spawn(this.options.droidPath ?? 'droid', this.args(sandbox, prompt),
+        { cwd: sandbox, env, stdio: ['ignore', 'pipe', 'pipe'] });
+      const settle = (error: ProviderError | null) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (error) reject(error); else resolve(stdout);
+      };
+      const kill = () => {
+        child.kill('SIGTERM');
+        setTimeout(() => child.kill('SIGKILL'), 1000).unref();
+      };
+      const timer = setTimeout(() => { kill(); settle(new ProviderError('factory', 'timeout')); },
+        this.options.timeoutMs ?? 8000);
+      child.stdout!.on('data', (chunk: Buffer) => {
+        bytes += chunk.length;
+        if (bytes > MAX_STDOUT_BYTES) { kill(); settle(new ProviderError('factory', 'invalid_output')); }
+        else stdout += chunk.toString('utf8');
+      });
+      // stderr is drained and discarded; it is never logged.
+      child.stderr!.resume();
+      child.on('error', () => settle(new ProviderError('factory', 'not_configured')));
+      child.on('close', code => settle(code === 0 ? null : new ProviderError('factory', 'unavailable')));
+    });
+  }
+}
+
+export function buildAckPrompt(input: AckProposalInput): string {
+  const options = input.options.map((o, i) => `${i}: ${JSON.stringify(o)}`).join('\n');
+  return [
+    input.round === 2 ? 'Your previous reply could not be used. Follow the reply format exactly.\n' : '',
+    'You are the recipient-side agent in Kinetic, one bounded coordination step. You see only what both people approved.',
+    'Pick the option that would be the gentlest, lowest-pressure way for the recipient to reach out, or decline if none fits.',
+    `Approved by the sender: ${JSON.stringify(input.approved)}`,
+    `Options the recipient already agreed to offer, most preferred first:\n${options}`,
+    'Reply with one JSON object and nothing else: {"decision":"compatible","optionIndex":N} or {"decision":"decline"}. Do not use tools.',
+  ].join('\n');
+}
+
+/** Pulls the outermost JSON object from model text; returns the raw text when none parses. */
+export function extractJsonObject(text: string): unknown {
+  const start = text.indexOf('{'), end = text.lastIndexOf('}');
+  if (start === -1 || end <= start) return text;
+  try {
+    return JSON.parse(text.slice(start, end + 1));
+  } catch {
+    return text;
+  }
+}

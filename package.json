@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "workspaces": [
-    "contracts"
+    "contracts",
+    "src/agents",
+    "worker"
   ],
   "engines": {
     "node": ">=20"
@@ -12,6 +14,9 @@
     "build": "npm run build -w @kinetic/contracts",
     "test": "npm run test -w @kinetic/contracts",
     "check": "npm run check -w @kinetic/contracts",
-    "contracts:schema": "npm run schema -w @kinetic/contracts"
+    "contracts:schema": "npm run schema -w @kinetic/contracts",
+    "ai:build": "npm run build -w @kinetic/contracts && npm run build -w @kinetic/agents && npm run build -w @kinetic/worker",
+    "ai:check": "npm run ai:build && npm test -w @kinetic/agents && npm test -w @kinetic/worker",
+    "ai:live": "npm run ai:build && npm run live -w @kinetic/agents && npm run live -w @kinetic/worker"
   }
 }

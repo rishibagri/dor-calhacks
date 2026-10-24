@@ -1,0 +1,21 @@
+{
+  "synthetic": true,
+  "source": "C4 bounded-coordination expectations over contracts/fixtures/scenarios.json. DS: extend with ranking cases; CS/Cyber: these are the inputs the worker expects from authoritative state.",
+  "preferences": {
+    "partners": { "schemaVersion": 1, "consentId": "partners-b-consent", "consentVersion": 1, "pairId": "partners-pair", "recipientId": "partners-b", "purpose": "support_nudge", "supportModes": ["short_call", "encouraging_note"], "availability": ["this_week"], "expiresAt": "2099-01-01T00:00:00Z", "revokedAt": null },
+    "friends": { "schemaVersion": 1, "consentId": "friends-b-consent", "consentVersion": 1, "pairId": "friends-pair", "recipientId": "friends-b", "purpose": "support_nudge", "supportModes": ["shared_activity"], "availability": ["today", "this_week"], "expiresAt": "2099-01-01T00:00:00Z", "revokedAt": null },
+    "family": { "schemaVersion": 1, "consentId": "family-b-consent", "consentVersion": 1, "pairId": "family-pair", "recipientId": "family-b", "purpose": "support_nudge", "supportModes": ["encouraging_note", "short_call"], "availability": [], "expiresAt": "2099-01-01T00:00:00Z", "revokedAt": null }
+  },
+  "cases": [
+    { "id": "partners-happy", "scenario": "partners", "proposer": [{ "decision": "compatible", "optionIndex": 0 }], "expect": { "outcome": "nudge_proposed", "decidedBy": "agent", "rounds": 1, "templateId": "offer_short_call", "options": [{ "supportMode": "short_call", "availability": "this_week" }] } },
+    { "id": "friends-happy", "scenario": "friends", "proposer": [{ "decision": "compatible", "optionIndex": 0 }], "expect": { "outcome": "nudge_proposed", "decidedBy": "agent", "rounds": 1, "templateId": "offer_shared_activity" } },
+    { "id": "family-happy", "scenario": "family", "proposer": [{ "decision": "compatible", "optionIndex": 0 }], "expect": { "outcome": "nudge_proposed", "decidedBy": "agent", "rounds": 1, "templateId": "offer_note", "options": [{ "supportMode": "encouraging_note" }] } },
+    { "id": "incompatible-mode", "scenario": "partners", "preferencesOverride": { "supportModes": ["shared_activity"] }, "proposer": [], "expect": { "outcome": "no_intersection", "rounds": 0, "proposerCalls": 0, "ack": "decline" } },
+    { "id": "recipient-declines", "scenario": "partners", "proposer": [{ "decision": "decline" }], "expect": { "outcome": "recipient_declined", "rounds": 1, "ack": "decline" } },
+    { "id": "proposer-garbage-then-fallback", "scenario": "partners", "proposer": [{ "decision": "compatible", "optionIndex": 7 }, { "decision": "compatible", "optionIndex": 0, "note": "extra field" }], "expect": { "outcome": "proposer_failed_fallback", "decidedBy": "fixed_template", "rounds": 2, "templateId": "offer_short_call" } },
+    { "id": "revoked-before-use", "scenario": "partners", "state": { "revoked": true }, "proposer": [], "expect": { "outcome": "policy_denied", "rounds": 0, "proposerCalls": 0 } },
+    { "id": "revoked-during-generation", "scenario": "partners", "revokeOnProposerCall": true, "proposer": [{ "decision": "compatible", "optionIndex": 0 }], "expect": { "outcome": "policy_denied", "rounds": 1, "nudge": false } },
+    { "id": "recipient-preferences-revoked", "scenario": "partners", "preferencesOverride": { "revokedAt": "2026-10-23T00:00:00Z" }, "proposer": [], "expect": { "outcome": "preferences_unavailable", "rounds": 0 } },
+    { "id": "cooldown", "scenario": "partners", "lastNudgeHoursAgo": 3, "proposer": [], "expect": { "outcome": "cooldown", "rounds": 0 } }
+  ]
+}
