@@ -31,7 +31,13 @@ const reviewOptions = [
   { value: 'quick_review' as const, label: 'A quick summary is enough' },
 ];
 
+// Keyed on lock state so a vault lock unmounts the form and drops in-memory answers.
 export default function OnboardingPage() {
+  const vault = useVault();
+  return <OnboardingForm key={vault.locked ? 'locked' : 'open'} />;
+}
+
+function OnboardingForm() {
   const vault = useVault();
   const [a, setA] = useState<QuizAnswers>(EMPTY_ANSWERS);
   const [message, setMessage] = useState<string | null>(null);
@@ -124,8 +130,16 @@ export default function OnboardingPage() {
         </CardContent>
       </Card>
       {!vaultReady && (
-        <Alert><AlertTitle>Vault pending (Cyber)</AlertTitle>
-          <AlertDescription>Saving is disabled; answers stay in memory only and are lost on reload.</AlertDescription></Alert>
+        vault.status.kind === 'live' ? (
+          <Alert><AlertTitle>Unlock your vault to save answers</AlertTitle>
+            <AlertDescription>
+              Answers stay on this device and are saved only after you unlock your vault on the{' '}
+              <Link href="/privacy" className="underline">Privacy page</Link>.
+            </AlertDescription></Alert>
+        ) : (
+          <Alert><AlertTitle>Private storage unavailable</AlertTitle>
+            <AlertDescription>Answers cannot be saved on this device right now.</AlertDescription></Alert>
+        )
       )}
       {message && <p role="status" className="text-sm text-foreground">{message}</p>}
       <div className="flex flex-wrap items-center gap-2">

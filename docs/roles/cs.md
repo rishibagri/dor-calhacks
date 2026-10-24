@@ -10,7 +10,7 @@ Application composition, identity, SpacetimeDB publishing/bindings, Apify ingest
 
 ## Already implemented — preserve it
 
-Pages, quiz and database adapter are implemented. The app composition root still selects placeholderVault and placeholderReflection. Bindings are placeholders. Cyber has now shipped the real vault, guarded approval, delivery and commit reducers; integrate those rather than reimplementing them.
+Pages, quiz and database adapter are implemented. The app composition root (`src/lib/backend/index.tsx`) now selects `openAccountVault` and `createReflectionClient` for signed-in users; placeholders remain only as signed-out/offline fallbacks. SpacetimeDB bindings are generated (`src/lib/spacetime/module_bindings`). Cyber has now shipped the real vault, guarded approval, delivery and commit reducers; integrate those rather than reimplementing them.
 
 ## Product reset
 

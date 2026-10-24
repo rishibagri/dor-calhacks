@@ -1,6 +1,7 @@
 import { spacetimedb, expiry_sweep } from '../schema';
 import { CATALOGUE_MAX_SOURCE_AGE_MS } from '@dor/contracts/policy';
 import { fail } from '../errors';
+import { isScheduledCall } from '../guards';
 import { expiryKey, hex, type ExpiryKind } from '../policy_state';
 
 /**
@@ -13,7 +14,8 @@ export const sweep_expired = spacetimedb.reducer(
   { onSchedule: expiry_sweep },
   { sweep: expiry_sweep.rowType },
   ctx => {
-    if (!ctx.senderAuth.isInternal) fail('unauthorized', 'scheduler only');
+    if (!isScheduledCall({ isInternal: ctx.senderAuth.isInternal, connectionId: ctx.connectionId,
+      sender: ctx.sender, databaseIdentity: ctx.databaseIdentity })) fail('unauthorized', 'scheduler only');
     const now = ctx.timestamp.microsSinceUnixEpoch;
     const mark = (kind: ExpiryKind, id: string, version: number) => {
       const record_key = expiryKey(kind, id, version);
