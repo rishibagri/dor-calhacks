@@ -22,6 +22,7 @@ import type {
   SharingCategory,
   SupportMode,
   Availability,
+  PrivateReflection,
 } from '@dor/contracts';
 
 export type { AgentAck, ApprovedSignal, DisclosureReceipt, LocalConnectionProfile, Nudge };
@@ -67,6 +68,9 @@ export interface SupportPreferencesView {
   expiresAt: string;
   revokedAt: string | null;
 }
+
+/** One of the caller's own approved signals (`my_signals`), with its revocation time if revoked. */
+export type SignalView = ApprovedSignal & { revokedAt: string | null };
 
 /** The caller's OWN delivery settings as a recipient in one pair (`my_nudge_delivery`, D017/D018). */
 export interface NudgeDeliveryView {
@@ -149,6 +153,7 @@ export interface SharedStatePort {
   myPresetAssignments(): RecipientPresetAssignment[]; // my_preset_assignments
   myNudges(): Nudge[]; // my_nudges
   myReceipts(): DisclosureReceipt[]; // my_receipts
+  mySignals(): SignalView[]; // my_signals (sender-only, D026); includes revoked rows
   mySupportPreferences(): SupportPreferencesView[]; // my_support_preferences
   myNudgeDelivery(): NudgeDeliveryView[]; // my_nudge_delivery
 
@@ -222,5 +227,6 @@ export interface VaultPort {
 /** Transient provider reflection via authenticated Next.js route (AI owns). */
 export interface ReflectionPort {
   readonly status: AdapterStatus;
-  reflect(selectedText: string, clientRequestId: string): Promise<{ reflection: string }>;
+  /** C1 (AI-owned contract): reflection text plus an owner-only candidate held in memory, never persisted. */
+  reflect(selectedText: string, clientRequestId: string, signal?: AbortSignal): Promise<PrivateReflection>;
 }

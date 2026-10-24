@@ -120,6 +120,15 @@ export const DiscoveryPublication = __t.object("DiscoveryPublication", {
 });
 export type DiscoveryPublication = __Infer<typeof DiscoveryPublication>;
 
+export const DiscoveryReport = __t.object("DiscoveryReport", {
+  reportId: __t.string(),
+  reporter: __t.identity(),
+  target: __t.identity(),
+  reason: __t.string(),
+  createdAt: __t.timestamp(),
+});
+export type DiscoveryReport = __Infer<typeof DiscoveryReport>;
+
 export const ExpiredRecord = __t.object("ExpiredRecord", {
   recordKey: __t.string(),
   kind: __t.string(),
@@ -132,6 +141,61 @@ export const ExpirySweep = __t.object("ExpirySweep", {
   scheduledAt: __t.scheduleAt(),
 });
 export type ExpirySweep = __Infer<typeof ExpirySweep>;
+
+export const Introduction = __t.object("Introduction", {
+  introId: __t.string(),
+  sender: __t.identity(),
+  recipient: __t.identity(),
+  clientRequestId: __t.string(),
+  senderRevision: __t.u32(),
+  senderName: __t.string(),
+  recipientName: __t.option(__t.string()),
+  sharedTags: __t.array(__t.string()),
+  status: __t.string(),
+  senderClosed: __t.bool(),
+  createdAt: __t.timestamp(),
+  expiresAt: __t.timestamp(),
+  respondedAt: __t.option(__t.timestamp()),
+});
+export type Introduction = __Infer<typeof Introduction>;
+
+export const IntroductionProposal = __t.object("IntroductionProposal", {
+  proposalId: __t.string(),
+  viewer: __t.identity(),
+  candidate: __t.identity(),
+  candidateRef: __t.string(),
+  viewerRevision: __t.u32(),
+  candidateRevision: __t.u32(),
+  reasonCode: __t.string(),
+  sharedTags: __t.array(__t.string()),
+  openerId: __t.string(),
+  decidedBy: __t.string(),
+  createdAt: __t.timestamp(),
+  expiresAt: __t.timestamp(),
+});
+export type IntroductionProposal = __Infer<typeof IntroductionProposal>;
+
+export const IntroductionProposalRow = __t.object("IntroductionProposalRow", {
+  proposalId: __t.string(),
+  candidateRef: __t.string(),
+  reasonCode: __t.string(),
+  sharedTags: __t.array(__t.string()),
+  openerId: __t.string(),
+  decidedBy: __t.string(),
+  expiresAt: __t.timestamp(),
+});
+export type IntroductionProposalRow = __Infer<typeof IntroductionProposalRow>;
+
+export const IntroductionRow = __t.object("IntroductionRow", {
+  introId: __t.string(),
+  direction: __t.string(),
+  status: __t.string(),
+  counterpartName: __t.option(__t.string()),
+  sharedTags: __t.array(__t.string()),
+  createdAt: __t.timestamp(),
+  expiresAt: __t.option(__t.timestamp()),
+});
+export type IntroductionRow = __Infer<typeof IntroductionRow>;
 
 export const Invite = __t.object("Invite", {
   token: __t.string(),
@@ -175,6 +239,12 @@ export const MyDiscoveryRow = __t.object("MyDiscoveryRow", {
   discoveryEnabled: __t.bool(),
 });
 export type MyDiscoveryRow = __Infer<typeof MyDiscoveryRow>;
+
+export const MyIntroductionProposals = __t.object("MyIntroductionProposals", {});
+export type MyIntroductionProposals = __Infer<typeof MyIntroductionProposals>;
+
+export const MyIntroductions = __t.object("MyIntroductions", {});
+export type MyIntroductions = __Infer<typeof MyIntroductions>;
 
 export const MyInvites = __t.object("MyInvites", {});
 export type MyInvites = __Infer<typeof MyInvites>;
@@ -270,6 +340,13 @@ export const PresetViewRow = __t.object("PresetViewRow", {
   revokedAt: __t.option(__t.timestamp()),
 });
 export type PresetViewRow = __Infer<typeof PresetViewRow>;
+
+export const RateWindow = __t.object("RateWindow", {
+  limitKey: __t.string(),
+  windowStart: __t.timestamp(),
+  count: __t.u32(),
+});
+export type RateWindow = __Infer<typeof RateWindow>;
 
 export const RelationshipPreset = __t.object("RelationshipPreset", {
   presetId: __t.string(),
