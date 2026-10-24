@@ -4,6 +4,7 @@ import { createLiveWorker } from './live.js';
 import { SpacetimeWorkerConnection, type LooseBuilder } from './spacetime/connection.js';
 import { spacetimeWorkerPorts } from './spacetime/adapters.js';
 import { SignalWatcher } from './watcher.js';
+import { PlanWatcher, runPlanJob } from './plans.js';
 
 /**
  * Worker process: one SpacetimeDB connection as the allow-listed worker identity, the bounded coordinator over
@@ -50,8 +51,18 @@ async function main(): Promise<void> {
     onOutcome: outcomes => { for (const o of outcomes) log('outcome', { outcome: o.outcome, rounds: o.rounds, decidedBy: o.decidedBy }); },
     onError: error => log('job_error', { code: error instanceof Error ? error.message.split(':')[0]!.slice(0, 40) : 'unknown' }),
   });
-  const timer = setInterval(() => { void watcher.sweep().catch(() => log('sweep_error')); },
-    numberEnv('DOR_WORKER_SWEEP_MS', 5000));
+  // Shared plans (D039) run only when the bindings carry worker_plan_candidates + commit_plan_proposal.
+  const clock = { now: () => new Date() };
+  const plans = connection.planCandidates ? new PlanWatcher(connection, {
+    run: basis => runPlanJob(basis, { source: connection, runner: worker.runner, clock }),
+    onOutcome: o => log('plan_outcome', { outcome: o.outcome, rounds: o.rounds, modelCalls: o.modelCalls, decidedBy: o.decidedBy }),
+    onError: error => log('plan_error', { code: error instanceof Error ? error.message.split(':')[0]!.slice(0, 40) : 'unknown' }),
+  }) : null;
+  log('plans', { enabled: plans ? 1 : 0 });
+  const timer = setInterval(() => {
+    void watcher.sweep().catch(() => log('sweep_error'));
+    void plans?.sweep().catch(() => log('plan_sweep_error'));
+  }, numberEnv('DOR_WORKER_SWEEP_MS', 5000));
 
   const server = createServer((req, res) => {
     if (req.method === 'GET' && req.url === '/healthz') {

@@ -138,3 +138,19 @@ test('Cartesia errors map to sanitized codes; missing key reports not_configured
     if (saved !== undefined) process.env.CARTESIA_API_KEY = saved;
   }
 });
+
+test('claude usage: metadata only, reported for success and for every failure path', async () => {
+  const seen = [];
+  const usage = { input_tokens: 812, output_tokens: 96, cache_read_input_tokens: 700 };
+  const ok = claudeStub(() => ({ stop_reason: 'end_turn', usage,
+    parsed_output: { reflection: 'SYNTHETIC reflection', candidate: { supportMode: 'short_call', availability: null } } }));
+  await new ClaudeReflectionAdapter({ client: ok.client, onUsage: u => seen.push(u) }).reflect('SYNTHETIC secret', 'req-1');
+  const cut = claudeStub(() => ({ stop_reason: 'max_tokens', usage, parsed_output: null }));
+  await assert.rejects(new ClaudeReflectionAdapter({ client: cut.client, onUsage: u => seen.push(u) }).reflect('SYNTHETIC', 'r'));
+  assert.deepEqual(seen.map(({ durationMs, ...rest }) => rest), [
+    { model: 'claude-opus-5-5', outcome: 'ok', candidate: true, inputTokens: 812, outputTokens: 96, cacheReadTokens: 700 },
+    { model: 'claude-opus-5-5', outcome: 'invalid_output', candidate: null, inputTokens: 812, outputTokens: 96, cacheReadTokens: 700 },
+  ]);
+  assert.ok(seen.every(u => Number.isInteger(u.durationMs)));
+  assert.doesNotMatch(JSON.stringify(seen), /SYNTHETIC|req-1/, 'no text or request IDs in usage');
+});

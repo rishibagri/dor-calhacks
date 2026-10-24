@@ -23,6 +23,20 @@ export interface ClaudeReflectionOptions {
   /** Per-call budget from AGENTS_PROTOCOL.md; the SDK retries once on transport failure. */
   timeoutMs?: number;
   client?: Anthropic;
+  /** Metadata-only usage per call (R4 cost/latency tracking): never text, prompts or identifiers. */
+  onUsage?: (usage: ReflectionUsage) => void;
+}
+
+export interface ReflectionUsage {
+  model: string;
+  durationMs: number;
+  /** `ok`, or the ProviderError code the call ended with. */
+  outcome: string;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  cacheReadTokens: number | null;
+  /** Whether the reply carried a draft candidate (a measure of usefulness, not content). */
+  candidate: boolean | null;
 }
 
 /**
@@ -39,10 +53,28 @@ export class ClaudeReflectionAdapter implements PrivateReflectionPort {
     const text = selectedText.trim();
     if (!text || text.length > MAX_SELECTED_TEXT_CHARS) throw new ProviderError('anthropic', 'invalid_input');
     const client = this.getClient();
+    const model = this.options.model ?? DEFAULT_REFLECTION_MODEL;
+    const started = Date.now();
+    let usage: Anthropic.Beta.BetaUsage | undefined;
+    const report = (outcome: string, candidate: boolean | null) => this.options.onUsage?.({ model, outcome, candidate,
+      durationMs: Date.now() - started, inputTokens: usage?.input_tokens ?? null, outputTokens: usage?.output_tokens ?? null,
+      cacheReadTokens: usage?.cache_read_input_tokens ?? null });
+    try {
+      const result = await this.call(client, model, text, u => { usage = u; });
+      report('ok', result.candidate !== null);
+      return result;
+    } catch (error) {
+      report(error instanceof ProviderError ? error.code : 'unknown', null);
+      throw error;
+    }
+  }
+
+  private async call(client: Anthropic, model: string, text: string, onUsage: (u: Anthropic.Beta.BetaUsage) => void):
+    Promise<PrivateReflection> {
     let response;
     try {
       response = await client.beta.messages.parse({
-        model: this.options.model ?? DEFAULT_REFLECTION_MODEL,
+        model,
         max_tokens: 16000,
         betas: ['server-side-fallback-2026-07-01'],
         fallbacks: 'default',
@@ -55,6 +87,7 @@ export class ClaudeReflectionAdapter implements PrivateReflectionPort {
       // Non-API failures here are output parsing errors from the structured-output helper.
       throw new ProviderError('anthropic', 'invalid_output');
     }
+    onUsage(response.usage);
     if (response.stop_reason === 'refusal') throw new ProviderError('anthropic', 'refused');
     if (response.stop_reason === 'max_tokens' || !response.parsed_output) throw new ProviderError('anthropic', 'invalid_output');
     return toPrivateReflection(response.parsed_output);

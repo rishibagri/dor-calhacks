@@ -4,6 +4,34 @@ Read `docs/roles/ai.md` and README **R0–R6** for current assignments. The hist
 
 ---
 
+# AI handoff — R2–R4 worker paths (2026-10-24 ~16:45Z)
+
+**Branch:** `role/ai-voice`, working tree on main `59f917e` (not yet committed or in a PR). **Status:** implemented and offline-verified only; no provider call, no published module.
+
+| Piece | Files | Evidence kind |
+|---|---|---|
+| Shared-plan worker: `worker_plan_candidates` → `PlanCoordinator` → `commit_plan_proposal` | `worker/src/plans.ts`, `worker/src/main.ts` | Real module in-process, 11 cases, 2 mutations caught |
+| Introduction commit: shortlist → `IntroductionCoordinator` → `commit_introduction_proposal` | `worker/src/introductions.ts` | Real reducer in-process, 6 cases (shortlist/eligibility synthetic), 2 mutations caught |
+| Aggregate job deadline (25 s, slot wait + rounds) | `worker/src/{droid-proposer,live}.ts` | Unit, 4 cases + integration fallback case |
+| Reflection in-flight dedupe + usage metadata | `src/agents/src/{http/routes,reflection/claude}.ts`, `src/app/api/reflections/route.ts` | Unit, 3 cases; app build |
+
+Checks: `ai:check` agents 67, worker 32, integration 36; `check:all` exit 0 (contracts 116, module 137, app 207 + 1 known todo); `build:app --webpack` OK.
+
+## Exact asks
+- **CS:** regenerate the client and worker bindings after D039, because the plan path stays disabled until `worker_plan_candidates` and `commit_plan_proposal` are present. Worker runbook additions are in `worker/README.md` (Shared plans, Job deadline).
+- **Sumedh:**
+  1. A worker-readable introduction source: a request view or table with the viewer ref/revision and ≤ 3 visible candidates. Alternatively, decide the app owns the trigger.
+  2. Confirm the per-event intent binding versus D034's per-person `intentVersion`.
+  3. Decide fallback on or off.
+- **Nimisha:** an importable `rankEvents` for `runPlanJob`.
+
+## Not done
+- Introductions are not wired into `main.ts` (no source).
+- `max_tokens` right-sizing and every live run wait for keys and the go-ahead.
+- Browser mic/TTS check.
+
+---
+
 # AI handoff — R1–R3 implementation (2026-10-24 ~06:10Z)
 
 **Branch:** `role/ai-voice` @ `ba354ef`+docs, based on main `4fe469a`. Pushed; not yet in a PR. **Status:** implemented and offline-verified only. No provider was called and no module is published. Budget used: B = 30 h from 05:45Z (deadline ≈ 11:45Z Oct 25).

@@ -54,10 +54,22 @@ Each benchmark ran 3 × (partners, friends, family, and a two-option friends cas
 
 Rows are mapped by `src/spacetime/rows.ts`, which accepts snake_case harness rows and camelCase generated rows, as well as tagged options. A row that does not map is dropped, so drift fails closed. `SpacetimeWorkerConnection` (`src/spacetime/connection.ts`) is the live source over generated client bindings.
 
-**Live wiring:** `createLiveWorker({ authToken, policyState, signals, preferences, delivery, commit, rank?, droid? })` builds Cyber's real `DisclosurePolicy` over `policyState`. It has no parameter for a policy object, so a fake cannot be wired in. It returns `{ handler, runJob, coordinator, close }`; `runJob` shares the handler's `JobLedger`.
+**Live wiring:** `createLiveWorker({ authToken, policyState, signals, preferences, delivery, commit, rank?, droid? })` builds Cyber's real `DisclosurePolicy` over `policyState`. It has no parameter for a policy object, so a fake cannot be wired in. It returns `{ handler, runJob, coordinator, runner, close }`; `runJob` shares the handler's `JobLedger`, and `runner` is the shared Droid slot pool for the plan and introduction paths.
+
+## Shared plans (AI-R3, D034/D039) — `src/plans.ts`
+`PlanWatcher` reads `worker_plan_candidates`, groups rows by basis (accepted introduction or pair with C7 approvals), and runs one `runPlanJob` per basis whose fingerprint (events, exact intent ids/versions, approvals) changed. `PlanCoordinator` makes 0 model calls for one usable event and at most 1 call + 1 repair for 2–3. It rechecks the same `(basis, event)` row with identical intents after generation, then commits through `commit_plan_proposal` with exactly those ids and versions. Plan IDs are stable per basis and event, so a restart re-commits as a no-op. `stale`/`not_found` refusals become `not_current`/`source_stale`; `invalid`, `worker only` and transport faults throw and are retried (≤ 3 attempts per fingerprint).
+
+D034's `PlanParticipant.intentVersion` is per person, while the module versions intents per event. Participants are therefore positional (`participant_a`/`participant_b`, as the view orders intents) with a constant version, and the exact per-event binding is done by the adapter recheck plus the reducer. The plan path is enabled only when the bindings carry both `worker_plan_candidates` and `commit_plan_proposal`; the current generated bindings predate D039, so CS must regenerate them.
+
+## Introductions (AI-R2, D033/D038) — `src/introductions.ts`
+`runIntroductionJob(shortlist, { source, runner, eligibility, clock })` runs `IntroductionCoordinator` and commits through `commit_introduction_proposal` into the viewer's private suggestions. A refusal is recorded as `stale`; `worker only` throws. While the D038 commit accepts `shared_interest` only, event overlap is stripped before any model call (`sameEventSupported: false`). **Not wired into `main.ts`:** the module has no worker-readable source of discovery shortlists and current eligibility yet (open ask to Cyber/CS).
+
+## Job deadline
+Every job gets one aggregate model budget (`jobDeadlineMs`/`deadlineMs`, default 25 s) covering slot wait and all rounds. Past it, `DroidRunner` fails the call with `timeout` without spawning, so the coordinator moves straight to its labeled fallback or no suggestion. A queued call leaves the queue at its deadline, so a released slot never goes to a job that has given up.
 
 ## Process (`src/main.ts`, `npm start -w @dor/worker`)
 - One SpacetimeDB connection as the worker identity, plus `SignalWatcher`: every `DOR_WORKER_SWEEP_MS` (default 5 s) it starts one job per newly visible approved signal, with `requestId = signalId`. Nudge IDs are therefore stable across restarts, `commit_nudge` dedupes them, and the cooldown pre-check skips Droid for a pair it already nudged.
+- `PlanWatcher` on the same interval when the bindings include the plan view and reducer (`plans` log line says whether it is enabled).
 - `POST /jobs` (above) and `GET /healthz`. Logs are JSON codes and counts only.
 - Env: `DOR_WORKER_AUTH_TOKEN`, `DOR_SPACETIME_URI`, `DOR_SPACETIME_MODULE`, `DOR_SPACETIME_WORKER_TOKEN`, `PORT`, `DOR_DROID_{MODEL,PATH,TIMEOUT_MS,CONCURRENCY}`, `FACTORY_API_KEY`.
 - **Refuses to start** until the module is published and bindings are generated into `src/module_bindings` (`spacetime generate --lang typescript --out-dir worker/src/module_bindings --module-path spacetimedb`). The admin then runs `set_worker_identity` for the worker token's identity.
