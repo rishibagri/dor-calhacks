@@ -37,6 +37,7 @@ import {
 import AcceptPairInviteReducer from "./accept_pair_invite_reducer";
 import ApproveActivityInterestReducer from "./approve_activity_interest_reducer";
 import ApproveSignalReducer from "./approve_signal_reducer";
+import ApproveSignalStandingReducer from "./approve_signal_standing_reducer";
 import AssignRelationshipPresetReducer from "./assign_relationship_preset_reducer";
 import BlockDiscoveryUserReducer from "./block_discovery_user_reducer";
 import BlockIntroductionParticipantReducer from "./block_introduction_participant_reducer";
@@ -61,6 +62,7 @@ import RevisePlanProposalReducer from "./revise_plan_proposal_reducer";
 import RevokeActivityInterestReducer from "./revoke_activity_interest_reducer";
 import RevokeEventIntentReducer from "./revoke_event_intent_reducer";
 import RevokeSignalReducer from "./revoke_signal_reducer";
+import RevokeStandingConsentReducer from "./revoke_standing_consent_reducer";
 import RevokeSupportPreferencesReducer from "./revoke_support_preferences_reducer";
 import SendIntroductionRequestReducer from "./send_introduction_request_reducer";
 import SetAuthAudienceReducer from "./set_auth_audience_reducer";
@@ -70,6 +72,7 @@ import SetDiscoveryConfigReducer from "./set_discovery_config_reducer";
 import SetDiscoveryPageReducer from "./set_discovery_page_reducer";
 import SetNudgeDeliveryReducer from "./set_nudge_delivery_reducer";
 import SetRelationshipPresetReducer from "./set_relationship_preset_reducer";
+import SetStandingConsentReducer from "./set_standing_consent_reducer";
 import SetSupportPreferencesReducer from "./set_support_preferences_reducer";
 import SetWorkerIdentityReducer from "./set_worker_identity_reducer";
 import SnoozeNudgeReducer from "./snooze_nudge_reducer";
@@ -100,6 +103,7 @@ import MyPresetsRow from "./my_presets_table";
 import MyReceiptsRow from "./my_receipts_table";
 import MyRecipientPausesRow from "./my_recipient_pauses_table";
 import MySignalsRow from "./my_signals_table";
+import MyStandingConsentsRow from "./my_standing_consents_table";
 import MySupportPreferencesRow from "./my_support_preferences_table";
 import WorkerDeliveryRow from "./worker_delivery_table";
 import WorkerPlanCandidatesRow from "./worker_plan_candidates_table";
@@ -250,6 +254,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MySignalsRow),
+  myStandingConsents: __table({
+    name: 'my_standing_consents',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyStandingConsentsRow),
   mySupportPreferences: __table({
     name: 'my_support_preferences',
     indexes: [
@@ -292,6 +303,7 @@ const reducersSchema = __reducers(
   __reducerSchema("accept_pair_invite", AcceptPairInviteReducer),
   __reducerSchema("approve_activity_interest", ApproveActivityInterestReducer),
   __reducerSchema("approve_signal", ApproveSignalReducer),
+  __reducerSchema("approve_signal_standing", ApproveSignalStandingReducer),
   __reducerSchema("assign_relationship_preset", AssignRelationshipPresetReducer),
   __reducerSchema("block_discovery_user", BlockDiscoveryUserReducer),
   __reducerSchema("block_introduction_participant", BlockIntroductionParticipantReducer),
@@ -316,6 +328,7 @@ const reducersSchema = __reducers(
   __reducerSchema("revoke_activity_interest", RevokeActivityInterestReducer),
   __reducerSchema("revoke_event_intent", RevokeEventIntentReducer),
   __reducerSchema("revoke_signal", RevokeSignalReducer),
+  __reducerSchema("revoke_standing_consent", RevokeStandingConsentReducer),
   __reducerSchema("revoke_support_preferences", RevokeSupportPreferencesReducer),
   __reducerSchema("send_introduction_request", SendIntroductionRequestReducer),
   __reducerSchema("set_auth_audience", SetAuthAudienceReducer),
@@ -325,6 +338,7 @@ const reducersSchema = __reducers(
   __reducerSchema("set_discovery_page", SetDiscoveryPageReducer),
   __reducerSchema("set_nudge_delivery", SetNudgeDeliveryReducer),
   __reducerSchema("set_relationship_preset", SetRelationshipPresetReducer),
+  __reducerSchema("set_standing_consent", SetStandingConsentReducer),
   __reducerSchema("set_support_preferences", SetSupportPreferencesReducer),
   __reducerSchema("set_worker_identity", SetWorkerIdentityReducer),
   __reducerSchema("snooze_nudge", SnoozeNudgeReducer),
@@ -379,6 +393,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_recipient_pauses": Omit<typeof tablesSchema.schemaType.tables["myRecipientPauses"], "accessorName"> & { readonly accessorName: "my_recipient_pauses" };
     /** @deprecated Use `mySignals` instead. This alias will be removed in the next major version. */
     readonly "my_signals": Omit<typeof tablesSchema.schemaType.tables["mySignals"], "accessorName"> & { readonly accessorName: "my_signals" };
+    /** @deprecated Use `myStandingConsents` instead. This alias will be removed in the next major version. */
+    readonly "my_standing_consents": Omit<typeof tablesSchema.schemaType.tables["myStandingConsents"], "accessorName"> & { readonly accessorName: "my_standing_consents" };
     /** @deprecated Use `mySupportPreferences` instead. This alias will be removed in the next major version. */
     readonly "my_support_preferences": Omit<typeof tablesSchema.schemaType.tables["mySupportPreferences"], "accessorName"> & { readonly accessorName: "my_support_preferences" };
     /** @deprecated Use `workerDelivery` instead. This alias will be removed in the next major version. */
@@ -427,6 +443,7 @@ const tableAccessorAliases = {
   "my_receipts": "myReceipts",
   "my_recipient_pauses": "myRecipientPauses",
   "my_signals": "mySignals",
+  "my_standing_consents": "myStandingConsents",
   "my_support_preferences": "mySupportPreferences",
   "worker_delivery": "workerDelivery",
   "worker_plan_candidates": "workerPlanCandidates",
@@ -492,6 +509,8 @@ export type DbView = __DbViewBase & {
   readonly "my_recipient_pauses": __DbViewBase["myRecipientPauses"];
   /** @deprecated Use `mySignals` instead. This alias will be removed in the next major version. */
   readonly "my_signals": __DbViewBase["mySignals"];
+  /** @deprecated Use `myStandingConsents` instead. This alias will be removed in the next major version. */
+  readonly "my_standing_consents": __DbViewBase["myStandingConsents"];
   /** @deprecated Use `mySupportPreferences` instead. This alias will be removed in the next major version. */
   readonly "my_support_preferences": __DbViewBase["mySupportPreferences"];
   /** @deprecated Use `workerDelivery` instead. This alias will be removed in the next major version. */
@@ -546,6 +565,8 @@ export type Tables = __TablesBase & {
   readonly "my_recipient_pauses": __TablesBase["myRecipientPauses"];
   /** @deprecated Use `mySignals` instead. This alias will be removed in the next major version. */
   readonly "my_signals": __TablesBase["mySignals"];
+  /** @deprecated Use `myStandingConsents` instead. This alias will be removed in the next major version. */
+  readonly "my_standing_consents": __TablesBase["myStandingConsents"];
   /** @deprecated Use `mySupportPreferences` instead. This alias will be removed in the next major version. */
   readonly "my_support_preferences": __TablesBase["mySupportPreferences"];
   /** @deprecated Use `workerDelivery` instead. This alias will be removed in the next major version. */

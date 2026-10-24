@@ -1,4 +1,4 @@
-import { connectedCounterparts, findAssignment, findPreset, findPublicationRow, pairsOf, pauseInForce } from './policy_state';
+import { connectedCounterparts, findAssignment, findPreset, findPublicationRow, pairsOf, pauseInForce, standingApprovalStands, toStandingState } from './policy_state';
 import { t } from 'spacetimedb/server';
 import { Timestamp, type Identity } from 'spacetimedb';
 import {
@@ -130,6 +130,7 @@ function nudgeSourcesStand(db: ReadDb, n: { pair_id: string; source_signal_ids: 
     if (!s || s.pair_id !== n.pair_id || s.consent_version !== n.source_consent_versions[i]) return false;
     if (signalExpiredMarked(db, id)) return false;
     if (pauseInForce(db, s.sender_id, s.pair_id, null)) return false; // D041: the sender is pausing this person
+    if (!standingApprovalStands(db, id, null)) return false; // D044: the approving rule no longer stands
     return guardSignalStanding(toStoredSignal(s), loadStanding(db, s.sender_id, s.pair_id), hex(viewer)).allowed;
   });
 }
@@ -222,6 +223,7 @@ export const worker_signal_context = spacetimedb.view(
     return [...ctx.db.approved_signal.iter()]
       .filter(s => !s.revoked_at && !signalExpiredMarked(ctx.db, s.signal_id) &&
         !pauseInForce(ctx.db, s.sender_id, s.pair_id, null) && // D041: paused pairs' signals are not presented
+        standingApprovalStands(ctx.db, s.signal_id, null) && // D044: automatic approvals only while their rule stands
         guardSignalStanding(toStoredSignal(s), loadStanding(ctx.db, s.sender_id, s.pair_id)).allowed)
       .flatMap(s => {
         const p = ctx.db.pair.pair_id.find(s.pair_id);
@@ -628,4 +630,24 @@ export const my_recipient_pauses = spacetimedb.view(
     pair_id: p.pair_id, version: p.version, expires_at: p.expires_at, created_at: p.created_at,
     active: pauseInForce(ctx.db, ctx.sender, p.pair_id, null),
   }))
+);
+
+// ---- D044 automatic nudges (owner only) ----
+
+const myStandingRow = t.row('MyStandingConsentRow', {
+  pair_id: t.string(), categories: t.array(t.string()), version: t.u32(), expires_at: t.timestamp(), active: t.bool(), created_at: t.timestamp(),
+});
+
+/**
+ * The caller's own standing rules: which pair, which categories, until when, and whether it still stands. `version` is
+ * what set_standing_consent takes as expected_version and approve_signal_standing as rule_version. The recipient and
+ * everyone else have no view of this table.
+ */
+export const my_standing_consents = spacetimedb.view(
+  { name: 'my_standing_consents', public: true }, t.array(myStandingRow),
+  ctx => [...ctx.db.standing_consent.owner.filter(ctx.sender)].map(r => {
+    const st = toStandingState(ctx.db, r);
+    return { pair_id: r.pair_id, categories: r.categories, version: r.version, expires_at: r.expires_at, created_at: r.created_at,
+      active: st.revokedAtMs === null && !st.expiredMarked };
+  })
 );

@@ -1,4 +1,4 @@
-// a3 (proposed D044): the server-minted signal id shape. Helper only; not enforced anywhere yet.
+// a3 (proposed D047): the server-minted signal id shape. Helper only; not enforced anywhere yet.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { isServerMintedId } from '../dist/index.js';
