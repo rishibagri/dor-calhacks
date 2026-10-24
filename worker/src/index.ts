@@ -5,8 +5,9 @@ export { runCoordinationJob, InvalidJobError, JobConflictError, JobLedger, type 
 export { createJobRequestHandler } from './server.js';
 export { createLiveWorker, type LiveWorkerConfig } from './live.js';
 export { type CommitRejection } from './jobs.js';
-export { SpacetimeCommit, SpacetimeDeliveryState, SpacetimePolicyStateReader, SpacetimeRecipientPreferences, SpacetimeSignalSource, classifyCommitError, spacetimeWorkerPorts, type CommitNudgeArgs,
+export { SpacetimeCommit, SpacetimeDeliveryState, SpacetimePolicyStateReader, SpacetimeSignalSource,
+  SpacetimeRecipientPreferences, UnavailableRecipientPreferences, classifyCommitError, spacetimeWorkerPorts, type CommitNudgeArgs,
   type WorkerStateSource } from './spacetime/adapters.js';
 export { SpacetimeWorkerConnection, WORKER_VIEWS, type SpacetimeWorkerOptions } from './spacetime/connection.js';
-export { toApprovedSignal, toDeliveryContext, toPreferences, toSignalContext, mapRows, RowShapeError } from './spacetime/rows.js';
+export { toApprovedSignal, toDeliveryContext, toSignalContext, toSupportPreferences, mapRows, RowShapeError } from './spacetime/rows.js';
 export { SignalWatcher, type SignalWatcherOptions } from './watcher.js';

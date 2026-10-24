@@ -153,3 +153,16 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - No rate limits yet.
   - Discovery is off until the C8 ACKs.
   - Introductions, report and limits are CYBER-R2.
+
+### 2026-10-24T08:30Z | Cyber → AI, CS | Merged main (AI PR #11); worker wired to recipient consent
+- **What changed:**
+  - Resolved the `docs/DECISIONS.md` conflict: main's D033/D034 are kept verbatim and D035 is appended after them.
+  - With the user's approval, edited Adam's worker adapter so the worker reads `worker_support_preferences` and passes `recipient_consent_id/version` from the compatible `AgentAck` into `commit_nudge`.
+  - The integration tests now use real consent recorded through `set_support_preferences`.
+- **Compatibility:** `supportPreferences()` on `WorkerStateSource` is optional (missing means no consent, fail closed). The `spacetimeWorkerPorts` override parameter and `UnavailableRecipientPreferences` are kept.
+- **Evidence:**
+  - `check:all` exit 0: contracts 95, module 84, app 147.
+  - `ai:check` exit 0: agents 64, worker 21, integration 17.
+  - Integration tests type-check with 0 errors.
+  - `next build` ok; audit 0.
+- **Adam:** review `worker/src/spacetime/adapters.ts`. **CS:** generated bindings must include the new view and the new `commit_nudge` args.

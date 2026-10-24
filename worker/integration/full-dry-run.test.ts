@@ -1,7 +1,7 @@
 // FULL AI DRY RUN across the three Kinetic experiences. Prints a step trace labeled by evidence kind:
 //   module    = the real SpacetimeDB module (Cyber/CS reducers, views, guards) running in-process
 //   real      = production AI code (route handler, coordinators, worker adapters, LocalVault)
-//   synthetic = a labeled stand-in (accounts, provider replies, C8/C7 eligibility that has no module state yet)
+//   synthetic = a labeled stand-in (accounts, provider replies, C8/C7 state that has no module yet)
 //   live      = a real provider call (opt-in: KINETIC_DRYRUN_LIVE_CLAUDE=1, KINETIC_DRYRUN_LIVE_DROID=1; costs credits)
 // Offline by default. Not a published module, deployed worker or browser run.
 // KINETIC_DRYRUN_REPORT=<path> also writes the trace as Markdown.
@@ -72,9 +72,10 @@ function relationshipWorld(kind: 'partner' | 'friend' | 'family', cats: string[]
   w.h.withReducerTx(w.admin, ctx => mod.set_worker_identity(ctx, { worker: workerId, enabled: true }));
   w.call(w.bob, ctx => mod.set_nudge_delivery(ctx, { pair_id: pairId, opted_in: true, quiet_start_minute: undefined,
     quiet_end_minute: undefined, utc_offset_minutes: 0 }));
-  return { w, pairId, worker };
+  grantPrefs(w, w.bob, pairId, ['short_call', 'encouraging_note'], ['today', 'this_week']); // Bob's own consent (D035)
+  const bobHex = w.h.withReducerTx(w.bob, ctx => ctx.sender.toHexString());
+  return { w, pairId, worker, bobHex };
 }
-
 
 async function reflect(journey: string, caseId: string) {
   const fixture = reflectionFixtures.cases.find(c => c.id === caseId)!;
@@ -107,16 +108,13 @@ describe('full AI dry run', () => {
     const J = 'partner';
     const reply = await reflect(J, 'partners-exam');
     const candidate = await persistLocally(J, reply) as { supportMode?: string; availability?: string };
-    const { w, pairId, worker } = relationshipWorld('partner', ['support_preference', 'coarse_availability']);
+    const { w, pairId, worker, bobHex } = relationshipWorld('partner', ['support_preference', 'coarse_availability']);
     const signal = await step(J, 'owner approves the exact preview (approve_signal)', ['module', 'synthetic'], () => {
       const args = approveArgs(w, w.alice, pairId, { support_mode: candidate.supportMode!, availability: candidate.availability! }, 'dry-p');
       w.call(w.alice, ctx => mod.approve_signal(ctx, args));
       return allSignals(w).find(s => s.client_request_id === 'dry-p')!;
     }, s => `signal ${s.support_mode}/${s.availability}`);
 
-    await step(J, 'recipient records support-preference consent (set_support_preferences)', ['module', 'synthetic'],
-      () => grantPrefs(w, w.bob, pairId, ['short_call', 'encouraging_note'], ['today', 'this_week']),
-      r => `consent v${r.consent_version}: ${r.support_modes.join(',')}`);
     const runner = scriptedRunner(['{"decision":"compatible","optionIndex":0}']);
     const live = createLiveWorker({ authToken: 'synthetic-worker-token-0123456789abcdef',
       ...spacetimeWorkerPorts(harnessSource(w, worker)),
@@ -140,8 +138,7 @@ describe('full AI dry run', () => {
 
   it('friend: availability-only reflection → no nudge and zero model calls', async () => {
     const J = 'friend';
-    const { w, pairId, worker } = relationshipWorld('friend', ['support_preference', 'coarse_availability']);
-    grantPrefs(w, w.bob, pairId, ['short_call', 'encouraging_note'], ['today', 'this_week']);
+    const { w, pairId, worker, bobHex } = relationshipWorld('friend', ['support_preference', 'coarse_availability']);
     await step(J, 'owner approves availability only', ['module', 'synthetic'], () => {
       const args = approveArgs(w, w.alice, pairId, { availability: 'today' }, 'dry-f');
       w.call(w.alice, ctx => mod.approve_signal(ctx, args));

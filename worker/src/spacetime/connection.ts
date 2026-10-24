@@ -46,7 +46,7 @@ export interface SpacetimeWorkerOptions {
 }
 
 /**
- * Live WorkerStateSource: one connection subscribed to the two worker-only views. Reads come from the
+ * Live WorkerStateSource: one connection subscribed to the worker-only views. Reads come from the
  * subscription cache, which the server keeps current; they are advisory because commit_nudge rechecks every
  * guard in its own transaction. Commits go through the reducer and surface its `code: reason` refusal.
  */

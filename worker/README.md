@@ -42,15 +42,15 @@ Each benchmark ran 3 × (partners, friends, family, and a two-option friends cas
 `runCoordinationJob(job, deps)` keeps only schema-valid envelopes from the job's pair whose IDs were requested, coordinates, then calls `commit.commit(result, job)`.
 
 ## Database-backed adapters (AI-R1)
-`spacetimeWorkerPorts(source)` (`src/spacetime/adapters.ts`) builds every port `createLiveWorker` needs from one `WorkerStateSource`. That source is three reads plus one call, made as the allow-listed worker identity:
+`spacetimeWorkerPorts(source, preferences?)` (`src/spacetime/adapters.ts`) builds every port `createLiveWorker` needs from one `WorkerStateSource`. That source is three reads plus one call, made as the allow-listed worker identity:
 
 | Port | Backed by | Behavior |
 |---|---|---|
 | `policyState` (`PolicyStateReader`) | `worker_signal_context` view | Mirrors `policy_state.ts`; Cyber's real `DisclosurePolicy` runs over it |
 | `signals` (`ApprovedSignalSource`) | `worker_signal_context` view | Envelopes come from the view, never from the job request |
 | `delivery` (`DeliveryStatePort`) | `worker_delivery` view | No row means not opted in (D017) |
-| `preferences` (`RecipientPreferencesPort`) | `worker_support_preferences` view (D035) | No row means no consent: `preferences_unavailable`, 0 model calls |
-| `commit` (`CoordinationCommitPort`) | `commit_nudge` reducer | Sends the compatible ACK's `recipient_consent_id/version`, so a consent edit or revoke during generation is refused. Guard refusals (`stale`, `quiet_hours`, `cooldown`, …) become recorded outcomes; transport faults and `worker only` throw so the job retries |
+| `commit` (`CoordinationCommitPort`) | `commit_nudge` reducer | Binds `recipient_consent_id/version` from the compatible `AgentAck` (D035); a nudge without one is refused locally. Guard refusals (`stale`, `quiet_hours`, `cooldown`, …) become recorded outcomes; transport faults and `worker only` throw so the job retries |
+| `preferences` (`RecipientPreferencesPort`) | `worker_support_preferences` view (D035) | `SpacetimeRecipientPreferences`: the recipient's own consent recorded via `set_support_preferences`. No row, or a source without `supportPreferences()`, means no consent: no nudge, 0 model calls |
 
 Rows are mapped by `src/spacetime/rows.ts`, which accepts snake_case harness rows and camelCase generated rows, as well as tagged options. A row that does not map is dropped, so drift fails closed. `SpacetimeWorkerConnection` (`src/spacetime/connection.ts`) is the live source over generated client bindings.
 

@@ -27,7 +27,7 @@ Malformed/free-text/nested candidate (`invalid_schema`); wrong recipient; pendin
 
 ## Not yet decided / not implemented
 - Module wiring (role/cyber-privacy, offline harness only, not published): `approve_signal`, `set_nudge_delivery`, `set_support_preferences`/`revoke_support_preferences`, `set_worker_identity`, `commit_nudge`, `sweep_expired` and the worker views are implemented. The module imports `@kinetic/contracts/policy`, which has no Zod; whether the `spacetime` CLI bundler resolves it is untested until publish.
-- Recipient support-preferences consent (D021 `RecipientSupportPreferences`) has no authoritative table yet; live coordination stays fail-closed (REVIEWS.md D021 #4).
+- Recipient support-preferences consent (D021 `RecipientSupportPreferences`) is stored in the recipient-owned `support_preference` table and bound into `commit_nudge` (D035; offline harness only).
 - Coordination outcomes and ACKs describe the recipient and must never be shown to the sender (REVIEWS.md D021 #5).
 - DST: quiet hours use the UTC offset captured when set (D018); recipient must re-save after a DST change until IANA zones are supported.
 - User-approved addition: CS-owned Apify catalogue and mutual activity proposals are planned C7 work, gated on new shared schemas/consent and guarded state. Existing C3/F6 template-only flow is unchanged until that review. Aura and group sharing remain outside committed scope. See docs/features/ACTIVITY_DISCOVERY.md.
