@@ -4,6 +4,56 @@ Read `docs/roles/ds.md` and README **R0–R6** for current assignments. The hist
 
 ---
 
+# DS handoff — R phases (latest)
+Status at `role/ds-context` @ `b077a1e` + docs commit, on main `4fe469a`. **Committed locally, not pushed** (owner request). Everything is offline and synthetic. Nothing is live, and the components are not yet composed into a real page.
+
+## Delivered (DS-R0–R2)
+- **Consumer proposal:** `src/features/discovery/types.ts` defines the C8 shapes DS needs (`DiscoveryCandidate`, `DiscoveryViewer`, `PublishedEventIntent`, `DiscoveryMode`, `ReasonCode`, `DiscoveryShortlist`). These are not contract types; swap them for reviewed `@kinetic/contracts` C8 exports when they land.
+- **`rankNearby(input)`** (`src/evaluation/nearby.ts`): a pure shortlist returning at most 3 entries.
+  - **Removes:** self, blocked (either direction), withdrawn, expired publication, already connected, duplicates, rows over the 50-row cap (reported as `truncated`), and in event mode anyone without a current intent for that event.
+  - **Rejects as `invalid_card`:** any card with a field outside the projection, or with an unallowlisted tag.
+  - **Scores:** shared published tags, plus 2 for a shared current event intent, plus 1 when the event's topic is a shared tag. Tie-break is the opaque ref.
+  - **Outputs:** `ref`, `reasons`, `sharedTags`, `sharedEventId`, `theirIntent`. Display names are never read.
+  - **No-shortlist reasons:** `not_published`, `viewer_has_nothing_published` (cold start), `viewer_no_event_intent`, `empty_area`, `no_fit`.
+- **Components** (`src/features/discovery/`): `DiscoveryResults` and `EventResults` take props only and render honest empty states. Labels come from the pure `view-model.ts`; it never shows a percentage, distance or attendance claim, and intent reads "Interested" or "Planning to go".
+- **`rankActivities`:** links now go through contracts `safeCatalogueUrl`; `allowInPerson` (default false) enables local in-person events.
+
+## Results (actual, `src/evaluation/results/latest.md` @ b077a1e)
+| Set | Metric | DS | Baseline |
+|---|---|---|---|
+| Nearby/event, 15 cases | Top-1 relevant | 6/6 | 4/6 (most tags) |
+| | Cases with a false match | 0/15 | 8/15 (16 people) |
+| | Correct no-action | 9/9 | 3/9 |
+| Activities, 12 cases | Top-1 / false / no-action | 6/6 / 0/12 / 6/6 | 1/6 / 9/12 / 3/6 |
+| Support, 30 cases | Expected outcome | 29/30 (a3 known gap) | — |
+
+The labels come from one DS annotator, who also designed the rankers, so these numbers are optimistic. No human ratings yet; `results/ratings-template.md` is ready for two raters.
+
+## Consumer and exact next action
+- **CS:**
+  - On the Discover page, render `<DiscoveryResults shortlist candidates onInvite onBlock onEmptyAction invitedRefs synthetic />` with `shortlist = rankNearby({viewer, candidates, mode, allowedTags, now})`, where `candidates` is your authorized page (≤50 rows, area/audience filtered server-side).
+  - For events, render `<EventResults result items sourceStatus allowedSourceHosts now utcOffsetMinutes onChoose />`.
+  - Invite/block handlers must call the guarded reducers; the component never sends anything itself.
+  - Sanitize or flag instruction-like titles.
+  - Decide how rankers get packaged for the worker (root `package.json`).
+- **Adam:** the introduction workflow receives at most 3 entries; prompts may contain reason codes and shared tag slugs only. Zero entries means no model call.
+- **Sumedh:** confirm the projection in `types.ts` is the full permitted field set; the ranker's flag checks are defensive, while the server's are authoritative.
+- **Team:** two independent raters fill in the ratings template.
+
+## Blockers
+- No C8 schema, candidate query or guards yet, so discovery runs only on fixtures.
+- The rankers live in `src/evaluation`, which the worker cannot import without a packaging decision.
+- D027 Q2 copy is still unapplied (CS).
+
+## Run
+```sh
+npm run check:all
+node --test "src/evaluation/__tests__/*.test.ts" "src/features/discovery/__tests__/*.test.ts"
+node src/evaluation/report.ts --write
+```
+
+---
+
 # Current coordination update — Nimisha (DS)
 
 Read your updated detailed plan in docs/roles/ds.md and shared README.md phases. Task IDs are DS-P#; Cyber uses CYBER-P#. CS owns Apify ingestion; Nimisha matching; Adam bounded proposals; Sumedh disclosure/vault. Preserve existing work and review the main/role-branch status before selecting the first unmet phase. Forwardable message: docs/team-messages/ds.md. This notice does not ACK or complete any pending implementation/contract review.

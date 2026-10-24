@@ -36,7 +36,7 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 | Role / person | Current status | Next handoff |
 |---|---|---|
 | CS — you | App/quiz/client adapter implemented; app composition still uses placeholders; actual bindings/auth/deployment unverified | CS-R1: compose real vault/voice features and generate bindings; CS-R2/R3: coarse-area discovery state and one Apify catalogue |
-| DS — Nimisha | PR #8 merged: ACK/activity rankers, 30 support + 12 activity cases, synthetic report | DS-R1/R2: canonical C7/C8 rank port, nearby/event fixtures and discovery-results component |
+| DS — Nimisha | role/ds-context b077a1e (local, unpushed): `rankNearby` shortlist + `src/features/discovery` components + 15 nearby cases; rankActivities uses safeCatalogueUrl/allowInPerson. Offline/synthetic | CS: compose DiscoveryResults/EventResults and ship C8 candidate query matching `src/features/discovery/types.ts`; Sumedh: confirm projection; Adam: ≤3-entry shortlist; team: ratings |
 | Cyber — Sumedh | d7285eb includes real vault, unified guards, opt-in, worker-only commit/views and Apify guards; offline only | CYBER-R1: recipient preference consent + commit binding, expiry/audience and privacy component; R2: publication/block guards |
 | AI — Adam | PR #7 merged: routes/browser helpers, real-policy worker factory, replay ledger and cheaper Droid; isolated Droid evidence only | AI-R1: voice component + worker database adapters; R2/R3: bounded introduction/event workflow; R4: call budgets |
 
