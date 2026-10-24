@@ -123,3 +123,9 @@ test('plan timing comes from the catalogue: ≥ 1 h before start, ≤ 48 h, neve
   assert.equal(guardPlanTiming(ev(), NOW, NOW).reason, 'invalid_schema');
   assert.equal(guardPlanTiming(ev({ status: 'cancelled' }), NOW + H, NOW).reason, 'event_cancelled');
 });
+
+test('validEventId (DS ask): the catalogue id shape the ingester and module accept', async () => {
+  const { validEventId } = await import('../dist/index.js');
+  for (const ok of ['apify:3f2a9c1d0e4b5a6f7c8d9e0f1a2b3c4d', 'evt-hike-1', 'abc']) assert.equal(validEventId(ok), true, ok);
+  for (const bad of ['ab', 'Evt-1', 'evt 1', '-evt', 'evt/../x', 'a'.repeat(129), '', null, 12]) assert.equal(validEventId(bad), false, String(bad));
+});

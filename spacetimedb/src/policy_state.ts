@@ -170,3 +170,18 @@ export function pauseInForce(db: ReadDb, owner: Identity, pairId: string, nowMs:
     expiredMarked: isExpiredMarked(db, 'pause', p.pause_id, p.version),
   }, nowMs);
 }
+
+/**
+ * Hex identities the caller is already connected with: an accepted introduction (either direction) or an accepted
+ * pair. Index lookups only. Discovery hides these people from each other and refuses a new introduction to them.
+ */
+export function connectedCounterparts(db: ReadDb, me: Identity): Set<string> {
+  const out = new Set<string>();
+  for (const r of db.introduction.sender.filter(me)) if (r.status === 'accepted') out.add(hex(r.recipient));
+  for (const r of db.introduction.recipient.filter(me)) if (r.status === 'accepted') out.add(hex(r.sender));
+  for (const p of pairsOf(db, me)) {
+    if (p.status !== 'accepted' || !p.member_b) continue;
+    out.add(hex(p.member_a.isEqual(me) ? p.member_b : p.member_a));
+  }
+  return out;
+}

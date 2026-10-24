@@ -1,4 +1,4 @@
-import { findAssignment, findPreset, findPublicationRow, pairsOf, pauseInForce } from './policy_state';
+import { connectedCounterparts, findAssignment, findPreset, findPublicationRow, pairsOf, pauseInForce } from './policy_state';
 import { t } from 'spacetimedb/server';
 import { Timestamp, type Identity } from 'spacetimedb';
 import {
@@ -338,7 +338,7 @@ export const discovery_cards = spacetimedb.view(
     const viewer = loadDiscoveryParty(ctx.db, ctx.sender);
     if (!viewer.publication || !viewer.area) return [];
     const after = ctx.db.discovery_page.owner.find(ctx.sender)?.after_ref ?? '';
-    const connected = acceptedCounterparts(ctx.db, ctx.sender);
+    const connected = connectedCounterparts(ctx.db, ctx.sender); // accepted introductions and linked pairs
     const eligible = [];
     for (const a of ctx.db.area_participation.area_key.filter(viewer.area.areaKey)) {
       if (a.owner.isEqual(ctx.sender) || connected.has(a.owner.toHexString())) continue;
@@ -353,13 +353,6 @@ export const discovery_cards = spacetimedb.view(
   }
 );
 
-/** Hex identities the caller has an accepted introduction with (indexed on both sides). */
-function acceptedCounterparts(db: ReadDb, me: Identity): Set<string> {
-  const out = new Set<string>();
-  for (const r of db.introduction.sender.filter(me)) if (r.status === 'accepted') out.add(r.recipient.toHexString());
-  for (const r of db.introduction.recipient.filter(me)) if (r.status === 'accepted') out.add(r.sender.toHexString());
-  return out;
-}
 
 // ---- C8 introductions (CYBER-R2, PROPOSED) ----
 
