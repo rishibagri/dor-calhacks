@@ -2,7 +2,7 @@
 // Always read in the same transaction as the write the guard protects.
 import type { Identity, Timestamp } from 'spacetimedb';
 import type { InferSchema, ViewCtx } from 'spacetimedb/server';
-import type { PolicySnapshot, StoredSignal } from '@kinetic/contracts/policy';
+import type { DeliveryGate, PolicySnapshot, StoredSignal } from '@kinetic/contracts/policy';
 import type { spacetimedb } from './schema';
 import type { Ctx } from './errors';
 
@@ -41,5 +41,20 @@ export function toStoredSignal(s: SignalRow): StoredSignal {
     consentVersion: s.consent_version, recipientPolicyId: s.recipient_policy_id,
     recipientPolicyVersion: s.recipient_policy_version, presetAssignmentVersion: s.preset_assignment_version,
     expiresAtMs: toMs(s.expires_at), revokedAtMs: s.revoked_at ? toMs(s.revoked_at) : null,
+  };
+}
+
+/** F5 gate inputs: the recipient's own delivery row for this pair (null = never opted in) and the last nudge in the pair. */
+export function loadDeliveryGate(db: ReadDb, recipient: Identity, pairId: string, nowMs: number): DeliveryGate {
+  const row = [...db.nudge_delivery.iter()].find(d => d.pair_id === pairId && d.recipient.isEqual(recipient));
+  let last: number | null = null;
+  // Every nudge counts toward the per-pair cooldown, including dismissed/suppressed ones (no revoke-and-retry spam).
+  for (const n of db.nudge.iter()) if (n.pair_id === pairId) last = Math.max(last ?? 0, toMs(n.created_at));
+  return {
+    nowMs, lastNudgeAtMs: last,
+    pref: row ? {
+      optedIn: row.opted_in, quietStartMinute: row.quiet_start_minute ?? null,
+      quietEndMinute: row.quiet_end_minute ?? null, utcOffsetMinutes: row.utc_offset_minutes,
+    } : null,
   };
 }

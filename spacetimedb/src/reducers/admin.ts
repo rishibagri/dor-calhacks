@@ -26,3 +26,20 @@ export const set_auth_issuer = spacetimedb.reducer(
     }
   }
 );
+
+/**
+ * Module-owner only: allow-list (or remove) the coordination worker's identity. The worker may read
+ * worker_* views and call commit_nudge; it has no account, so it cannot approve, revoke or read my_* views.
+ */
+export const set_worker_identity = spacetimedb.reducer(
+  { worker: t.identity(), enabled: t.bool() },
+  (ctx, { worker, enabled }) => {
+    requireOwner(ctx);
+    if (enabled) {
+      if (ctx.db.account.identity.find(worker)) fail('invalid', 'worker identity must not be a user account');
+      if (!ctx.db.worker_identity.identity.find(worker)) ctx.db.worker_identity.insert({ identity: worker });
+    } else {
+      ctx.db.worker_identity.identity.delete(worker);
+    }
+  }
+);

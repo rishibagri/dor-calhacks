@@ -1,7 +1,7 @@
 import { t } from 'spacetimedb/server';
 import type { Identity } from 'spacetimedb';
 import { guardSignalStanding } from '@kinetic/contracts/policy';
-import { spacetimedb, account, approved_signal, nudge, disclosure_receipt } from './schema';
+import { spacetimedb, account, approved_signal, nudge, disclosure_receipt, nudge_delivery } from './schema';
 import { hex, loadStanding, toStoredSignal, type ReadDb } from './policy_state';
 
 // Every view filters strictly by ctx.sender. Tables stay private; only these are public.
@@ -139,4 +139,75 @@ export const my_signals = spacetimedb.view(
 export const my_receipts = spacetimedb.view(
   { name: 'my_receipts', public: true }, t.array(disclosure_receipt.rowType),
   ctx => [...ctx.db.disclosure_receipt.iter()].filter(r => r.sender_id.isEqual(ctx.sender))
+);
+
+/** The caller's own recipient delivery settings (D017/D018). */
+export const my_nudge_delivery = spacetimedb.view(
+  { name: 'my_nudge_delivery', public: true }, t.array(nudge_delivery.rowType),
+  ctx => [...ctx.db.nudge_delivery.iter()].filter(d => d.recipient.isEqual(ctx.sender))
+);
+
+// ---- Worker-only views (C4/F6). Empty for every identity not in worker_identity. ----
+// They give the worker's DisclosurePolicy an AUTHORITATIVE reader (not the envelope it was handed).
+// Advisory only: commit_nudge re-checks everything at commit.
+
+const workerSignalRow = t.row('WorkerSignalRow', {
+  signal_id: t.string(), pair_id: t.string(), sender_id: t.identity(), recipient_id: t.identity(),
+  purpose: t.string(), support_mode: t.option(t.string()), availability: t.option(t.string()),
+  consent_version: t.u32(), recipient_policy_id: t.string(), recipient_policy_version: t.u32(),
+  preset_assignment_version: t.u32(), expires_at: t.timestamp(),
+  // standing snapshot (metadata only)
+  pair_status: t.string(), pair_member_a: t.identity(), pair_member_b: t.option(t.identity()),
+  assignment_recipient: t.option(t.identity()), assignment_preset_id: t.option(t.string()),
+  assignment_version: t.option(t.u32()), preset_allowed_categories: t.array(t.string()),
+  preset_version: t.option(t.u32()), preset_expires_at: t.option(t.timestamp()), preset_revoked: t.bool(),
+});
+
+const isWorker = (db: ReadDb, who: Identity): boolean => Boolean(db.worker_identity.identity.find(who)); // find() returns null, not undefined
+
+export const worker_signal_context = spacetimedb.view(
+  { name: 'worker_signal_context', public: true }, t.array(workerSignalRow),
+  ctx => {
+    if (!isWorker(ctx.db, ctx.sender)) return [];
+    return [...ctx.db.approved_signal.iter()]
+      .filter(s => !s.revoked_at && guardSignalStanding(toStoredSignal(s), loadStanding(ctx.db, s.sender_id, s.pair_id)).allowed)
+      .flatMap(s => {
+        const p = ctx.db.pair.pair_id.find(s.pair_id);
+        if (!p) return [];
+        const a = [...ctx.db.preset_assignment.iter()].find(r => r.pair_id === s.pair_id && r.owner.isEqual(s.sender_id));
+        const pr = a ? [...ctx.db.relationship_preset.iter()].find(r => r.owner.isEqual(s.sender_id) && r.preset_kind === a.preset_kind) : undefined;
+        return [{
+          signal_id: s.signal_id, pair_id: s.pair_id, sender_id: s.sender_id, recipient_id: s.recipient_id,
+          purpose: s.purpose, support_mode: s.support_mode, availability: s.availability,
+          consent_version: s.consent_version, recipient_policy_id: s.recipient_policy_id,
+          recipient_policy_version: s.recipient_policy_version, preset_assignment_version: s.preset_assignment_version,
+          expires_at: s.expires_at, pair_status: p.status, pair_member_a: p.member_a, pair_member_b: p.member_b,
+          assignment_recipient: a?.recipient, assignment_preset_id: pr?.preset_id, assignment_version: a?.assignment_version,
+          preset_allowed_categories: pr?.allowed_categories ?? [], preset_version: pr?.version,
+          preset_expires_at: pr?.expires_at, preset_revoked: pr?.revoked_at !== undefined,
+        }];
+      });
+  }
+);
+
+const workerDeliveryRow = t.row('WorkerDeliveryRow', {
+  pair_id: t.string(), recipient: t.identity(), opted_in: t.bool(),
+  quiet_start_minute: t.option(t.u16()), quiet_end_minute: t.option(t.u16()), utc_offset_minutes: t.i16(),
+  last_nudge_at: t.option(t.timestamp()),
+});
+
+/** Opted-in delivery rows plus the pair's last nudge time, for the coordinator's pre-check (DeliveryStatePort). */
+export const worker_delivery = spacetimedb.view(
+  { name: 'worker_delivery', public: true }, t.array(workerDeliveryRow),
+  ctx => {
+    if (!isWorker(ctx.db, ctx.sender)) return [];
+    return [...ctx.db.nudge_delivery.iter()].filter(d => d.opted_in).map(d => {
+      const last = [...ctx.db.nudge.iter()].filter(n => n.pair_id === d.pair_id)
+        .reduce<typeof d.updated_at | undefined>((m, n) => (!m || n.created_at.microsSinceUnixEpoch > m.microsSinceUnixEpoch ? n.created_at : m), undefined);
+      return {
+        pair_id: d.pair_id, recipient: d.recipient, opted_in: d.opted_in, quiet_start_minute: d.quiet_start_minute,
+        quiet_end_minute: d.quiet_end_minute, utc_offset_minutes: d.utc_offset_minutes, last_nudge_at: last,
+      };
+    });
+  }
 );

@@ -136,7 +136,7 @@ describe('approve_signal: direct reducer bypass attempts', () => {
     const w = setup();
     w.call(w.alice, ctx => mod.create_pair_invite(ctx, {}));
     const pendingId = view<any>(w, w.alice, mod.my_invites)[0].pair_id;
-    expect(() => approve(w, w.alice, approveArgs(w, w.alice, pendingId, BOTH))).toThrow('invalid: unlinked');
+    expect(() => approve(w, w.alice, approveArgs(w, w.alice, pendingId, BOTH))).toThrow('unauthorized: no_consent'); // FLOWS: pending = no consent
     const { w: w2, pairId } = partnered();
     const preview = approveArgs(w2, w2.alice, pairId, BOTH);
     w2.call(w2.bob, ctx => mod.unlink_pair(ctx, { pair_id: pairId }));

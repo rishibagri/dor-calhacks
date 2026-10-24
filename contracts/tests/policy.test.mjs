@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {
   guardApproval, guardSignalUse, guardSignalStanding, guardNudgeCommit, payloadRevision,
   policyErrorCode, DisclosurePolicy, DISCLOSURE_CONSENT_VERSION, SIGNAL_LIFETIME_MS,
+  previewDisclosure, DEFAULT_RECIPIENT_DELIVERY, NUDGE_COOLDOWN_MS,
 } from '../dist/index.js';
 import * as zodFree from '../dist/policy.js';
 
@@ -66,13 +67,13 @@ test('cross-user: the other member cannot ride the owner\'s assignment', () => {
   assert.equal(reason(guardApproval(request({ callerId: B }), w)), 'no_consent');
 });
 
-test('no relationship: pending, unlinked or self-pairs are denied', () => {
-  for (const status of ['pending', 'unlinked']) {
-    const w = world(); w.pair.status = status;
-    assert.equal(reason(guardApproval(request(), w)), 'unlinked');
-  }
-  const w = world(); w.pair.memberB = null;
-  assert.equal(reason(guardApproval(request(), w)), 'unlinked');
+test('no relationship: pending (FLOWS: no_consent), unlinked, or no second member are denied', () => {
+  const pending = world(); pending.pair.status = 'pending';
+  assert.equal(reason(guardApproval(request(), pending)), 'no_consent');
+  const unlinked = world(); unlinked.pair.status = 'unlinked';
+  assert.equal(reason(guardApproval(request(), unlinked)), 'unlinked');
+  const half = world(); half.pair.memberB = null;
+  assert.equal(reason(guardApproval(request(), half)), 'no_consent');
 });
 
 test('no confirmed preset or no assignment means no consent ceiling (default deny)', () => {
@@ -80,15 +81,15 @@ test('no confirmed preset or no assignment means no consent ceiling (default den
   assert.equal(reason(guardApproval(request(), w1)), 'no_consent');
   const w2 = world(); w2.preset = null;
   assert.equal(reason(guardApproval(request(), w2)), 'no_consent');
-  const w3 = world(); w3.preset.policyId = 'some-other-preset';
-  assert.equal(reason(guardApproval(request(), w3)), 'no_consent');
+  const w3 = world(); w3.preset.policyId = 'some-other-preset'; // assignment points elsewhere (FLOWS)
+  assert.equal(reason(guardApproval(request(), w3)), 'stale_policy');
 });
 
 test('assignment for a different recipient or a different owner\'s preset is rejected', () => {
   const w1 = world(); w1.assignment.recipientId = C;
   assert.equal(reason(guardApproval(request(), w1)), 'wrong_recipient');
   const w2 = world(); w2.preset.ownerId = C;
-  assert.equal(reason(guardApproval(request(), w2)), 'no_consent');
+  assert.equal(reason(guardApproval(request(), w2)), 'wrong_recipient');
 });
 
 test('stale preset version, stale assignment version and stale consent notice are rejected', () => {
@@ -190,14 +191,16 @@ test('standing guard (views, no clock) still catches revocation and version drif
   assert.equal(reason(guardSignalStanding({ ...sig, revokedAtMs: 1 }, noClock)), 'revoked');
 });
 
+const OPEN = { pref: { ...DEFAULT_RECIPIENT_DELIVERY, optedIn: true, quietStartMinute: null, quietEndMinute: null }, lastNudgeAtMs: null, nowMs: NOW };
+
 test('revocation race: a decision is only as fresh as the snapshot; recheck at commit catches it', () => {
   const req = request(); const sig = storedFrom(req, guardApproval(req, world()));
   const sources = new Map([['sig-1', { signal: sig, snapshot: world() }]]);
   const nudge = { pairId: 'pair-1', recipientId: B, templateId: 'offer_short_call',
     sourceSignalIds: ['sig-1'], sourceConsentVersions: [1] };
-  assert.equal(guardNudgeCommit(nudge, sources).allowed, true); // coordination-time check passes
+  assert.equal(guardNudgeCommit(nudge, sources, OPEN).allowed, true); // coordination-time check passes
   sources.set('sig-1', { signal: { ...sig, revokedAtMs: NOW + 1 }, snapshot: world() }); // owner revokes mid-generation
-  assert.equal(reason(guardNudgeCommit(nudge, sources)), 'revoked'); // commit-time recheck suppresses
+  assert.equal(reason(guardNudgeCommit(nudge, sources, OPEN)), 'revoked'); // commit-time recheck suppresses
 });
 
 test('nudge commit: template must match an approved mode; versions align; unknown sources deny', () => {
@@ -205,23 +208,25 @@ test('nudge commit: template must match an approved mode; versions align; unknow
   const sources = new Map([['sig-1', { signal: sig, snapshot: world() }]]);
   const base = { pairId: 'pair-1', recipientId: B, templateId: 'offer_short_call',
     sourceSignalIds: ['sig-1'], sourceConsentVersions: [1] };
-  const ok = guardNudgeCommit(base, sources);
-  assert.equal(ok.allowed, true); assert.equal(ok.expiresAtMs, d.expiresAtMs);
-  assert.equal(reason(guardNudgeCommit({ ...base, templateId: 'offer_note' }, sources)), 'blocked_category');
-  assert.equal(reason(guardNudgeCommit({ ...base, templateId: 'free_text_from_model' }, sources)), 'invalid_schema');
-  assert.equal(reason(guardNudgeCommit({ ...base, sourceConsentVersions: [2] }, sources)), 'stale_policy');
-  assert.equal(reason(guardNudgeCommit({ ...base, sourceSignalIds: ['ghost'] }, sources)), 'no_consent');
-  assert.equal(reason(guardNudgeCommit({ ...base, recipientId: C }, sources)), 'wrong_recipient');
-  assert.equal(reason(guardNudgeCommit({ ...base, pairId: 'pair-2' }, sources)), 'wrong_recipient');
-  assert.equal(reason(guardNudgeCommit({ ...base, sourceSignalIds: ['sig-1', 'sig-1'], sourceConsentVersions: [1, 1] }, sources)), 'invalid_schema');
-  // Availability-only signal cannot justify any support-mode template.
+  const ok = guardNudgeCommit(base, sources, OPEN);
+  assert.equal(ok.allowed, true); assert.equal(ok.expiresAtMs, Math.min(d.expiresAtMs, NOW + NUDGE_COOLDOWN_MS));
+  assert.equal(reason(guardNudgeCommit({ ...base, templateId: 'offer_note' }, sources, OPEN)), 'blocked_category');
+  assert.equal(reason(guardNudgeCommit({ ...base, templateId: 'free_text_from_model' }, sources, OPEN)), 'invalid_schema');
+  assert.equal(reason(guardNudgeCommit({ ...base, sourceConsentVersions: [2] }, sources, OPEN)), 'stale_policy');
+  assert.equal(reason(guardNudgeCommit({ ...base, sourceSignalIds: ['ghost'] }, sources, OPEN)), 'no_consent');
+  assert.equal(reason(guardNudgeCommit({ ...base, recipientId: C }, sources, OPEN)), 'wrong_recipient');
+  assert.equal(reason(guardNudgeCommit({ ...base, pairId: 'pair-2' }, sources, OPEN)), 'wrong_recipient');
+  assert.equal(reason(guardNudgeCommit({ ...base, sourceSignalIds: ['sig-1', 'sig-1'], sourceConsentVersions: [1, 1] }, sources, OPEN)), 'invalid_schema');
+  // Availability-only signal cannot justify any template (D020: no nudge from availability-only approval).
   const availOnly = new Map([['sig-1', { signal: { ...sig, supportMode: undefined }, snapshot: world() }]]);
-  assert.equal(reason(guardNudgeCommit(base, availOnly)), 'blocked_category');
+  assert.equal(reason(guardNudgeCommit(base, availOnly, OPEN)), 'blocked_category');
 });
 
 test('error codes never leak existence and map denials to API codes', () => {
-  assert.deepEqual(['invalid_schema', 'wrong_recipient', 'no_consent', 'blocked_category', 'unlinked', 'expired', 'revoked', 'stale_policy']
-    .map(policyErrorCode), ['invalid', 'not_found', 'unauthorized', 'unauthorized', 'invalid', 'stale', 'stale', 'stale']);
+  assert.deepEqual(['invalid_schema', 'wrong_recipient', 'no_consent', 'blocked_category', 'unlinked', 'expired', 'revoked', 'stale_policy',
+    'not_opted_in', 'quiet_hours', 'cooldown']
+    .map(policyErrorCode), ['invalid', 'not_found', 'unauthorized', 'unauthorized', 'invalid', 'stale', 'stale', 'stale',
+    'unauthorized', 'rate_limited', 'rate_limited']);
 });
 
 // ---- DisclosurePolicy (Zod boundary for API/worker) ----
@@ -269,4 +274,71 @@ test('port: quiz profile and model-shaped output never authorize', async () => {
   assert.equal((await policy.check(profile, B)).reason, 'invalid_schema');
   const modelOutput = { approved: true, supportMode: 'short_call', reasoning: 'they seem stressed' };
   assert.equal((await policy.check(modelOutput, B)).reason, 'invalid_schema');
+});
+
+// ---- F5/F7 delivery gate at commit (D017, D018) ----
+function commitFixture() {
+  const req = request(); const d = guardApproval(req, world()); const sig = storedFrom(req, d);
+  return { sources: new Map([['sig-1', { signal: sig, snapshot: world() }]]),
+    nudge: { pairId: 'pair-1', recipientId: B, templateId: 'offer_short_call', sourceSignalIds: ['sig-1'], sourceConsentVersions: [1] } };
+}
+
+test('commit: recipient never opted in (no delivery row) means no nudge; default is off', () => {
+  const { sources, nudge } = commitFixture();
+  assert.equal(guardNudgeCommit(nudge, sources, { pref: null, lastNudgeAtMs: null, nowMs: NOW }).reason, 'not_opted_in');
+  assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, pref: { ...OPEN.pref, optedIn: false } }).reason, 'not_opted_in');
+  assert.equal(DEFAULT_RECIPIENT_DELIVERY.optedIn, false);
+});
+
+test('commit: quiet hours in recipient local time and 24h per-pair cooldown are rechecked at commit', () => {
+  const { sources, nudge } = commitFixture();
+  const quiet = { ...OPEN, pref: { ...DEFAULT_RECIPIENT_DELIVERY, optedIn: true } }; // 22:00-08:00 UTC
+  assert.equal(guardNudgeCommit(nudge, sources, quiet).reason, 'quiet_hours'); // NOW is 00:00Z
+  assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, lastNudgeAtMs: NOW - NUDGE_COOLDOWN_MS + 1 }).reason, 'cooldown');
+  assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, lastNudgeAtMs: NOW - NUDGE_COOLDOWN_MS }).allowed, true);
+});
+
+test('commit: consent failures win over delivery state (a revoked source never reaches the gate)', () => {
+  const { sources, nudge } = commitFixture();
+  const s = sources.get('sig-1'); s.signal.revokedAtMs = NOW;
+  assert.equal(guardNudgeCommit(nudge, sources, { pref: null, lastNudgeAtMs: null, nowMs: NOW }).reason, 'revoked');
+});
+
+test('commit: stale approval (preset changed after approval) cannot produce a nudge', () => {
+  const { sources, nudge } = commitFixture();
+  sources.get('sig-1').snapshot.preset.version++;
+  assert.equal(guardNudgeCommit(nudge, sources, OPEN).reason, 'stale_policy');
+});
+
+// ---- One policy: device preview and reducer guard agree on every combination ----
+test('previewDisclosure (device) and guardApproval (reducer) never disagree', () => {
+  const toContract = w => ({
+    preset: w.preset && { schemaVersion: 1, policyId: w.preset.policyId, ownerId: w.preset.ownerId, presetKind: 'partner',
+      purpose: 'support_nudge', allowedCategories: [...w.preset.allowedCategories], approvalMode: 'each_item', version: w.preset.version,
+      expiresAt: new Date(w.preset.expiresAtMs).toISOString(), revokedAt: w.preset.revokedAtMs === null ? null : new Date(w.preset.revokedAtMs).toISOString() },
+    assignment: w.assignment && { schemaVersion: 1, ...w.assignment },
+  });
+  const candidates = [{}, { supportMode: 'short_call' }, { availability: 'today' }, { supportMode: 'encouraging_note', availability: 'this_week' }];
+  const categorySets = [[], ['support_preference'], ['coarse_availability'], ['support_preference', 'coarse_availability']];
+  const mutations = [w => w, w => { w.pair.status = 'pending'; return w; }, w => { w.pair.status = 'unlinked'; return w; },
+    w => { w.preset.revokedAtMs = NOW - 1; return w; }, w => { w.preset.expiresAtMs = NOW; return w; },
+    w => { w.assignment = null; return w; }, w => { w.assignment.presetId = 'x'; return w; }, w => { w.assignment.recipientId = C; return w; }];
+  let compared = 0;
+  for (const cand of candidates) for (const cats of categorySets) for (const mutate of mutations) {
+    const w = mutate(world({ cats }));
+    const { preset, assignment } = toContract(w);
+    const pv = previewDisclosure({ candidate: cand, ownerId: A, recipientId: B, pairId: 'pair-1', pairStatus: w.pair.status,
+      preset, assignment, now: new Date(NOW) }, 'Bob');
+    // Approve exactly what the preview would write (or the raw candidate if it was not shareable).
+    const payload = pv.kind === 'shareable' ? pv.payload : cand;
+    const d = guardApproval(request({ supportMode: payload.supportMode, availability: payload.availability }), w);
+    if (Object.keys(cand).length === 0) assert.equal(d.reason, 'invalid_schema'); // nothing to approve, whatever the preview says
+    else if (pv.kind === 'shareable') assert.equal(d.allowed, true, JSON.stringify({ cand, cats }));
+    else assert.equal(d.reason, pv.reason, JSON.stringify({ cand, cats, pv }));
+    // And approving the full candidate when the preview dropped a field is denied, never stripped.
+    if (pv.kind === 'shareable' && pv.blocked.length > 0)
+      assert.equal(guardApproval(request({ supportMode: cand.supportMode, availability: cand.availability }), w).reason, 'blocked_category');
+    compared++;
+  }
+  assert.equal(compared, 128);
 });

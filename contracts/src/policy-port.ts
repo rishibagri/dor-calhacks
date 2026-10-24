@@ -16,7 +16,7 @@ export interface PolicyStateReader {
 }
 
 /** True only when the presented envelope equals the stored record field-for-field. */
-export function sameApprovedPayload(presented: ApprovedSignal, stored: StoredSignal): boolean {
+export function sameStoredEnvelope(presented: ApprovedSignal, stored: StoredSignal): boolean {
   return presented.signalId === stored.signalId && presented.pairId === stored.pairId &&
     presented.senderId === stored.senderId && presented.recipientId === stored.recipientId &&
     presented.purpose === stored.purpose && presented.supportMode === stored.supportMode &&
@@ -35,7 +35,7 @@ export class DisclosurePolicy implements DisclosurePolicyPort {
     if (!parsed.success) return { allowed: false, reason: 'invalid_schema' };
     const loaded = await this.reader.load(parsed.data.signalId);
     // Unknown signal or any altered field: the owner never approved this exact payload.
-    if (!loaded || !sameApprovedPayload(parsed.data, loaded.signal)) return { allowed: false, reason: 'no_consent' };
+    if (!loaded || !sameStoredEnvelope(parsed.data, loaded.signal)) return { allowed: false, reason: 'no_consent' };
     return guardSignalUse(loaded.signal, { ...loaded.snapshot, nowMs: this.clock.now().getTime() }, recipientId);
   }
 }

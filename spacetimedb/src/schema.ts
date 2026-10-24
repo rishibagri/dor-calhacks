@@ -110,6 +110,30 @@ export const nudge = table(
   }
 );
 
+/**
+ * Recipient-owned F5 delivery settings per pair (D017 opt-in default off, D018 quiet hours).
+ * No row = never opted in. Written only by the recipient via set_nudge_delivery.
+ */
+export const nudge_delivery = table(
+  { name: 'nudge_delivery' },
+  {
+    delivery_id: t.string().primaryKey(),
+    recipient: t.identity(),
+    pair_id: t.string(),
+    opted_in: t.bool(),
+    quiet_start_minute: t.option(t.u16()),
+    quiet_end_minute: t.option(t.u16()),
+    utc_offset_minutes: t.i16(),
+    updated_at: t.timestamp(),
+  }
+);
+
+/** Allow-listed coordination worker identities (module-owner managed). Workers have no account and cannot approve. */
+export const worker_identity = table(
+  { name: 'worker_identity' },
+  { identity: t.identity().primaryKey() }
+);
+
 export const disclosure_receipt = table(
   { name: 'disclosure_receipt' },
   {
@@ -137,4 +161,6 @@ export const spacetimedb = schema({
   approved_signal,
   nudge,
   disclosure_receipt,
+  nudge_delivery,
+  worker_identity,
 });
