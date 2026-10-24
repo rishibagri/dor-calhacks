@@ -143,11 +143,35 @@ export interface JournalEntrySummary {
   localId: string;
   createdAt: string;
 }
+/** 'unknown' until refresh() has read local metadata; 'absent' = no vault on this device yet. */
+export type VaultState = 'unknown' | 'absent' | 'locked' | 'unlocked';
+/** Constant, content-free error codes (Error.message === code). `wrong_secret` covers passphrase AND recovery code. */
+export type VaultErrorCode =
+  | 'vault_unavailable' | 'vault_absent' | 'vault_exists' | 'vault_locked' | 'wrong_secret'
+  | 'weak_passphrase' | 'invalid_input' | 'not_found' | 'vault_corrupt';
+/**
+ * Cyber lifecycle additions (src/vault/DESIGN.md, D026; CS ACK pending): create/recover/change/destroy,
+ * reflection text persistence (D021 review: never the candidate), and subscribe/getVersion so the UI
+ * re-renders on lock/unlock/auto-lock like useSharedState.
+ */
 export interface VaultPort {
   readonly status: AdapterStatus;
   readonly locked: boolean;
+  readonly state: VaultState;
+  refresh(): Promise<VaultState>;
+  /** Creates the single-device vault and returns the recovery code; show it once. Throws vault_exists. */
+  create(passphrase: string): Promise<{ recoveryCode: string }>;
   unlock(passphrase: string): Promise<void>;
+  /** Unlocks with the recovery code, sets a new passphrase and issues a NEW recovery code. */
+  recover(recoveryCode: string, newPassphrase: string): Promise<{ recoveryCode: string }>;
+  changePassphrase(current: string, next: string): Promise<void>;
   lock(): void;
+  /** Irreversible crypto-shred of every local entry, profile and extra. */
+  destroy(): Promise<void>;
+  saveReflection(localId: string, reflection: string): Promise<void>;
+  readReflection(localId: string): Promise<string | null>;
+  subscribe(listener: () => void): () => void;
+  getVersion(): number;
   saveJournal(entry: { localId: string; text: string }): Promise<void>;
   listJournals(): Promise<JournalEntrySummary[]>;
   readJournal(localId: string): Promise<{ localId: string; text: string; createdAt: string }>;

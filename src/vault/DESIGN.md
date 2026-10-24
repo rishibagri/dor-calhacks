@@ -1,6 +1,11 @@
-# Local vault: key, unlock and recovery design (Cyber) — v1 proposal
+# Local vault: key, unlock and recovery design (Cyber) — v1
 
-Status: **design only**. No vault code exists yet; `placeholderVault` still throws. This satisfies ARCHITECTURE.md "agreed key derivation/recovery design before implementation". Review: CS (VaultPort consumer), AI (stores reflections/candidates).
+Status: **implemented, offline-verified** in `src/vault/` (`LocalVault`, `IndexedDbVaultStore`, `crypto.ts`). Tests: `src/vault/__tests__/vault.test.ts` (Node Web Crypto + fake-indexeddb). **Not yet wired into the app.** CS swaps `placeholderVault` and adds the create/unlock/recovery screens. Not verified in a real browser yet (auto-lock on pagehide, IndexedDB on disk).
+
+Implementation differences from the original proposal:
+- **No `encryptions` counter is stored.** A random 96-bit IV is safe for far more seals than a single-device journal will make.
+- **Reflections store text only.** The candidate is never persisted (REVIEWS.md D021 #1).
+- **Shared browser profiles.** `IndexedDbVaultStore(indexedDB, name)` takes a DB name. CS should namespace it per signed-in account, e.g. `kinetic-vault:<sha256(clerk userId)>`, and call `lock()` on identity change.
 
 ## What it protects, and what it does not
 | In scope | Out of scope (state honestly in UI/claims) |
