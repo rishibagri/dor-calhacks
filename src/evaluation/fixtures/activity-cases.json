@@ -1,0 +1,343 @@
+{
+  "fixtureVersion": 1,
+  "owner": "DS",
+  "synthetic": true,
+  "clock": "2026-10-24T00:00:00Z",
+  "utcOffsetMinutes": -420,
+  "note": "DS activity-ranking cases. Labels (expected, relevantTop1, relevant, mustNotSuggest) were written before running the ranker or baseline, by one DS annotator: they are author labels, not teammate usefulness ratings. agreed = the option both sides already agreed to after policy and ACK. approvedInterests is hypothetical C7 consent; null is today's real state. 'all' = every row in activity-catalogue.json.",
+  "neverSuggest": [
+    "act-trivia-tonight-dup",
+    "act-concert-inperson",
+    "act-old-listing",
+    "act-started",
+    "act-starts-in-10min",
+    "act-unsafe-url",
+    "act-unknown-time",
+    "act-far-future",
+    "act-other-site",
+    "act-malformed"
+  ],
+  "cases": [
+    {
+      "id": "ac1-partners-today-no-interests",
+      "group": "positive",
+      "relationship": "partners",
+      "description": "Partner nudge agreed shared_activity + today; no approved interests (C7 consent absent, the real state today).",
+      "agreed": {
+        "supportMode": "shared_activity",
+        "availability": "today"
+      },
+      "catalogue": "all",
+      "approvedInterests": null,
+      "expected": {
+        "kind": "ranked",
+        "suggestionIds": [
+          "act-trivia-tonight",
+          "act-injection-text",
+          "act-drawing-ondemand"
+        ],
+        "relevantTop1": [
+          "act-trivia-tonight"
+        ],
+        "relevant": [
+          "act-trivia-tonight",
+          "act-drawing-ondemand"
+        ],
+        "mustNotSuggest": [
+          "act-movie-watchparty-sat",
+          "act-board-game-thu",
+          "act-cooking-class-tue",
+          "act-long-ondemand"
+        ]
+      }
+    },
+    {
+      "id": "ac2-partners-week-mutual-interest",
+      "group": "positive",
+      "relationship": "partners",
+      "description": "Both people approved interests (hypothetical reviewed C7 consent); overlap is watching_together only.",
+      "agreed": {
+        "supportMode": "shared_activity",
+        "availability": "this_week"
+      },
+      "catalogue": "all",
+      "approvedInterests": {
+        "sender": [
+          "watching_together",
+          "games"
+        ],
+        "recipient": [
+          "watching_together"
+        ]
+      },
+      "expected": {
+        "kind": "ranked",
+        "suggestionIds": [
+          "act-movie-watchparty-sat",
+          "act-long-ondemand",
+          "act-trivia-tonight"
+        ],
+        "relevantTop1": [
+          "act-movie-watchparty-sat"
+        ],
+        "relevant": [
+          "act-movie-watchparty-sat",
+          "act-long-ondemand",
+          "act-trivia-tonight",
+          "act-board-game-thu"
+        ],
+        "mustNotSuggest": []
+      }
+    },
+    {
+      "id": "ac3-friends-week-one-sided-interests",
+      "group": "positive",
+      "relationship": "friends",
+      "description": "Interests do not overlap; one person's interest must not be treated as shared.",
+      "agreed": {
+        "supportMode": "shared_activity",
+        "availability": "this_week"
+      },
+      "catalogue": "all",
+      "approvedInterests": {
+        "sender": [
+          "creating"
+        ],
+        "recipient": [
+          "games"
+        ]
+      },
+      "expected": {
+        "kind": "ranked",
+        "suggestionIds": [
+          "act-trivia-tonight",
+          "act-injection-text",
+          "act-board-game-thu"
+        ],
+        "forbidRationale": [
+          "mutual_interest"
+        ],
+        "relevantTop1": [
+          "act-trivia-tonight",
+          "act-board-game-thu"
+        ],
+        "relevant": [
+          "act-trivia-tonight",
+          "act-board-game-thu",
+          "act-drawing-ondemand",
+          "act-movie-watchparty-sat",
+          "act-cooking-class-tue"
+        ],
+        "mustNotSuggest": []
+      }
+    },
+    {
+      "id": "ac4-noaction-no-agreed-option",
+      "group": "no_action",
+      "relationship": "family",
+      "description": "No compatible ACK (recipient not opted in / declined / policy denied upstream).",
+      "agreed": null,
+      "catalogue": "all",
+      "approvedInterests": null,
+      "expected": {
+        "kind": "no_suggestion",
+        "reason": "no_agreed_option"
+      }
+    },
+    {
+      "id": "ac5-noaction-short-call-agreed",
+      "group": "no_action",
+      "relationship": "partners",
+      "description": "Agreed option is a short call; activities are not requested.",
+      "agreed": {
+        "supportMode": "short_call",
+        "availability": "today"
+      },
+      "catalogue": "all",
+      "approvedInterests": null,
+      "expected": {
+        "kind": "no_suggestion",
+        "reason": "not_shared_activity"
+      }
+    },
+    {
+      "id": "ac6-noaction-empty-catalogue",
+      "group": "no_action",
+      "relationship": "friends",
+      "description": "Apify source unavailable and no cached rows.",
+      "agreed": {
+        "supportMode": "shared_activity",
+        "availability": "today"
+      },
+      "catalogue": [],
+      "approvedInterests": null,
+      "expected": {
+        "kind": "no_suggestion",
+        "reason": "empty_catalogue"
+      }
+    },
+    {
+      "id": "ac7-noaction-only-ineligible-rows",
+      "group": "no_action",
+      "relationship": "partners",
+      "description": "Every row is in-person, stale, started, too soon, unsafe, off-allowlist, undated, out of range or malformed.",
+      "agreed": {
+        "supportMode": "shared_activity",
+        "availability": "today"
+      },
+      "catalogue": [
+        "act-concert-inperson",
+        "act-old-listing",
+        "act-started",
+        "act-starts-in-10min",
+        "act-unsafe-url",
+        "act-other-site",
+        "act-far-future",
+        "act-unknown-time",
+        "act-malformed"
+      ],
+      "approvedInterests": null,
+      "expected": {
+        "kind": "no_suggestion",
+        "reason": "no_eligible_activity"
+      }
+    },
+    {
+      "id": "ac8-noaction-only-weak-rows",
+      "group": "no_action",
+      "relationship": "family",
+      "description": "Only an on-demand 4h marathon and an undated item: not worth an interruption.",
+      "agreed": {
+        "supportMode": "shared_activity"
+      },
+      "catalogue": [
+        "act-long-ondemand",
+        "act-unknown-time"
+      ],
+      "approvedInterests": null,
+      "expected": {
+        "kind": "no_suggestion",
+        "reason": "no_strong_match"
+      }
+    },
+    {
+      "id": "ac9-noaction-nothing-today",
+      "group": "no_action",
+      "relationship": "partners",
+      "description": "Agreed today but every eligible row starts after the recipient's local day ends.",
+      "agreed": {
+        "supportMode": "shared_activity",
+        "availability": "today"
+      },
+      "catalogue": [
+        "act-movie-watchparty-sat",
+        "act-board-game-thu",
+        "act-cooking-class-tue"
+      ],
+      "approvedInterests": null,
+      "expected": {
+        "kind": "no_suggestion",
+        "reason": "no_eligible_activity"
+      }
+    },
+    {
+      "id": "ac10-friends-support-only-no-window",
+      "group": "positive",
+      "relationship": "friends",
+      "description": "Friends preset is support-only (D015): no availability was shared, so the 14-day horizon applies and nothing is narrowed by an invented window.",
+      "agreed": {
+        "supportMode": "shared_activity"
+      },
+      "catalogue": "all",
+      "approvedInterests": null,
+      "expected": {
+        "kind": "ranked",
+        "suggestionIds": [
+          "act-trivia-tonight",
+          "act-injection-text",
+          "act-board-game-thu"
+        ],
+        "relevantTop1": [
+          "act-trivia-tonight",
+          "act-board-game-thu"
+        ],
+        "relevant": [
+          "act-trivia-tonight",
+          "act-board-game-thu",
+          "act-movie-watchparty-sat",
+          "act-drawing-ondemand",
+          "act-cooking-class-tue"
+        ],
+        "mustNotSuggest": []
+      }
+    },
+    {
+      "id": "ac11-family-duplicate-listing",
+      "group": "positive",
+      "relationship": "family",
+      "description": "Same listing collected twice (tracking query + trailing slash); suggest it once.",
+      "agreed": {
+        "supportMode": "shared_activity",
+        "availability": "today"
+      },
+      "catalogue": [
+        "act-trivia-tonight-dup",
+        "act-trivia-tonight"
+      ],
+      "approvedInterests": null,
+      "expected": {
+        "kind": "ranked",
+        "suggestionIds": [
+          "act-trivia-tonight"
+        ],
+        "relevantTop1": [
+          "act-trivia-tonight"
+        ],
+        "relevant": [
+          "act-trivia-tonight"
+        ],
+        "mustNotSuggest": []
+      }
+    },
+    {
+      "id": "ac12-partners-today-mutual-games",
+      "group": "positive",
+      "relationship": "partners",
+      "description": "Mutual approved games interest, today window.",
+      "agreed": {
+        "supportMode": "shared_activity",
+        "availability": "today"
+      },
+      "catalogue": "all",
+      "approvedInterests": {
+        "sender": [
+          "games"
+        ],
+        "recipient": [
+          "games",
+          "music"
+        ]
+      },
+      "expected": {
+        "kind": "ranked",
+        "suggestionIds": [
+          "act-trivia-tonight",
+          "act-injection-text",
+          "act-drawing-ondemand"
+        ],
+        "relevantTop1": [
+          "act-trivia-tonight"
+        ],
+        "relevant": [
+          "act-trivia-tonight",
+          "act-drawing-ondemand"
+        ],
+        "mustNotSuggest": [
+          "act-movie-watchparty-sat",
+          "act-board-game-thu",
+          "act-cooking-class-tue"
+        ]
+      }
+    }
+  ]
+}
