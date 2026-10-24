@@ -4,7 +4,56 @@ Read `docs/roles/ds.md` and README **R0–R6** for current assignments. The hist
 
 ---
 
-# DS handoff — R phases (latest)
+# DS handoff — Day 2, DS-R3 (latest)
+Status: `role/ds-context` on main `6c15b28`, DS-R3 changes **uncommitted, awaiting owner review**. Everything DS owns is still offline and synthetic. The previous handoff below remains accurate for DS-R0–R2.
+
+## Integrated vs synthetic (as of main 6c15b28)
+| Piece | In the running app? | Evidence |
+|---|---|---|
+| `rankNearby`, `rankDiscoveryCards` adapter, `DiscoveryResults`, `EventResults` | **No.** No page imports them; there is no Discover route | `grep` of `src/app`, `src/components`, `src/lib` finds no discovery usage |
+| `discovery_cards` / `my_discovery_profile` generated bindings | Generated only. Shape matches the DS adapter; nothing subscribes to them | `src/lib/spacetime/module_bindings/discovery_cards_table.ts` |
+| C8 reducers/views (publish, area, block, sweep) | Module code + in-process tests only; module **unpublished**, discovery flag off | Cyber/CS logs |
+| Event intents (C8 EventIntent) | **Does not exist** server-side: no table, view or card field. Real rows always give `eventIntents: []` | `spacetimedb/src` has no event-intent table |
+| Regional event feed (C7 + `areaKey`) | **Does not exist.** `fixtures/event-listings.json` is a synthetic stand-in | — |
+| `rankEventCompanions` / `eligibleEvents` (DS-R3) | No. Pure functions + 21 tests over synthetic fixtures | `src/evaluation/__tests__/events.test.ts` |
+| `rankAckOptions` in the worker | No. The worker can't import `src/evaluation` | no import in `worker/` or `src/agents` |
+| Eval numbers | Synthetic labels from one DS annotator; no human ratings | `results/latest.md` |
+
+## Delivered (DS-R3, uncommitted)
+- **`eligibleEvents(events, viewerAreaKey, allowedTags, now)`** (`src/evaluation/events.ts`). Catalogue only, never looks at people. An event is eligible when it is in person, has `areaKey === viewerAreaKey` (null area = none), is `scheduled`, starts ≥30 min and ≤14 days from now, was fetched ≤72 h ago, and has only allowlisted topics. Any key outside `CatalogueEventRef` + `areaKey` (a venue, for example) rejects the row. Duplicate IDs resolve to the latest fetch; on a tie the more restrictive status wins, so a conflicting cancelled copy hides the event. Results are order-independent.
+- **`rankEventCompanions({viewer, viewerAreaKey, events, candidates, allowedTags, now, limit?})`**. For each eligible event the viewer published a current intent for, it runs `rankNearby` event mode (unchanged). It returns ≤3 events, soonest first, as `{eventId, viewerIntent, companions: ShortlistEntry[≤3]}`. No-result reasons: `not_published`, `no_active_area`, `no_eligible_event`, `viewer_no_event_intent`, `no_companions`. Shared tags alone never make an event companion; both people must have published a current intent for the same eligible event. Block/withdraw/expired publication/already connected/self are removed by `rankNearby`.
+- **`EventListing`** is a DS consumer proposal (contracts `CatalogueEventRef` plus the coarse `areaKey` of the regional feed), not a wire type.
+- Evidence: 21 new tests; DS suite 142 pass / 0 fail / 1 todo (a3); `tsc --noEmit` clean; 10/10 targeted mutations caught. Eval report unchanged (no new labeled cases in metrics yet).
+
+## Messages to send (exact integration work)
+**→ CS: compose discovery into the app.**
+1. Add a Discover route. Subscribe to `my_discovery_profile` and `discovery_cards`.
+2. Viewer = `{ ref: publicationId, published: discoveryEnabled && !withdrawn && !expired && areaActive, tags: interestTags, eventIntents: [] }`.
+3. Nearby: `rankDiscoveryCards({ viewer, rows: discovery_cards, mode: { kind: 'nearby' }, allowedTags, now })`, then `<DiscoveryResults shortlist candidates onInvite onBlock onEmptyAction invitedRefs synthetic />`. Wire `onInvite`/`onBlock` to guarded reducers only. Keep `synthetic` on while seeded.
+4. Hide the "same event" UI on real data until event intents exist (they always come back empty today).
+5. For local events, provide the regional feed rows as `CatalogueEventRef + areaKey` and the viewer's `areaKey` from `my_discovery_profile` (only when `areaActive`), then call `rankEventCompanions`.
+6. Decide the ranker import path for the worker (root `package.json` is yours).
+
+**→ Sumedh (Cyber): two server-side gaps block real event and nearby correctness.**
+1. C8 EventIntent producer: table + publish/revoke reducers + an `eventIntents` field (`{eventId, intent: interested|going, expiresAt}`, expiry capped at event end) on `discovery_cards`, or a separate caller-filtered view. Until it exists, real event companions are always `no_companions`.
+2. `alreadyConnected`: either drop linked pairs from `discovery_cards` server-side or add a flag. The DS adapter sets it to `false` for now.
+3. Confirm the coarse `areaKey` on catalogue event rows is acceptable, i.e. public feed metadata, not a user's location.
+4. Still open: a3 (opaque `signalId` validation).
+
+**→ Adam (AI): consume shortlists, no prompt text from catalogue.**
+1. Event companions arrive as `EventCompanions` (`eventId`, `viewerIntent`, ≤3 `ShortlistEntry`). Map each entry to `IntroductionShortlist` the same way as nearby, with `sharedEventId` set. Zero events means no model call.
+2. For D034 plans, `eligibility.eligible` is the DS-ordered event ID list; pass the matching `CatalogueEventRef`s.
+3. Agree the import path with CS: either move `rankAckOptions` / `rankNearby` / `rankEventCompanions` into contracts, or add a small `@dor/ranking` workspace. The worker can't import `src/evaluation` today.
+
+## Next for DS
+- Add labeled event cases to the metrics report (DS-R4 needs ≥12 new nearby/event cases with a baseline).
+- Two teammate ratings (`results/ratings-template.md`).
+- First-session recommendations on event cards (DS-R3 remainder).
+
+---
+
+
+# DS handoff — R phases (DS-R0–R2)
 Status at `role/ds-context` @ `b077a1e` + docs commit, on main `4fe469a`. **Merged to main via PR #9 @ `fab86d6`.** Everything is offline and synthetic. Nothing is live, and the components are not yet composed into a real page.
 
 ## Delivered (DS-R0–R2)
