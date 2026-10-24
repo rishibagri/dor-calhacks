@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 const STEPS = [
   { href: '/onboarding', label: 'Take the optional quiz', note: 'Personalizes suggestions; never grants sharing.' },
-  { href: '/journal', label: 'Write a private entry', note: 'Stays on this device (vault pending).' },
+  { href: '/journal', label: 'Write a private entry', note: 'Encrypted on this device. Reflect, and share only what you approve.' },
   { href: '/connections', label: 'Connect someone', note: 'Invite, then confirm a preset per person.' },
   { href: '/privacy', label: 'Review what is shared', note: 'Approved signals and receipts.' },
 ];
@@ -18,7 +18,8 @@ export default function HomePage() {
       <header className="space-y-3">
         <h1 className="font-display text-4xl font-semibold md:text-5xl">dor</h1>
         <p className="max-w-[48ch] text-lg text-muted-foreground">
-          A private journal. Nothing is shared unless you approve a limited signal.
+          Stay close to your partner, friends and family. Reflect privately; reach out only when you choose, to the
+          person you choose.
         </p>
       </header>
       <section aria-labelledby="next-steps">
