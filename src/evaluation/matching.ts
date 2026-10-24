@@ -126,3 +126,18 @@ export function buildNudge(signal: ApprovedSignal, ack: AgentAck, match: Extract
     templateId: match.templateId, createdAt: opts.now.toISOString(), expiresAt: new Date(expiresAt).toISOString(),
   });
 }
+
+const HOUR_MS = 3_600_000;
+
+/** The recipient's own nudge row (`my_nudges`), mirroring Cyber's D043 projection in spacetimedb/src/views.ts. */
+export interface RecipientNudgeRow { id: string; pairId: string; templateId: Nudge['templateId']; visibleUntil: string }
+
+/**
+ * Projects an internal nudge to exactly what its recipient can subscribe to under D043: no creation time, exact
+ * expiry, source signal ids or consent versions, and `visibleUntil` = the expiry rounded up to the hour. The rounding
+ * hides the approval minute, not the hour: expiry is approval + SIGNAL_LIFETIME_MS whenever that is within one cooldown.
+ */
+export function recipientNudgeRow(n: Nudge): RecipientNudgeRow {
+  const visibleUntil = Math.ceil(Date.parse(n.expiresAt) / HOUR_MS) * HOUR_MS;
+  return { id: n.id, pairId: n.pairId, templateId: n.templateId, visibleUntil: new Date(visibleUntil).toISOString() };
+}
