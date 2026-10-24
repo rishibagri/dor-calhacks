@@ -14,7 +14,8 @@ function requireWorker(ctx: Ctx): void {
  * F7 (FLOWS.md): the worker proposes, this reducer decides. Re-checks every source signal against
  * CURRENT authoritative state (revocation during generation, stale preset/assignment, expiry, recipient),
  * requires the template to be templateForSignal of an approved source (availability-only ⇒ nothing),
- * then the F5 gate (opt-in, cooldown, quiet hours). Idempotent on nudge_id: a replay is a no-op and never
+ * then the recipient's CURRENT preference consent (bound id + version, unrevoked, unexpired, covering the
+ * template's mode; D035), then the F5 gate (opt-in, cooldown, quiet hours). Idempotent on nudge_id: a replay is a no-op and never
  * resurrects a suppressed nudge; a different payload under the same id is rejected.
  */
 export const commit_nudge = spacetimedb.reducer(
@@ -24,6 +25,8 @@ export const commit_nudge = spacetimedb.reducer(
     template_id: t.string(),
     source_signal_ids: t.array(t.string()),
     source_consent_versions: t.array(t.u32()),
+    recipient_consent_id: t.string(),
+    recipient_consent_version: t.u32(),
   },
   (ctx, args) => {
     requireWorker(ctx);
@@ -32,7 +35,9 @@ export const commit_nudge = spacetimedb.reducer(
     if (prior) {
       const same = prior.pair_id === args.pair_id && prior.template_id === args.template_id &&
         prior.source_signal_ids.join('\u001f') === args.source_signal_ids.join('\u001f') &&
-        prior.source_consent_versions.join(',') === args.source_consent_versions.join(',');
+        prior.source_consent_versions.join(',') === args.source_consent_versions.join(',') &&
+        prior.recipient_consent_id === args.recipient_consent_id &&
+        prior.recipient_consent_version === args.recipient_consent_version;
       if (same) return;
       fail('invalid', 'nudge_id reused');
     }
@@ -48,6 +53,7 @@ export const commit_nudge = spacetimedb.reducer(
     const d = guardNudgeCommit({
       pairId: args.pair_id, recipientId: recipient.toHexString(), templateId: args.template_id,
       sourceSignalIds: args.source_signal_ids, sourceConsentVersions: args.source_consent_versions,
+      recipientConsentId: args.recipient_consent_id, recipientConsentVersion: args.recipient_consent_version,
     }, sources, loadDeliveryGate(ctx.db, recipient, args.pair_id, toMs(ctx.timestamp)));
     if (!d.allowed) fail(policyErrorCode(d.reason), d.reason);
 
@@ -56,6 +62,7 @@ export const commit_nudge = spacetimedb.reducer(
       source_signal_ids: args.source_signal_ids, source_consent_versions: args.source_consent_versions,
       template_id: args.template_id, created_at: ctx.timestamp, expires_at: new Timestamp(fromMs(d.expiresAtMs)),
       dismissed: false, snoozed_until: undefined, suppressed: false,
+      recipient_consent_id: args.recipient_consent_id, recipient_consent_version: args.recipient_consent_version,
     });
     for (const id of args.source_signal_ids) {
       const s = ctx.db.approved_signal.signal_id.find(id)!;
