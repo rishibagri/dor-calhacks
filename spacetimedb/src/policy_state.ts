@@ -2,7 +2,7 @@
 // Always read in the same transaction as the write the guard protects.
 import type { Identity, Timestamp } from 'spacetimedb';
 import type { InferSchema, ViewCtx } from 'spacetimedb/server';
-import { pauseActive } from '@dor/contracts/policy';
+import { pauseActive, standingRuleStands, type StandingPresetState, type StandingRuleState } from '@dor/contracts/policy';
 import type { AreaState, DeliveryGate, DiscoveryParty, PolicySnapshot, PublicationState, StoredSignal, SupportPreferenceState } from '@dor/contracts/policy';
 import type { spacetimedb } from './schema';
 import type { Ctx } from './errors';
@@ -70,7 +70,7 @@ export function toStoredSignal(s: SignalRow): StoredSignal {
 }
 
 // ---- Expiry markers (written by sweep_expired; views have no clock) ----
-export type ExpiryKind = 'signal' | 'preference' | 'publication' | 'area' | 'intent' | 'catalogue' | 'activity' | 'pause';
+export type ExpiryKind = 'signal' | 'preference' | 'publication' | 'area' | 'intent' | 'catalogue' | 'activity' | 'pause' | 'standing';
 export const expiryKey = (kind: ExpiryKind, id: string, version: number): string => `${kind}:${id}:${version}`;
 export const isExpiredMarked = (db: ReadDb, kind: ExpiryKind, id: string, version: number): boolean =>
   Boolean(db.expired_record.record_key.find(expiryKey(kind, id, version))); // find() returns null, not undefined
@@ -184,4 +184,43 @@ export function connectedCounterparts(db: ReadDb, me: Identity): Set<string> {
     out.add(hex(p.member_a.isEqual(me) ? p.member_b : p.member_a));
   }
   return out;
+}
+
+// ---- D044 automatic nudges (owner index, then pair) ----
+type StandingRow = NonNullable<ReturnType<Ctx['db']['standing_consent']['rule_id']['find']>>;
+
+export function findStandingRow(db: ReadDb, owner: Identity, pairId: string): StandingRow | undefined {
+  for (const r of db.standing_consent.owner.filter(owner)) if (r.pair_id === pairId) return r;
+  return undefined;
+}
+export function toStandingState(db: ReadDb, r: StandingRow): StandingRuleState {
+  return {
+    ruleId: r.rule_id, ownerId: hex(r.owner), recipientId: hex(r.recipient), pairId: r.pair_id, categories: r.categories,
+    recipientPolicyVersion: r.recipient_policy_version, presetAssignmentVersion: r.preset_assignment_version,
+    noticeVersion: r.notice_version, version: r.version, expiresAtMs: toMs(r.expires_at),
+    revokedAtMs: r.revoked_at ? toMs(r.revoked_at) : null, expiredMarked: isExpiredMarked(db, 'standing', r.rule_id, r.version),
+  };
+}
+/** The owner's current preset for this pair as the standing-consent guard sees it (null = none). */
+export function loadStandingPreset(db: ReadDb, owner: Identity, pairId: string): StandingPresetState | null {
+  const s = loadStanding(db, owner, pairId);
+  if (!s.preset || !s.assignment) return null;
+  return { allowedCategories: s.preset.allowedCategories, version: s.preset.version, assignmentVersion: s.assignment.assignmentVersion,
+    expiresAtMs: s.preset.expiresAtMs, revoked: s.preset.revokedAtMs !== null };
+}
+
+/**
+ * For a signal approved under a standing rule: does that exact rule version still authorize it? Signals approved
+ * manually (no standing_approval row) return true here; their own guards apply. Fail closed on a missing rule.
+ */
+export function standingApprovalStands(db: ReadDb, signalId: string, nowMs: number | null): boolean {
+  const link = db.standing_approval.signal_id.find(signalId);
+  if (!link) return true;
+  const rule = db.standing_consent.rule_id.find(link.rule_id);
+  const signal = db.approved_signal.signal_id.find(signalId);
+  if (!rule || !signal) return false;
+  const categories = [signal.support_mode ? 'support_preference' : '', signal.availability ? 'coarse_availability' : ''].filter(Boolean);
+  return standingRuleStands(toStandingState(db, rule), loadStandingPreset(db, rule.owner, rule.pair_id), {
+    ownerId: hex(signal.sender_id), recipientId: hex(signal.recipient_id), pairId: signal.pair_id, categories, ruleVersion: link.rule_version,
+  }, nowMs) === null;
 }
