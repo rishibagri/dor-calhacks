@@ -3,8 +3,8 @@ import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { ProviderError, type AckProposalInput, type AckProposerPort, type IntroProposalInput, type IntroProposerPort }
-  from '@kinetic/agents';
+import { ProviderError, type AckProposalInput, type AckProposerPort, type IntroProposalInput, type IntroProposerPort,
+  type PlanProposalInput, type PlanProposerPort } from '@kinetic/agents';
 
 /** The only tool the Droid may use: a planning list with no file, shell, network or web access. */
 export const DROID_ALLOWED_TOOLS = ['TodoWrite'] as const;
@@ -206,6 +206,37 @@ export class DroidIntroProposer implements IntroProposerPort {
   close(): Promise<void> {
     return this.runner.close();
   }
+}
+
+/**
+ * Shared-plan agent (AI-R3). Per mutual event it sees normalized topics, format and hours until start only: no
+ * titles, descriptions, URLs, venues or people. It cannot act on an event; its reply only selects an option.
+ */
+export class DroidPlanProposer implements PlanProposerPort {
+  readonly runner: DroidRunner;
+  constructor(options: DroidAckProposerOptions & { runner?: DroidRunner } = {}) {
+    this.runner = options.runner ?? new DroidRunner(options);
+  }
+
+  propose(input: PlanProposalInput, _requestId: string): Promise<unknown> {
+    return this.runner.run(buildPlanPrompt(input));
+  }
+
+  close(): Promise<void> {
+    return this.runner.close();
+  }
+}
+
+export function buildPlanPrompt(input: PlanProposalInput): string {
+  const options = input.events.map((e, i) =>
+    `${i}: topics ${JSON.stringify(e.topics)}; ${e.format === 'online' ? 'online' : 'in person'}; starts in about ${e.startsInHours} hours`).join('\n');
+  return [
+    input.round === 2 ? 'Your previous reply could not be used. Follow the reply format exactly.\n' : '',
+    'Two people in Kinetic both said they are interested in these public events. Suggest the one that makes the easiest first plan together, or none.',
+    'Prefer in-person events with enough notice to arrange; do not pick an event just because it is soonest.',
+    `Options, already ranked:\n${options}`,
+    'Reply with one JSON object and nothing else: {"decision":"suggest","eventIndex":N} or {"decision":"none"}. Do not use tools.',
+  ].join('\n');
 }
 
 export function buildIntroPrompt(input: IntroProposalInput): string {

@@ -132,3 +132,12 @@ test('intro prompt: published overlap tags and event counts only; ack and intro 
   await second;
   await runner.close();
 });
+
+test('plan prompt: topics, format and lead time only', async () => {
+  const { buildPlanPrompt } = await import('../dist/index.js');
+  const prompt = buildPlanPrompt({ events: [{ topics: ['board_games'], format: 'in_person', startsInHours: 30 },
+    { topics: ['film'], format: 'online', startsInHours: 6 }], round: 1 });
+  assert.match(prompt, /0: topics \["board_games"\]; in person; starts in about 30 hours/);
+  assert.match(prompt, /1: topics \["film"\]; online; starts in about 6 hours/);
+  assert.doesNotMatch(prompt, /previous reply/);
+});

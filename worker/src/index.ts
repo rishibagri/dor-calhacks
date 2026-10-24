@@ -1,4 +1,4 @@
-export { DroidAckProposer, DroidIntroProposer, DroidRunner, DROID_ALLOWED_TOOLS, DEFAULT_DROID_MODEL, buildAckPrompt, buildIntroPrompt, extractJsonObject,
+export { DroidAckProposer, DroidIntroProposer, DroidPlanProposer, DroidRunner, buildPlanPrompt, DROID_ALLOWED_TOOLS, DEFAULT_DROID_MODEL, buildAckPrompt, buildIntroPrompt, extractJsonObject,
   type DroidAckProposerOptions, type DroidUsage } from './droid-proposer.js';
 export { runCoordinationJob, InvalidJobError, JobConflictError, JobLedger, type ApprovedSignalSource, type CoordinationCommitPort, type CoordinationResult,
   type JobDeps } from './jobs.js';
