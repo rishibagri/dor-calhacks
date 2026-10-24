@@ -2,21 +2,86 @@
 
 ### AI that helps people connect with people
 
-dor helps people build new connections and keep existing ones alive. A person can reflect privately, discover people with shared interests nearby, or find company for a local event. Their agent helps find a useful opening; the people choose whether to act.
+dor helps people keep existing partner, friend and family relationships alive through private reflection and explicitly approved, recipient-specific invitations to connect. The current release prioritizes that complete journey. Geographical discovery, nearby introductions and same-event matching are preserved as extensions, not core release gates.
 
 The product thesis is that AI should help someone leave a conversation with a bot and start a conversation with a person. This is a design goal to validate, not a claim that AI causes isolation for everyone. dor complements calls and meeting up by reducing the effort of finding the person, reason and moment.
 
 > Private reflection → explicitly approved context → a useful human connection.
+
+## Current direction — core first (2026-10-24)
+
+**This mini patch changes the plan, not runtime behavior.** The core-first milestones below supersede the discovery-first R0–R6 schedule and conflicting priorities in older role/plan documents. Preserve implemented discovery/event code; do not delete it, weaken its guards, or expand it before the core passes live verification. Existing Discover UI is not disabled by this README change; CS must separate it from the core demo in a follow-up. This is not another 36-hour sprint.
+
+**Core journey:** private typed/voice reflection → identify support intent and recipient boundaries → clarify privately when necessary → exact named-recipient preview → explicit approval → bounded coordination → authoritative consent recheck → recipient-only nudge → dismiss, pause or revoke.
+
+### Sponsor targets and implementation evidence
+
+Source: user-supplied **13.0 Hacker Guide.pdf**, PDF pages 11–13 (printed pages 10–12), and the [official prize listing](https://cal-hacks-13-0.devpost.com/). The guide says detailed criteria are on the [live site](https://hive.hackberkeley.org/prizes) and prizes may change. Tool use below is **our implementation/evidence requirement**, not an invented complete sponsor rubric. Credits, installed packages and a sponsor logo do not prove eligibility.
+
+| Target / priority | Required tool contribution in dor | Owner and evidence before claiming readiness |
+|---|---|---|
+| **Meta/Facebook: Bringing People Closer Together with AI — primary product target** | Demonstrate AI helping an existing partner, friend or family connection while respecting recipient-specific boundaries and human approval. The supplied guide does not specify a required Meta model/API; do not assume Llama, WhatsApp or Meta hardware is mandatory. | **All; CS integrates, Nimisha evaluates.** Show one useful invitation, one private clarification and one correctly suppressed nudge. Confirm any additional technical/submission conditions with the sponsor. |
+| **Anthropic: Best use of Claude — primary** | Claude performs meaningful private reflection and structured support/ambiguity reasoning through the authenticated provider path. It must distinguish “want company” from “want this person's company,” without authorizing a disclosure. | **Adam + Nimisha; Sumedh reviews the boundary.** User confirmed the challenge title; the guide still says “Coming soon.” Record real Claude execution, constrained outputs and positive/clarify/no-action cases. Coding with Claude alone is not the product integration we intend to demonstrate. |
+| **Factory: Best Use of the Factory Droid SDK — primary, rework in progress** | Rework orchestration to use the actual **Droid SDK** for an application-triggered, bounded workflow over approved signals. Preserve tool restrictions, isolated execution, cancellation, call limits and commit-time policy checks. | **Adam; CS supplies runtime/configuration.** SDK rework is user-confirmed ongoing work, not verified landed code. Current inspected worker uses restricted `droid exec`; a CLI install/subprocess must not be described as SDK integration. Show the SDK call path and a reproducible execution; verify final eligibility with Factory. [SDK docs](https://docs.factory.com/sdk/typescript). |
+| **Cartesia: Best Use of Cartesia — primary** | Real voice capture/transcription and optional read-aloud in the core journal, with scoped short-lived browser tokens and clear provider-processing copy. | **Adam; CS composes the UI.** Demonstrate record/stop/correct, typed fallback, denied microphone, cancellation and token expiry. A saved API key or mocked audio does not establish a working integration. |
+| **SpacetimeDB — core infrastructure; exact challenge title/criteria pending** | Authoritative reducers, private tables, caller-filtered views and live subscriptions for pairs, exact approvals, recipient consent, nudges and revocation. CLI publishing/generation is tooling, not the runtime integration. | **CS + Sumedh.** Two signed-in accounts and a denied third account; revocation during generation; retry without duplicate delivery. Guide lists “Coming soon”; [Spacetime's announcement](https://spacetimedb.com/blog/spacetime-at-calhacks) confirms a usage prize without a complete rubric. Record the exact submission category when confirmed. |
+| **Apify: Best use of Apify — conditional extension** | A real server-side Actor/API public activity source, normalized and cached with provenance. Keep personal context, recipient IDs and user-derived location out of Actor input. | **CS; Nimisha ranks permitted results, Sumedh reviews inputs.** Pursue only after the core is complete. If no meaningful live integration ships, omit this submission target. The separate Best Actor category is not claimed merely for consuming an existing Actor. |
+
+No extra tool is being added solely to chase another prize. Sponsor evidence should contain code paths, reproducible synthetic-data demos and content-free usage metrics, never keys, raw journals or private clarification answers. Video/presentation planning remains in [docs/DEMO.md](docs/DEMO.md).
+
+### Reasoning layer and human-in-the-loop behavior
+
+**New clarification and person-specific pause behavior is planned, not implemented by this patch.** Existing presets remain category ceilings; a new recipient exclusion can only narrow permission, never broaden the preset. Shared pause/revision interfaces require Cyber/CS/AI review and versioned contracts before implementation.
+
+1. **Private understanding (Claude):** only process content the owner selected under the provider notice. Produce an owner-only assessment of desired support, uncertainty and possible recipient restrictions. Never infer permission from quiz answers, closeness, past approvals or a model confidence score. No lie detection or comparison of friends' private stories.
+2. **Deterministic exclusion:** an explicit “not Alex,” pause, unlink, missing consent or stale permission blocks that recipient. Clear refusal is not an invitation to ask again until the user agrees. Keep private explanations out of shared state and peer prompts; a durable pause needs only the minimum restricted control metadata, not its reason.
+3. **Three owner-side outcomes:** `no_action`, `needs_clarification`, or `ready_for_preview` are proposed design vocabulary, not new exported schemas. Invalid/ambiguous output, refusal or timeout never means send. A model can suggest a clarification or veto a proposal; it cannot approve delivery.
+4. **Private clarification:** ask one natural question at a time, for example “Would company feel good tonight, or would you prefer some space?” Then, only if needed, “Is there someone you would feel comfortable hearing from?” Questions must not disclose another person's private data or imply that anyone has already been notified. Explain that answers help shape private suggestions; do not conceal that sharing is possible later. Offer skip/not now. Proposed cap: two questions, then no action if unresolved; no repeated pressure or background retry after dismissal.
+5. **Explicit sharing decision:** a clarification answer is never consent. Show the exact approved fields, named recipient and recipient-facing template, then ask separately whether to share. Bind approval to that recipient and revision. Editing the recipient or payload requires a fresh preview/approval. Only an approved signal can trigger shared coordination; journal activity alone must not determine outreach timing or audience.
+6. **Bounded coordination (Factory SDK rework):** use approved enums and recipient-consented preferences only. No raw story, exclusion explanation, private reflection, free-form question or hidden chain-of-thought in peer prompts/logs. Prefer deterministic filtering first; invoke reasoning only when useful. Existing safe-template fallback must never bypass unresolved relational ambiguity or a pause.
+7. **Atomic delivery (SpacetimeDB):** recheck current identity, accepted pair, preset/assignment/item consent versions, recipient opt-in/preferences, expiry, quiet hours, cooldown and revocation. Add the reviewed pause version/check before enabling the new feature; an old queued job must not survive a new pause. Recipient copy stays in approved fixed templates. Suppression is silent to the other person: no “they avoided you” or “the AI decided not to notify you” receipt.
+
+**Private-event acceptance case:** someone declines a friend's invitation saying they are sick, later attends a party, and mentions it privately. No “ask about Friday,” event hint, whereabouts, contradiction alert or hidden-story explanation may reach that friend. General availability is not willingness to see every person. If the user explicitly excludes that friend, suppress; if intent is unclear, clarify privately and require fresh explicit approval before any sharing. Never fabricate a cover story. We can reduce disclosure risk; we cannot guarantee that all human inference or relationship friction is impossible.
+
+**Data lifetime:** keep clarification questions/answers and pending assessments in the owner's current session by default; discard on completion, cancellation, lock or account change. Persistence needs a reviewed local-vault design. Neither raw answers nor reasons belong in SpacetimeDB, analytics, Factory coordination sessions or team logs. Minimal content-free decision codes are enough for synthetic evaluation.
+
+### Where implementation actually stands
+
+Inspected main: **6093b2a**, including PRs #16–22. The older baseline inventory below is retained as history, not current status. Code presence and teammate offline evidence are not deployed proof.
+
+| Area | Current evidence | Next core work |
+|---|---|---|
+| Local journal / voice / privacy | Per-account vault composition, VaultControls, VoiceReflection, saved entries and generated bindings exist on main. | Verify real-browser lifecycle, microphone and configured providers; fix integration failures. |
+| Exact recipient sharing | ShareReview, payload/revision-bound approval, recipient support/delivery settings and approved-signal revocation UI exist on main. | Exercise the complete two-account path against deployed state; do not rebuild these surfaces from scratch. |
+| Guarded coordination | Consent-bound worker adapters, reducer authorization, caller-filtered views, expiry handling and fixed templates exist. | Complete SDK rework and verify deployed worker identity, runtime limits and races. |
+| Recipient-specific avoidance / clarification | Requirements defined above; no complete reviewed pause + clarification workflow established. | Design schemas/state transitions, implement UI + private reasoning + authoritative pause enforcement, add targeted regression cases. |
+| Geography / events | Discover UI, paged area-filtered cards, introductions, event/plan guards and DS evaluation code already exist. | Preserve as extension; stop making these a core acceptance dependency. |
+| Release readiness | Existing offline checks/builds are documented in role logs. | New branch-specific checks, live provider runs and two-account evidence; no full live completion claim. |
+
+PR #23 is still open at this checkpoint and overlaps work subsequently integrated on main; review its remaining safety/follow-up diff before merging. Do not use an old PR description to overwrite newer sharing or discovery code. This documentation PR does not merge it.
+
+### Immediate core milestones and balanced ownership
+
+Use actual time remaining; these milestones supersede the old geographical R2/R3 release gates. All four owners work in parallel within each gate. Preserve the detailed older tasks as a reference, not a second active backlog.
+
+| Gate | CS — you | DS — Nimisha | AI — Adam | Cyber — Sumedh | Exit evidence |
+|---|---|---|---|---|---|
+| **Core 1: reconcile and define boundaries** | Reconcile latest main/open PRs; verify current sharing/settings UI; claim clarification UI and pause-control integration. | Define support/avoid/uncertain expected outcomes and forbidden disclosure labels before evaluating models. | Specify private assessment/clarification seam and SDK migration plan; keep private Claude and approved-only Factory contexts separate. | Define negative recipient restriction, expiry/version, access and commit-time semantics; review new interfaces with producers/consumers. | Shared reviewed proposal; exact file claims; no silent runtime contract changes. |
+| **Core 2: implement the private decision loop** | Compose question/skip/answer states into journal; reuse exact recipient preview; clear state on lock/account switch; integrate explicit pause controls after contracts land. | Add paired scenarios: company generally vs this friend, explicit refusal, ambiguous timing, skipped question, changed answer and prompt injection. | Implement bounded structured assessment and at most two clarifications; invalid/refused/timeout → no delivery; actual SDK workflow over approved inputs. | Implement authoritative pause checks at approval/use/commit and invalidation of queued/visible derived work; owner-only controls and reason-free outputs. | Positive, clarify and no-action journeys offline; no content or question answer crosses the sharing boundary. |
+| **Core 3: connect and verify live** | Configure module/auth/bindings/worker, run two-account plus denied-third-account journey; verify approval, revoke and reconnect. | Two teammate ratings on eligible usefulness; report unsafe suggestions separately from missed suggestions; compare deterministic baseline. | Verify Claude/Cartesia/SDK with synthetic inputs; measure calls, total latency, queue/retry limits, cancellation and graceful provider failure. | Test direct reducer bypasses, pause/revoke during generation, stale approval replay, wrong-recipient access and private logging. | Reproducible core journey on real services; deny/race cases produce no unauthorized delivery. |
+| **Core 4: stabilize and prepare submission** | Separate extension UI from core demo; fix blockers and prepare reproducible run/reset instructions. | Choose partner/friend/family examples plus the private-party no-action case; record actual sample size and limitations. | Freeze tested SDK/provider config; supply sanitized integration/cost evidence, not unsupported savings claims. | Final privacy-copy/control review; verify expiry, delete-vs-revoke behavior and account-switch cleanup. | Stable demo + verified sponsor checklist; incomplete integrations labeled honestly. |
+
+**Core definition of done:** one useful approved nudge, one clarification that remains private until separately approved, and one explicit person-specific refusal that cannot deliver despite retries. Reproduce partner/friend/family cases, clear private state on lock/sign-out, handle failed microphone/provider paths, and prove a revoked/paused signal cannot produce a new visible nudge. Do not claim this is done from a build, an offline harness, or a configured key alone.
 
 ## Start here
 
 1. Read [AGENTS.md](AGENTS.md), [PRD.md](PRD.md), [PROJECT_KNOWLEDGE.md](PROJECT_KNOWLEDGE.md) and [contracts/README.md](contracts/README.md).
 2. Read [shared dependencies](docs/PLAN.md), [selected stack](docs/TECH_STACK.md) and the contract specs.
 3. Open your role: [CS](docs/roles/cs.md), [Nimisha / DS](docs/roles/ds.md), [Adam / AI](docs/roles/ai.md), [Sumedh / Cyber](docs/roles/cyber.md), then your handoff and all update logs.
-4. Merge main into your active role branch. Preserve implementation already completed. **R0–R6 below replace the old P0–P9 schedule; they do not reset code or give us another 36 hours.** Historical P IDs remain in logs as evidence.
+4. Merge main into your active role branch. Preserve implementation already completed. **Core 1–4 above are the active milestones. R0–R6 below are historical planning/reference only.** Historical P IDs remain in logs as evidence.
 5. [Forwardable team messages](docs/team-messages/README.md) explain what changed. Video/presentation work stays separate in [docs/DEMO.md](docs/DEMO.md).
 
-## The three experiences we are building
+## Original three-experience vision — core plus deferred extensions
 
 | Experience | Example | What dor does | Human decision |
 |---|---|---|---|
@@ -30,7 +95,7 @@ All original partner/friend/family functionality stays. Nearby discovery is not 
 
 The skippable 6–8-question quiz still personalizes communication style, support, bandwidth and draft sharing preferences. It never grants disclosure consent. Established connections use explicitly confirmed partner/friend/family presets with named per-item approvals. Stranger discovery has a separate explicit publication choice; it cannot inherit those presets.
 
-## Completed implementation and current gaps
+## Historical implementation inventory — superseded by the current checkpoint above
 
 Inspected baseline: main through `d7285eb`, including latest Cyber vault/F5/F7 work and AI/DS PRs #7/#8. This is an evidence-based reset of the documentation. Old handoffs retain their original commit-specific history; the current table and PROJECT_KNOWLEDGE take precedence for present status.
 
@@ -87,7 +152,7 @@ Each person owns implementation, a usable feature surface, tests and a handoff. 
 
 New component paths are assignments, not existing implementation. Claim files before editing; CS retains shared navigation/layout. Cyber's existing claims for signals/delivery/coordination/policy/views remain intact. All cross-role wire types are exported from `@dor/contracts`, not duplicated in a feature folder. Shared package reviews require affected producer/consumer ACKs; this plan does not forge those ACKs.
 
-## Revised execution phases — remaining work only
+## Historical R0–R6 execution phases — not the current release gates
 
 The original sprint is still 36 hours, with only the original 30 minutes allocated to planning. Do not restart that clock. At resumption, write down the actual remaining budget **B** and finish time. The percentages below allocate B and sum to 100%; they are planning estimates, not known time remaining. R0 is capped at 30 minutes, and any surplus goes to R6. Example only: if B = 18 hours, the approximate blocks are 0.5 / 3.25 / 4 / 4 / 2.75 / 2 / 1.5 hours, capped to the actual deadline.
 
@@ -248,7 +313,7 @@ Run `npm run contracts:schema` after runtime shape changes and update fixtures i
 
 Configuration is documented in [.env.example](.env.example); keep real values local or in host secrets. Publish the SpacetimeDB module and generate bindings using [its guide](spacetimedb/README.md). Factory runs in a compatible persistent worker host; a local CLI login is not deployed authentication. Build/font downloads and local listening permissions can affect checks independently of application correctness; record the distinction.
 
-**Morning acceptance:** two distinct signed-in test users plus a third denied user; real vault lifecycle; typed and voice reflection; exact approval and recipient preference consent; real worker commit; revoke during generation; profile opt-in/withdraw/block; nearby introduction; source-backed event plan with both acceptances. Seed partner, friend, family, newcomer and same-event cases separately. Record implementation, offline test, deployment and live evidence independently in PROJECT_KNOWLEDGE.
+**Historical expanded acceptance (extensions, not the current core gate):** two distinct signed-in test users plus a third denied user; real vault lifecycle; typed and voice reflection; exact approval and recipient preference consent; real worker commit; revoke during generation; profile opt-in/withdraw/block; nearby introduction; source-backed event plan with both acceptances. Seed partner, friend, family, newcomer and same-event cases separately. Record implementation, offline test, deployment and live evidence independently in PROJECT_KNOWLEDGE.
 
 ## Coordination and repository map
 
