@@ -1,5 +1,6 @@
 'use client';
 
+import { ApprovedSignals } from '@/components/feature/approved-signals';
 import { useLiveShared } from '@/components/shell/use-live';
 import { IntegrationStatus } from '@/components/shell/integration-status';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -16,7 +17,9 @@ const FACTS = [
 
 export default function PrivacyPage() {
   const vault = useVault();
-  const receipts = useLiveShared().myReceipts();
+  const shared = useLiveShared();
+  const receipts = shared.myReceipts();
+  const names = new Map(shared.myPairs().flatMap((p) => p.counterpartIdentityHex ? [[p.counterpartIdentityHex, p.counterpartDisplayName ?? 'Your connection'] as const] : []));
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <header className="space-y-2">
@@ -36,17 +39,18 @@ export default function PrivacyPage() {
           </p>
         </AlertDescription>
       </Alert>
+      <ApprovedSignals />
       <Card>
         <CardHeader>
-          <CardTitle>Approved signals and receipts</CardTitle>
-          <CardDescription>Exactly which fields were used, for whom, and when.</CardDescription>
+          <CardTitle>Receipts</CardTitle>
+          <CardDescription>Every time an approval was made, used, revoked or suppressed.</CardDescription>
         </CardHeader>
         <CardContent>
-          {receipts.length === 0 && <p className="text-sm text-muted-foreground">No signals approved yet.</p>}
+          {receipts.length === 0 && <p className="text-sm text-muted-foreground">No receipts yet.</p>}
           <ul className="divide-y">
             {receipts.map((r) => (
               <li key={r.receiptId} className="space-y-0.5 py-3 text-sm">
-                <p><span className="font-medium">{r.action}</span> to {r.recipientId}</p>
+                <p><span className="font-medium capitalize">{r.action}</span> for {names.get(r.recipientId) ?? 'a former connection'}</p>
                 <p className="text-muted-foreground">
                   {r.categories.join(', ')} <span aria-hidden>&middot;</span>{' '}
                   <time dateTime={r.createdAt}>{new Date(r.createdAt).toLocaleString()}</time>

@@ -4,14 +4,15 @@
  * schemas. Rows that fail validation are dropped (fail closed), never shown.
  */
 import {
+  ApprovedSignalSchema,
   DisclosureReceiptSchema,
   NudgeSchema,
   RecipientPresetAssignmentSchema,
   RelationshipPresetSchema,
 } from '@dor/contracts';
-import type { DisclosureReceipt, Nudge, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
+import type { ApprovedSignal, DisclosureReceipt, Nudge, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
 import { validRecipientDelivery, validSupportPreferences } from '@dor/contracts/policy';
-import type { InviteView, NudgeDeliveryView, PairView, SupportPreferencesView } from '@/lib/backend/ports';
+import type { InviteView, NudgeDeliveryView, PairView, SignalView, SupportPreferencesView } from '@/lib/backend/ports';
 import { toCamel, type LooseRow } from './bindings';
 
 type Mapper<T> = (row: LooseRow) => T | null;
@@ -119,6 +120,30 @@ export const mapReceipt: Mapper<DisclosureReceipt> = (row) =>
     action: str(row, 'action'),
     createdAt: str(row, 'created_at'),
   });
+
+/** SDK option → value or undefined (the contract schema uses optional, not null). */
+function opt(row: LooseRow, key: string): string | undefined {
+  return str(row, key) ?? undefined;
+}
+
+export const mapSignal: Mapper<SignalView> = (row) => {
+  const signal = parsed<ApprovedSignal>(ApprovedSignalSchema, {
+    schemaVersion: 2,
+    signalId: str(row, 'signal_id'),
+    pairId: str(row, 'pair_id'),
+    senderId: str(row, 'sender_id'),
+    recipientId: str(row, 'recipient_id'),
+    purpose: str(row, 'purpose'),
+    supportMode: opt(row, 'support_mode'),
+    availability: opt(row, 'availability'),
+    consentVersion: Number(plain(get(row, 'consent_version'))),
+    recipientPolicyId: str(row, 'recipient_policy_id'),
+    recipientPolicyVersion: Number(plain(get(row, 'recipient_policy_version'))),
+    presetAssignmentVersion: Number(plain(get(row, 'preset_assignment_version'))),
+    expiresAt: str(row, 'expires_at'),
+  });
+  return signal ? { ...signal, revokedAt: str(row, 'revoked_at') } : null;
+};
 
 function num(row: LooseRow, key: string): number | null {
   const v = plain(get(row, key));

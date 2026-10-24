@@ -72,7 +72,7 @@ export function createOfflineSharedState(
     setSupportPreferences: refuse, revokeSupportPreferences: refuse, setNudgeDelivery: refuse,
     myAccount: () => null, myPairs: () => EMPTY, myInvites: () => EMPTY, myPresets: () => EMPTY,
     myPresetAssignments: () => EMPTY, myNudges: () => EMPTY, myReceipts: () => EMPTY,
-    mySupportPreferences: () => EMPTY, myNudgeDelivery: () => EMPTY,
+    mySignals: () => EMPTY, mySupportPreferences: () => EMPTY, myNudgeDelivery: () => EMPTY,
     subscribe: () => () => undefined,
     getVersion: () => 0,
     dispose: () => undefined,

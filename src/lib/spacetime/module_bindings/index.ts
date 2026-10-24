@@ -38,13 +38,20 @@ import AcceptPairInviteReducer from "./accept_pair_invite_reducer";
 import ApproveSignalReducer from "./approve_signal_reducer";
 import AssignRelationshipPresetReducer from "./assign_relationship_preset_reducer";
 import BlockDiscoveryUserReducer from "./block_discovery_user_reducer";
+import BlockIntroductionParticipantReducer from "./block_introduction_participant_reducer";
+import CancelIntroductionRequestReducer from "./cancel_introduction_request_reducer";
+import CommitIntroductionProposalReducer from "./commit_introduction_proposal_reducer";
 import CommitNudgeReducer from "./commit_nudge_reducer";
 import CreatePairInviteReducer from "./create_pair_invite_reducer";
+import DismissIntroductionProposalReducer from "./dismiss_introduction_proposal_reducer";
 import DismissNudgeReducer from "./dismiss_nudge_reducer";
 import PublishDiscoveryProfileReducer from "./publish_discovery_profile_reducer";
 import RegisterAccountReducer from "./register_account_reducer";
+import ReportDiscoveryUserReducer from "./report_discovery_user_reducer";
+import RespondIntroductionRequestReducer from "./respond_introduction_request_reducer";
 import RevokeSignalReducer from "./revoke_signal_reducer";
 import RevokeSupportPreferencesReducer from "./revoke_support_preferences_reducer";
+import SendIntroductionRequestReducer from "./send_introduction_request_reducer";
 import SetAuthAudienceReducer from "./set_auth_audience_reducer";
 import SetAuthIssuerReducer from "./set_auth_issuer_reducer";
 import SetDiscoveryAreaReducer from "./set_discovery_area_reducer";
@@ -63,6 +70,8 @@ import WithdrawDiscoveryProfileReducer from "./withdraw_discovery_profile_reduce
 import DiscoveryCardsRow from "./discovery_cards_table";
 import MyAccountRow from "./my_account_table";
 import MyDiscoveryProfileRow from "./my_discovery_profile_table";
+import MyIntroductionProposalsRow from "./my_introduction_proposals_table";
+import MyIntroductionsRow from "./my_introductions_table";
 import MyInvitesRow from "./my_invites_table";
 import MyNudgeDeliveryRow from "./my_nudge_delivery_table";
 import MyNudgesRow from "./my_nudges_table";
@@ -101,6 +110,20 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyDiscoveryProfileRow),
+  myIntroductionProposals: __table({
+    name: 'my_introduction_proposals',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyIntroductionProposalsRow),
+  myIntroductions: __table({
+    name: 'my_introductions',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyIntroductionsRow),
   myInvites: __table({
     name: 'my_invites',
     indexes: [
@@ -193,13 +216,20 @@ const reducersSchema = __reducers(
   __reducerSchema("approve_signal", ApproveSignalReducer),
   __reducerSchema("assign_relationship_preset", AssignRelationshipPresetReducer),
   __reducerSchema("block_discovery_user", BlockDiscoveryUserReducer),
+  __reducerSchema("block_introduction_participant", BlockIntroductionParticipantReducer),
+  __reducerSchema("cancel_introduction_request", CancelIntroductionRequestReducer),
+  __reducerSchema("commit_introduction_proposal", CommitIntroductionProposalReducer),
   __reducerSchema("commit_nudge", CommitNudgeReducer),
   __reducerSchema("create_pair_invite", CreatePairInviteReducer),
+  __reducerSchema("dismiss_introduction_proposal", DismissIntroductionProposalReducer),
   __reducerSchema("dismiss_nudge", DismissNudgeReducer),
   __reducerSchema("publish_discovery_profile", PublishDiscoveryProfileReducer),
   __reducerSchema("register_account", RegisterAccountReducer),
+  __reducerSchema("report_discovery_user", ReportDiscoveryUserReducer),
+  __reducerSchema("respond_introduction_request", RespondIntroductionRequestReducer),
   __reducerSchema("revoke_signal", RevokeSignalReducer),
   __reducerSchema("revoke_support_preferences", RevokeSupportPreferencesReducer),
+  __reducerSchema("send_introduction_request", SendIntroductionRequestReducer),
   __reducerSchema("set_auth_audience", SetAuthAudienceReducer),
   __reducerSchema("set_auth_issuer", SetAuthIssuerReducer),
   __reducerSchema("set_discovery_area", SetDiscoveryAreaReducer),
@@ -225,6 +255,10 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_account": Omit<typeof tablesSchema.schemaType.tables["myAccount"], "accessorName"> & { readonly accessorName: "my_account" };
     /** @deprecated Use `myDiscoveryProfile` instead. This alias will be removed in the next major version. */
     readonly "my_discovery_profile": Omit<typeof tablesSchema.schemaType.tables["myDiscoveryProfile"], "accessorName"> & { readonly accessorName: "my_discovery_profile" };
+    /** @deprecated Use `myIntroductionProposals` instead. This alias will be removed in the next major version. */
+    readonly "my_introduction_proposals": Omit<typeof tablesSchema.schemaType.tables["myIntroductionProposals"], "accessorName"> & { readonly accessorName: "my_introduction_proposals" };
+    /** @deprecated Use `myIntroductions` instead. This alias will be removed in the next major version. */
+    readonly "my_introductions": Omit<typeof tablesSchema.schemaType.tables["myIntroductions"], "accessorName"> & { readonly accessorName: "my_introductions" };
     /** @deprecated Use `myInvites` instead. This alias will be removed in the next major version. */
     readonly "my_invites": Omit<typeof tablesSchema.schemaType.tables["myInvites"], "accessorName"> & { readonly accessorName: "my_invites" };
     /** @deprecated Use `myNudgeDelivery` instead. This alias will be removed in the next major version. */
@@ -270,6 +304,8 @@ const tableAccessorAliases = {
   "discovery_cards": "discoveryCards",
   "my_account": "myAccount",
   "my_discovery_profile": "myDiscoveryProfile",
+  "my_introduction_proposals": "myIntroductionProposals",
+  "my_introductions": "myIntroductions",
   "my_invites": "myInvites",
   "my_nudge_delivery": "myNudgeDelivery",
   "my_nudges": "myNudges",
@@ -308,6 +344,10 @@ export type DbView = __DbViewBase & {
   readonly "my_account": __DbViewBase["myAccount"];
   /** @deprecated Use `myDiscoveryProfile` instead. This alias will be removed in the next major version. */
   readonly "my_discovery_profile": __DbViewBase["myDiscoveryProfile"];
+  /** @deprecated Use `myIntroductionProposals` instead. This alias will be removed in the next major version. */
+  readonly "my_introduction_proposals": __DbViewBase["myIntroductionProposals"];
+  /** @deprecated Use `myIntroductions` instead. This alias will be removed in the next major version. */
+  readonly "my_introductions": __DbViewBase["myIntroductions"];
   /** @deprecated Use `myInvites` instead. This alias will be removed in the next major version. */
   readonly "my_invites": __DbViewBase["myInvites"];
   /** @deprecated Use `myNudgeDelivery` instead. This alias will be removed in the next major version. */
@@ -342,6 +382,10 @@ export type Tables = __TablesBase & {
   readonly "my_account": __TablesBase["myAccount"];
   /** @deprecated Use `myDiscoveryProfile` instead. This alias will be removed in the next major version. */
   readonly "my_discovery_profile": __TablesBase["myDiscoveryProfile"];
+  /** @deprecated Use `myIntroductionProposals` instead. This alias will be removed in the next major version. */
+  readonly "my_introduction_proposals": __TablesBase["myIntroductionProposals"];
+  /** @deprecated Use `myIntroductions` instead. This alias will be removed in the next major version. */
+  readonly "my_introductions": __TablesBase["myIntroductions"];
   /** @deprecated Use `myInvites` instead. This alias will be removed in the next major version. */
   readonly "my_invites": __TablesBase["myInvites"];
   /** @deprecated Use `myNudgeDelivery` instead. This alias will be removed in the next major version. */
@@ -414,3 +458,4 @@ export class DbConnection extends __DbConnectionImpl<typeof REMOTE_MODULE> {
     return new SubscriptionBuilder(this);
   };
 }
+

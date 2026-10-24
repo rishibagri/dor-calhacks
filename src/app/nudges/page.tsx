@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { NUDGE_TEMPLATE_COPY } from '@dor/contracts';
 import type { ReducerResult } from '@/lib/backend/ports';
@@ -34,7 +35,8 @@ export default function NudgesPage() {
         <div className={`rounded-lg border border-dashed p-8 text-center ${ENTER}`}>
           <p className="font-medium">Nothing waiting for you</p>
           <p className="mx-auto mt-1 max-w-[48ch] text-sm text-muted-foreground">
-            No nudges right now. When someone approves a signal for you, a gentle suggestion appears here.
+            No nudges right now. Nudges only reach you from connections you have turned them on for, and only for kinds
+            of support you accept. Set both per connection in <Link className="underline" href="/connections">Connections</Link>.
           </p>
         </div>
       )}

@@ -168,6 +168,7 @@ export class SpacetimeSharedState implements SharedStateController {
   myPresetAssignments = () => this.views.assignments;
   myNudges = () => this.views.nudges;
   myReceipts = () => this.views.receipts;
+  mySignals = () => this.views.signals;
   mySupportPreferences = () => this.views.supportPreferences;
   myNudgeDelivery = () => this.views.nudgeDelivery;
 }
