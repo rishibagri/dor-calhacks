@@ -128,6 +128,50 @@ export interface IntroductionProposalView {
  */
 export interface UnreadableRow { id: string | null; pairId: string | null }
 
+/** One `catalogue_events` row: public, source-backed, normalized server-side (D039). Never joined to a person. */
+export interface CatalogueEventView {
+  eventId: string;
+  title: string;
+  startsAt: string;
+  endsAt: string | null;
+  topics: string[];
+  format: 'in_person' | 'online';
+  areaKey: string | null;
+  sourceUrl: string | null;
+  fetchedAt: string;
+}
+
+/** The caller's own event intent (`my_event_intents`), withdrawn ones included so the next version is known. */
+export interface EventIntentRow {
+  eventId: string;
+  kind: 'interested' | 'going';
+  version: number;
+  active: boolean;
+  expiresAt: string;
+}
+
+/** Mutual overlap only (`event_companions`): a visible card and an event both of you marked. */
+export interface EventCompanionRow { cardRef: string; eventId: string }
+
+/** The caller's own standing C7 approval (`my_activity_approvals`). */
+export interface ActivityApprovalRow { approvalId: string; pairId: string; topics: string[]; expiresAt: string }
+
+export type PlanStatus = 'pending' | 'confirmed' | 'stale' | 'expired' | 'declined' | 'cancelled' | 'closed';
+
+/** The caller's own shared plan (`my_plans`). The other person's acceptance is never shown before confirmed. */
+export interface PlanView {
+  planId: string;
+  revision: number;
+  status: PlanStatus;
+  myAcceptance: boolean;
+  eventId: string;
+  eventTitle: string;
+  eventStartsAt: string;
+  sourceUrl: string | null;
+  counterpartName: string | null;
+  expiresAt: string;
+}
+
 export type ReportReason = 'spam' | 'harassment' | 'impersonation' | 'inappropriate_profile' | 'other';
 
 /** The caller's OWN delivery settings as a recipient in one pair (`my_nudge_delivery`, D017/D018). */
@@ -220,6 +264,13 @@ export interface SharedStatePort {
   cancelIntroductionRequest(introId: string): Promise<ReducerResult>; // cancel_introduction_request
   blockIntroductionParticipant(introId: string): Promise<ReducerResult>; // block_introduction_participant
   /** Also blocks. The target is never told who reported or why. */
+  /** C8 event intent; expectedVersion 0 = first. Expires with the event. */
+  publishEventIntent(eventId: string, kind: 'interested' | 'going', expectedVersion: number): Promise<ReducerResult>; // publish_event_intent
+  revokeEventIntent(eventId: string): Promise<ReducerResult>; // revoke_event_intent
+  revokeActivityInterest(approvalId: string): Promise<ReducerResult>; // revoke_activity_interest
+  /** Own accept/decline of the CURRENT plan revision. */
+  respondPlan(planId: string, revision: number, accept: boolean): Promise<ReducerResult>; // respond_plan
+  cancelPlan(planId: string): Promise<ReducerResult>; // cancel_plan
   dismissIntroductionProposal(proposalId: string): Promise<ReducerResult>; // dismiss_introduction_proposal
   reportDiscoveryUser(target: { kind: 'card' | 'introduction'; ref: string }, reason: ReportReason): Promise<ReducerResult>; // report_discovery_user
 
@@ -238,6 +289,11 @@ export interface SharedStatePort {
   discoveryCards(): DiscoveryCardRow[]; // discovery_cards (≤ DISCOVERY_CARD_LIMIT, caller-filtered)
   myIntroductions(): IntroductionView[]; // my_introductions
   myIntroductionProposals(): IntroductionProposalView[]; // my_introduction_proposals
+  catalogueEvents(): CatalogueEventView[]; // catalogue_events
+  myEventIntents(): EventIntentRow[]; // my_event_intents
+  eventCompanions(): EventCompanionRow[]; // event_companions
+  myActivityApprovals(): ActivityApprovalRow[]; // my_activity_approvals
+  myPlans(): PlanView[]; // my_plans
   /** Rows present in a view but unreadable; see UnreadableRow. */
   unreadable(): { signals: UnreadableRow[]; supportPreferences: UnreadableRow[]; nudgeDelivery: UnreadableRow[] };
 
