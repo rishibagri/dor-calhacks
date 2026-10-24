@@ -1,14 +1,16 @@
 import { z } from 'zod';
+import { AVAILABILITIES, DISCLOSURE_PURPOSE, NUDGE_TEMPLATE_IDS, RELATIONSHIP_PRESET_KINDS,
+  SHARING_CATEGORIES, SUPPORT_MODES } from './enums.js';
 
 const id = z.string().min(1).max(128);
 const time = z.string().datetime({ offset: true });
-export const SupportModeSchema = z.enum(['short_call', 'encouraging_note', 'shared_activity']);
-export const AvailabilitySchema = z.enum(['today', 'this_week', 'no_preference']);
-export const SharingCategorySchema = z.enum(['support_preference', 'coarse_availability']);
-export const RelationshipPresetKindSchema = z.enum(['partner', 'friend', 'family']);
+export const SupportModeSchema = z.enum(SUPPORT_MODES);
+export const AvailabilitySchema = z.enum(AVAILABILITIES);
+export const SharingCategorySchema = z.enum(SHARING_CATEGORIES);
+export const RelationshipPresetKindSchema = z.enum(RELATIONSHIP_PRESET_KINDS);
 export const ApprovedSignalSchema = z.object({
   schemaVersion: z.literal(2), signalId: id, pairId: id, senderId: id, recipientId: id,
-  purpose: z.literal('support_nudge'), supportMode: SupportModeSchema.optional(),
+  purpose: z.literal(DISCLOSURE_PURPOSE), supportMode: SupportModeSchema.optional(),
   availability: AvailabilitySchema.optional(), consentVersion: z.number().int().positive(),
   recipientPolicyId: id, recipientPolicyVersion: z.number().int().positive(),
   presetAssignmentVersion: z.number().int().positive(), expiresAt: time,
@@ -16,7 +18,7 @@ export const ApprovedSignalSchema = z.object({
   'At least one approved sharing category is required');
 export const RelationshipPresetSchema = z.object({
   schemaVersion: z.literal(1), policyId: id, ownerId: id, presetKind: RelationshipPresetKindSchema,
-  purpose: z.literal('support_nudge'), allowedCategories: z.array(SharingCategorySchema)
+  purpose: z.literal(DISCLOSURE_PURPOSE), allowedCategories: z.array(SharingCategorySchema)
     .refine(v => new Set(v).size === v.length, 'Duplicate categories'),
   approvalMode: z.literal('each_item'), version: z.number().int().positive(),
   expiresAt: time, revokedAt: time.nullable(),
@@ -39,7 +41,7 @@ export const AgentAckSchema = z.object({
 export const NudgeSchema = z.object({
   schemaVersion: z.literal(1), id, pairId: id, recipientId: id,
   sourceSignalIds: z.array(id).min(1), sourceConsentVersions: z.array(z.number().int().positive()).min(1),
-  templateId: z.enum(['offer_short_call', 'offer_note', 'offer_shared_activity']),
+  templateId: z.enum(NUDGE_TEMPLATE_IDS),
   createdAt: time, expiresAt: time,
 }).strict().refine(n => n.sourceSignalIds.length === n.sourceConsentVersions.length,
   'Every source signal must have a corresponding consent version');

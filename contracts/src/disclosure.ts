@@ -21,7 +21,7 @@ export const SignalCandidateSchema = z.object({
 }).strict();
 export type SignalCandidate = z.infer<typeof SignalCandidateSchema>;
 
-export const SIGNAL_LIFETIME_MS = 24 * 60 * 60 * 1000;
+// Signal lifetime is Cyber's SIGNAL_LIFETIME_MS in ./policy.js (single source; D026).
 
 const FIELD_CATEGORY = { supportMode: 'support_preference', availability: 'coarse_availability' } as const;
 type CandidateField = keyof typeof FIELD_CATEGORY;
@@ -121,8 +121,11 @@ function ownerSentence(name: string, p: SignalCandidate): string {
   return `${name} may learn that ${parts.join(', and ')}. ${caveat}`;
 }
 
-/** F4: the approval payload is the preview payload; no other field may change between them. */
-export function sameApprovedPayload(preview: SignalCandidate, signal: Pick<ApprovedSignal, 'supportMode' | 'availability'>): boolean {
+/**
+ * F4: the approval payload is the preview payload; no other field may change between them.
+ * Distinct from Cyber's `sameApprovedPayload` (full presented-vs-stored signal comparison).
+ */
+export function matchesPreviewPayload(preview: SignalCandidate, signal: Pick<ApprovedSignal, 'supportMode' | 'availability'>): boolean {
   return preview.supportMode === signal.supportMode && preview.availability === signal.availability;
 }
 

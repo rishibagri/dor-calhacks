@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Timestamp } from 'spacetimedb';
-import { jwtAuth, mod, pairUp, setup, view } from './helpers';
-
-const FUTURE = '2099-01-01T00:00:00Z';
+import { approveArgs, confirmPreset, FUTURE, jwtAuth, mod, pairUp, setup, view } from './helpers';
 
 describe('auth gating', () => {
   it('rejects callers whose issuer is not allow-listed', () => {
@@ -100,20 +98,18 @@ describe('presets', () => {
   });
 });
 
+/** Nudge built from a signal that went through the real guarded approve_signal. */
 function seedNudge(w: ReturnType<typeof setup>, pairId: string) {
-  const bobId = view<any>(w, w.alice, mod.my_pairs)[0].counterpart_identity;
-  const aliceId = view<any>(w, w.bob, mod.my_pairs)[0].counterpart_identity;
-  const ts = new Timestamp(w.h.clock.now().microsSinceUnixEpoch + 1_000_000_000n);
+  if (view(w, w.alice, mod.my_preset_assignments).length === 0) confirmPreset(w, w.alice, pairId, 'partner', ['support_preference']);
+  const args = approveArgs(w, w.alice, pairId, { support_mode: 'short_call' }, 'seed'); // views: outside the tx
+  w.call(w.alice, ctx => mod.approve_signal(ctx, args));
+  const sig = view<any>(w, w.alice, mod.my_signals)[0];
+  // No nudge-producing reducer exists yet (worker commit is a later milestone); insert as internal.
   w.h.withReducerTx(w.admin, ctx => {
-    ctx.db.approved_signal.insert({
-      signal_id: 's1', pair_id: pairId, sender_id: aliceId, recipient_id: bobId, purpose: 'support_nudge',
-      support_mode: 'short_call', availability: undefined, consent_version: 1, recipient_policy_id: 'p',
-      recipient_policy_version: 1, preset_assignment_version: 1, expires_at: ts, revoked_at: undefined,
-    });
     ctx.db.nudge.insert({
-      id: 'n1', pair_id: pairId, recipient_id: bobId, source_signal_ids: ['s1'], source_consent_versions: [1],
-      template_id: 'offer_short_call', created_at: ctx.timestamp, expires_at: ts, dismissed: false,
-      snoozed_until: undefined, suppressed: false,
+      id: 'n1', pair_id: pairId, recipient_id: sig.recipient_id, source_signal_ids: [sig.signal_id],
+      source_consent_versions: [sig.consent_version], template_id: 'offer_short_call', created_at: ctx.timestamp,
+      expires_at: sig.expires_at, dismissed: false, snoozed_until: undefined, suppressed: false,
     });
   });
 }
@@ -139,10 +135,9 @@ describe('nudges and unlink', () => {
     w.call(w.bob, ctx => mod.unlink_pair(ctx, { pair_id: pairId }));
     expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
     expect(view(w, w.alice, mod.my_preset_assignments)).toHaveLength(0);
-    for (const u of [w.alice, w.bob]) {
-      const r = view<any>(w, u, mod.my_receipts);
-      expect(r.map(x => x.action)).toEqual(['suppressed']);
-    }
+    // Receipts are sender-only (D026): the recipient never learns of approvals/suppressions.
+    expect(view<any>(w, w.alice, mod.my_receipts).map(x => x.action)).toEqual(['approved', 'suppressed']);
+    expect(view(w, w.bob, mod.my_receipts)).toHaveLength(0);
     expect(view<any>(w, w.alice, mod.my_pairs)[0].status).toBe('unlinked');
     expect(() => w.call(w.carol, ctx => mod.unlink_pair(ctx, { pair_id: pairId }))).toThrow(/^not_found:/);
   });
@@ -155,17 +150,5 @@ describe('nudges and unlink', () => {
     w.call(w.alice, ctx => mod.set_relationship_preset(ctx, { preset_kind: 'partner', allowed_categories: ['coarse_availability'], expected_version: 1, expires_at: FUTURE }));
     expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
     expect(view<any>(w, w.alice, mod.my_presets)[0].version).toBe(2);
-  });
-});
-
-describe('signals', () => {
-  it('approve_signal is refused until the policy guard exists', () => {
-    const w = setup();
-    const { pairId } = pairUp(w);
-    expect(() => w.call(w.alice, ctx => mod.approve_signal(ctx, {
-      pair_id: pairId, support_mode: 'short_call', availability: undefined, payload_revision: 1,
-      recipient_policy_version: 1, preset_assignment_version: 1, consent_version: 1, client_request_id: 'r1',
-    }))).toThrow('unavailable: policy guard pending (Cyber)');
-    expect(w.h.withReducerTx(w.admin, ctx => [...ctx.db.approved_signal.iter()].length)).toBe(0);
   });
 });

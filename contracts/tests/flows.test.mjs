@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
-  previewDisclosure, nudgeDelivery, templateForSignal, sameApprovedPayload,
+  previewDisclosure, nudgeDelivery, templateForSignal, matchesPreviewPayload,
   DEFAULT_RECIPIENT_DELIVERY, NUDGE_TEMPLATE_COPY, ApprovedSignalSchema,
 } from '../dist/index.js';
 
@@ -34,7 +34,7 @@ test('F3: every fixture signal equals the preview payload of its own fields', ()
     const cand = Object.fromEntries(['supportMode', 'availability'].filter(k => s[k] !== undefined).map(k => [k, s[k]]));
     const pv = previewDisclosure(input(c, cand), 'X');
     assert.equal(pv.kind, 'shareable', c.scenario);
-    assert.ok(sameApprovedPayload(pv.payload, s), c.scenario);
+    assert.ok(matchesPreviewPayload(pv.payload, s), c.scenario);
     assert.equal(templateForSignal(s), c.expectedTemplate, c.scenario);
   }
 });
@@ -79,8 +79,8 @@ test('F3: availability-only preview is honest that no nudge results', () => {
 
 test('F4: approval must carry exactly the previewed payload', () => {
   const s = ApprovedSignalSchema.parse(partners.approvedSignal);
-  assert.ok(sameApprovedPayload(both, s));
-  assert.equal(sameApprovedPayload({ supportMode: 'short_call' }, s), false);
+  assert.ok(matchesPreviewPayload(both, s));
+  assert.equal(matchesPreviewPayload({ supportMode: 'short_call' }, s), false);
 });
 
 test('F5: delivery defaults deny until recipient opts in', () => {

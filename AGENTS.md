@@ -35,7 +35,7 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 |---|---|---|
 | CS — you | M1/D015 plus core flow draft merged through d4cc763; disclosure.ts and FLOWS.md exist, not reducer/UI-wired; live bindings/auth pending | CS-P1/P2: wire reviewed F3/F4/F5/F7 flow: device-only preview, guarded approval, per-pair opt-in/delivery gate and commit; own Apify source/catalogue per docs/features/ACTIVITY_DISCOVERY.md |
 | DS — Nimisha | Active DS branch 42ff908 reports fixtures/matching/evaluation; not yet merged | DS-P1/P2: review D015 and previewDisclosure/nudgeDelivery expectations (space, opt-in, quiet hours, cooldown), claim quiz semantics, publish rank hook |
-| Cyber — Sumedh | Cyber branch 129c31f reports guards/approval/key design; main still refuses until reviewed integration | CYBER-P1/P2: reconcile existing Cyber policy with CS-drafted disclosure.ts/FLOWS.md, preserve branch guards; real VaultPort incl. extras; review merged AI D021 |
+| Cyber — Sumedh | M1 on role/cyber-privacy @ 129c31f (PR #6): C6 guards in `@kinetic/contracts/policy`, authoritative `approve_signal`, sender-only `my_signals`/`my_receipts`, vault design (`src/vault/DESIGN.md`). Offline only: contracts 40/40, module 36/36; module not published | CYBER-P1/P2: reconcile existing Cyber policy with CS-drafted disclosure.ts/FLOWS.md, preserve branch guards; real VaultPort incl. extras; review merged AI D021 |
 | AI — Adam | M1/D021 adapters and worker merged via PR #4; limited Droid tests, full policy/app integration pending | AI-P1/P2: preserve branch, review merged D021 interfaces against main SignalCandidateSchema and D016–D020 flows, authenticated provider routes, real policy/worker ports; note missing keys/latency |
 
 Detailed shared phases are in README.md; per-owner phases in docs/roles/*.md; exact producer/consumer dependencies in docs/PLAN.md. These are current planning assignments, not completion evidence. Merge main into your active role branch; do not reset or force-update other roles.
@@ -55,3 +55,36 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Handoff log (append newest at the bottom)
+
+### 2026-10-24T03:30Z | Cyber → CS, AI, DS | M1 disclosure guards + vault design
+- **Branch/commit:** `role/cyber-privacy` @ `129c31f` (based on main @ `8e208df`). PR to main pending; read the remote role branch until merged.
+- **Status:** implemented and offline-verified, NOT live. `npm run check:all` exit 0 (contracts 40/40, module 36/36, typecheck, app tests 4/4); `next build` ok; audit 0. The SpacetimeDB module has never been published.
+- **Interfaces:**
+  - `@kinetic/contracts/policy` (no runtime dependencies; safe inside reducers) exports:
+    - `guardApproval`, `guardSignalUse`, `guardSignalStanding`, `guardNudgeCommit`
+    - `payloadRevision`, `policyErrorCode`
+    - constants `SIGNAL_LIFETIME_MS` and `DISCLOSURE_CONSENT_VERSION`
+  - `DisclosurePolicy` (`@kinetic/contracts`) is the real `DisclosurePolicyPort` for routes and the worker.
+  - `approve_signal` enforces the guard and the table gained `client_request_id`.
+  - New sender-only `my_signals` view; `my_receipts` is now sender-only; `my_nudges` rechecks that each source signal is still valid.
+  - Decision D026.
+- **CS next:**
+  1. ACK D026.
+  2. In the preview route, compute `payloadRevision({pairId, recipientId: counterpartHex, supportMode, availability, recipientPolicyVersion, presetAssignmentVersion, consentVersion: DISCLOSURE_CONSENT_VERSION})` and pass it unchanged to `approve_signal`.
+  3. Use `my_signals` in the privacy center.
+  4. Regenerate bindings after publish.
+  5. ACK the VaultPort additions in `src/vault/DESIGN.md`.
+  6. Add a JWT `aud` check.
+  7. Publish the module and rerun `spacetimedb/tests/disclosure.test.ts` scenarios live with two test accounts.
+- **AI next:** in live mode, replace `FakeDisclosurePolicy` with `new DisclosurePolicy(reader, clock)`; the reader must load authoritative state. Co-design the `commit_nudge` reducer and worker identity with CS.
+- **DS next:** no-action eval cases assert guard reason codes (`expired`, `revoked`, `unlinked`, `stale_policy`, `blocked_category`, `no_consent`).
+- **Open gaps:**
+  - No `commit_nudge` reducer and no worker identity.
+  - No expiry sweep (views have no clock).
+  - No recipient nudge opt-in.
+  - No rate limiting.
+  - JWT `aud` is not checked.
+  - The CLI bundler's resolution of `@kinetic/contracts/policy` is untested.
+- **Details:** `docs/handoffs/cyber.md`, `docs/updates/cyber.md`, `src/privacy/README.md`.
