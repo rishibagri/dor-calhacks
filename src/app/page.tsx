@@ -16,7 +16,7 @@ export default function HomePage() {
   return (
     <div className="space-y-10">
       <header className="space-y-3">
-        <h1 className="font-display text-4xl font-semibold md:text-5xl">Kinetic</h1>
+        <h1 className="font-display text-4xl font-semibold md:text-5xl">Dor</h1>
         <p className="max-w-[48ch] text-lg text-muted-foreground">
           A private journal. Nothing is shared unless you approve a limited signal.
         </p>
