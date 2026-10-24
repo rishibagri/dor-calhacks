@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useLiveShared } from '@/components/shell/use-live';
 import { IntegrationStatus } from '@/components/shell/integration-status';
@@ -71,6 +72,9 @@ export default function DiscoverPage() {
             <IntroductionSuggestions />
             <DiscoveryResults shortlist={shortlist} candidates={candidates} invitedRefs={invited} synthetic={isDiscoverySynthetic}
               onInvite={(ref) => void handleInvite(ref)} onBlock={(ref) => void handleBlock(ref)} onEmptyAction={handleEmptyAction} />
+            <p className="text-sm text-muted-foreground">
+              Quiet area? <Link className="underline" href="/events">Browse local events</Link> and see who else marked them.
+            </p>
             {(nextCursor || isPaged) && (
               <div className="flex gap-2">
                 {nextCursor && <Button size="sm" variant="outline" onClick={() => void handlePage(nextCursor)}>Show other people</Button>}
