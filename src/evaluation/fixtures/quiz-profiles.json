@@ -1,0 +1,120 @@
+{
+  "fixtureVersion": 2,
+  "owner": "DS",
+  "synthetic": true,
+  "note": "CS-consumable quiz fixtures. answers is a complete QuizAnswers object (src/components/feature/quiz-model.ts); expected.profile must equal buildProfile(answers).data and satisfy LocalConnectionProfileSchema; expected.extras must equal buildQuizExtras(answers) (LocalQuizExtras, vault only). expected.supportAction is DS matching semantics: 'none' means no support candidate is offered (prefersSpace). No case creates consent, a preset, an assignment or a signal. invalidAnswers[].answers are patches over the skip-all answers.",
+  "cases": [
+    {
+      "id": "partner-leaning",
+      "answers": { "afterLongDay": ["short_call"], "friendQuiet": ["encouraging_note"], "tone": "gentle", "rhythm": "flexible",
+        "overwhelmed": "quiet", "activities": ["talking", "watching_together"], "activitiesNote": "",
+        "scheduleSuggestions": "only_after_review", "categories": ["support_preference", "coarse_availability"], "reviewComfort": "quick_review" },
+      "expected": {
+        "profile": { "schemaVersion": 1, "communicationStyle": "gentle", "preferredSupportModes": ["short_call", "encouraging_note"],
+          "draftSharingCategories": ["support_preference", "coarse_availability"], "rhythm": "flexible", "suggestionIntensity": "quiet" },
+        "extras": { "prefersSpace": false, "activities": ["talking", "watching_together"], "activitiesNote": null,
+          "scheduleSuggestions": "only_after_review", "reviewComfort": "quick_review" },
+        "supportAction": "eligible"
+      }
+    },
+    {
+      "id": "friend-leaning",
+      "answers": { "afterLongDay": ["shared_activity"], "friendQuiet": ["shared_activity"], "tone": "playful", "rhythm": "spontaneous",
+        "overwhelmed": "fewer", "activities": ["games"], "activitiesNote": "",
+        "scheduleSuggestions": "keep_private", "categories": ["support_preference"], "reviewComfort": "review_everything" },
+      "expected": {
+        "profile": { "schemaVersion": 1, "communicationStyle": "playful", "preferredSupportModes": ["shared_activity"],
+          "draftSharingCategories": ["support_preference"], "rhythm": "spontaneous", "suggestionIntensity": "fewer" },
+        "extras": { "prefersSpace": false, "activities": ["games"], "activitiesNote": null,
+          "scheduleSuggestions": "keep_private", "reviewComfort": "review_everything" },
+        "supportAction": "eligible"
+      }
+    },
+    {
+      "id": "family-leaning-local-note",
+      "note": "Q7 empty (neither). Free text is trimmed and kept only in extras.",
+      "answers": { "afterLongDay": ["encouraging_note"], "friendQuiet": [], "tone": "direct", "rhythm": "planned",
+        "overwhelmed": "quiet", "activities": ["other"], "activitiesNote": "  SYNTHETIC local activity note  ",
+        "scheduleSuggestions": "keep_private", "categories": [], "reviewComfort": "review_everything" },
+      "expected": {
+        "profile": { "schemaVersion": 1, "communicationStyle": "direct", "preferredSupportModes": ["encouraging_note"],
+          "draftSharingCategories": [], "rhythm": "planned", "suggestionIntensity": "quiet" },
+        "extras": { "prefersSpace": false, "activities": ["other"], "activitiesNote": "SYNTHETIC local activity note",
+          "scheduleSuggestions": "keep_private", "reviewComfort": "review_everything" },
+        "supportAction": "eligible"
+      }
+    },
+    {
+      "id": "space-only",
+      "note": "No support mode; a nominated draft category does not override the space preference.",
+      "answers": { "afterLongDay": ["space"], "friendQuiet": [], "tone": null, "rhythm": null,
+        "overwhelmed": "paused", "activities": [], "activitiesNote": "",
+        "scheduleSuggestions": null, "categories": ["support_preference"], "reviewComfort": null },
+      "expected": {
+        "profile": { "schemaVersion": 1, "communicationStyle": null, "preferredSupportModes": [],
+          "draftSharingCategories": ["support_preference"], "rhythm": null, "suggestionIntensity": "paused" },
+        "extras": { "prefersSpace": true, "activities": [], "activitiesNote": null, "scheduleSuggestions": null, "reviewComfort": null },
+        "supportAction": "none"
+      }
+    },
+    {
+      "id": "space-with-other-modes",
+      "note": "App allows space alongside modes. Profile keeps the contract modes; DS matching still suppresses support candidates while prefersSpace is true.",
+      "answers": { "afterLongDay": ["space", "short_call"], "friendQuiet": ["encouraging_note"], "tone": null, "rhythm": null,
+        "overwhelmed": null, "activities": [], "activitiesNote": "",
+        "scheduleSuggestions": null, "categories": [], "reviewComfort": null },
+      "expected": {
+        "profile": { "schemaVersion": 1, "communicationStyle": null, "preferredSupportModes": ["short_call", "encouraging_note"],
+          "draftSharingCategories": [], "rhythm": null, "suggestionIntensity": null },
+        "extras": { "prefersSpace": true, "activities": [], "activitiesNote": null, "scheduleSuggestions": null, "reviewComfort": null },
+        "supportAction": "none"
+      }
+    },
+    {
+      "id": "skip-all",
+      "note": "EMPTY_ANSWERS. No inferred profile; sharing stays blocked until explicit preset confirmation. Empty modes are not a no-action signal: the AI candidate may still propose a mode for owner approval.",
+      "answers": { "afterLongDay": [], "friendQuiet": [], "tone": null, "rhythm": null,
+        "overwhelmed": null, "activities": [], "activitiesNote": "",
+        "scheduleSuggestions": null, "categories": [], "reviewComfort": null },
+      "expected": {
+        "profile": { "schemaVersion": 1, "communicationStyle": null, "preferredSupportModes": [],
+          "draftSharingCategories": [], "rhythm": null, "suggestionIntensity": null },
+        "extras": { "prefersSpace": false, "activities": [], "activitiesNote": null, "scheduleSuggestions": null, "reviewComfort": null },
+        "supportAction": "eligible"
+      }
+    },
+    {
+      "id": "partial-skip",
+      "note": "Nothing is inferred from omitted answers.",
+      "answers": { "afterLongDay": [], "friendQuiet": [], "tone": "gentle", "rhythm": null,
+        "overwhelmed": null, "activities": [], "activitiesNote": "",
+        "scheduleSuggestions": null, "categories": [], "reviewComfort": null },
+      "expected": {
+        "profile": { "schemaVersion": 1, "communicationStyle": "gentle", "preferredSupportModes": [],
+          "draftSharingCategories": [], "rhythm": null, "suggestionIntensity": null },
+        "extras": { "prefersSpace": false, "activities": [], "activitiesNote": null, "scheduleSuggestions": null, "reviewComfort": null },
+        "supportAction": "eligible"
+      }
+    },
+    {
+      "id": "note-without-other-dropped",
+      "note": "Note is dropped unless 'other' is selected; the same mode from Q1 and Q2 is de-duplicated.",
+      "answers": { "afterLongDay": ["encouraging_note"], "friendQuiet": ["encouraging_note"], "tone": null, "rhythm": null,
+        "overwhelmed": null, "activities": ["games"], "activitiesNote": "SYNTHETIC stale note",
+        "scheduleSuggestions": null, "categories": [], "reviewComfort": null },
+      "expected": {
+        "profile": { "schemaVersion": 1, "communicationStyle": null, "preferredSupportModes": ["encouraging_note"],
+          "draftSharingCategories": [], "rhythm": null, "suggestionIntensity": null },
+        "extras": { "prefersSpace": false, "activities": ["games"], "activitiesNote": null, "scheduleSuggestions": null, "reviewComfort": null },
+        "supportAction": "eligible"
+      }
+    }
+  ],
+  "invalidAnswers": [
+    { "id": "unknown-tone", "answers": { "tone": "sarcastic" }, "rejectedBy": "profile", "reason": "not a communicationStyle enum" },
+    { "id": "unknown-support-mode", "answers": { "friendQuiet": ["give_time"] }, "rejectedBy": "profile", "reason": "not a SupportMode" },
+    { "id": "blocked-category", "answers": { "categories": ["mood"] }, "rejectedBy": "profile", "reason": "mood is a blocked category" },
+    { "id": "auto-share-review", "answers": { "reviewComfort": "auto_share" }, "rejectedBy": "extras",
+      "reason": "not a reviewComfort value; no answer may enable automatic sharing. LocalQuizExtras currently has no runtime validation (CS/Cyber)." }
+  ]
+}
