@@ -78,3 +78,21 @@ test('all non-signal interface fixtures satisfy their canonical schemas', async 
   const fixtures = JSON.parse(await readFile(new URL('../fixtures/interfaces.json', import.meta.url), 'utf8'));
   for (const [name, fixture] of Object.entries(fixtures)) schemas[name + 'Schema'].parse(fixture);
 });
+
+test('private reflection candidates are enum-only and never carry journal text', async () => {
+  const { PrivateReflectionSchema, SignalCandidateSchema } = await import('../dist/index.js');
+  assert.equal(SignalCandidateSchema.safeParse({}).success, false);
+  assert.equal(SignalCandidateSchema.safeParse({ supportMode: 'short_call', note: 'synthetic detail' }).success, false);
+  assert.equal(PrivateReflectionSchema.safeParse({ schemaVersion: 1, reflection: 'r', candidate: null }).success, true);
+  assert.equal(PrivateReflectionSchema.safeParse({ schemaVersion: 1, reflection: 'r', candidate: null,
+    sourceJournalId: 'local-1' }).success, false);
+});
+
+test('recipient preferences and coordination jobs reject duplicates and free text', async () => {
+  const { RecipientSupportPreferencesSchema, CoordinationJobSchema } = await import('../dist/index.js');
+  const fixtures = JSON.parse(await readFile(new URL('../fixtures/interfaces.json', import.meta.url), 'utf8'));
+  const prefs = fixtures.RecipientSupportPreferences;
+  assert.equal(RecipientSupportPreferencesSchema.safeParse({ ...prefs, supportModes: ['short_call', 'short_call'] }).success, false);
+  assert.equal(RecipientSupportPreferencesSchema.safeParse({ ...prefs, supportModes: [] }).success, false);
+  assert.equal(CoordinationJobSchema.safeParse({ ...fixtures.CoordinationJob, transcript: 'synthetic' }).success, false);
+});

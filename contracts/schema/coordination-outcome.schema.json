@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "requestId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "pairId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "signalIds": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      }
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "nudge_proposed",
+        "policy_denied",
+        "preferences_unavailable",
+        "no_intersection",
+        "recipient_declined",
+        "cooldown",
+        "proposer_failed_fallback",
+        "proposer_failed_no_suggestion"
+      ]
+    },
+    "rounds": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2
+    },
+    "nudgeId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "decidedBy": {
+      "type": "string",
+      "enum": [
+        "none",
+        "agent",
+        "fixed_template"
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "requestId",
+    "pairId",
+    "signalIds",
+    "outcome",
+    "rounds",
+    "decidedBy"
+  ],
+  "additionalProperties": false
+}

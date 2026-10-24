@@ -1,8 +1,16 @@
-import type { ApprovedSignal, AgentAck, Nudge } from './schemas.js';
+import type { ApprovedSignal, AgentAck, CoordinationOutcome, Nudge, PrivateReflection,
+  VoiceSession } from './schemas.js';
 
 /** Local selected data may enter the disclosed transient provider route, never shared coordination. */
 export interface PrivateReflectionPort {
-  reflect(selectedText: string, requestId: string): Promise<{ reflection: string }>;
+  /** Result belongs in the owner's local vault only; the candidate is a draft, never consent. */
+  reflect(selectedText: string, requestId: string): Promise<PrivateReflection>;
+}
+/** Server-side provider adapter behind authenticated, non-logging routes. Audio and text are transient. */
+export interface VoicePort {
+  createSession(requestId: string): Promise<VoiceSession>;
+  transcribe(audio: Uint8Array, requestId: string): Promise<{ text: string }>;
+  synthesize(text: string, requestId: string): Promise<{ audio: Uint8Array; mimeType: string }>;
 }
 export interface Clock { now(): Date }
 export type PolicyReason = 'ok' | 'invalid_schema' | 'no_consent' | 'expired' | 'revoked' |
@@ -15,6 +23,6 @@ export interface DisclosurePolicyPort {
 export interface CoordinationPort {
   /** Only approved envelopes; implementation must revalidate before use and result commit. */
   coordinate(signals: ApprovedSignal[], requestId: string): Promise<{
-    acknowledgements: AgentAck[]; proposedNudges: Nudge[];
+    acknowledgements: AgentAck[]; proposedNudges: Nudge[]; outcomes: CoordinationOutcome[];
   }>;
 }

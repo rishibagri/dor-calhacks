@@ -3,10 +3,10 @@ Read this after AGENTS.md and PRD.md. This is the interface index; `src/schemas.
 
 | ID | Interface | Producer → Consumer | Responsible owner | Boundary |
 |---|---|---|---|---|
-| C1 | LocalConnectionProfile / PrivateReflectionPort | DS quiz + local UI → owner-only profile; AI transient reasoning → local vault | DS (quiz), AI (reflection), Cyber (vault) | Private; never shared-state subscription |
+| C1 | LocalConnectionProfile / PrivateReflectionPort → PrivateReflection + SignalCandidate / VoicePort → VoiceSession | DS quiz + local UI → owner-only profile; AI transient reasoning → local vault; AI voice adapter → CS routes | DS (quiz), AI (reflection, voice), Cyber (vault) | Private; never shared-state subscription. Candidate is an enum-only draft, never consent |
 | C2 | RelationshipPreset / RecipientPresetAssignment | Owner-confirmation UI → policy/reducers → preview and coordination guards | Cyber; CS consumes | Named recipient, confirmed preset, versions, no per-person overrides |
 | C3 | ApprovedSignal v2 | Guarded approval reducer → Factory/recipient agent | Cyber produces; AI consumes | Explicit minimal disclosure; no raw context |
-| C4 | AgentAck / CoordinationPort | Recipient's approved preferences → bounded coordinator | AI; DS and CS consume | Maximum two rounds; no free-form agent chat |
+| C4 | AgentAck / CoordinationPort / RecipientSupportPreferences / CoordinationJob / CoordinationOutcome | Recipient's approved preferences → bounded coordinator; content-free job → worker; sanitized outcome codes | AI; Cyber/CS produce preferences consent and jobs; DS and CS consume | Maximum two rounds; no free-form agent chat; jobs carry IDs only |
 | C5 | Nudge / DisclosureReceipt | Guarded coordination commit → caller-filtered views/UI | CS; Cyber reviews | Revalidate consent/preset before delivery |
 | C6 | DisclosurePolicyPort / fake clock/store | Cyber policy → reducers, worker and integration checks | Cyber; all consume | Fake implementations are offline-only and not security evidence |
 
@@ -21,6 +21,8 @@ From repository root: `npm ci`, then `npm run check`. `npm run contracts:schema`
 - The in-memory fake policy/store exists only to unblock development. It has no cryptographic, authentication, persistence or concurrency guarantees and must never be wired into live mode.
 - Changing an interface requires the producer and affected consuming owner to review the same PR; Cyber reviews privacy boundaries. Update inferred types, generated schemas, fixtures, checks, docs and handoffs together. Breaking wire changes bump schemaVersion.
 - Source-of-truth order: user decisions → PRD/decision log → interface spec/schema → measured verification → older handoffs. Conflicts must be resolved, not silently overridden.
+
+Proposed on `role/ai-voice` (D016, pending CS/Cyber/DS review): the C1 additions `PrivateReflection`, `SignalCandidate`, `VoiceSession` and `VoicePort`, and the C4 additions `RecipientSupportPreferences`, `CoordinationJob`, `CoordinationOutcome` and `CoordinationPort.outcomes`. All are additive; no existing wire shape or schemaVersion changes.
 
 ## Detailed contracts
 - [Architecture](specs/ARCHITECTURE.md)
