@@ -1,4 +1,4 @@
-import type { CommitNudgeArgs, WorkerStateSource } from './adapters.js';
+import type { CommitIntroductionArgs, CommitNudgeArgs, CommitPlanArgs, WorkerStateSource } from './adapters.js';
 
 /**
  * Structural view of generated SpacetimeDB client bindings (`spacetime generate --lang typescript`). Kept loose
@@ -27,8 +27,11 @@ export interface LooseBuilder {
 }
 
 export const WORKER_VIEWS = ['worker_signal_context', 'worker_delivery', 'worker_support_preferences'] as const;
+/** Subscribed only when the generated bindings include them (D039 plans); without them the worker proposes no plans. */
+export const OPTIONAL_WORKER_VIEWS = ['worker_plan_candidates'] as const;
 
 const camel = (snake: string) => snake.replace(/_([a-z])/g, (_m, c: string) => c.toUpperCase());
+const hasTable = (conn: LooseConnection, name: string) => Boolean(conn.db[camel(name)] ?? conn.db[name]);
 function table(conn: LooseConnection, name: string): LooseTable {
   const t = conn.db[camel(name)] ?? conn.db[name];
   if (!t) throw new Error(`unavailable: bindings lack ${name}`);
@@ -51,7 +54,16 @@ export interface SpacetimeWorkerOptions {
  * guard in its own transaction. Commits go through the reducer and surface its `code: reason` refusal.
  */
 export class SpacetimeWorkerConnection implements WorkerStateSource {
-  private constructor(private readonly conn: LooseConnection, readonly identityHex: string) {}
+  private constructor(private readonly conn: LooseConnection, readonly identityHex: string) {
+    // Only advertise the plan path when both its view and its reducer are in the bindings.
+    if (!hasTable(conn, 'worker_plan_candidates') || !(conn.reducers.commitPlanProposal ?? conn.reducers.commit_plan_proposal)) {
+      this.planCandidates = undefined;
+      this.commitPlanProposal = undefined;
+    }
+    if (!(conn.reducers.commitIntroductionProposal ?? conn.reducers.commit_introduction_proposal)) {
+      this.commitIntroductionProposal = undefined;
+    }
+  }
 
   static connect(options: SpacetimeWorkerOptions): Promise<SpacetimeWorkerConnection> {
     return new Promise((resolve, reject) => {
@@ -62,7 +74,7 @@ export class SpacetimeWorkerConnection implements WorkerStateSource {
           conn.subscriptionBuilder()
             .onApplied(() => { clearTimeout(timer); resolve(new SpacetimeWorkerConnection(conn, identity.toHexString())); })
             .onError(() => fail(new Error('unavailable: subscription rejected')))
-            .subscribe(WORKER_VIEWS.map(v => `SELECT * FROM ${v}`));
+            .subscribe([...WORKER_VIEWS, ...OPTIONAL_WORKER_VIEWS.filter(v => hasTable(conn, v))].map(v => `SELECT * FROM ${v}`));
         })
         .onConnectError((_ctx, error) => fail(error))
         .onDisconnect(() => undefined)
@@ -89,6 +101,25 @@ export class SpacetimeWorkerConnection implements WorkerStateSource {
       sourceSignalIds: args.source_signal_ids, sourceConsentVersions: args.source_consent_versions,
       recipientConsentId: args.recipient_consent_id, recipientConsentVersion: args.recipient_consent_version });
   }
+
+  planCandidates?: () => Promise<unknown[]> = async () => [...table(this.conn, 'worker_plan_candidates').iter()];
+
+  commitPlanProposal?: (args: CommitPlanArgs) => Promise<void> = async args => {
+    const reducer = this.conn.reducers.commitPlanProposal ?? this.conn.reducers.commit_plan_proposal;
+    if (!reducer) throw new Error('unavailable: bindings lack commit_plan_proposal');
+    await reducer({ planId: args.plan_id, basisKind: args.basis_kind, basisRef: args.basis_ref, eventId: args.event_id,
+      intentIds: args.intent_ids, intentVersions: args.intent_versions, approvalIds: args.approval_ids,
+      expiresAt: args.expires_at, decidedBy: args.decided_by });
+  };
+
+  commitIntroductionProposal?: (args: CommitIntroductionArgs) => Promise<void> = async args => {
+    const reducer = this.conn.reducers.commitIntroductionProposal ?? this.conn.reducers.commit_introduction_proposal;
+    if (!reducer) throw new Error('unavailable: bindings lack commit_introduction_proposal');
+    await reducer({ proposalId: args.proposal_id, viewerRef: args.viewer_ref, candidateRef: args.candidate_ref,
+      viewerPublicationVersion: args.viewer_publication_version, candidatePublicationVersion: args.candidate_publication_version,
+      reasonCode: args.reason_code, sharedTags: args.shared_tags, eventId: args.event_id, openerId: args.opener_id,
+      decidedBy: args.decided_by, expiresAt: args.expires_at });
+  };
 
   close(): void {
     this.conn.disconnect();

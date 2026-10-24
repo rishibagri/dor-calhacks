@@ -54,10 +54,32 @@ Each benchmark ran 3 × (partners, friends, family, and a two-option friends cas
 
 Rows are mapped by `src/spacetime/rows.ts`, which accepts snake_case harness rows and camelCase generated rows, as well as tagged options. A row that does not map is dropped, so drift fails closed. `SpacetimeWorkerConnection` (`src/spacetime/connection.ts`) is the live source over generated client bindings.
 
-**Live wiring:** `createLiveWorker({ authToken, policyState, signals, preferences, delivery, commit, rank?, droid? })` builds Cyber's real `DisclosurePolicy` over `policyState`. It has no parameter for a policy object, so a fake cannot be wired in. It returns `{ handler, runJob, coordinator, close }`; `runJob` shares the handler's `JobLedger`.
+**Live wiring:** `createLiveWorker({ authToken, policyState, signals, preferences, delivery, commit, rank?, droid? })` builds Cyber's real `DisclosurePolicy` over `policyState`. It has no parameter for a policy object, so a fake cannot be wired in. It returns `{ handler, runJob, coordinator, runner, close }`; `runJob` shares the handler's `JobLedger`, and `runner` is the shared Droid slot pool for the plan and introduction paths.
+
+## Shared plans (AI-R3, D034/D039) — `src/plans.ts`
+`PlanWatcher` reads `worker_plan_candidates`, groups rows by basis (accepted introduction or pair with C7 approvals), and runs one `runPlanJob` per basis whose fingerprint (events, exact intent ids/versions, approvals) changed. `PlanCoordinator` makes 0 model calls for one usable event and at most 1 call + 1 repair for 2–3. It rechecks the same `(basis, event)` row with identical intents after generation, then commits through `commit_plan_proposal` with exactly those ids and versions. Plan IDs are stable per basis and event, so a restart re-commits as a no-op. `stale`/`not_found` refusals become `not_current`/`source_stale`; `invalid`, `worker only` and transport faults throw and are retried (≤ 3 attempts per fingerprint).
+
+D034's `PlanParticipant.intentVersion` is per person, while the module versions intents per event. Participants are therefore positional (`participant_a`/`participant_b`, as the view orders intents) with a constant version, and the exact per-event binding is done by the adapter recheck plus the reducer. The plan path is enabled only when the bindings carry both `worker_plan_candidates` and `commit_plan_proposal`; the current generated bindings predate D039, so CS must regenerate them.
+
+## Introductions (AI-R2, D033/D038) — `src/introductions.ts`
+`runIntroductionJob(shortlist, { source, runner, eligibility, clock })` runs `IntroductionCoordinator` and commits through `commit_introduction_proposal` into the viewer's private suggestions. A refusal is recorded as `stale`; `worker only` throws. While the D038 commit accepts `shared_interest` only, event overlap is stripped before any model call (`sameEventSupported: false`). **Not wired into `main.ts`:** the module has no worker-readable source of discovery shortlists and current eligibility yet (open ask to Cyber/CS).
+
+## SDK transport (default) — `src/droid-sdk.ts`
+The worker uses `@factory/droid-sdk` sessions by default; `DOR_DROID_TRANSPORT=cli` restores the per-call `droid exec` spawn. Without `FACTORY_API_KEY` the worker refuses to start rather than silently switching transport. `DroidRunner` keeps the slots, queue, job deadline and usage reporting. Only the call itself moves to `DroidSdkTransport`.
+- **Warm pool, no shared context:** each slot keeps one started, tool-verified spare session. A session answers exactly one prompt and is then closed; the next spare warms in the background. The working directory is the slot's private directory, as with the CLI.
+- **Tool allowlist:** a new SDK session enables 16 tools by default, including `Execute`, `FetchUrl`, `WebSearch` and `Read` (measured). The SDK only has `disabledToolIds`, so every session's `listTools()` is checked against `SDK_ALLOWED_TOOLS` = `TodoWrite` + `ToolSearch`. `ToolSearch` cannot be disabled (measured); it only returns tool definitions. Extra tools are added to a learned deny-list and the session is recreated; if that fails, the session is refused (`not_configured`) and no prompt is sent.
+- **Locked down:** autonomy is `off`, `autoRejectPermissionRequests`, and builtin skills are disabled. Any `tool_call` in a turn is `invalid_output`. The deadline aborts the stream and that session is discarded. The reply is parsed from text, as on the CLI path.
+- **Usage:** per call, `factoryCredits` and cache tokens from `tokenUsage`, plus `outcome` (`ok` or the failure code). The worker logs it in `droid_call`.
+- **Dependency:** `@factory/droid-sdk@0.10.0` (exact). It nests `zod@3` (GHSA-mrhx-c7xc-m3w5, high) and `uuid@9` (GHSA-w5hq-g745-h8pq, moderate), with no non-breaking fix; Cyber review pending. Its deps only declare `prepare` hooks, which don't run on registry installs.
+- **Measured 2026-10-24, synthetic stand-ins (FakeDisclosurePolicy, fixture preferences), Haiku, droid 0.248.0:**
+  - SDK, 1 run × 4 cases: 4/4 agent-decided in round 1 with the expected template; revoked 0 calls. Call median 1.8 s (CLI record 4.1 s). **Credits: median 256 per call, 1,081 total**, against about 14 per call on the CLI record. This is unresolved: it is either a different credit unit in the SDK's `tokenUsage.factoryCredits` or a larger session prompt (about 3.8k cache-read tokens per call). Team decision (Adam, 2026-10-24): the SDK is the default. Cost only needs to stay within the credit budget, so watch the `credits` field in `droid_call` logs rather than optimizing further.
+
+## Job deadline
+Every job gets one aggregate model budget (`jobDeadlineMs`/`deadlineMs`, default 25 s) covering slot wait and all rounds. Past it, `DroidRunner` fails the call with `timeout` without spawning, so the coordinator moves straight to its labeled fallback or no suggestion. A queued call leaves the queue at its deadline, so a released slot never goes to a job that has given up.
 
 ## Process (`src/main.ts`, `npm start -w @dor/worker`)
 - One SpacetimeDB connection as the worker identity, plus `SignalWatcher`: every `DOR_WORKER_SWEEP_MS` (default 5 s) it starts one job per newly visible approved signal, with `requestId = signalId`. Nudge IDs are therefore stable across restarts, `commit_nudge` dedupes them, and the cooldown pre-check skips Droid for a pair it already nudged.
+- `PlanWatcher` on the same interval when the bindings include the plan view and reducer (`plans` log line says whether it is enabled).
 - `POST /jobs` (above) and `GET /healthz`. Logs are JSON codes and counts only.
 - Env: `DOR_WORKER_AUTH_TOKEN`, `DOR_SPACETIME_URI`, `DOR_SPACETIME_MODULE`, `DOR_SPACETIME_WORKER_TOKEN`, `PORT`, `DOR_DROID_{MODEL,PATH,TIMEOUT_MS,CONCURRENCY}`, `FACTORY_API_KEY`.
 - **Refuses to start** until the module is published and bindings are generated into `src/module_bindings` (`spacetime generate --lang typescript --out-dir worker/src/module_bindings --module-path spacetimedb`). The admin then runs `set_worker_identity` for the worker token's identity.
@@ -70,6 +92,7 @@ Rows are mapped by `src/spacetime/rows.ts`, which accepts snake_case harness row
 npm run ai:check                                   # offline tests + dry run over the in-process module
 npm run ai:dryrun                                  # full five-journey trace (DOR_DRYRUN_REPORT=out.md to save)
 DOR_DRYRUN_LIVE_DROID=1 npm run ai:dryrun      # same, with real droid (spends Factory credits)
+# The dry run reads .env.local only after that shell opt-in; offline runs never load provider keys.
 node worker/scripts/live-droid.mjs --runs 4        # live Droid; policy and preferences are labeled offline stand-ins
 ```
 

@@ -29,6 +29,40 @@ export interface WorkerStateSource {
   supportPreferences?(): Promise<Iterable<unknown>>;
   /** Calls commit_nudge; rejects with the reducer's `code: reason` message on refusal. */
   commitNudge(args: CommitNudgeArgs): Promise<void>;
+  /** Current rows of the worker_plan_candidates view (D039). A source without it proposes no plans. */
+  planCandidates?(): Promise<Iterable<unknown>>;
+  /** Calls commit_plan_proposal; rejects with the reducer's `code: reason` message on refusal. */
+  commitPlanProposal?(args: CommitPlanArgs): Promise<void>;
+  /** Calls commit_introduction_proposal (D038); rejects with the reducer's `code: reason` message on refusal. */
+  commitIntroductionProposal?(args: CommitIntroductionArgs): Promise<void>;
+}
+
+/** commit_introduction_proposal reducer arguments (spacetimedb/src/reducers/introductions.ts, D033/D038). */
+export interface CommitIntroductionArgs {
+  proposal_id: string;
+  viewer_ref: string;
+  candidate_ref: string;
+  viewer_publication_version: number;
+  candidate_publication_version: number;
+  reason_code: string;
+  shared_tags: string[];
+  event_id?: string;
+  opener_id: string;
+  decided_by: string;
+  expires_at: string;
+}
+
+/** commit_plan_proposal reducer arguments (spacetimedb/src/reducers/events.ts, D034/D039). */
+export interface CommitPlanArgs {
+  plan_id: string;
+  basis_kind: string;
+  basis_ref: string;
+  event_id: string;
+  intent_ids: string[];
+  intent_versions: number[];
+  approval_ids: string[];
+  expires_at: string;
+  decided_by: string;
 }
 
 /** DisclosurePolicy's authoritative reader. An unknown or unmappable signal is null (deny). */

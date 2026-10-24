@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { ProviderError, RateLimiter, handleReflectionRequest, handleVoiceSessionRequest } from '../dist/index.js';
+import { InFlightRequests, ProviderError, RateLimiter, handleReflectionRequest, handleVoiceSessionRequest } from '../dist/index.js';
 import { RouteError, createReflectionClient, createVoiceSessionClient } from '../dist/client.js';
 
 const json = async (url) => JSON.parse(await readFile(new URL(url, import.meta.url), 'utf8'));
@@ -79,4 +79,42 @@ test('browser clients validate responses and surface API error codes', async () 
   await assert.rejects(createReflectionClient({ fetch: fakeFetch(401, { error: { code: 'unauthenticated' } }) }).reflect('x', 'c'),
     (e) => e instanceof RouteError && e.status === 401 && e.code === 'unauthenticated');
   assert.deepEqual(await createVoiceSessionClient({ fetch: fakeFetch(200, voice.session) }).createSession(), voice.session);
+});
+
+test('reflection route: a double submit joins the running call; nothing is kept after it settles', async () => {
+  let release;
+  const gate = new Promise(r => { release = r; });
+  const reflection = reflectionStub(async () => { await gate; return okReflection; });
+  const inFlight = new InFlightRequests();
+  const send = (session, body) => handleReflectionRequest(post(body), { session, reflection, inFlight });
+  const body = { selectedText: 'SYNTHETIC entry', clientRequestId: 'c1' };
+  const first = send(signedIn, body), second = send(signedIn, body);
+  // Same ID, different text, or a different user never joins: each is its own call.
+  const otherText = send(signedIn, { ...body, selectedText: 'SYNTHETIC other entry' });
+  const otherUser = send({ configured: true, userId: 'user_other' }, body);
+  await new Promise(r => setImmediate(r));
+  assert.equal(reflection.calls.length, 3);
+  release();
+  for (const res of await Promise.all([first, second, otherText, otherUser])) assert.equal(res.status, 200);
+  assert.equal(inFlight.size, 0, 'no result retained');
+  await send(signedIn, body);
+  assert.equal(reflection.calls.length, 4, 'a later retry after completion is a new call (no private result cache)');
+});
+
+test('reflection route: a failed call is shared by joined duplicates and not remembered', async () => {
+  let fail = true;
+  const reflection = reflectionStub(async () => {
+    await new Promise(r => setImmediate(r));
+    if (fail) throw new ProviderError('anthropic', 'timeout');
+    return okReflection;
+  });
+  const inFlight = new InFlightRequests();
+  const send = () => handleReflectionRequest(post({ selectedText: 'SYNTHETIC entry', clientRequestId: 'c1' }),
+    { session: signedIn, reflection, inFlight });
+  const statuses = (await Promise.all([send(), send()])).map(r => r.status);
+  assert.deepEqual(statuses, [503, 503]);
+  assert.equal(reflection.calls.length, 1);
+  fail = false;
+  assert.equal((await send()).status, 200);
+  assert.equal(inFlight.size, 0);
 });

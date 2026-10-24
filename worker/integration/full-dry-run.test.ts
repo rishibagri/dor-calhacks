@@ -22,9 +22,14 @@ import reflectionFixtures from '../../src/agents/fixtures/reflection.synthetic.j
 import { allSignals, approveArgs, confirmPreset, grantPrefs, jwtAuth, mod, pairUp, setup, view, type World }
   from '../../spacetimedb/tests/helpers';
 
-try { process.loadEnvFile(new URL('../../.env.local', import.meta.url)); } catch { /* optional */ }
-const LIVE_CLAUDE = process.env.DOR_DRYRUN_LIVE_CLAUDE === '1' && Boolean(process.env.ANTHROPIC_API_KEY);
+// Live mode is opted into from the shell only, decided BEFORE .env.local is read: a flag or key in the file can
+// never turn the offline dry run (part of `npm run ai:check`) into a paid one, and offline runs never load keys.
+const LIVE_CLAUDE_REQUESTED = process.env.DOR_DRYRUN_LIVE_CLAUDE === '1';
 const LIVE_DROID = process.env.DOR_DRYRUN_LIVE_DROID === '1';
+if (LIVE_CLAUDE_REQUESTED || LIVE_DROID) {
+  try { process.loadEnvFile(new URL('../../.env.local', import.meta.url)); } catch { /* optional */ }
+}
+const LIVE_CLAUDE = LIVE_CLAUDE_REQUESTED && Boolean(process.env.ANTHROPIC_API_KEY);
 const droidMode = LIVE_DROID ? 'live' : 'synthetic';
 
 type Kind = 'module' | 'real' | 'synthetic' | 'live';
