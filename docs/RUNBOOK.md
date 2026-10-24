@@ -39,6 +39,7 @@ Copy `.cache/worker-token` into `DOR_SPACETIME_WORKER_TOKEN` on the worker host.
 npm run dev                          # app on :3000 (core mode: Discover/Events hidden)
 npm run ai:build && npm start -w @dor/worker   # worker, with the DOR_* worker env set
 ```
+The worker's Droid calls use the **Factory Droid SDK** by default and need `FACTORY_API_KEY` on the worker host; without it the worker refuses to start. Set `DOR_DROID_TRANSPORT=cli` only to fall back to `droid exec` (a CLI login works there). See worker/README.md "SDK transport". `npm run setup:doctor -- --worker` checks this.
 
 ## Reset (synthetic data only)
 ```sh

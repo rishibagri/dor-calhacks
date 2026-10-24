@@ -35,7 +35,11 @@ No extra tool is being added solely to chase another prize. Sponsor evidence sho
 
 ### Reasoning layer and human-in-the-loop behavior
 
-**New clarification and person-specific pause behavior is planned, not implemented by this patch.** Existing presets remain category ceilings; a new recipient exclusion can only narrow permission, never broaden the preset. Shared pause/revision interfaces require Cyber/CS/AI review and versioned contracts before implementation.
+**Status:**
+- **Private clarification:** CS loop (#28), with Claude's assessment ([PRIVATE_ASSESSMENT.md](docs/features/PRIVATE_ASSESSMENT.md), D040). Implemented offline; live Claude evidence pending.
+- **Durable person-specific pause:** still planned. Its requirements are in [RECIPIENT_PAUSE.md](docs/features/RECIPIENT_PAUSE.md) (Cyber, D041).
+
+**The rules below stay normative.** Existing presets remain category ceilings; a new recipient exclusion can only narrow permission, never broaden the preset. Shared pause/revision interfaces require Cyber/CS/AI review and versioned contracts before implementation.
 
 1. **Private understanding (Claude):** only process content the owner selected under the provider notice. Produce an owner-only assessment of desired support, uncertainty and possible recipient restrictions. Never infer permission from quiz answers, closeness, past approvals or a model confidence score. No lie detection or comparison of friends' private stories.
 2. **Deterministic exclusion:** an explicit “not Alex,” pause, unlink, missing consent or stale permission blocks that recipient. Clear refusal is not an invitation to ask again until the user agrees. Keep private explanations out of shared state and peer prompts; a durable pause needs only the minimum restricted control metadata, not its reason.
@@ -83,7 +87,7 @@ Inspected main: **6093b2a**, including PRs #16–22. The older baseline inventor
 | Local journal / voice / privacy | Per-account vault composition, VaultControls, VoiceReflection, saved entries and generated bindings exist on main. | Verify real-browser lifecycle, microphone and configured providers; fix integration failures. |
 | Exact recipient sharing | ShareReview, payload/revision-bound approval, recipient support/delivery settings and approved-signal revocation UI exist on main. | Exercise the complete two-account path against deployed state; do not rebuild these surfaces from scratch. |
 | Guarded coordination | Consent-bound worker adapters, reducer authorization, caller-filtered views, expiry handling and fixed templates exist. The Droid SDK transport is the worker default on the AI PR (offline tests + isolated live run), with a 25 s per-job budget. | Verify the deployed worker identity, SDK runtime limits and races end to end. |
-| Recipient-specific avoidance / clarification | Requirements defined above; no complete reviewed pause + clarification workflow established. | Design schemas/state transitions, implement UI + private reasoning + authoritative pause enforcement, add targeted regression cases. |
+| Recipient-specific avoidance / clarification | CS private decision loop (#28) plus Claude's owner-only assessment (AI, D040: `wants_space` / `unclear` / `wants_connection`, explicit name exclusions; can veto or skip a question, never choose). Offline-tested. | Durable server-side pause (Cyber, [RECIPIENT_PAUSE.md](docs/features/RECIPIENT_PAUSE.md)) with CS controls; live Claude run on the synthetic cases; DS paired evaluation. |
 | Geography / events | Discover UI, paged area-filtered cards, introductions, event/plan guards and DS evaluation code already exist. AI worker extension paths: `worker_plan_candidates` → `commit_plan_proposal`, and an introduction-proposal commit not yet wired to a worker source. | Preserve as extension; stop making these a core acceptance dependency. |
 | Release readiness | Existing offline checks/builds are documented in role logs. | New branch-specific checks, live provider runs and two-account evidence; no full live completion claim. |
 

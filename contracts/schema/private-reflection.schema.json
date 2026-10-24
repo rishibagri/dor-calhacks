@@ -39,6 +39,43 @@
           "type": "null"
         }
       ]
+    },
+    "assessment": {
+      "type": "object",
+      "properties": {
+        "intent": {
+          "type": "string",
+          "enum": [
+            "wants_connection",
+            "unclear",
+            "wants_space"
+          ]
+        },
+        "excludedNames": {
+          "maxItems": 5,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          }
+        },
+        "preferredNames": {
+          "maxItems": 3,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          }
+        }
+      },
+      "required": [
+        "intent",
+        "excludedNames",
+        "preferredNames"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [

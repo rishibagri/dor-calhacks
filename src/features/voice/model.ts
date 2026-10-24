@@ -1,4 +1,4 @@
-import type { PrivateReflection, SignalCandidate } from '@dor/contracts';
+import type { PrivateAssessment, PrivateReflection, SignalCandidate } from '@dor/contracts';
 
 /**
  * Pure rules for the voice/reflection feature (AI-owned). No React, no network: the component composes these.
@@ -40,8 +40,11 @@ export function textToReflect(draft: string, selection?: Selection): ReflectInpu
 }
 
 /** Splits a route result into what may be stored locally and what must stay in memory. */
-export function splitReflection(result: PrivateReflection): { persist: { reflection: string }; memoryOnly: SignalCandidate | null } {
-  return { persist: { reflection: result.reflection }, memoryOnly: result.candidate };
+export function splitReflection(result: PrivateReflection): {
+  persist: { reflection: string }; memoryOnly: SignalCandidate | null; assessment: PrivateAssessment | undefined;
+} {
+  // Only the reflection text is ever persisted; the candidate and the D040 assessment stay in memory.
+  return { persist: { reflection: result.reflection }, memoryOnly: result.candidate, assessment: result.assessment };
 }
 
 const MODE_COPY: Record<string, string> = {
