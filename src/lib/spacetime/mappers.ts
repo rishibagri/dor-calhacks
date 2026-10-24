@@ -11,9 +11,9 @@ import {
   RelationshipPresetSchema,
 } from '@dor/contracts';
 import type { ApprovedSignal, DisclosureReceipt, Nudge, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
-import { MAX_INTEREST_TAGS, MAX_PUBLIC_NAME, validRecipientDelivery, validSupportPreferences } from '@dor/contracts/policy';
+import { MAX_EVENT_TITLE, MAX_EVENT_TOPICS, MAX_INTEREST_TAGS, MAX_PUBLIC_NAME, validRecipientDelivery, validSupportPreferences } from '@dor/contracts/policy';
 import type {
-  DiscoveryCardRow, IntroductionProposalView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, SignalView, SupportPreferencesView,
+  ActivityApprovalRow, CatalogueEventView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, SignalView, SupportPreferencesView,
 } from '@/lib/backend/ports';
 import { toCamel, type LooseRow } from './bindings';
 
@@ -235,6 +235,47 @@ export const mapIntroductionProposal: Mapper<IntroductionProposalView> = (row) =
   const expiresAt = str(row, 'expires_at');
   if (!proposalId || !candidateRef || !reasonCode || !openerId || !sharedTags || !expiresAt) return null;
   return { proposalId, candidateRef, reasonCode, openerId, sharedTags, expiresAt };
+};
+
+const FORMATS: readonly CatalogueEventView['format'][] = ['in_person', 'online'];
+
+export const mapCatalogueEvent: Mapper<CatalogueEventView> = (row) => {
+  const eventId = str(row, 'event_id'), title = str(row, 'title'), startsAt = str(row, 'starts_at'), fetchedAt = str(row, 'fetched_at');
+  const format = FORMATS.find((f) => f === str(row, 'format'));
+  const topics = strings(row, 'topics', MAX_EVENT_TOPICS);
+  if (!eventId || !title || title.length > MAX_EVENT_TITLE || !startsAt || !fetchedAt || !format || !topics) return null;
+  return { eventId, title, startsAt, endsAt: str(row, 'ends_at'), topics, format, areaKey: str(row, 'area_key'), sourceUrl: str(row, 'source_url'), fetchedAt };
+};
+
+export const mapEventIntent: Mapper<EventIntentRow> = (row) => {
+  const eventId = str(row, 'event_id'), expiresAt = str(row, 'expires_at'), version = num(row, 'version');
+  const kind = str(row, 'kind'), active = get(row, 'active');
+  if (!eventId || !expiresAt || version === null || typeof active !== 'boolean' || (kind !== 'interested' && kind !== 'going')) return null;
+  return { eventId, kind, version, active, expiresAt };
+};
+
+export const mapCompanion: Mapper<EventCompanionRow> = (row) => {
+  const cardRef = str(row, 'card_ref'), eventId = str(row, 'event_id');
+  return cardRef && eventId ? { cardRef, eventId } : null;
+};
+
+export const mapActivityApproval: Mapper<ActivityApprovalRow> = (row) => {
+  const approvalId = str(row, 'approval_id'), pairId = str(row, 'pair_id'), expiresAt = str(row, 'expires_at');
+  const topics = strings(row, 'topics', MAX_EVENT_TOPICS);
+  return approvalId && pairId && expiresAt && topics ? { approvalId, pairId, topics, expiresAt } : null;
+};
+
+const PLAN_STATUS: readonly PlanStatus[] = ['pending', 'confirmed', 'stale', 'expired', 'declined', 'cancelled', 'closed'];
+
+export const mapPlan: Mapper<PlanView> = (row) => {
+  const planId = str(row, 'plan_id'), eventId = str(row, 'event_id'), eventStartsAt = str(row, 'event_starts_at');
+  const expiresAt = str(row, 'expires_at'), revision = num(row, 'revision'), myAcceptance = get(row, 'my_acceptance');
+  const status = PLAN_STATUS.find((s) => s === str(row, 'status'));
+  if (!planId || !eventId || !eventStartsAt || !expiresAt || revision === null || !status || typeof myAcceptance !== 'boolean') return null;
+  return {
+    planId, revision, status, myAcceptance, eventId, eventTitle: str(row, 'event_title') ?? '', eventStartsAt,
+    sourceUrl: str(row, 'source_url'), counterpartName: str(row, 'counterpart_name'), expiresAt,
+  };
 };
 
 export function unreadableRow(row: LooseRow, idKey: string): UnreadableRow {

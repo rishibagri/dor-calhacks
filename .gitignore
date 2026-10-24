@@ -12,3 +12,4 @@ demo/exports/
 .DS_Store
 next-env.d.ts
 *.tsbuildinfo
+.cache/

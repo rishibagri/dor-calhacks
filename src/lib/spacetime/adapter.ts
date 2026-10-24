@@ -171,6 +171,13 @@ export class SpacetimeSharedState implements SharedStateController {
     this.call('respond_introduction_request', () => A.respondIntroductionRequest(id, accept));
   cancelIntroductionRequest = (id: string) => this.call('cancel_introduction_request', () => A.introId(id));
   blockIntroductionParticipant = (id: string) => this.call('block_introduction_participant', () => A.introId(id));
+  publishEventIntent = (eventId: string, kind: 'interested' | 'going', expectedVersion: number) =>
+    this.call('publish_event_intent', () => ({ eventId, kind, expectedVersion }));
+  revokeEventIntent = (eventId: string) => this.call('revoke_event_intent', () => ({ eventId }));
+  revokeActivityInterest = (approvalId: string) => this.call('revoke_activity_interest', () => ({ approvalId }));
+  respondPlan = (planId: string, revision: number, accept: boolean) =>
+    this.call('respond_plan', () => ({ planId, revision, accept }));
+  cancelPlan = (planId: string) => this.call('cancel_plan', () => ({ planId }));
   dismissIntroductionProposal = (id: string) =>
     this.call('dismiss_introduction_proposal', () => ({ proposalId: id }));
   reportDiscoveryUser: SharedStatePort['reportDiscoveryUser'] = (t, reason) =>
@@ -191,6 +198,11 @@ export class SpacetimeSharedState implements SharedStateController {
   discoveryCards = () => this.views.discoveryCards;
   myIntroductions = () => this.views.introductions;
   myIntroductionProposals = () => this.views.proposals;
+  catalogueEvents = () => this.views.catalogue;
+  myEventIntents = () => this.views.eventIntents;
+  eventCompanions = () => this.views.companions;
+  myActivityApprovals = () => this.views.activityApprovals;
+  myPlans = () => this.views.plans;
   unreadable = () => this.views.unreadable;
 }
 
