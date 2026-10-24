@@ -7,7 +7,7 @@ import { useLiveShared } from '@/components/shell/use-live';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  NO_ACTION_COPY, QUESTION_COPY, QUESTION_NOTE, answerCompany, answerWho, applyUnnamedExclusionGuard, decide, excludeForNow,
+  NO_ACTION_COPY, QUESTION_COPY, QUESTION_NOTE, answerCompany, answerWho, applyUnnamedExclusionGuard, decide, excludeForNow, failClosedWithoutAssessment,
   type LoopState,
 } from './decision-loop-model';
 import { PAUSED_NOT_OFFERED, withoutPaused } from './pause-model';
@@ -28,7 +28,7 @@ export function DecisionLoop({ candidate, assessment, onDone }: {
   candidate: SignalCandidate | null; assessment?: PrivateAssessment; onDone: () => void;
 }) {
   const shared = useLiveShared();
-  const [s, setS] = useState<LoopState>(() => initialLoopState(candidate, assessment));
+  const [s, setS] = useState<LoopState>(() => failClosedWithoutAssessment(initialLoopState(candidate, assessment), assessment));
   const { eligible: unpaused, pausedCount } = withoutPaused(
     shareRecipients(shared.myPairs()).map(({ pairId, name, unnamed }) => ({ pairId, name, unnamed })),
     shared.myRecipientPauses(), new Date());
