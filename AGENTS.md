@@ -35,7 +35,7 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 |---|---|---|
 | CS — you | M1/D015 plus core flow draft merged through d4cc763; disclosure.ts and FLOWS.md exist, not reducer/UI-wired; live bindings/auth pending | CS-P1/P2: wire reviewed F3/F4/F5/F7 flow: device-only preview, guarded approval, per-pair opt-in/delivery gate and commit; own Apify source/catalogue per docs/features/ACTIVITY_DISCOVERY.md |
 | DS — Nimisha | Active DS branch 42ff908 reports fixtures/matching/evaluation; not yet merged | DS-P1/P2: review D015 and previewDisclosure/nudgeDelivery expectations (space, opt-in, quiet hours, cooldown), claim quiz semantics, publish rank hook |
-| Cyber — Sumedh | Cyber branch 129c31f reports guards/approval/key design; main still refuses until reviewed integration | CYBER-P1/P2: reconcile existing Cyber policy with CS-drafted disclosure.ts/FLOWS.md, preserve branch guards; real VaultPort incl. extras; review merged AI D021 |
+| Cyber — Sumedh | role/cyber-privacy @ 34e70f7 (merged main 982cfb0; PR pending). One policy (D026): disclosure.ts delegates to zod-free policy.ts; guarded approve_signal, set_nudge_delivery (opt-in default off), worker-only commit_nudge + worker views; real LocalVault (VaultPort incl. profile/extras); Apify input/link guards (D027); D016–D021 reviewed. Offline only: contracts 63, module 52, app 79, ai 40; not published | CS: ACK D026/D027 + VaultPort additions; wire LocalVault + create/unlock/recovery UI; publish module and run live two-account smoke. Adam: worker uses DisclosurePolicy over worker_signal_context; commit via commit_nudge; never show outcomes to sender. Cyber next: recipient-preferences consent table, expiry sweep, aud check |
 | AI — Adam | M1/D021 adapters and worker merged via PR #4; limited Droid tests, full policy/app integration pending | AI-P1/P2: preserve branch, review merged D021 interfaces against main SignalCandidateSchema and D016–D020 flows, authenticated provider routes, real policy/worker ports; note missing keys/latency |
 
 Detailed shared phases are in README.md; per-owner phases in docs/roles/*.md; exact producer/consumer dependencies in docs/PLAN.md. These are current planning assignments, not completion evidence. Merge main into your active role branch; do not reset or force-update other roles.
@@ -88,3 +88,39 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - JWT `aud` is not checked.
   - The CLI bundler's resolution of `@kinetic/contracts/policy` is untested.
 - **Details:** `docs/handoffs/cyber.md`, `docs/updates/cyber.md`, `src/privacy/README.md`.
+
+### 2026-10-24T05:30Z | Cyber → CS, AI, DS | CYBER-P2/P3: one policy, F5/F7 enforcement, real vault, C7 boundary
+- **Branch/commit:** `role/cyber-privacy` @ `34e70f7`. Merged `origin/main` @ `982cfb0` (no reset). PR to main pending; read the remote role branch until it merges.
+- **Status:** implemented and offline-verified, NOT live. The SpacetimeDB module is unpublished, and harness results do not prove deployed isolation.
+- **Evidence:**
+  - `npm run check:all` exits 0: contracts 63/63, schemas current, module 52/52, app typecheck, app tests 79/79.
+  - `npm run ai:check` exits 0 (agents 34, worker 6).
+  - `next build` ok; npm audit 0.
+  - Mutation checks: removing the opt-in, template, source-recheck, worker-check, worker-view gate, replay-resurrection, record-AAD, IV, key-extractability, lock or recovery-rotation protections each fails tests.
+- **File claims (CS please ACK; please don't edit these concurrently):**
+  - `spacetimedb/src/reducers/{signals,delivery,coordination}.ts`, `spacetimedb/src/policy_state.ts`
+  - Cyber-added parts of `schema.ts` (`nudge_delivery`, `worker_identity`, `approved_signal.client_request_id`), `views.ts` (`my_signals`, `my_receipts`, `my_nudges` recheck, `my_nudge_delivery`, `worker_*`) and `admin.ts` (`set_worker_identity`)
+  - `src/vault/**`, `src/privacy/**`, `contracts/src/{policy,policy-port,catalogue}.ts`
+- **CS next:**
+  1. ACK D026, D027 and the VaultPort additions in `src/lib/backend/ports.ts`.
+  2. Swap `placeholderVault` for `new LocalVault({ store: new IndexedDbVaultStore(indexedDB, 'kinetic-vault:' + sha256(userId)) })`. Subscribe with `useSyncExternalStore(vault.subscribe, vault.getVersion)`. Add create / unlock / show-recovery-code-once / recover screens.
+  3. Device preview via `previewDisclosure`, then `approve_signal` with `payloadRevision` (src/privacy/README.md).
+  4. Recipient opt-in UI (`set_nudge_delivery`, default off).
+  5. Apify adapter must build inputs only via `guardPublicCatalogueQuery`.
+  6. Publish, `set_worker_identity`, live two-account smoke.
+- **AI (Adam) next:**
+  1. In live mode, `DisclosurePolicy(reader over worker_signal_context, clock)` replaces the fake.
+  2. `worker_delivery` backs `DeliveryStatePort`.
+  3. Commit through `commit_nudge` with a deterministic `nudge_id`.
+  4. Never surface `CoordinationOutcome` or `AgentAck` to the sender.
+  5. Persist reflection text only (`vault.saveReflection`), never the candidate.
+  6. Recipient preferences stay fail-closed until a consent table exists.
+- **DS (Nimisha) next:** no-action cases may assert `not_opted_in`, `quiet_hours`, `cooldown` and `blocked_category` (availability-only). Ranking over private quiz extras runs on the device only (ACTIVITY_CONSENT.md §1.5).
+- **Open gaps:**
+  - Recipient support-preferences consent table (D021 #4).
+  - Scheduled expiry sweep for views.
+  - JWT `aud` check.
+  - Rate limits.
+  - Real-browser vault check (pagehide, on-disk IndexedDB).
+  - C7 activity-sharing types and reducers (not permitted yet).
+- **Details:** `docs/handoffs/cyber.md`, `docs/updates/cyber.md`, `src/privacy/{README,REVIEWS,ACTIVITY_CONSENT}.md`, `src/vault/DESIGN.md`.
