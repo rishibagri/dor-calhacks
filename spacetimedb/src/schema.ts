@@ -391,6 +391,26 @@ export const shared_plan = table(
   }
 );
 
+/**
+ * D041 durable recipient pause: owner-only, person-specific, reason-free. One row per owner + pair, updated in place.
+ * The target is the other pair member, derived server-side. No reason, note, journal or model text exists here.
+ * Pausing revokes the owner's standing approvals in the pair (suppressPairWork), so resume/expiry restores nothing.
+ */
+export const recipient_pause = table(
+  { name: 'recipient_pause' },
+  {
+    pause_id: t.string().primaryKey(),
+    owner: t.identity().index('btree'),
+    pair_id: t.string(),
+    target: t.identity(),
+    version: t.u32(),
+    expires_at: t.timestamp(),
+    resumed_at: t.option(t.timestamp()),
+    created_at: t.timestamp(),
+    updated_at: t.timestamp(),
+  }
+);
+
 /** Allow-listed coordination worker identities (module-owner managed). Workers have no account and cannot approve. */
 export const worker_identity = table(
   { name: 'worker_identity' },
@@ -445,4 +465,5 @@ export const spacetimedb = schema({
   event_intent,
   activity_approval,
   shared_plan,
+  recipient_pause,
 });

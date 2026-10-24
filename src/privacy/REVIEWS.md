@@ -100,3 +100,49 @@ Two conditions for consumers:
 **Venue tags:** not added (see the matrix's venue review). No habitual-visit disclosure is possible from the shipped fields.
 
 **Rejection cases consumers must keep:** third-account plan action; wrong revision; repeat accept; one-sided acceptance at expiry; second acceptance after intent revoke, re-publish, approval revoke, preset tightening, block, event cancellation, moved start or stale copy; commit with a non-participant's intent, a stale intent version, an unaccepted basis, approvals on an introduction basis, < 1 h lead or a duplicate live plan; user-written catalogue records; unsafe source links; free topics; intent for a cancelled, stale or started event.
+
+## 2026-10-24: CS PR #30 index rewrite, post-merge boundary review (Cyber)
+Verdict: **ACK, no leak found; no fix needed.** #30 moved per-user views and hot reducers from whole-table scans to btree index ranges and added `pair_member`. Checked against the pre-#30 code:
+- **Caller filters unchanged in meaning.** Each per-user view now reads only the caller's index range, which is the same set the old `iter().filter(caller)` produced:
+  - `my_pairs` (via `pair_member`), `my_invites`, `my_presets` and `my_preset_assignments` read the caller's owner/creator range;
+  - `my_nudges` reads the recipient range;
+  - `my_signals` and `my_receipts` read the sender range;
+  - `my_support_preferences` and `my_nudge_delivery` read the recipient range;
+  - `my_introductions` reads the sender and recipient ranges; `my_introduction_proposals` reads the viewer range;
+  - `my_event_intents` and `my_activity_approvals` read the owner range; `my_plans` reads both participant ranges.
+
+  Reducers (`approve_signal` idempotency, `revoke_signal`, `suppressPairWork`, delivery, preferences, presets, introductions, events) look up by caller or pair index with the same predicates.
+- **`pair_member` consistency.**
+  - Invite writes the creator's row and accept writes the accepter's, in the same transaction as the `pair` update. Self-accept is still refused, so the `pair:member` key can't collide.
+  - Unlink keeps both rows, and `pair.status` stays authoritative everywhere (`alreadyPaired` skips unlinked pairs; `requireMemberPair` still reads `pair`). A re-pair gets a new pair id and new rows.
+  - No view exposes `pair_member`.
+- **Nothing new visible to a third account.** The only new public view is `catalogue_status` (feed key, times, status, count): operational metadata, no user data, registered accounts only, flag-gated. `record_catalogue_run` is ingester-only.
+- **Evidence:** existing third-account suites pass. Mutations against #30's filters (`pairsOf` reading all members, `my_plans` reading one participant side, accept not writing `pair_member`) are each caught by the suite.
+- **Operational note:** `pair_member` has no backfill. If a module with existing pairs were republished, those pairs would vanish from `my_pairs`. That fails closed, not a leak; irrelevant today because nothing is published.
+
+## 2026-10-24: D040 private assessment (Adam), Cyber boundary review
+Verdict: **ACK with conditions.** Checked against `docs/features/PRIVATE_ASSESSMENT.md` §1/§3/§4 and the code (`src/agents/src/reflection/claude.ts`, `src/features/voice/{assessment,model}.ts`, `voice-reflection.tsx`, `decision-loop.tsx`, `src/app/journal/page.tsx`, `src/app/api/reflections/route.ts`):
+- **Owner-only and in memory: holds.** `splitReflection` persists only the reflection text; the candidate and assessment stay in component state. The journal clears the episode on `pagehide`, and the editor unmounts on lock.
+- **Never sent onward: holds.** The assessment returns to the owner's browser only. Nothing writes it to SpacetimeDB, approved signals, Factory/Droid, analytics or logs. The route's usage log is token counts, duration and outcome only.
+- **Narrow-only: holds.**
+  - `wants_space` and invalid assessments stop.
+  - `wants_connection` only skips the company question.
+  - Excluded names remove matches, and ambiguous names remove all matches. Preferred names only reorder.
+  - Name matching runs on the device; Claude never receives the contact list.
+  - `decide()` can't reach a preview without the owner choosing the person, and `ShareReview` approval stays separate.
+
+Conditions:
+1. An assessment, exclusion or clarification answer must never create, extend or lift a D041 pause. The UI may *offer* a pause; only the owner's tap sets it.
+2. The `ShareReview` preview and approval stay mandatory on every path, including `wants_connection`.
+3. The "Leaving out X for now" line is owner-screen copy only, never a notification or any recipient-visible text.
+4. DS evals include the ambiguous-name and injection cases from §5.
+
+## 2026-10-25: live-host fix for database-initiated calls (CS Core 3 finding)
+- **Finding (CS, live):** `sweep_expired` refused every scheduled run with `unauthorized: scheduler only`. SpacetimeDB 2.13 never sets `senderAuth.isInternal` on a real host; `AuthCtxImpl.fromBackend` always sets it to false, and only the in-process harness sets it. Expiry markers were therefore never written live, so lapsed records (including D041 pauses) stayed in force in views. That failed closed, but it was broken.
+- **Fix:** new `isDatabaseInternal(ctx)` in `guards.ts` requires no connection AND `ctx.sender` equal to `ctx.databaseIdentity` (the harness keeps `isInternal`). A client can't satisfy both: every client call has a connection, and client identities come from their token's issuer and subject.
+- **Applied to:**
+  - `sweep_expired`: the bug.
+  - `requireIngester`: the module owner was refused live, because the owner was only ever admitted through `isInternal`. The owner is now checked against the owner row, and the database itself is admitted.
+  - `requireOwner`'s no-owner-row fallback: never reached live; kept fail-closed.
+  - `requireAuthenticated`'s `isInternal` shortcut is harness-only. No scheduled reducer calls it, so it's unchanged and commented.
+- **Evidence:** `spacetimedb/tests/scheduler_auth.test.ts` (5) calls the reducers with a live-shaped context (`isInternal` false, no connection, database identity). The sweep runs and really ends a lapsed pause. A user, the database identity with a connection, and a stranger without a connection are each refused for the sweep and for ingestion; the owner can ingest. 5 of 5 mutations are caught, including reverting to `isInternal`. Not yet re-verified on the live host: CS should restart the local module and confirm the sweep log is clean.

@@ -3,6 +3,7 @@ import { ScheduleAt } from 'spacetimedb';
 import { validHostAllowlist, validSlugAllowlist } from '@dor/contracts/policy';
 import { spacetimedb } from '../schema';
 import { fail, type Ctx } from '../errors';
+import { isDatabaseInternal } from '../guards';
 import { SWEEP_INTERVAL_MICROS } from '../constants';
 
 /** Records the publisher as module owner and starts the expiry sweep. Issuers/audiences are added later. */
@@ -15,7 +16,8 @@ export const init = spacetimedb.init(ctx => {
 
 function requireOwner(ctx: Ctx): void {
   const row = ctx.db.module_owner.key.find('owner');
-  const ok = row ? row.owner.isEqual(ctx.sender) : ctx.senderAuth.isInternal;
+  // The owner row is written by init. Without it (never live) only the database itself may act; fail closed otherwise.
+  const ok = row ? row.owner.isEqual(ctx.sender) : isDatabaseInternal(ctx);
   if (!ok) fail('unauthorized', 'module owner only');
 }
 

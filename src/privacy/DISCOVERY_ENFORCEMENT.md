@@ -19,6 +19,7 @@ Guards live in `contracts/src/discovery.ts` (zod-free, re-exported from `@dor/co
 | `report_discovery_user` | account | reason in allowlist; card visible now, or caller is a participant; also blocks | `invalid: reason`/`target_kind`, `not_found:*` | 10/day |
 | `commit_introduction_proposal` | allow-listed worker only | flag; ids; visibility now; both publication versions; tags ⊆ both current tags; `shared_interest` only; not already pending/connected; idempotent on `proposal_id` | `unauthorized: worker only`, `stale: stale_revision`, `not_found: blocked`/`area_mismatch`, `unauthorized: withdrawn`, `invalid:*`, `stale: already_connected` | none (worker) |
 | `dismiss_introduction_proposal` | viewer only | owner of the proposal | `not_found: proposal` | none |
+| `set_discovery_page` (CS, #22) | account | opaque ref shape only; stores the caller's own cursor | `invalid: after_ref` | none (reveals nothing beyond cards the caller can already see) |
 
 Limits are per caller identity, in one database (one module instance), counted on successful actions only: a failed reducer rolls back its counter. Refused probes are kept uninformative instead: every ref the caller cannot see gives the same `not_found`, and card refs are random UUIDs, not identities.
 
@@ -26,7 +27,7 @@ Limits are per caller identity, in one database (one module instance), counted o
 
 | View | Rows | Fields | Never included |
 |---|---|---|---|
-| `discovery_cards` | other participants visible to the caller now, ≤ 50 | `card_ref, display_name, interest_tags, shared_tags, revision` | identity, area key, expiry, pair/preset/signal/preference, quiz, journal, location |
+| `discovery_cards` | other participants visible to the caller now, read through the area index, in card-ref order after the caller's own `discovery_page` cursor, excluding people with an accepted introduction (CS #22), ≤ 50 | `card_ref, display_name, interest_tags, shared_tags, revision` | identity, area key, expiry, pair/preset/signal/preference, quiz, journal, location |
 | `my_discovery_profile` | the caller's own | own publication, own area key and status | anyone else's |
 | `my_introductions` | introductions the caller is in, unless blocked either way | `intro_id, direction, status, counterpart_name, shared_tags, created_at, expires_at` | identities, card refs, area; incoming pending shown only while the sender's profile stands unchanged; outgoing never shows a decline (accepted / pending / closed); recipient name only after acceptance |
 | `my_introduction_proposals` | the caller's own AI suggestions, while the candidate is still visible and both revisions unchanged | `proposal_id, candidate_ref, reason_code, shared_tags, opener_id, decided_by, expires_at` | anything about the candidate beyond their card ref; candidates never see proposals about them |
