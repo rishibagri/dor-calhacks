@@ -125,7 +125,7 @@ Status: PR #25 (open), `role/ds-context` merged with main `71c3b6a` (README core
 ## CI fix after AI #38 (2026-10-24T20:08Z, main 4135082 merged; PR #36 not merged)
 - AI #38 closed the nickname exclusions, so nn1/nn2 meet their pre-run labels. Their `knownGap` markers are removed and the labels are unchanged.
 - D042 is now in `docs/DECISIONS.md`, and the contract requires the assessment whenever there is a candidate.
-- **Results:** decision loop 55/55; forbidden 0; the remaining todos are a3 and the timing row (both Sumedh's).
+- **Results:** decision loop 55/55; forbidden 0. Remaining todos: a3 (Sumedh) and the timing row. D043 (Cyber #39, main `f0f722c`) narrowed the real `my_nudges` row, so the timing todo now needs DS to mirror that row in `matching.ts` `buildNudge`. PR #36 CI passes against `f0f722c`.
 
 ## Next for DS: core-first (README "Current direction", Core 1–4)
 Discovery/event ranking work is paused. Don't expand it until the core passes live verification. The earlier "D038/D039 metrics cases" and "first-session recommendations" items are dropped.
