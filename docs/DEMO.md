@@ -1,4 +1,8 @@
-# Edited demo — three relationship instances
+# Separate demo and video production plan
+
+This document preserves the optional video/presentation work separately from the core engineering plan, role contracts, and acceptance gates. Scheduling and production ownership here are provisional and do not assign engineering deliverables.
+
+## Edited demo — three relationship instances
 Owner: DS (producer/editor); CS supplies stable UI footage, AI supplies voice loop, Cyber verifies disclosure visuals. Deliver a polished 90-second 16:9 MP4, captioned version, clean version, and local backup. Target 1080p, readable UI, consistent sound levels; verify actual submission constraints before export. This document is a production plan; no video exists yet.
 
 ## Three complete stories (synthetic people and recordings)

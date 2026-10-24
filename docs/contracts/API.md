@@ -12,7 +12,7 @@ JSON, authenticated session, UTC ISO timestamps, random opaque IDs, server-side 
 | POST /api/signals/preview | {candidateId,pairId} | exact fixed-template recipient preview, candidate revision |
 | POST /api/signals/approve | {candidateId,pairId,candidateRevision,consentVersion,clientRequestId} | approved signal ID; validate displayed revision, recipient, expiry, membership |
 | POST /api/signals/:id/revoke | {} | revoked; cancel queued uses, invalidate derived cached nudges |
-| POST /api/coordination/run | {pairId,clientRequestId} | bounded exchange + eligible nudges; demo trigger, authenticated member only |
+| POST /api/coordination/run | {pairId,clientRequestId} | bounded exchange + eligible nudges; authenticated member trigger only |
 | GET /api/nudges | cursor | own eligible inbox, revalidate current consent before display |
 | POST /api/nudges/:id/feedback | {action:helpful/dismiss/snooze} | own feedback; no automatic personal message |
 | GET /api/privacy/receipts | cursor | own disclosure receipts; omit private references |

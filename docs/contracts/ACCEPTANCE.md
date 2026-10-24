@@ -17,7 +17,7 @@ Release bar: all deterministic privacy tests pass; no forbidden fields cross the
 AI records median/p95 voice and nudge latency over at least 10 seeded runs; target <=3 seconds for first audible response after turn completion and <=8 seconds for nudge generation. These are targets until measured. Include provider failures and recovery.
 
 ## Contract fixtures
-packages/contracts/approved-signal.schema.json is a strict boundary schema proposal. Runtime code must additionally enforce authenticated identity, consent record/payload equality, current membership/version, expiry, and revocation. JSON Schema validity alone never grants permission. demo/scenarios.json contains synthetic interface fixtures, with deliberately far-future expiries for static readability; reset scripts must replace them with realistic relative expiries before tests or demonstrations.
+packages/contracts/approved-signal.schema.json is a strict boundary schema proposal. Runtime code must additionally enforce authenticated identity, consent record/payload equality, current membership/version, expiry, and revocation. JSON Schema validity alone never grants permission. src/evaluation/fixtures/scenarios.json contains synthetic interface fixtures, with deliberately far-future expiries for static readability; reset scripts must replace them with realistic relative expiries before test runs.
 
 ## Evidence
-Each role logs commands/results or reproducible manual steps. Demo production acceptance: 90-second film, all three instances, real UI, readable captions, understandable voice, consent and revocation shown, local playback checked. No claim of implemented protection from the existence of this checklist.
+Each role logs commands/results or reproducible manual steps. No claim of implemented protection from the existence of this checklist.

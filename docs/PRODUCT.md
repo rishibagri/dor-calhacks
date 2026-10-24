@@ -11,7 +11,7 @@ Help people show up for each other without requiring them to share every private
 - Nudge inbox with rationale limited to approved context, dismiss/snooze/helpful feedback, quiet hours, cooldown, and one action the person can choose.
 - Privacy center: approved signals, recipient, expiry, revoke/unlink, journal deletion, and a sanitized receipt of what crossed the boundary.
 - Three complete seeded experiences: partners, friends, family. Same product, different relationship context.
-- Deployed demo, reproducible seed/reset, real screen recordings, edited 90-second film and backup walkthrough.
+- Deployed application with reproducible seed/reset and documented recovery behavior.
 
 ## Stretch after core acceptance at hour 22
 Opt-in recurring ritual suggestion, time-zone-aware scheduling, accessible playback, richer longitudinal owner-only reflection. Choose at most two. Do not add native apps, calendar OAuth, SMS, contact import, group relationships, or unlimited agent negotiation during this sprint.
@@ -20,4 +20,4 @@ Opt-in recurring ritual suggestion, time-zone-aware scheduling, accessible playb
 A nudge can itself reveal that someone may want support. Even coarse signals can invite inference. Show this clearly at approval; allow no sharing, generic suggestions, or exact bounded sharing. The journal is private from the other person, not necessarily from the processing providers. State which providers process audio/text and verify their actual retention options before making claims.
 
 ## Core acceptance
-Two real accounts, a live journal, explicitly approved signal, bounded agent exchange, an actionable nudge, and revocation that prevents subsequent use. The other account cannot retrieve journal text, audio, identifiers, embeddings, private reasoning, or unapproved facts. Film demonstrates all three relationship instances using synthetic stories.
+Two real accounts, a live journal, explicitly approved signal, bounded agent exchange, an actionable nudge, and revocation that prevents subsequent use. The other account cannot retrieve journal text, audio, identifiers, embeddings, private reasoning, or unapproved facts. All three relationship instances have synthetic end-to-end verification scenarios.

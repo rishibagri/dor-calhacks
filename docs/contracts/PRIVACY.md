@@ -12,7 +12,7 @@ Construct recipient rationale from fixed templates and approved enums; do not in
 Cross-account journal GET/DELETE; pair ID tampering; unaccepted invite; malicious transcript asking to disclose secrets; model extra fields/encoded content; expiry; unlink; revoke before coordination; revoke during generation; stale retry after revoke; unauthorized nudge read; logs/error/analytics leakage; repeated probes to infer blocked facts. Revocation cannot erase information already seen; state that honestly.
 
 ## Data lifecycle
-Audio transient by default; visibly disclose provider processing. Owner can correct or delete transcript. Deletion immediately removes app access and revokes derived signals; document actual primary-store cleanup, backups, and provider retention separately. Audit only IDs/actions/versions with restricted access, never content. Synthetic demo data only until live-data boundaries pass. Any provider data-retention claim must be verified in that provider's current settings/docs before launch.
+Audio transient by default; visibly disclose provider processing. Owner can correct or delete transcript. Deletion immediately removes app access and revokes derived signals; document actual primary-store cleanup, backups, and provider retention separately. Audit only IDs/actions/versions with restricted access, never content. Synthetic test data only until live-data boundaries pass. Any provider data-retention claim must be verified in that provider's current settings/docs before launch.
 
 ## Honest privacy copy
 “Your journal is not shared with your connection. You choose which limited signals can be used for nudges. Our processing providers handle audio/text to provide the service. A nudge may still let someone infer that you would welcome support.”

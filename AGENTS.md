@@ -4,10 +4,13 @@ Read this file before working, including after resuming. Human owners and their 
 ## Read order
 README.md → docs/PLAN.md → docs/PRODUCT.md → all docs/contracts/*.md → packages/contracts/index.ts → your docs/roles/*.md → current coordination updates.
 
+## Shared contract visibility
+All architecture, API, agent protocol, privacy, acceptance, and data contracts are shared on `main` and available to every teammate and agent. `main` is authoritative; do not maintain branch-specific private contracts. Merge shared contract updates from `main` into each role branch before dependent work. Separate video/presentation planning lives in docs/DEMO.md and is not required engineering-contract reading.
+
 ## Operating rules
 - Work only on your role branch. Sync main before integration. Small PRs every 2–3 hours; CS owns integration and does not become the sole implementer.
 - Claim files/task in the update area before editing shared surfaces. Own your directories. Ask the affected role before changing shared interfaces; record decisions in docs/DECISIONS.md and version contracts together.
-- Contracts are normative proposals, not evidence that protections exist. Never weaken privacy gates to make a demo work. Block uncertain disclosure.
+- Contracts are normative proposals, not evidence that protections exist. Never weaken privacy gates to make a feature work. Block uncertain disclosure.
 - Journal audio, transcripts, embeddings, inferred sensitive facts, and private summaries must never enter shared agent state, peer prompts, analytics, Git, issues, or agent update files.
 - No provider keys in clients or commits. Use synthetic data. No autonomous messages impersonating users. Delivery is in-app; sending a personal message requires user action.
 - Verify authentication, ownership, consent scope/version/expiry, pair membership, unlink state, and output allowlists on the server. A prompt is not an authorization boundary.
@@ -27,4 +30,4 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 | AI | Planned | Voice adapter and candidate proposal |
 
 ## Completion checklist
-Contract compatibility, meaningful checks, privacy review for boundary changes, updated role log, reproducible demo instructions. Never mark a stub, replay, or mocked provider as live integration.
+Contract compatibility, meaningful checks, privacy review for boundary changes, updated role log, reproducible verification instructions. Never mark a stub, replay, or mocked provider as live integration.
