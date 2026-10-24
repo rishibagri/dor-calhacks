@@ -1,3 +1,20 @@
+# CS handoff — 2026-10-24T20:30Z, role/cs-app (CS-R3)
+
+Status: CS-R3 implemented in code, **offline-verified only**. No Apify run, no published module.
+
+## Interfaces
+- `SharedStatePort`: `publishEventIntent`, `revokeEventIntent`, `revokeActivityInterest`, `respondPlan`, `cancelPlan`; views `catalogueEvents`, `myEventIntents`, `eventCompanions`, `myActivityApprovals`, `myPlans`.
+- `/events`: DS `eligibleEvents` over the viewer's area, Cyber `intentPreviewCopy` before marking, `sourceAgeLabel`, safe links, mutual companions with "Introduce yourself", `PlansList` with `PLAN_STATUS_COPY` / `planAcceptCopy`.
+- Privacy: Cyber `EventPrivacyControls` composed (`src/components/feature/event-privacy.tsx`).
+- Ingestion: `src/lib/catalogue/ingest.ts` (pure; `guardPublicCatalogueQuery` per topic, `guardCatalogueEvent` per record, stable IDs, dedupe, instruction-title filter); `scripts/ingest-catalogue.ts --fixture|--fetch [--commit db] [--force]` with lock file and 6 h refresh window. Regional source lives in an Apify *task* (APIFY_TASK_ID); requests carry only guarded generic fields.
+
+## Blockers / next consumer
+- C7 activity approval UI for existing pairs is not built: `SHARING_CATEGORIES` lacks `activity_interest`, so no preset can allow it (Cyber/contract change first).
+- Apify task/Actor not selected; `FIELD_MAP` and `SOURCE_HOSTS` are proposals for Cyber review before a paid run.
+- AI: worker must call `commit_plan_proposal` from `worker_plan_candidates`; until then `my_plans` is empty.
+
+---
+
 # CS handoff — 2026-10-24T19:00Z, role/cs-app (PR #22)
 
 Status: CS-R1 complete in code, CS-R2 complete in code. **Offline-verified only**: the module has not been published, no two-account run, no browser geolocation or network trace.

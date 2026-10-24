@@ -2,6 +2,7 @@
 
 import { ApprovedSignals } from '@/components/feature/approved-signals';
 import { DiscoveryStatus } from '@/components/feature/discovery-status';
+import { EventPrivacy } from '@/components/feature/event-privacy';
 import { useLiveShared } from '@/components/shell/use-live';
 import { IntegrationStatus } from '@/components/shell/integration-status';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -42,6 +43,7 @@ export default function PrivacyPage() {
       </Alert>
       <ApprovedSignals />
       <DiscoveryStatus />
+      <EventPrivacy />
       <Card>
         <CardHeader>
           <CardTitle>Receipts</CardTitle>

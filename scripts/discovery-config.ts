@@ -4,6 +4,7 @@
  * Usage: node scripts/discovery-config.ts [database] [--enable]
  */
 import { AREA_KEYS, DISCOVERY_TAGS, launchConfigValid } from '../src/lib/discovery/config.ts';
+import { SOURCE_HOSTS } from '../src/lib/catalogue/feeds.ts';
 
 if (!launchConfigValid()) {
   console.error('discovery config fails the module slug rules; fix src/lib/discovery/config.ts');
@@ -14,4 +15,5 @@ const call = (key: string, values: readonly string[]) =>
   `spacetime call ${db} set_discovery_config '${JSON.stringify(key)}' '${JSON.stringify(values)}'`;
 console.log(call('areas', AREA_KEYS));
 console.log(call('tags', DISCOVERY_TAGS));
+console.log(call('source_hosts', SOURCE_HOSTS));
 if (process.argv.includes('--enable')) console.log(call('enabled', ['true']));
