@@ -181,6 +181,27 @@ describe('typed approval → worker → commit_nudge, over the real module', () 
     expect([n.recipient_consent_id, n.recipient_consent_version]).toEqual([pref.consent_id, pref.consent_version]);
   });
 
+  it('recipient narrows consent while the model runs: the coordinator recheck refuses and nothing is committed', async () => {
+    const { w, pairId, worker } = world();
+    optIn(w, pairId);
+    const sig = approve(w, BOTH);
+    const droid = scriptedDroid(undefined, () => { grantPrefs(w, w.bob, pairId, ['encouraging_note'], ['today', 'this_week']); });
+    const live = liveWorker(w, harnessSource(w, worker), droid);
+    expect((await live.runJob(job(pairId, sig.signal_id))).map(o => o.outcome)).toEqual(['preferences_unavailable']);
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
+  });
+
+  it('recipient re-saves the same consent after the recheck: only the version pin stops the commit (D035)', async () => {
+    const { w, pairId, worker } = world();
+    optIn(w, pairId);
+    const sig = approve(w, BOTH);
+    // Same modes and windows, so the consent still stands and covers the template; only consent_version moves.
+    const source = harnessSource(w, worker, { beforeCommit: () => { grantPrefs(w, w.bob, pairId, BOB_MODES, ['today', 'this_week']); } });
+    const live = liveWorker(w, source, scriptedDroid());
+    expect((await live.runJob(job(pairId, sig.signal_id))).map(o => o.outcome)).toEqual(['policy_denied']);
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
+  });
+
   it('a non-worker identity sees no signals and cannot commit', async () => {
     const { w, pairId, bobHex } = world();
     optIn(w, pairId);
