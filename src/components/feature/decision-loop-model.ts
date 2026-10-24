@@ -60,10 +60,12 @@ export interface LoopState {
   excluded: readonly string[];
   /** Distinct questions shown so far. Re-answering one is not a new question; the cap counts distinct ones. */
   asked: readonly (keyof typeof QUESTION_COPY)[];
+  /** Set by `failClosedWithoutAssessment`: a candidate arrived with no private assessment, so nobody is ever asked about. */
+  blocked?: 'assessment_missing';
 }
 
 export type Outcome =
-  | { kind: 'no_action'; reason: 'nothing_to_share' | 'prefers_space' | 'skipped' | 'no_recipient' | 'no_eligible_recipient' | 'question_cap' }
+  | { kind: 'no_action'; reason: 'nothing_to_share' | 'prefers_space' | 'skipped' | 'no_recipient' | 'no_eligible_recipient' | 'question_cap' | 'assessment_missing' }
   | { kind: 'needs_clarification'; question: keyof typeof QUESTION_COPY; options: readonly Recipient[] }
   | { kind: 'ready_for_preview'; recipient: Recipient; candidate: SignalCandidate };
 
@@ -73,11 +75,22 @@ export function startLoop(candidate: SignalCandidate | null): LoopState {
   return { candidate: parsed?.success ? parsed.data : null, company: null, chosen: null, excluded: [], asked: [] };
 }
 
+/**
+ * A candidate without Claude's private assessment cannot be checked against refusals in the entry ("not Alex"), so
+ * the loop ends in silence instead of offering every connection. Absent = `undefined` or `null`. A present assessment
+ * is left to the assessment seam (an invalid one already fails closed there). No candidate stays `nothing_to_share`.
+ */
+export function failClosedWithoutAssessment(s: LoopState, assessment: unknown): LoopState {
+  if (s.candidate === null || (assessment !== undefined && assessment !== null)) return s;
+  return { ...s, blocked: 'assessment_missing' };
+}
+
 const eligible = (s: LoopState, recipients: readonly Recipient[]) => recipients.filter((r) => !s.excluded.includes(r.pairId));
 
 /** Derives the current outcome. `recipients` = accepted connections only (from the caller's own pairs view). */
 export function decide(s: LoopState, recipients: readonly Recipient[]): Outcome {
   if (s.candidate === null) return { kind: 'no_action', reason: 'nothing_to_share' };
+  if (s.blocked === 'assessment_missing') return { kind: 'no_action', reason: 'assessment_missing' };
   if (s.company === 'space') return { kind: 'no_action', reason: 'prefers_space' };
   if (s.company === 'skip') return { kind: 'no_action', reason: 'skipped' };
   const options = eligible(s, recipients);
@@ -124,4 +137,5 @@ export const NO_ACTION_COPY: Record<Extract<Outcome, { kind: 'no_action' }>['rea
   no_recipient: 'Okay, no one right now. Nothing will be shared.',
   no_eligible_recipient: 'There is no one to suggest right now. Nothing will be shared.',
   question_cap: 'Nothing will be shared from this entry.',
+  assessment_missing: "dor couldn't read this entry clearly enough to suggest anyone. Nothing will be shared.",
 };

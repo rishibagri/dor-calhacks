@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
 import { BackendProvider } from '@/lib/backend';
 import { isClerkConfigured } from '@/lib/config';
+import { SwRegister } from '@/components/shell/sw-register';
 import { AppShell } from '@/components/shell/app-shell';
 import './globals.css';
 
@@ -13,9 +14,21 @@ const mono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono', dis
 export const metadata: Metadata = {
   title: 'dor',
   description: 'A private voice journal with owner-approved, minimal signals.',
+  applicationName: 'dor',
+  icons: { apple: '/pwa-icon/apple-touch-icon.png' },
+  appleWebApp: { capable: true, title: 'dor', statusBarStyle: 'default' },
+  formatDetection: { telephone: false },
 };
 
-export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#faf8f4' },
+    { media: '(prefers-color-scheme: dark)', color: '#1a1816' },
+  ],
+};
 
 // Follows the system theme before first paint to avoid a flash.
 const THEME_SCRIPT = `try{if(matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.classList.add('dark')}catch(e){}`;
@@ -32,6 +45,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className="min-h-dvh antialiased">
+        <SwRegister />
         {isClerkConfigured ? <ClerkProvider>{body}</ClerkProvider> : body}
       </body>
     </html>
