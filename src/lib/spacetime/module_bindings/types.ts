@@ -411,6 +411,19 @@ export type MyRecipientPauses = __Infer<typeof MyRecipientPauses>;
 export const MySignals = __t.object("MySignals", {});
 export type MySignals = __Infer<typeof MySignals>;
 
+export const MyStandingConsentRow = __t.object("MyStandingConsentRow", {
+  pairId: __t.string(),
+  categories: __t.array(__t.string()),
+  version: __t.u32(),
+  expiresAt: __t.timestamp(),
+  active: __t.bool(),
+  createdAt: __t.timestamp(),
+});
+export type MyStandingConsentRow = __Infer<typeof MyStandingConsentRow>;
+
+export const MyStandingConsents = __t.object("MyStandingConsents", {});
+export type MyStandingConsents = __Infer<typeof MyStandingConsents>;
+
 export const MySupportPreferences = __t.object("MySupportPreferences", {});
 export type MySupportPreferences = __Infer<typeof MySupportPreferences>;
 
@@ -559,6 +572,30 @@ export const SharedPlanRow = __t.object("SharedPlanRow", {
   expiresAt: __t.timestamp(),
 });
 export type SharedPlanRow = __Infer<typeof SharedPlanRow>;
+
+export const StandingApproval = __t.object("StandingApproval", {
+  signalId: __t.string(),
+  ruleId: __t.string(),
+  ruleVersion: __t.u32(),
+});
+export type StandingApproval = __Infer<typeof StandingApproval>;
+
+export const StandingConsent = __t.object("StandingConsent", {
+  ruleId: __t.string(),
+  owner: __t.identity(),
+  pairId: __t.string(),
+  recipient: __t.identity(),
+  categories: __t.array(__t.string()),
+  recipientPolicyVersion: __t.u32(),
+  presetAssignmentVersion: __t.u32(),
+  noticeVersion: __t.u32(),
+  version: __t.u32(),
+  expiresAt: __t.timestamp(),
+  revokedAt: __t.option(__t.timestamp()),
+  createdAt: __t.timestamp(),
+  updatedAt: __t.timestamp(),
+});
+export type StandingConsent = __Infer<typeof StandingConsent>;
 
 export const SupportPreference = __t.object("SupportPreference", {
   consentId: __t.string(),

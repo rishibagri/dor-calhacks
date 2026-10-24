@@ -78,6 +78,13 @@ Client: `send_introduction_request({card_ref, client_request_id})` (a fresh rand
 ### Adam: introduction proposals (D033 → D038)
 Commit each proposal with the worker identity through `commit_introduction_proposal({proposal_id, viewer_ref, candidate_ref, viewer_publication_version, candidate_publication_version, reason_code: 'shared_interest', shared_tags, event_id: none, opener_id: 'suggest_shared_interest', decided_by, expires_at})`. `proposal_id` must match `^[A-Za-z0-9_-]{8,64}$` (a UUID qualifies). The reducer is the authority: treat `stale:*`, `not_found:*`, `unauthorized: withdrawn` and `invalid:*` as no proposal, and `unauthorized: worker only` as a deployment fault. `same_event` is refused until R3.
 
+### CS: automatic nudges (D044, off by default)
+Spec and owner copy: `docs/features/AUTOMATIC_NUDGES.md`.
+- **Reducers:** `set_standing_consent`, `revoke_standing_consent` and `approve_signal_standing`, plus the owner-only view `my_standing_consents`.
+- **Setup screen:** a separate screen outside the journal, with a clear revoke control.
+- **Candidates:** use only those the decision loop resolved to that uniquely chosen pair.
+- **Manual preview** stays the default.
+
 ### CS: recipient pause controls (D041, core)
 - **Reducers:** `pause_recipient({pair_id, expires_at, expected_version})` and `resume_recipient({pair_id, expected_version})`. `expected_version` is the row's `version` from `my_recipient_pauses` (0 for none). Join `pair_id` to `my_pairs` to show the name. Show `expires_at`, offer resume, and never ask for a reason.
 - **Copy rule:** "{name} isn't notified." Also say that anything already shared with them is withdrawn now, and that a nudge they already saw will disappear.

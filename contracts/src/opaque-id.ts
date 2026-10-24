@@ -1,5 +1,5 @@
 /**
- * a3 (PROPOSED, D044; DS + AI ACK needed before enforcement): approved-signal IDs must be opaque and server-minted.
+ * a3 (PROPOSED, D047; DS + AI ACK needed before enforcement): approved-signal IDs must be opaque and server-minted.
  * The SpacetimeDB module mints every signal id with `ctx.newUuidV4()` (lowercase RFC 4122 v4). A client- or
  * model-chosen id such as "exam-friday-panic" could spell out a private reason, so the shared contract should accept
  * only this shape. Not enforced yet: fixtures and tests across contracts, DS and the worker still use readable ids.

@@ -20,7 +20,8 @@
     "check": "npm run build && npm test",
     "live": "node scripts/live-droid.mjs",
     "start": "node dist/main.js",
-    "test:integration": "vitest run --config integration/vitest.config.ts"
+    "test:integration": "vitest run --config integration/vitest.config.ts",
+    "demo": "vitest run --config integration/vitest.config.ts --silent=false demo-journey"
   },
   "dependencies": {
     "@dor/agents": "0.1.0",

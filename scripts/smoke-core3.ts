@@ -1,6 +1,8 @@
 /**
  * Core 3 live smoke: two accounts (A, B) + a denied third (C) against the REAL Clerk dev instance
- * and a LOCAL SpacetimeDB. SYNTHETIC DATA ONLY (dor-smoke-{a,b,c}+clerk_test@example.com).
+ * and a local or hosted SpacetimeDB. SYNTHETIC DATA ONLY (dor-smoke-{a,b,c}[-SMOKE_TAG]+clerk_test@example.com).
+ * Any teammate can run it: the private-table reads (allow-list print, --sweep marker) need the module owner's
+ * CLI login and are skipped, and reported as skipped, for everyone else.
  * Never prints secrets or tokens. Never calls paid providers. Does not run the worker, so nudge
  * delivery (commit_nudge) is NOT exercised.
  *
@@ -34,8 +36,11 @@ async function clerk(method: string, path: string, body?: unknown): Promise<any>
   if (!res.ok) throw new Error(mask(`Clerk ${method} ${path} -> ${res.status}: ${text.slice(0, 400)}`));
   return text ? JSON.parse(text) : {};
 }
+// SMOKE_TAG gives each teammate their own A/B/C users, so runs against a shared database never collide.
+const SMOKE_TAG = process.env.SMOKE_TAG ?? '';
+if (!/^[a-z0-9]{0,16}$/.test(SMOKE_TAG)) throw new Error('SMOKE_TAG: lowercase letters/digits only, at most 16');
 async function ensureUser(tag: string): Promise<string> {
-  const email = `dor-smoke-${tag}+clerk_test@example.com`;
+  const email = `dor-smoke-${tag}${SMOKE_TAG && `-${SMOKE_TAG}`}+clerk_test@example.com`;
   const found = await clerk('GET', `/users?email_address=${encodeURIComponent(email)}`);
   if (Array.isArray(found) && found[0]) return found[0].id;
   const made = await clerk('POST', '/users', {
@@ -87,11 +92,21 @@ function rec(n: string, step: string, expected: string, actual: string, pass: bo
   results.push({ n, step, expected, actual: mask(actual), pass });
   console.log(`${pass ? 'PASS' : 'FAIL'} ${n} ${step} | expected ${expected} | actual ${mask(actual)}`);
 }
+const skipped: string[] = [];
+function skip(n: string, step: string, why: string) {
+  skipped.push(n);
+  console.log(`SKIP ${n} ${step} | ${why}`);
+}
 const ok = (n: string, step: string, err: string | null) => rec(n, step, 'ok', err ?? 'ok', err === null);
 const denied = (n: string, step: string, err: string | null) => rec(n, step, 'rejected', err ?? 'ACCEPTED (unexpected)', err !== null);
 
-function sql(q: string): string {
-  return execFileSync('spacetime', ['sql', DB, q, '-s', SERVER], { encoding: 'utf8' }).trim();
+/** Private tables are readable only by the module owner's CLI login; anyone else gets null and the owner-only checks are skipped. */
+function ownerSql(q: string): string | null {
+  try {
+    return execFileSync('spacetime', ['sql', DB, q, '-s', SERVER], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  } catch {
+    return null;
+  }
 }
 
 // Opt-in: set a short-lived consent, wait for the 60 s sweep to mark it, then restore normal consent.
@@ -105,12 +120,16 @@ async function sweepStep(b: Conn, pairId: string, normalExp: string): Promise<vo
   const row = b.rows('my_support_preferences').find((p) => p.pairId === pairId);
   rec('10b', 'B my_support_preferences row visible, active', 'row, not revoked', row ? `row v${row.consentVersion} revoked=${!!row.revokedAt}` : 'none', !!row && !row.revokedAt);
   const id: string = row?.consentId ?? '';
-  const marked = () => sql('SELECT kind, record_key FROM expired_record').split('\n').some((l) => l.includes('preference') && l.includes(id));
-  console.log(`${stamp()} sweep: expiry set for ${shortExp}; polling expired_record every 5s (max 150s)`);
-  let found = false;
-  for (const end = Date.now() + 150000; Date.now() < end; await sleep(5000)) { if (marked()) { found = true; break; } }
-  console.log(`${stamp()} sweep: marker ${found ? 'PRESENT' : 'absent'}`);
-  rec('10c', 'sweep inserted expired_record kind=preference for B consent', 'marker present', found ? 'marker present' : 'absent after 150s', found);
+  if (ownerSql('SELECT kind FROM expired_record') === null) {
+    skip('10c', 'sweep inserted expired_record kind=preference for B consent', 'expired_record is private: run with the module owner CLI login');
+  } else {
+    const marked = () => (ownerSql('SELECT kind, record_key FROM expired_record') ?? '').split('\n').some((l) => l.includes('preference') && l.includes(id));
+    console.log(`${stamp()} sweep: expiry set for ${shortExp}; polling expired_record every 5s (max 150s)`);
+    let found = false;
+    for (const end = Date.now() + 150000; Date.now() < end; await sleep(5000)) { if (marked()) { found = true; break; } }
+    console.log(`${stamp()} sweep: marker ${found ? 'PRESENT' : 'absent'}`);
+    rec('10c', 'sweep inserted expired_record kind=preference for B consent', 'marker present', found ? 'marker present' : 'absent after 150s', found);
+  }
   const after = b.rows('my_support_preferences').find((p) => p.pairId === pairId);
   console.log(`${stamp()} sweep: my_support_preferences still returns row=${!!after} (owner view is raw; expiry is enforced by loadPreference/commit_nudge, not hidden in this view)`);
   const latest = b.rows('my_support_preferences').find((p) => p.pairId === pairId);
@@ -132,18 +151,24 @@ async function main() {
   const cl = claims(tok.a);
   const aud = Array.isArray(cl.aud) ? cl.aud : [cl.aud];
   console.log(`token iss=${cl.iss} aud=${JSON.stringify(aud)} | env DOR_CLERK_ISSUER=${process.env.DOR_CLERK_ISSUER} DOR_AUTH_AUDIENCE=${process.env.DOR_AUTH_AUDIENCE}`);
-  const cfg = sql('SELECT * FROM auth_config'); const audTable = sql('SELECT * FROM auth_audience');
-  console.log('module auth_config:\n' + cfg + '\nmodule auth_audience:\n' + audTable);
-  const issOk = cfg.includes(cl.iss) && cl.iss === process.env.DOR_CLERK_ISSUER;
-  const audOk = aud.some((x: string) => audTable.includes(x)) && aud.includes(process.env.DOR_AUTH_AUDIENCE);
-  rec('0', 'token iss/aud match env + module allow-lists', 'match', `issuer ${issOk ? 'ok' : 'MISMATCH'}, audience ${audOk ? 'ok' : 'MISMATCH'}`, issOk && audOk);
+  // The allow-list tables are private. Without the owner login, step 1 proves them instead: register_account
+  // fails with "issuer/audience not allow-listed" unless both are allow-listed.
+  const cfg = ownerSql('SELECT * FROM auth_config'); const audTable = ownerSql('SELECT * FROM auth_audience');
+  const tables = cfg !== null && audTable !== null;
+  console.log(tables ? 'module auth_config:\n' + cfg + '\nmodule auth_audience:\n' + audTable
+    : 'module allow-list tables: not readable (not the owner CLI login); step 1 checks them');
+  const issOk = cl.iss === process.env.DOR_CLERK_ISSUER && (!tables || cfg!.includes(cl.iss));
+  const audOk = aud.includes(process.env.DOR_AUTH_AUDIENCE) && (!tables || aud.some((x: string) => audTable!.includes(x)));
+  rec('0', `token iss/aud match env${tables ? ' + module allow-lists' : ''}`, 'match', `issuer ${issOk ? 'ok' : 'MISMATCH'}, audience ${audOk ? 'ok' : 'MISMATCH'}`, issOk && audOk);
   if (!issOk || !audOk) { console.log('STOP: allow-list mismatch (finding); reducer phase skipped'); return; }
 
   const a = await connect(tok.a), b = await connect(tok.b), c = await connect(tok.c);
 
   // 1 register
   for (const [n, who, name] of [['1a', a, 'Smoke A'], ['1b', b, 'Smoke B'], ['1c', c, 'Smoke C']] as const) {
-    ok(n, `register_account ${name}`, await who.call('register_account', { displayName: name }));
+    const err = await who.call('register_account', { displayName: name });
+    ok(n, `register_account ${name}`, err);
+    if (err?.includes('not allow-listed')) { console.log('STOP: module allow-list missing the Clerk issuer/audience (owner: set_auth_issuer / set_auth_audience)'); return; }
   }
   // Re-run hygiene: unlink stale accepted A<->B pairs.
   await waitFor(() => a.rows('my_account').length === 1);
@@ -233,6 +258,6 @@ async function main() {
 
 main().then(() => {
   const fails = results.filter((r) => !r.pass);
-  console.log(`\n${results.length - fails.length}/${results.length} PASS`);
+  console.log(`\n${results.length - fails.length}/${results.length} PASS${skipped.length ? ` (${skipped.length} owner-only skipped: ${skipped.join(', ')})` : ''}`);
   process.exit(fails.length ? 1 : 0);
 }).catch((e) => { console.error('smoke aborted:', mask(String(e?.stack ?? e))); process.exit(2); });

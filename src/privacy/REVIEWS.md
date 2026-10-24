@@ -162,8 +162,8 @@ The pause cases pz1–pz4 are correct: never offered, only-candidate → no_acti
 
 **Still missing:** a **change of mind mid-episode** case. The owner is at the preview step with Alex chosen when a pause on Alex becomes active. Expected: the loop does not proceed to approval (or approval is refused, `unauthorized: recipient_paused`), and nothing reaches Alex. The server side (a pause between approval and commit) is covered by `spacetimedb/tests/pause.test.ts` and Adam's worker cases.
 
-## 2026-10-25: a3 status (semantic signal IDs) → proposed D044
-On the real path a3 is mitigated twice: the module mints UUID v4 ids, and D043 removed source signal ids from the recipient's nudge row. The remaining gap is the shared contract, the fake and `DisclosurePolicy` accepting readable ids. `isServerMintedId` is added (unused, with tests). Enforcement needs DS and AI to migrate their fixtures, so it waits for their ACK (D044).
+## 2026-10-25: a3 status (semantic signal IDs) → proposed D047 (was D044)
+On the real path a3 is mitigated twice: the module mints UUID v4 ids, and D043 removed source signal ids from the recipient's nudge row. The remaining gap is the shared contract, the fake and `DisclosurePolicy` accepting readable ids. `isServerMintedId` is added (unused, with tests). Enforcement needs DS and AI to migrate their fixtures, so it waits for their ACK (D047).
 
 ## 2026-10-25: Core 4 privacy review (Cyber): recipient surfaces, copy, controls, account switch
 Verdict: **PASS with two copy fixes owed (MEDIUM, owners' files).** Offline code review of main `53795c2`; not a browser or live check.

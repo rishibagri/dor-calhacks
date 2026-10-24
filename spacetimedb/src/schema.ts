@@ -411,6 +411,35 @@ export const recipient_pause = table(
   }
 );
 
+/**
+ * D044 automatic nudges: an owner's explicit standing consent for ONE pair (off unless this row exists and stands).
+ * One row per owner + pair, updated in place; every change bumps `version`. Recipient is derived from the pair.
+ */
+export const standing_consent = table(
+  { name: 'standing_consent' },
+  {
+    rule_id: t.string().primaryKey(),
+    owner: t.identity().index('btree'),
+    pair_id: t.string(),
+    recipient: t.identity(),
+    categories: t.array(t.string()),
+    recipient_policy_version: t.u32(),
+    preset_assignment_version: t.u32(),
+    notice_version: t.u32(),
+    version: t.u32(),
+    expires_at: t.timestamp(),
+    revoked_at: t.option(t.timestamp()),
+    created_at: t.timestamp(),
+    updated_at: t.timestamp(),
+  }
+);
+
+/** Which approved signals were created under a standing rule (and which rule version). Private; rechecked at use. */
+export const standing_approval = table(
+  { name: 'standing_approval' },
+  { signal_id: t.string().primaryKey(), rule_id: t.string(), rule_version: t.u32() }
+);
+
 /** Allow-listed coordination worker identities (module-owner managed). Workers have no account and cannot approve. */
 export const worker_identity = table(
   { name: 'worker_identity' },
@@ -466,4 +495,6 @@ export const spacetimedb = schema({
   activity_approval,
   shared_plan,
   recipient_pause,
+  standing_consent,
+  standing_approval,
 });

@@ -77,6 +77,22 @@ The worker uses `@factory/droid-sdk` sessions by default; `DOR_DROID_TRANSPORT=c
 ## Job deadline
 Every job gets one aggregate model budget (`jobDeadlineMs`/`deadlineMs`, default 25 s) covering slot wait and all rounds. Past it, `DroidRunner` fails the call with `timeout` without spawning, so the coordinator moves straight to its labeled fallback or no suggestion. A queued call leaves the queue at its deadline, so a released slot never goes to a job that has given up.
 
+## Backend demo (`integration/demo-journey.test.ts`, `npm run demo -w @dor/worker`)
+One Alex → Sam journey, narrated step by step with the sponsor track each step exercises:
+1. **Cartesia:** voice entry.
+2. **Claude:** private reflection + owner-only assessment, via the real route handler.
+3. **Human-in-the-loop:** decision loop; Alex picks Sam and sees the exact preview.
+4. **SpacetimeDB:** approval, an enum-only signal.
+5. **Factory:** worker, policy, one locked-down Droid session, guarded commit.
+6. **SpacetimeDB:** Sam's D043 narrow nudge row.
+7. **Boundary:** a third account sees nothing; revoke hides the nudge.
+8. **Meta:** Sam decides.
+
+How it runs:
+- Offline by default: synthetic providers, the real module in-process, real AI code. It runs inside `ai:check` as a regression test.
+- Real providers are opted into **from the shell only**: `DOR_DEMO_LIVE=cartesia,claude,droid npm run demo -w @dor/worker`. A full live run costs about $0.01 Claude, a few cents Cartesia and one Droid SDK call. `DOR_DEMO_TRACE=trace.jsonl` writes the steps as JSON lines for a `/console` replay.
+- Asserted on every run: no story words, names or reflection text in the Droid prompt; Sam's row is exactly `id, pair_id, template_id, visible_until`; Carol sees 0 nudges; revoke removes Sam's nudge.
+
 ## Process (`src/main.ts`, `npm start -w @dor/worker`)
 - **Event-driven (`src/loop.ts`, `WorkerLoop`):** a new row in `worker_signal_context` or `worker_plan_candidates` triggers a debounced sweep (200 ms) right away. A fallback sweep runs every `DOR_WORKER_SWEEP_MS` (default 15 s) in case an event is missed.
 - **Connection failures (Core 3 audit HIGH, fixed):**

@@ -59,6 +59,9 @@ export const sweep_expired = spacetimedb.reducer(
     for (const a of ctx.db.activity_approval.iter()) {
       if (!a.revoked_at && a.expires_at.microsSinceUnixEpoch <= now) mark('activity', a.approval_id, 1);
     }
+    for (const r of ctx.db.standing_consent.iter()) {
+      if (!r.revoked_at && r.expires_at.microsSinceUnixEpoch <= now) mark('standing', r.rule_id, r.version); // restores nothing
+    }
     for (const p of ctx.db.recipient_pause.iter()) {
       if (!p.resumed_at && p.expires_at.microsSinceUnixEpoch <= now) mark('pause', p.pause_id, p.version); // restores nothing
     }

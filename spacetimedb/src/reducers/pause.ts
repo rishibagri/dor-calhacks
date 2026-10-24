@@ -9,6 +9,7 @@ import { requireAccount, requireMemberPair } from '../guards';
 import { newId } from '../ids';
 import { findPauseRow, fromMs, hex, pauseInForce, toMs } from '../policy_state';
 import { suppressPairWork } from '../suppress';
+import { endStandingRule } from '../standing_effects';
 
 /**
  * What a pause kills, in the same transaction: every standing approval the owner made in this pair (revoked, with
@@ -16,6 +17,7 @@ import { suppressPairWork } from '../suppress';
  * pair. Revocation is permanent, so neither resume nor expiry nor any retry can make pre-pause work usable again.
  */
 function invalidateOwnerWork(ctx: Ctx, pairId: string): void {
+  endStandingRule(ctx, ctx.sender, pairId); // D044: a pause ends any automatic-nudge rule; resuming never re-enables it
   suppressPairWork(ctx, pairId, ctx.sender);
   for (const a of [...ctx.db.activity_approval.owner.filter(ctx.sender)]) {
     if (a.pair_id === pairId && !a.revoked_at) ctx.db.activity_approval.approval_id.update({ ...a, revoked_at: ctx.timestamp });
