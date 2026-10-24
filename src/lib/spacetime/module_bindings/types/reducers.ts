@@ -22,6 +22,7 @@ import DismissIntroductionProposalReducer from "../dismiss_introduction_proposal
 import DismissNudgeReducer from "../dismiss_nudge_reducer";
 import PublishDiscoveryProfileReducer from "../publish_discovery_profile_reducer";
 import PublishEventIntentReducer from "../publish_event_intent_reducer";
+import RecordCatalogueRunReducer from "../record_catalogue_run_reducer";
 import RegisterAccountReducer from "../register_account_reducer";
 import ReportDiscoveryUserReducer from "../report_discovery_user_reducer";
 import RespondIntroductionRequestReducer from "../respond_introduction_request_reducer";
@@ -62,6 +63,7 @@ export type DismissIntroductionProposalParams = __Infer<typeof DismissIntroducti
 export type DismissNudgeParams = __Infer<typeof DismissNudgeReducer>;
 export type PublishDiscoveryProfileParams = __Infer<typeof PublishDiscoveryProfileReducer>;
 export type PublishEventIntentParams = __Infer<typeof PublishEventIntentReducer>;
+export type RecordCatalogueRunParams = __Infer<typeof RecordCatalogueRunReducer>;
 export type RegisterAccountParams = __Infer<typeof RegisterAccountReducer>;
 export type ReportDiscoveryUserParams = __Infer<typeof ReportDiscoveryUserReducer>;
 export type RespondIntroductionRequestParams = __Infer<typeof RespondIntroductionRequestReducer>;

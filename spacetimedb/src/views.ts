@@ -1,3 +1,4 @@
+import { findAssignment, findPreset, findPublicationRow, pairsOf } from './policy_state';
 import { t } from 'spacetimedb/server';
 import type { Identity } from 'spacetimedb';
 import {
@@ -62,8 +63,7 @@ export const my_account = spacetimedb.view(
 
 export const my_pairs = spacetimedb.view(
   { name: 'my_pairs', public: true }, t.array(pairViewRow),
-  ctx => [...ctx.db.pair.iter()]
-    .filter(p => p.member_a.isEqual(ctx.sender) || (p.member_b?.isEqual(ctx.sender) ?? false))
+  ctx => pairsOf(ctx.db, ctx.sender)
     .map(p => {
       const other = p.member_a.isEqual(ctx.sender) ? p.member_b : p.member_a;
       const otherAccount = other ? ctx.db.account.identity.find(other) : undefined;
@@ -79,15 +79,14 @@ export const my_pairs = spacetimedb.view(
 
 export const my_invites = spacetimedb.view(
   { name: 'my_invites', public: true }, t.array(inviteViewRow),
-  ctx => [...ctx.db.invite.iter()]
-    .filter(i => i.creator.isEqual(ctx.sender) && !i.used)
+  ctx => [...ctx.db.invite.creator.filter(ctx.sender)]
+    .filter(i => !i.used)
     .map(i => ({ invite_token: i.token, pair_id: i.pair_id, expires_at: i.expires_at }))
 );
 
 export const my_presets = spacetimedb.view(
   { name: 'my_presets', public: true }, t.array(presetViewRow),
-  ctx => [...ctx.db.relationship_preset.iter()]
-    .filter(p => p.owner.isEqual(ctx.sender))
+  ctx => [...ctx.db.relationship_preset.owner.filter(ctx.sender)]
     .map(p => ({
       policy_id: p.preset_id,
       owner_id: p.owner,
@@ -102,9 +101,8 @@ export const my_presets = spacetimedb.view(
 export const my_preset_assignments = spacetimedb.view(
   { name: 'my_preset_assignments', public: true }, t.array(assignmentViewRow),
   ctx => {
-    const presets = [...ctx.db.relationship_preset.iter()].filter(p => p.owner.isEqual(ctx.sender));
-    return [...ctx.db.preset_assignment.iter()]
-      .filter(a => a.owner.isEqual(ctx.sender))
+    const presets = [...ctx.db.relationship_preset.owner.filter(ctx.sender)];
+    return [...ctx.db.preset_assignment.owner.filter(ctx.sender)]
       .flatMap(a => {
         const preset = presets.find(p => p.preset_kind === a.preset_kind);
         return preset ? [{
@@ -146,14 +144,14 @@ function nudgeConsentStands(db: ReadDb, n: { pair_id: string; template_id: strin
 /** Recipient only. Hidden while snoozed (sweep_expired clears snoozed_until when due), dismissed or suppressed. */
 export const my_nudges = spacetimedb.view(
   { name: 'my_nudges', public: true }, t.array(nudge.rowType),
-  ctx => [...ctx.db.nudge.iter()].filter(n => n.recipient_id.isEqual(ctx.sender) && !n.suppressed && !n.dismissed &&
+  ctx => [...ctx.db.nudge.recipient_id.filter(ctx.sender)].filter(n => !n.suppressed && !n.dismissed &&
     n.snoozed_until === undefined && nudgeSourcesStand(ctx.db, n, ctx.sender) && nudgeConsentStands(ctx.db, n, ctx.sender))
 );
 
 /** Sender-only: the owner's own approved signals (privacy center: recipient, expiry, revoke). */
 export const my_signals = spacetimedb.view(
   { name: 'my_signals', public: true }, t.array(approved_signal.rowType),
-  ctx => [...ctx.db.approved_signal.iter()].filter(s => s.sender_id.isEqual(ctx.sender))
+  ctx => [...ctx.db.approved_signal.sender_id.filter(ctx.sender)]
 );
 
 /**
@@ -162,19 +160,19 @@ export const my_signals = spacetimedb.view(
  */
 export const my_receipts = spacetimedb.view(
   { name: 'my_receipts', public: true }, t.array(disclosure_receipt.rowType),
-  ctx => [...ctx.db.disclosure_receipt.iter()].filter(r => r.sender_id.isEqual(ctx.sender))
+  ctx => [...ctx.db.disclosure_receipt.sender_id.filter(ctx.sender)]
 );
 
 /** Recipient only: the caller's own support-preference consents (D035). Never visible to the sender. */
 export const my_support_preferences = spacetimedb.view(
   { name: 'my_support_preferences', public: true }, t.array(support_preference.rowType),
-  ctx => [...ctx.db.support_preference.iter()].filter(p => p.recipient.isEqual(ctx.sender))
+  ctx => [...ctx.db.support_preference.recipient.filter(ctx.sender)]
 );
 
 /** The caller's own recipient delivery settings (D017/D018). */
 export const my_nudge_delivery = spacetimedb.view(
   { name: 'my_nudge_delivery', public: true }, t.array(nudge_delivery.rowType),
-  ctx => [...ctx.db.nudge_delivery.iter()].filter(d => d.recipient.isEqual(ctx.sender))
+  ctx => [...ctx.db.nudge_delivery.recipient.filter(ctx.sender)]
 );
 
 // ---- Worker-only views (C4/F6). Empty for every identity not in worker_identity. ----
@@ -204,8 +202,8 @@ export const worker_signal_context = spacetimedb.view(
       .flatMap(s => {
         const p = ctx.db.pair.pair_id.find(s.pair_id);
         if (!p) return [];
-        const a = [...ctx.db.preset_assignment.iter()].find(r => r.pair_id === s.pair_id && r.owner.isEqual(s.sender_id));
-        const pr = a ? [...ctx.db.relationship_preset.iter()].find(r => r.owner.isEqual(s.sender_id) && r.preset_kind === a.preset_kind) : undefined;
+        const a = findAssignment(ctx.db, s.sender_id, s.pair_id);
+        const pr = a ? findPreset(ctx.db, s.sender_id, a.preset_kind) : undefined;
         return [{
           signal_id: s.signal_id, pair_id: s.pair_id, sender_id: s.sender_id, recipient_id: s.recipient_id,
           purpose: s.purpose, support_mode: s.support_mode, availability: s.availability,
@@ -232,7 +230,7 @@ export const worker_delivery = spacetimedb.view(
   ctx => {
     if (!isWorker(ctx.db, ctx.sender)) return [];
     return [...ctx.db.nudge_delivery.iter()].filter(d => d.opted_in).map(d => {
-      const last = [...ctx.db.nudge.iter()].filter(n => n.pair_id === d.pair_id)
+      const last = [...ctx.db.nudge.pair_id.filter(d.pair_id)]
         .reduce<typeof d.updated_at | undefined>((m, n) => (!m || n.created_at.microsSinceUnixEpoch > m.microsSinceUnixEpoch ? n.created_at : m), undefined);
       return {
         pair_id: d.pair_id, recipient: d.recipient, opted_in: d.opted_in, quiet_start_minute: d.quiet_start_minute,
@@ -282,7 +280,7 @@ export const my_discovery_profile = spacetimedb.view(
   ctx => {
     const me = loadDiscoveryParty(ctx.db, ctx.sender);
     const p = me.publication, a = ctx.db.area_participation.owner.find(ctx.sender);
-    const pubRow = [...ctx.db.discovery_publication.iter()].find(r => r.owner.isEqual(ctx.sender));
+    const pubRow = findPublicationRow(ctx.db, ctx.sender);
     return [{
       publication_id: p?.publicationId, display_name: p?.displayName, interest_tags: p ? [...p.interestTags] : [],
       revision: p?.revision ?? 0, expires_at: pubRow?.expires_at, withdrawn: p?.withdrawnAtMs != null,
@@ -357,9 +355,9 @@ export const my_introductions = spacetimedb.view(
   ctx => {
     if (!ctx.db.account.identity.find(ctx.sender)) return [];
     const out = [];
-    for (const r of ctx.db.introduction.iter()) {
+    for (const r of [...ctx.db.introduction.sender.filter(ctx.sender), ...ctx.db.introduction.recipient.filter(ctx.sender)]) {
       const incoming = r.recipient.isEqual(ctx.sender);
-      if (!incoming && !r.sender.isEqual(ctx.sender)) continue;
+      if (incoming && r.sender.isEqual(ctx.sender)) continue; // self-introduction is impossible; never list twice
       if (blockedEitherWay(ctx.db, r.sender, r.recipient)) continue;
       let status: string;
       if (incoming) {
@@ -400,8 +398,7 @@ export const my_introduction_proposals = spacetimedb.view(
     if (!enabled || !ctx.db.account.identity.find(ctx.sender)) return [];
     const viewer = loadDiscoveryParty(ctx.db, ctx.sender);
     const out = [];
-    for (const p of ctx.db.introduction_proposal.iter()) {
-      if (!p.viewer.isEqual(ctx.sender)) continue;
+    for (const p of ctx.db.introduction_proposal.viewer.filter(ctx.sender)) {
       const cand = loadDiscoveryParty(ctx.db, p.candidate);
       if (!guardDiscoveryVisibility(viewer, cand, blockedEitherWay(ctx.db, p.viewer, p.candidate), enabled, null).ok) continue;
       if (viewer.publication!.revision !== p.viewer_revision || cand.publication!.revision !== p.candidate_revision) continue;
@@ -438,6 +435,20 @@ export const catalogue_events = spacetimedb.view(
   }
 );
 
+const catalogueStatusRow = t.row('CatalogueStatusRow', {
+  feed_key: t.string(), last_attempt_at: t.timestamp(), last_success_at: t.option(t.timestamp()), last_status: t.string(),
+  record_count: t.u32(),
+});
+
+/** Ingestion health per configured feed (registered accounts, discovery enabled). Operational metadata only. */
+export const catalogue_status = spacetimedb.view(
+  { name: 'catalogue_status', public: true }, t.array(catalogueStatusRow),
+  ctx => {
+    if (!discoveryEnabled(ctx.db) || !ctx.db.account.identity.find(ctx.sender)) return [];
+    return [...ctx.db.catalogue_source.iter()].map(r => ({ ...r })); // bounded by the configured feed count
+  }
+);
+
 const myIntentRow = t.row('MyEventIntentRow', {
   event_id: t.string(), kind: t.string(), version: t.u32(), active: t.bool(), expires_at: t.timestamp(),
 });
@@ -448,8 +459,8 @@ const myIntentRow = t.row('MyEventIntentRow', {
  */
 export const my_event_intents = spacetimedb.view(
   { name: 'my_event_intents', public: true }, t.array(myIntentRow),
-  ctx => [...ctx.db.event_intent.iter()]
-    .filter(i => i.owner.isEqual(ctx.sender) && !toIntentState(ctx.db, i).expiredMarked)
+  ctx => [...ctx.db.event_intent.owner.filter(ctx.sender)]
+    .filter(i => !toIntentState(ctx.db, i).expiredMarked)
     .map(i => ({ event_id: i.event_id, kind: i.kind, version: i.version, active: !i.revoked_at, expires_at: i.expires_at }))
 );
 
@@ -467,15 +478,15 @@ export const event_companions = spacetimedb.view(
     if (!enabled || !ctx.db.account.identity.find(ctx.sender)) return [];
     const viewer = loadDiscoveryParty(ctx.db, ctx.sender);
     if (!viewer.publication || !viewer.area) return [];
-    const mine = new Set([...ctx.db.event_intent.iter()]
-      .filter(i => i.owner.isEqual(ctx.sender) && intentStands(toIntentState(ctx.db, i), hex(ctx.sender), i.event_id, null, null) &&
+    const mine = new Set([...ctx.db.event_intent.owner.filter(ctx.sender)]
+      .filter(i => intentStands(toIntentState(ctx.db, i), hex(ctx.sender), i.event_id, null, null) &&
         !catalogueEventUsable(loadCatalogueEvent(ctx.db, i.event_id), null))
       .map(i => i.event_id));
     if (mine.size === 0) return [];
     const out = [];
-    for (const i of ctx.db.event_intent.iter()) {
+    for (const i of [...mine].flatMap(id => [...ctx.db.event_intent.event_id.filter(id)])) {
       if (out.length >= DISCOVERY_CARD_LIMIT) break;
-      if (i.owner.isEqual(ctx.sender) || !mine.has(i.event_id)) continue;
+      if (i.owner.isEqual(ctx.sender)) continue;
       if (!intentStands(toIntentState(ctx.db, i), hex(i.owner), i.event_id, null, null)) continue;
       const target = loadDiscoveryParty(ctx.db, i.owner);
       if (!guardDiscoveryVisibility(viewer, target, blockedEitherWay(ctx.db, ctx.sender, i.owner), enabled, null).ok) continue;
@@ -490,8 +501,8 @@ const myApprovalRow = t.row('MyActivityApprovalRow', { approval_id: t.string(), 
 /** The caller's own standing C7 approvals (owner only; the recipient never sees topics outside a plan). */
 export const my_activity_approvals = spacetimedb.view(
   { name: 'my_activity_approvals', public: true }, t.array(myApprovalRow),
-  ctx => [...ctx.db.activity_approval.iter()]
-    .filter(a => a.owner.isEqual(ctx.sender) && !a.revoked_at && !toApprovalState(ctx.db, a).expiredMarked)
+  ctx => [...ctx.db.activity_approval.owner.filter(ctx.sender)]
+    .filter(a => !a.revoked_at && !toApprovalState(ctx.db, a).expiredMarked)
     .map(a => ({ approval_id: a.approval_id, pair_id: a.pair_id, topics: a.topics, expires_at: a.expires_at }))
 );
 
@@ -509,9 +520,8 @@ export const my_plans = spacetimedb.view(
   { name: 'my_plans', public: true }, t.array(planRow),
   ctx => {
     const out = [];
-    for (const p of ctx.db.shared_plan.iter()) {
+    for (const p of [...ctx.db.shared_plan.participant_a.filter(ctx.sender), ...ctx.db.shared_plan.participant_b.filter(ctx.sender)]) {
       const isA = p.participant_a.isEqual(ctx.sender);
-      if (!isA && !p.participant_b.isEqual(ctx.sender)) continue;
       if (blockedEitherWay(ctx.db, p.participant_a, p.participant_b)) continue;
       const live = currentPlanStatus(toPlanState(p), loadPlanCheck(ctx.db, p, null));
       const status = live === 'declined' || live === 'cancelled'
@@ -559,17 +569,17 @@ export const worker_plan_candidates = spacetimedb.view(
     for (const p of ctx.db.pair.iter()) if (p.status === 'accepted' && p.member_b) bases.push({ kind: 'existing_connection', ref: p.pair_id, a: p.member_a, b: p.member_b });
     for (const base of bases) {
       if (blockedEitherWay(ctx.db, base.a, base.b)) continue;
-      for (const ia of ctx.db.event_intent.iter()) {
+      for (const ia of ctx.db.event_intent.owner.filter(base.a)) {
         if (out.length >= WORKER_PLAN_LIMIT) return out;
-        if (!ia.owner.isEqual(base.a) || !intentStands(toIntentState(ctx.db, ia), hex(base.a), ia.event_id, null, null)) continue;
+        if (!intentStands(toIntentState(ctx.db, ia), hex(base.a), ia.event_id, null, null)) continue;
         const ib = findIntentRow(ctx.db, base.b, ia.event_id);
         if (!ib || !intentStands(toIntentState(ctx.db, ib), hex(base.b), ia.event_id, null, null)) continue;
         const e = ctx.db.catalogue_event.event_id.find(ia.event_id);
         if (!e || catalogueEventUsable(toCatalogueState(ctx.db, e), null)) continue;
         let approvals: string[] = [];
         if (base.kind === 'existing_connection') {
-          const pick = (owner: Identity, other: Identity) => [...ctx.db.activity_approval.iter()].find(x => x.pair_id === base.ref &&
-            x.owner.isEqual(owner) && x.recipient.isEqual(other) && !x.revoked_at && !toApprovalState(ctx.db, x).expiredMarked &&
+          const pick = (owner: Identity, other: Identity) => [...ctx.db.activity_approval.owner.filter(owner)].find(x => x.pair_id === base.ref &&
+            x.recipient.isEqual(other) && !x.revoked_at && !toApprovalState(ctx.db, x).expiredMarked &&
             x.topics.some(t => e.topics.includes(t)))?.approval_id;
           const pa = pick(base.a, base.b), pb = pick(base.b, base.a);
           if (!pa || !pb || !approvalsStand(ctx.db, base.ref, base.a, base.b, pa, pb, e.topics, null)) continue;

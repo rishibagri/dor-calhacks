@@ -13,7 +13,7 @@ import {
 import type { ApprovedSignal, DisclosureReceipt, Nudge, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
 import { MAX_EVENT_TITLE, MAX_EVENT_TOPICS, MAX_INTEREST_TAGS, MAX_PUBLIC_NAME, validRecipientDelivery, validSupportPreferences } from '@dor/contracts/policy';
 import type {
-  ActivityApprovalRow, CatalogueEventView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, SignalView, SupportPreferencesView,
+  ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, SignalView, SupportPreferencesView,
 } from '@/lib/backend/ports';
 import { toCamel, type LooseRow } from './bindings';
 
@@ -245,6 +245,13 @@ export const mapCatalogueEvent: Mapper<CatalogueEventView> = (row) => {
   const topics = strings(row, 'topics', MAX_EVENT_TOPICS);
   if (!eventId || !title || title.length > MAX_EVENT_TITLE || !startsAt || !fetchedAt || !format || !topics) return null;
   return { eventId, title, startsAt, endsAt: str(row, 'ends_at'), topics, format, areaKey: str(row, 'area_key'), sourceUrl: str(row, 'source_url'), fetchedAt };
+};
+
+export const mapCatalogueStatus: Mapper<CatalogueStatusView> = (row) => {
+  const feedKey = str(row, 'feed_key'), lastAttemptAt = str(row, 'last_attempt_at'), recordCount = num(row, 'record_count');
+  const lastStatus = str(row, 'last_status');
+  if (!feedKey || !lastAttemptAt || recordCount === null || (lastStatus !== 'ok' && lastStatus !== 'failed')) return null;
+  return { feedKey, lastAttemptAt, lastSuccessAt: str(row, 'last_success_at'), lastStatus, recordCount };
 };
 
 export const mapEventIntent: Mapper<EventIntentRow> = (row) => {

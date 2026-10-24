@@ -49,6 +49,12 @@ function commit(db: string, u: UpsertArgs): void {
   execFileSync('spacetime', ['call', db, 'upsert_catalogue_event', ...positional.map((p) => JSON.stringify(p))], { stdio: ['ignore', 'ignore', 'inherit'] });
 }
 
+/** Health row for the Events page: ok with the count, or failed (the module keeps the last success). */
+function recordRun(db: string, feedKey: string, ok: boolean, count: number): void {
+  execFileSync('spacetime', ['call', db, 'record_catalogue_run', JSON.stringify(feedKey), JSON.stringify(ok), JSON.stringify(count)],
+    { stdio: ['ignore', 'ignore', 'inherit'] });
+}
+
 async function main(): Promise<void> {
   const fixture = value('--fixture');
   if (!fixture && !flag('--fetch')) throw new Error('pass --fixture <file> (offline) or --fetch (Apify)');
@@ -76,9 +82,14 @@ async function main(): Promise<void> {
       const report = ingest(datasets, { sourceKey: SOURCE_KEY, feed, map: FIELD_MAP, allow, fetchedAtMs, nowMs: Date.now() });
       const db = value('--commit');
       if (db) report.upserts.forEach((u) => commit(db, u));
+      if (db) recordRun(db, feed.areaKey, true, report.upserts.length);
       if (!fixture) writeFileSync(cacheFile, JSON.stringify({ fetchedAtMs, count: report.upserts.length }));
       console.log(JSON.stringify({ feed: feed.areaKey, fetchedAt: new Date(fetchedAtMs).toISOString(), committed: Boolean(db),
         upserts: report.upserts.length, rejected: report.rejected, events: db ? undefined : report.upserts }, null, 2));
+    } catch (e) {
+      const db = value('--commit');
+      if (db) { try { recordRun(db, feed.areaKey, false, 0); } catch { /* the original failure is the one to report */ } }
+      throw e;
     } finally {
       rmSync(lock, { force: true });
     }

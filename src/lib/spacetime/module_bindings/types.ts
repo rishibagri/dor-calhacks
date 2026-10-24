@@ -113,6 +113,27 @@ export type CatalogueEventRow = __Infer<typeof CatalogueEventRow>;
 export const CatalogueEvents = __t.object("CatalogueEvents", {});
 export type CatalogueEvents = __Infer<typeof CatalogueEvents>;
 
+export const CatalogueSource = __t.object("CatalogueSource", {
+  feedKey: __t.string(),
+  lastAttemptAt: __t.timestamp(),
+  lastSuccessAt: __t.option(__t.timestamp()),
+  lastStatus: __t.string(),
+  recordCount: __t.u32(),
+});
+export type CatalogueSource = __Infer<typeof CatalogueSource>;
+
+export const CatalogueStatus = __t.object("CatalogueStatus", {});
+export type CatalogueStatus = __Infer<typeof CatalogueStatus>;
+
+export const CatalogueStatusRow = __t.object("CatalogueStatusRow", {
+  feedKey: __t.string(),
+  lastAttemptAt: __t.timestamp(),
+  lastSuccessAt: __t.option(__t.timestamp()),
+  lastStatus: __t.string(),
+  recordCount: __t.u32(),
+});
+export type CatalogueStatusRow = __Infer<typeof CatalogueStatusRow>;
+
 export const DisclosureReceipt = __t.object("DisclosureReceipt", {
   receiptId: __t.string(),
   signalId: __t.string(),
@@ -410,6 +431,13 @@ export const Pair = __t.object("Pair", {
   createdAt: __t.timestamp(),
 });
 export type Pair = __Infer<typeof Pair>;
+
+export const PairMember = __t.object("PairMember", {
+  key: __t.string(),
+  pairId: __t.string(),
+  member: __t.identity(),
+});
+export type PairMember = __Infer<typeof PairMember>;
 
 export const PairViewRow = __t.object("PairViewRow", {
   pairId: __t.string(),
