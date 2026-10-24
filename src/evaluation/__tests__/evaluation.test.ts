@@ -4,38 +4,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { AgentAckSchema, ApprovedSignalSchema, RecipientPresetAssignmentSchema, RelationshipPresetSchema } from '@dor/contracts';
-import type { PolicyResult } from '@dor/contracts';
-import { FakeClock, FakeDisclosurePolicy } from '@dor/contracts/fakes';
-import { buildNudge, buildPreview, intersectAvailability, matchSignal, type MatchResult, type PreviewResult } from '../matching.ts';
+import { buildNudge, buildPreview, intersectAvailability, matchSignal } from '../matching.ts';
+import { SUPPORT_GROUPS as GROUPS, crossedTerms, runSupportCase } from '../support-pipeline.ts';
 
 const data = JSON.parse(await readFile(new URL('../fixtures/evaluation-cases.json', import.meta.url), 'utf8'));
 const now = new Date(data.clock);
-const GROUPS = ['partners', 'friends', 'family', 'privacy_attack', 'no_action'];
 
-function leaks(payloads: unknown[], terms: string[]): string[] {
-  const wire = JSON.stringify(payloads).toLowerCase();
-  return terms.filter(t => wire.includes(t.toLowerCase()));
-}
-
-async function runCase(c: any): Promise<{ preview: PreviewResult; policy: PolicyResult | null; match: MatchResult; crossed: unknown[] }> {
-  const preset = RelationshipPresetSchema.parse(c.preset);
-  const assignment = RecipientPresetAssignmentSchema.parse(c.assignment);
-  const preview = buildPreview({ candidate: c.candidate, preset, assignment, recipientId: c.deliverTo });
-  const policy = c.submittedSignal === null ? null : await new FakeDisclosurePolicy({
-    clock: new FakeClock(data.clock), linked: c.state.linked, revoked: c.state.revoked, preset, assignment,
-    approved: c.approvedSignal,
-  }).check(c.submittedSignal, c.deliverTo);
-  const match = matchSignal({ signal: c.submittedSignal, policy, ack: c.ack, now,
-    inQuietHours: c.delivery.inQuietHours, lastNudgeAt: c.delivery.lastNudgeAt });
-  // What reaches the recipient side: the preview shown to the owner always; envelope and ACK only when allowed.
-  const crossed: unknown[] = [preview];
-  if (policy?.allowed) crossed.push(c.submittedSignal, c.ack);
-  if (match.outcome === 'nudge') {
-    crossed.push(buildNudge(ApprovedSignalSchema.parse(c.submittedSignal), AgentAckSchema.parse(c.ack), match,
-      { id: `nudge-${GROUPS.indexOf(c.group)}-${data.cases.indexOf(c)}`, now }));
-  }
-  return { preview, policy, match, crossed };
-}
+const runCase = (c: any) => runSupportCase(data, c);
+const leaks = crossedTerms;
 
 test('set composition: 30 synthetic cases, 6 per group, unique IDs, one seed per relationship', () => {
   assert.equal(data.synthetic, true);

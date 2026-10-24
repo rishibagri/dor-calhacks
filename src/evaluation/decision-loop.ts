@@ -210,27 +210,33 @@ export function scoreCase(file: DecisionFile, c: DecisionCase, system: DecisionS
   };
 }
 
+/**
+ * The nudge that would follow if the owner approved this exact preview and the recipient's agent agreed: the
+ * deterministic approve → ACK → `matchSignal` → `buildNudge` path with a fixed consent, no quiet hours and no
+ * cooldown. Simulated and offline (no reducer, worker or policy port runs); null unless the outcome is a shareable preview.
+ */
+export function nudgeAfterApproval(file: DecisionFile, outcome: Outcome, s: Surfaces, id: string): unknown {
+  if (s.preview?.kind !== 'shareable' || outcome.kind !== 'ready_for_preview') return null;
+  const now = new Date(file.clock);
+  const person = file.people[outcome.recipient.pairId]!;
+  const signal = {
+    schemaVersion: 2, signalId: `sig-${id}`, pairId: outcome.recipient.pairId, senderId: file.ownerId,
+    recipientId: person.recipientId, purpose: 'support_nudge', ...s.preview.payload, consentVersion: 1,
+    recipientPolicyId: 'decision-eval-policy', recipientPolicyVersion: 1, presetAssignmentVersion: 1,
+    expiresAt: new Date(now.getTime() + 86_400_000).toISOString(),
+  };
+  const ack = { schemaVersion: 1, signalId: signal.signalId, recipientConsentId: 'consent-1', recipientConsentVersion: 1,
+    decision: 'compatible', ...s.preview.payload };
+  const m = matchSignal({ signal, policy: { allowed: true, reason: 'ok' }, ack, now, inQuietHours: false, lastNudgeAt: null });
+  return m.outcome === 'nudge'
+    ? { ...buildNudge(signal as never, ack as never, m, { id: `nudge-${id}`, now }), copy: NUDGE_TEMPLATE_COPY[m.templateId] }
+    : m;
+}
+
 /** Everything a recipient or the delivery schedule could depend on, for one story. Must not vary with the story. */
 export function observable(file: DecisionFile, story: string) {
   const n = file.noninterference;
   const { outcome } = replay(file, story, n.candidate, n.recipients, n.steps, n.assessment);
   const s = surfacesOf(file, outcome);
-  let nudge: unknown = null;
-  if (s.preview?.kind === 'shareable' && outcome.kind === 'ready_for_preview') {
-    const now = new Date(file.clock);
-    const person = file.people[outcome.recipient.pairId]!;
-    const signal = {
-      schemaVersion: 2, signalId: 'sig-noninterference', pairId: outcome.recipient.pairId, senderId: file.ownerId,
-      recipientId: person.recipientId, purpose: 'support_nudge', ...s.preview.payload, consentVersion: 1,
-      recipientPolicyId: 'decision-eval-policy', recipientPolicyVersion: 1, presetAssignmentVersion: 1,
-      expiresAt: new Date(now.getTime() + 86_400_000).toISOString(),
-    };
-    const ack = { schemaVersion: 1, signalId: signal.signalId, recipientConsentId: 'consent-1', recipientConsentVersion: 1,
-      decision: 'compatible', ...s.preview.payload };
-    const m = matchSignal({ signal, policy: { allowed: true, reason: 'ok' }, ack, now, inQuietHours: false, lastNudgeAt: null });
-    nudge = m.outcome === 'nudge'
-      ? { ...buildNudge(signal as never, ack as never, m, { id: 'nudge-noninterference', now }), copy: NUDGE_TEMPLATE_COPY[m.templateId] }
-      : m;
-  }
-  return { outcome, surfaces: s, nudge };
+  return { outcome, surfaces: s, nudge: nudgeAfterApproval(file, outcome, s, 'noninterference') };
 }
