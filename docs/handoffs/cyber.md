@@ -1,6 +1,6 @@
 # CYBER handoff (Sumedh): current, CYBER-R0/R1
 
-Status: implemented on `role/cyber-privacy` @ `0021c16` + `9b82854`, on main `fab86d6`. A PR to main is open. **Offline-verified only.** The module is unpublished, so nothing here is live.
+Status: implemented on `role/cyber-privacy` @ `0021c16` + `9b82854`, on main `fab86d6`. PR #10 to main is open. **Offline-verified only.** The module is unpublished, so nothing here is live.
 
 ## What R1 added (D035)
 | Protection | Where | Evidence |
