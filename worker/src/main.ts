@@ -5,16 +5,19 @@ import { SpacetimeWorkerConnection, type LooseBuilder } from './spacetime/connec
 import { spacetimeWorkerPorts } from './spacetime/adapters.js';
 import { SignalWatcher } from './watcher.js';
 import { PlanWatcher, runPlanJob } from './plans.js';
+import { WorkerLoop } from './loop.js';
 import { droidEnv, type DroidTransport } from './droid-proposer.js';
 import { DroidSdkTransport, type CreateSdkSession } from './droid-sdk.js';
 
 /**
  * Worker process: one SpacetimeDB connection as the allow-listed worker identity, the bounded coordinator over
- * Cyber's real DisclosurePolicy, a periodic sweep that turns newly approved signals into jobs, and POST /jobs.
+ * Cyber's real DisclosurePolicy, event-driven sweeps (plus a fallback interval) that turn newly approved signals
+ * into jobs, automatic reconnect that fails closed while disconnected, and POST /jobs.
  * Logs are codes and counts only.
  *
  * Env: DOR_WORKER_AUTH_TOKEN, DOR_SPACETIME_URI, DOR_SPACETIME_MODULE (default dor),
- * DOR_SPACETIME_WORKER_TOKEN, PORT (default 8787), DOR_WORKER_SWEEP_MS (default 5000),
+ * DOR_SPACETIME_WORKER_TOKEN, PORT (default 8787), DOR_WORKER_SWEEP_MS (fallback sweep, default 15000),
+ * DOR_WORKER_MAX_OFFLINE_MS (default 120000),
  * DOR_DROID_MODEL / _PATH / _TIMEOUT_MS / _CONCURRENCY / _TRANSPORT (sdk default, cli). FACTORY_API_KEY for the
  * SDK transport and for droid on a deployed host.
  */
@@ -88,15 +91,22 @@ async function main(): Promise<void> {
     onError: error => log('plan_error', { code: error instanceof Error ? error.message.split(':')[0]!.slice(0, 40) : 'unknown' }),
   }) : null;
   log('plans', { enabled: plans ? 1 : 0 });
-  const timer = setInterval(() => {
-    void watcher.sweep().catch(() => log('sweep_error'));
-    void plans?.sweep().catch(() => log('plan_sweep_error'));
-  }, numberEnv('DOR_WORKER_SWEEP_MS', 5000));
+  // Event-driven: new worker-view rows trigger a sweep at once; the interval is only a safety net. Nothing runs
+  // while the connection is down, and a lost connection that will not come back exits so the supervisor restarts.
+  const loop = new WorkerLoop(connection, {
+    sweeps: [() => watcher.sweep(), ...(plans ? [() => plans.sweep()] : [])],
+    fallbackIntervalMs: numberEnv('DOR_WORKER_SWEEP_MS', 15_000),
+    maxOfflineMs: numberEnv('DOR_WORKER_MAX_OFFLINE_MS', 120_000),
+    onFatal: () => shutdown(1),
+    log,
+  });
+  loop.start();
 
   const server = createServer((req, res) => {
     if (req.method === 'GET' && req.url === '/healthz') {
-      res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
-      res.end('{"ok":true}');
+      // 503 while the database connection is down, so a supervisor or load balancer sees the real state.
+      res.writeHead(connection.isAlive ? 200 : 503, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+      res.end(JSON.stringify({ ok: connection.isAlive }));
       return;
     }
     void worker.handler(req, res);
@@ -104,15 +114,15 @@ async function main(): Promise<void> {
   const port = numberEnv('PORT', 8787);
   server.listen(port, () => log('listening', { port }));
 
-  const shutdown = () => {
-    log('shutdown');
-    clearInterval(timer);
+  function shutdown(code = 0): void {
+    log('shutdown', { code });
+    loop.stop();
     server.close();
     connection.close();
-    void worker.close().finally(() => process.exit(0));
-  };
-  process.once('SIGTERM', shutdown);
-  process.once('SIGINT', shutdown);
+    void worker.close().finally(() => process.exit(code));
+  }
+  process.once('SIGTERM', () => shutdown(0));
+  process.once('SIGINT', () => shutdown(0));
 }
 
 main().catch(error => {

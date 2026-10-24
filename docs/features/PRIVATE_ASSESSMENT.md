@@ -1,6 +1,6 @@
 # Private assessment (Claude) → private decision loop
 
-**Owner:** Adam (AI). **Status:** implemented and offline-verified on `role/ai-voice`. Not live-verified yet: that needs `ANTHROPIC_API_KEY` and an agreed live run. **Decision:** D040 (proposed; CS, Cyber and DS review requested).
+**Owner:** Adam (AI). **Status:** on main (#31); offline-verified. **Isolated live Claude run** (2026-10-24): 10 synthetic cases through the real adapter on Opus 5.5. Hard safety checks held in 10/10: crisis, explicit exclusion, no inferred names, injection. About $0.01 per call. See the AI log. Not yet run through the deployed app. **Decision:** D040 (proposed; CS, Cyber and DS review requested).
 
 This is the AI half of README Core 1/2 ("Reasoning layer and human-in-the-loop behavior") and the Anthropic sponsor target. Claude reads the owner's selected journal text. Besides the private reflection and coarse support draft, it now returns an **owner-only assessment of who the owner wants contact with right now**. CS's [private decision loop](PRIVATE_DECISION_LOOP.md) uses that assessment to **ask less or stop**. It never uses it to **choose or share**.
 
@@ -24,7 +24,11 @@ PrivateAssessment = {
 }
 ```
 
-- **Optional field:** older replies and other producers stay valid. A missing assessment means "no assessment", and the loop asks its normal questions.
+- **Required with a candidate (D042, resolves DS r4m):** `PrivateReflectionSchema` rejects a reflection that has a candidate but no assessment. It's optional only when `candidate` is null (nothing to share).
+  - Our Claude adapter always sets one; a missing or garbled model assessment becomes `wants_space`.
+  - The browser client parses with this schema, so a server reply missing it shows the normal reflection error.
+  - Independently, CS's `DecisionLoop` fails closed (`failClosedWithoutAssessment` → `no_action: assessment_missing`).
+  - The pure helpers in `assessment.ts` still treat "missing" as "none". DS's evaluation wraps `replay()` with CS's guard to match the app.
 - **Names:** 1–40 characters, trimmed, no control characters, at most 5 excluded and 3 preferred. They are names as the owner wrote them in their own entry: never reasons, events, places or quotes.
 - **Never shared:** the assessment, like the candidate, is owner-only C1. It never goes into SpacetimeDB, approved signals, Factory or Droid prompts, analytics, logs, team updates or the vault.
 
@@ -50,7 +54,7 @@ Pure helpers, applied before `decide()`:
 
 | Assessment | Effect on the loop | Never |
 |---|---|---|
-| none / missing | unchanged: asks "company?" then "who?" | — |
+| none / missing (with a candidate) | **no action** (D042: contract-invalid; the app's `failClosedWithoutAssessment` ends the loop) | asks anyone |
 | `wants_space` | episode ends with no action; the "Review what to share" button is hidden | asks a question, suggests anyone |
 | `unclear` | unchanged: the owner answers both questions | skips a question |
 | `wants_connection` | skips only the company question (as if answered "company"); still asks **who** | picks the person |
@@ -58,8 +62,12 @@ Pure helpers, applied before `decide()`:
 | `preferredNames` | matching connections are listed first in "who" | pre-selects them |
 | invalid (fails `PrivateAssessmentSchema`) | no action | falls back optimistically |
 
-- **Name matching** runs on the device against the owner's own accepted connections. It is case- and accent-insensitive, matches whole words (full name or any word of it), and never matches prefixes.
-  - An ambiguous exclusion (two people called Alex) excludes **every** match. Narrowing is the safe direction.
+- **Name matching** runs on the device against the owner's own accepted connections. It is case- and accent-insensitive.
+  - **Exclusions** (`exclusionMatches`): every written word must match a word of the connection's name, either whole or as a prefix of 3+ letters in either direction. So "not Alexander" leaves out "Alex", and "not Alex" leaves out "Alexander". Two-letter fragments never match. This closes the CS audit's MEDIUM nickname gap; leaving someone out is the safe direction.
+  - **Preferences** (`nameMatches`): whole words only. They only reorder, so strictness costs nothing.
+  - An ambiguous exclusion (two people called Alex) excludes **every** match.
+  - Nicknames that share no spelling (Bob ↔ Robert) can't be matched. `unmatchedExclusions(recipients, assessment)` returns excluded names that matched nobody, so CS can show an owner-only note or ask "Who did you mean?". The owner is still the only one who picks a person.
+  - CS adds a fail-closed guard: when any name is excluded, connections without a display name are left out (`applyUnnamedExclusionGuard`).
   - Claude never receives the contact list.
 - **Re-applied on every render.** Exclusions apply to the live recipients list, so a connection that loads after the loop mounts is still excluded.
 - **Invariant (tested):** no assessment, valid or not, makes `decide()` return `ready_for_preview` without the owner explicitly choosing that person in the "who" step. Approval is then still the separate `ShareReview` step bound to `payloadRevision`.

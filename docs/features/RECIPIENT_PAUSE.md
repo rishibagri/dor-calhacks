@@ -44,7 +44,12 @@ Neither stops an already-approved signal or a queued worker job. A pause must.
   - `BoundedCoordinator` rechecks policy after the model runs and before the fixed-template fallback commits, so a pause during generation becomes `policy_denied`.
   - `commit_nudge` refusing a late pause is classified as `policy_denied` by `classifyCommitError`.
 - If you instead add a field to worker rows (for example `pause_version`), tell Adam the exact name and type. The worker will bind and recheck it, and the commit args will carry it.
-- AI will add integration cases in `worker/integration/` once the reducers exist: pause before the job, pause during generation, pause then resume (the old signal stays dead), and the fallback path.
+- **Done (AI):** `worker/integration/dry-run.test.ts`, "D041 recipient pause → worker", runs 5 cases through the real module and worker, all passing:
+  - pause before the job (0 Droid calls);
+  - pause during generation, on the fixed-template fallback path;
+  - pause just before commit (`commit_nudge` refuses → `policy_denied`);
+  - pause then resume (the old signal stays dead; a fresh approval nudges);
+  - a committed nudge disappears from the recipient once paused.
 
 ## What CS consumes
 

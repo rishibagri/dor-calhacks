@@ -57,3 +57,15 @@ Offline-verified unless stated otherwise.
 - **Private assessment (D040), role/ai-voice:** Claude returns an owner-only assessment that only narrows CS's decision loop (`docs/features/PRIVATE_ASSESSMENT.md`). Offline-verified; live Claude evidence pending.
 - **Not built yet:** the durable recipient pause. Cyber owns it (D041); requirements are in `docs/features/RECIPIENT_PAUSE.md`.
 - **Token safety:** offline checks never load `.env.local`; paid runs are explicit.
+
+## AI backend status — role/ai-voice (2026-10-24 ~20:10Z)
+- **Worker:**
+  - SDK auto-reconnect; fails closed while disconnected; event-driven sweeps with a 15 s fallback.
+  - Exits for a supervisor restart after a 2 min outage; `/healthz` returns 503 while down.
+  - D041 pause honored with no worker change (5 integration cases); mid-job disconnects never lose or duplicate a nudge (2 cases).
+  - Offline-verified.
+- **Assessment:** nickname-tolerant exclusions; `unmatchedExclusions` for CS. D042 (r4m) resolved: the contract requires an assessment with any candidate, and the app fails closed.
+- **Live (isolated, synthetic):**
+  - Claude reflection + assessment, 10 cases on Opus 5.5: hard safety checks 10/10, ~$0.01/call.
+  - Cartesia token/TTS/STT pass.
+  - Not yet: browser voice (Stage B) and nudge delivery through the worker (Stage C).

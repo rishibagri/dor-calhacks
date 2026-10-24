@@ -78,10 +78,18 @@ The worker uses `@factory/droid-sdk` sessions by default; `DOR_DROID_TRANSPORT=c
 Every job gets one aggregate model budget (`jobDeadlineMs`/`deadlineMs`, default 25 s) covering slot wait and all rounds. Past it, `DroidRunner` fails the call with `timeout` without spawning, so the coordinator moves straight to its labeled fallback or no suggestion. A queued call leaves the queue at its deadline, so a released slot never goes to a job that has given up.
 
 ## Process (`src/main.ts`, `npm start -w @dor/worker`)
-- One SpacetimeDB connection as the worker identity, plus `SignalWatcher`: every `DOR_WORKER_SWEEP_MS` (default 5 s) it starts one job per newly visible approved signal, with `requestId = signalId`. Nudge IDs are therefore stable across restarts, `commit_nudge` dedupes them, and the cooldown pre-check skips Droid for a pair it already nudged.
-- `PlanWatcher` on the same interval when the bindings include the plan view and reducer (`plans` log line says whether it is enabled).
-- `POST /jobs` (above) and `GET /healthz`. Logs are JSON codes and counts only.
-- Env: `DOR_WORKER_AUTH_TOKEN`, `DOR_SPACETIME_URI`, `DOR_SPACETIME_MODULE`, `DOR_SPACETIME_WORKER_TOKEN`, `PORT`, `DOR_DROID_{MODEL,PATH,TIMEOUT_MS,CONCURRENCY}`, `FACTORY_API_KEY`.
+- **Event-driven (`src/loop.ts`, `WorkerLoop`):** a new row in `worker_signal_context` or `worker_plan_candidates` triggers a debounced sweep (200 ms) right away. A fallback sweep runs every `DOR_WORKER_SWEEP_MS` (default 15 s) in case an event is missed.
+- **Connection failures (Core 3 audit HIGH, fixed):**
+  - The connection uses the SDK's automatic reconnect (`withAutomaticReconnect`).
+  - From a drop until the replayed subscription applies again, every read and commit throws `unavailable: disconnected`, so the stale cache is never used, and no sweep runs.
+  - A disconnect never uses up a job's attempts. The retry after reconnecting is safe because nudge and plan IDs are stable and the reducers are idempotent; if the first commit had landed, the cooldown gate stops the retry before any model call.
+  - If the SDK will not retry, or the outage exceeds `DOR_WORKER_MAX_OFFLINE_MS` (default 2 min), the process exits with code 1 so its supervisor restarts it.
+  - `GET /healthz` returns 503 `{"ok":false}` while disconnected.
+- One SpacetimeDB connection as the worker identity, plus `SignalWatcher`: each sweep starts one job per newly visible approved signal, with `requestId = signalId`. Nudge IDs are therefore stable across restarts, `commit_nudge` dedupes them, and the cooldown pre-check skips Droid for a pair it already nudged.
+- `PlanWatcher` in the same loop when the bindings include the plan view and reducer (`plans` log line says whether it is enabled).
+- `POST /jobs` (above) and `GET /healthz`. Logs are JSON codes and counts only: `connected`, `droid_transport`, `disconnected`, `reconnected`, `fatal_connection`, `droid_call`, `outcome`, `job_error`.
+- Env: `DOR_WORKER_AUTH_TOKEN`, `DOR_SPACETIME_URI`, `DOR_SPACETIME_MODULE`, `DOR_SPACETIME_WORKER_TOKEN`, `PORT`, `DOR_WORKER_SWEEP_MS`, `DOR_WORKER_MAX_OFFLINE_MS`, `DOR_DROID_{MODEL,PATH,TIMEOUT_MS,CONCURRENCY,TRANSPORT}`, `FACTORY_API_KEY`.
+- **D041 pause:** the worker needs no change. Paused pairs leave `worker_signal_context`, the coordinator rechecks policy after generation (before any fallback commit), and `commit_nudge` refuses a late pause. Five integration cases in `integration/dry-run.test.ts` cover this.
 - **Refuses to start** until the module is published and bindings are generated into `src/module_bindings` (`spacetime generate --lang typescript --out-dir worker/src/module_bindings --module-path spacetimedb`). The admin then runs `set_worker_identity` for the worker token's identity.
 
 ## Droid concurrency
