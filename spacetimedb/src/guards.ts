@@ -15,7 +15,7 @@ type Pair = PairRow;
  */
 export function requireAuthenticated(ctx: Ctx): void {
   const a = ctx.senderAuth;
-  if (a.isInternal) return;
+  if (a.isInternal) return; // harness only; live, no scheduled reducer calls this (see isDatabaseInternal)
   if (!a.hasJWT || !a.jwt) fail('unauthenticated', 'JWT required');
   if (!ctx.db.auth_config.issuer.find(a.jwt.issuer)) {
     fail('unauthenticated', 'issuer not allow-listed');
@@ -23,6 +23,19 @@ export function requireAuthenticated(ctx: Ctx): void {
   if (!audienceAllowed(a.jwt.audience, [...ctx.db.auth_audience.iter()].map(r => r.audience))) {
     fail('unauthenticated', 'audience not allow-listed');
   }
+}
+
+/**
+ * True for calls the database makes itself, such as scheduled reducers (the expiry sweep).
+ *
+ * On a real SpacetimeDB 2.13 host `senderAuth.isInternal` is never true: `AuthCtxImpl.fromBackend` always sets it to
+ * false, and only the in-process test harness sets it. A scheduled call arrives with no connection and with
+ * `ctx.sender` equal to the database's own identity. No client can hold that identity (client identities come from
+ * their token's issuer and subject), and every client call has a connection. Both conditions are required.
+ */
+export function isDatabaseInternal(ctx: Ctx): boolean {
+  if (ctx.senderAuth.isInternal) return true; // in-process test harness
+  return ctx.connectionId === null && ctx.sender.isEqual(ctx.databaseIdentity);
 }
 
 export function requireAccount(ctx: Ctx): Account {

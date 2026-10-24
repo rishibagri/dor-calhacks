@@ -136,3 +136,13 @@ Conditions:
 2. The `ShareReview` preview and approval stay mandatory on every path, including `wants_connection`.
 3. The "Leaving out X for now" line is owner-screen copy only, never a notification or any recipient-visible text.
 4. DS evals include the ambiguous-name and injection cases from §5.
+
+## 2026-10-25: live-host fix for database-initiated calls (CS Core 3 finding)
+- **Finding (CS, live):** `sweep_expired` refused every scheduled run with `unauthorized: scheduler only`. SpacetimeDB 2.13 never sets `senderAuth.isInternal` on a real host; `AuthCtxImpl.fromBackend` always sets it to false, and only the in-process harness sets it. Expiry markers were therefore never written live, so lapsed records (including D041 pauses) stayed in force in views. That failed closed, but it was broken.
+- **Fix:** new `isDatabaseInternal(ctx)` in `guards.ts` requires no connection AND `ctx.sender` equal to `ctx.databaseIdentity` (the harness keeps `isInternal`). A client can't satisfy both: every client call has a connection, and client identities come from their token's issuer and subject.
+- **Applied to:**
+  - `sweep_expired`: the bug.
+  - `requireIngester`: the module owner was refused live, because the owner was only ever admitted through `isInternal`. The owner is now checked against the owner row, and the database itself is admitted.
+  - `requireOwner`'s no-owner-row fallback: never reached live; kept fail-closed.
+  - `requireAuthenticated`'s `isInternal` shortcut is harness-only. No scheduled reducer calls it, so it's unchanged and commented.
+- **Evidence:** `spacetimedb/tests/scheduler_auth.test.ts` (5) calls the reducers with a live-shaped context (`isInternal` false, no connection, database identity). The sweep runs and really ends a lapsed pause. A user, the database identity with a connection, and a stranger without a connection are each refused for the sweep and for ingestion; the owner can ingest. 5 of 5 mutations are caught, including reverting to `isInternal`. Not yet re-verified on the live host: CS should restart the local module and confirm the sweep log is clean.

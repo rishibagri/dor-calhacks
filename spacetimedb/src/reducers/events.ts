@@ -8,7 +8,7 @@ import {
 } from '@dor/contracts/policy';
 import { spacetimedb } from '../schema';
 import { fail, type Ctx } from '../errors';
-import { requireAcceptedPair, requireAccount, otherMember } from '../guards';
+import { requireAcceptedPair, requireAccount, otherMember, isDatabaseInternal } from '../guards';
 import { newId } from '../ids';
 import { blockedEitherWay, discoveryList, findAssignment, fromMs, hex, toMs } from '../policy_state';
 import { consumeRate, requireDiscovery } from '../discovery_effects';
@@ -26,8 +26,10 @@ const parseIso = (iso: string): number => {
   if (Number.isNaN(ms)) fail('invalid', 'invalid_schema');
   return ms;
 };
+/** Module owner (checked against the owner row, not isInternal, which is never true live), the database itself, or an allow-listed worker. */
 function requireIngester(ctx: Ctx): void {
-  if (ctx.senderAuth.isInternal) return;
+  if (isDatabaseInternal(ctx)) return;
+  if (ctx.db.module_owner.key.find('owner')?.owner.isEqual(ctx.sender)) return;
   if (!ctx.db.worker_identity.identity.find(ctx.sender)) fail('unauthorized', 'ingester only');
 }
 function requireWorker(ctx: Ctx): void {
