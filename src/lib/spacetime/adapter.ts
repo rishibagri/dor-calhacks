@@ -164,6 +164,7 @@ export class SpacetimeSharedState implements SharedStateController {
   withdrawDiscoveryProfile = () => this.call('withdraw_discovery_profile', () => ({}));
   setDiscoveryArea = (key: string) => this.call('set_discovery_area', () => A.setDiscoveryArea(key));
   blockDiscoveryUser = (ref: string) => this.call('block_discovery_user', () => A.cardRef(ref));
+  setDiscoveryPage = (after: string) => this.call('set_discovery_page', () => ({ afterRef: after }));
   sendIntroductionRequest = (ref: string, req: string) =>
     this.call('send_introduction_request', () => A.sendIntroductionRequest(ref, req));
   respondIntroductionRequest = (id: string, accept: boolean) =>

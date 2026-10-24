@@ -3,7 +3,7 @@
  * guardAreaKey, guardIntroductionRequest); these only shape input and give early, honest feedback.
  */
 import {
-  DISCOVERY_AUDIENCES, DISCOVERY_NOTICE_VERSION, MAX_INTEREST_TAGS, PUBLICATION_MAX_LIFETIME_MS, guardPublicationDraft,
+  DISCOVERY_CARD_LIMIT, DISCOVERY_AUDIENCES, DISCOVERY_NOTICE_VERSION, MAX_INTEREST_TAGS, PUBLICATION_MAX_LIFETIME_MS, guardPublicationDraft,
 } from '@dor/contracts/policy';
 import type { DiscoveryCardRow, MyDiscoveryView } from '../../lib/backend/ports.ts';
 import { rankDiscoveryCards } from '../../features/discovery/adapters.ts';
@@ -70,4 +70,13 @@ export function shortlistFor(me: MyDiscoveryView | null, rows: readonly Discover
 /** Fresh ID per Send tap, matching the module's [A-Za-z0-9_-]{8,64} (validClientRequestId). */
 export function newIntroductionRequestId(): string {
   return crypto.randomUUID().replaceAll('-', '');
+}
+
+/**
+ * Paging over the caller's discovery_cards (server cursor, card-ref order). A full page means there may be more;
+ * the next cursor is the last ref on this page. Only the caller's own cursor moves.
+ */
+export function nextPageCursor(rows: readonly DiscoveryCardRow[]): string | null {
+  if (rows.length < DISCOVERY_CARD_LIMIT) return null;
+  return rows.reduce((max, r) => (r.cardRef > max ? r.cardRef : max), '');
 }

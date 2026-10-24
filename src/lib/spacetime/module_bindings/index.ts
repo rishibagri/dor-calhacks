@@ -64,6 +64,7 @@ import SetAuthAudienceReducer from "./set_auth_audience_reducer";
 import SetAuthIssuerReducer from "./set_auth_issuer_reducer";
 import SetDiscoveryAreaReducer from "./set_discovery_area_reducer";
 import SetDiscoveryConfigReducer from "./set_discovery_config_reducer";
+import SetDiscoveryPageReducer from "./set_discovery_page_reducer";
 import SetNudgeDeliveryReducer from "./set_nudge_delivery_reducer";
 import SetRelationshipPresetReducer from "./set_relationship_preset_reducer";
 import SetSupportPreferencesReducer from "./set_support_preferences_reducer";
@@ -299,6 +300,7 @@ const reducersSchema = __reducers(
   __reducerSchema("set_auth_issuer", SetAuthIssuerReducer),
   __reducerSchema("set_discovery_area", SetDiscoveryAreaReducer),
   __reducerSchema("set_discovery_config", SetDiscoveryConfigReducer),
+  __reducerSchema("set_discovery_page", SetDiscoveryPageReducer),
   __reducerSchema("set_nudge_delivery", SetNudgeDeliveryReducer),
   __reducerSchema("set_relationship_preset", SetRelationshipPresetReducer),
   __reducerSchema("set_support_preferences", SetSupportPreferencesReducer),

@@ -3,7 +3,7 @@
  * `code: reason` text so `messageForError` can map it to fixed copy (server text is never shown).
  */
 import type { IntroductionActionsPort, IntroductionView as ControlRow } from '../../features/privacy/introduction-model.ts';
-import type { IntroductionView, ReducerResult, SharedStatePort } from '../../lib/backend/ports.ts';
+import type { IntroductionView, ReducerResult, ReportReason, SharedStatePort } from '../../lib/backend/ports.ts';
 
 export async function orThrow(result: Promise<ReducerResult>): Promise<void> {
   const r = await result;
@@ -23,4 +23,12 @@ export function introductionActions(shared: SharedStatePort): IntroductionAction
 /** my_introductions rows in the shape Cyber's controls render (expiry as a Date). */
 export function toControlRows(rows: readonly IntroductionView[]): ControlRow[] {
   return rows.map((r) => ({ ...r, expiresAt: r.expiresAt ? new Date(r.expiresAt) : null }));
+}
+
+/**
+ * Card-level report (D038: report also blocks; fixed reasons only). Ready for DS's DiscoveryResults `onReport`
+ * prop (in progress, DS): pass `(ref, reason) => reportCard(shared, ref, reason)` through `runAction`.
+ */
+export function reportCard(shared: SharedStatePort, cardRef: string, reason: ReportReason): Promise<void> {
+  return orThrow(shared.reportDiscoveryUser({ kind: 'card', ref: cardRef }, reason));
 }

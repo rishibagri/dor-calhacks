@@ -213,6 +213,8 @@ export interface SharedStatePort {
   /** A configured coarse area key only; coordinates never reach this port. */
   setDiscoveryArea(areaKey: string): Promise<ReducerResult>; // set_discovery_area
   blockDiscoveryUser(cardRef: string): Promise<ReducerResult>; // block_discovery_user
+  /** Caller's own discovery cursor: cards after this ref; '' = first page. */
+  setDiscoveryPage(afterRef: string): Promise<ReducerResult>; // set_discovery_page
   sendIntroductionRequest(cardRef: string, clientRequestId: string): Promise<ReducerResult>; // send_introduction_request
   respondIntroductionRequest(introId: string, accept: boolean): Promise<ReducerResult>; // respond_introduction_request
   cancelIntroductionRequest(introId: string): Promise<ReducerResult>; // cancel_introduction_request

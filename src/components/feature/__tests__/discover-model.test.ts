@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PUBLICATION_MAX_LIFETIME_MS, validClientRequestId } from '@dor/contracts/policy';
+import { DISCOVERY_CARD_LIMIT, PUBLICATION_MAX_LIFETIME_MS, validClientRequestId } from '@dor/contracts/policy';
 import { messageForError } from '../../../features/privacy/introduction-model.ts';
-import { orThrow } from '../introduction-actions.ts';
+import { orThrow, reportCard } from '../introduction-actions.ts';
 import {
-  PUBLICATION_DAYS, checkProfileDraft, discoverStage, newIntroductionRequestId, publicationExpiry, shortlistFor,
+  PUBLICATION_DAYS, checkProfileDraft, discoverStage, newIntroductionRequestId, nextPageCursor, publicationExpiry, shortlistFor,
 } from '../discover-model.ts';
 
 const NOW = Date.parse('2026-10-24T12:00:00Z');
@@ -82,4 +82,18 @@ test('refusals reach the user only as Cyber fixed copy, never server text or a d
   const leaked = await msg(fail('invalid', 'declined by recipient <script>'));
   assert.doesNotMatch(String(leaked), /declin|script/i);
   assert.equal(await msg(orThrow(Promise.resolve({ ok: true as const }))), null);
+});
+
+test('paging: a short page has no next cursor; a full page continues after its highest ref', () => {
+  assert.equal(nextPageCursor([card('b', ['hiking'], ['hiking'])]), null);
+  const full = Array.from({ length: DISCOVERY_CARD_LIMIT }, (_, i) => card(`r-${String(i).padStart(3, '0')}`, ['hiking'], ['hiking']));
+  assert.equal(nextPageCursor([...full].reverse()), `r-${String(DISCOVERY_CARD_LIMIT - 1).padStart(3, '0')}`);
+});
+
+test('card report sends a card target with a fixed reason and surfaces only fixed copy', async () => {
+  const calls: unknown[] = [];
+  const shared = { reportDiscoveryUser: async (t: unknown, r: unknown) => { calls.push([t, r]); return { ok: false as const, code: 'rate_limited' as const, message: 'rate_limited' }; } };
+  const err = await reportCard(shared as never, 'card-1', 'spam').then(() => null, messageForError);
+  assert.deepEqual(calls, [[{ kind: 'card', ref: 'card-1' }, 'spam']]);
+  assert.match(String(err), /limit/);
 });

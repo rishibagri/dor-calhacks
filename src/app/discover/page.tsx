@@ -7,7 +7,9 @@ import { DiscoveryArea } from '@/components/feature/discovery-area';
 import { DiscoveryProfile } from '@/components/feature/discovery-profile';
 import { IntroductionSuggestions } from '@/components/feature/introduction-suggestions';
 import { introductionActions, orThrow, toControlRows } from '@/components/feature/introduction-actions';
-import { discoverStage, newIntroductionRequestId, shortlistFor } from '@/components/feature/discover-model';
+import { discoverStage, newIntroductionRequestId, nextPageCursor, shortlistFor } from '@/components/feature/discover-model';
+import { Button } from '@/components/ui/button';
+import { isDiscoverySynthetic } from '@/lib/config';
 import { DiscoveryResults } from '@/features/discovery/discovery-results';
 import { IntroductionControls } from '@/features/privacy/introduction-controls';
 import { runAction } from '@/features/privacy/introduction-model';
@@ -19,7 +21,17 @@ export default function DiscoverPage() {
   const stage = discoverStage(me, now.getTime());
   const [invited, setInvited] = useState<ReadonlySet<string>>(new Set());
   const [message, setMessage] = useState<string | null>(null);
-  const { shortlist, candidates } = shortlistFor(me, shared.discoveryCards(), now);
+  const rows = shared.discoveryCards();
+  const { shortlist, candidates } = shortlistFor(me, rows, now);
+  const nextCursor = nextPageCursor(rows);
+  const [isPaged, setIsPaged] = useState(false);
+
+  const handlePage = async (afterRef: string) => {
+    const err = await runAction(() => orThrow(shared.setDiscoveryPage(afterRef)));
+    if (err) return setMessage(err);
+    setIsPaged(afterRef !== '');
+    setInvited(new Set());
+  };
   const isDiscoverable = Boolean(me?.published && !me.withdrawn && !me.expired);
 
   const handleInvite = async (ref: string) => {
@@ -57,8 +69,14 @@ export default function DiscoverPage() {
           {message && <p role="status" className="text-sm text-muted-foreground">{message}</p>}
           {stage === 'ready' && <>
             <IntroductionSuggestions />
-            <DiscoveryResults shortlist={shortlist} candidates={candidates} invitedRefs={invited}
+            <DiscoveryResults shortlist={shortlist} candidates={candidates} invitedRefs={invited} synthetic={isDiscoverySynthetic}
               onInvite={(ref) => void handleInvite(ref)} onBlock={(ref) => void handleBlock(ref)} onEmptyAction={handleEmptyAction} />
+            {(nextCursor || isPaged) && (
+              <div className="flex gap-2">
+                {nextCursor && <Button size="sm" variant="outline" onClick={() => void handlePage(nextCursor)}>Show other people</Button>}
+                {isPaged && <Button size="sm" variant="ghost" onClick={() => void handlePage('')}>Back to the start</Button>}
+              </div>
+            )}
           </>}
         </>
       )}

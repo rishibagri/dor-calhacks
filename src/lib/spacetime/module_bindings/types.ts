@@ -153,6 +153,12 @@ export const DiscoveryConfig = __t.object("DiscoveryConfig", {
 });
 export type DiscoveryConfig = __Infer<typeof DiscoveryConfig>;
 
+export const DiscoveryPage = __t.object("DiscoveryPage", {
+  owner: __t.identity(),
+  afterRef: __t.string(),
+});
+export type DiscoveryPage = __Infer<typeof DiscoveryPage>;
+
 export const DiscoveryPublication = __t.object("DiscoveryPublication", {
   publicationId: __t.string(),
   owner: __t.identity(),
