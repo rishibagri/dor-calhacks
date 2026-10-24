@@ -184,7 +184,7 @@ export const discovery_publication = table(
   { name: 'discovery_publication' },
   {
     publication_id: t.string().primaryKey(), // opaque card reference; never an identity
-    owner: t.identity(),
+    owner: t.identity().index('btree'), // one row per owner; indexed so lookups never scan every profile
     display_name: t.string(),
     interest_tags: t.array(t.string()),
     audience: t.string(),
@@ -201,17 +201,29 @@ export const area_participation = table(
   { name: 'area_participation' },
   {
     owner: t.identity().primaryKey(),
-    area_key: t.string(),
+    area_key: t.string().index('btree'), // discovery_cards reads only the viewer's area
     revision: t.u32(),
     expires_at: t.timestamp(),
     active: t.bool(),
   }
 );
 
+/**
+ * The caller's own discovery page position (CS-R2): discovery_cards returns at most DISCOVERY_CARD_LIMIT cards in
+ * card-ref order after `after_ref`. Views take no arguments, so paging is this per-viewer row. '' = first page.
+ */
+export const discovery_page = table(
+  { name: 'discovery_page' },
+  { owner: t.identity().primaryKey(), after_ref: t.string() }
+);
+
 /** Private blocks. Matching in either direction hides both people from each other. Never shown to the target. */
 export const discovery_block = table(
   { name: 'discovery_block' },
-  { block_id: t.string().primaryKey(), blocker: t.identity(), blocked: t.identity(), created_at: t.timestamp() }
+  {
+    block_id: t.string().primaryKey(), blocker: t.identity().index('btree'), blocked: t.identity().index('btree'),
+    created_at: t.timestamp(),
+  }
 );
 
 /**
@@ -222,8 +234,8 @@ export const introduction = table(
   { name: 'introduction' },
   {
     intro_id: t.string().primaryKey(),
-    sender: t.identity(),
-    recipient: t.identity(),
+    sender: t.identity().index('btree'),
+    recipient: t.identity().index('btree'),
     client_request_id: t.string(), // sender-scoped idempotency key
     sender_revision: t.u32(), // sender publication revision the request was made from
     sender_name: t.string(), // public name snapshot the recipient was shown
@@ -398,6 +410,7 @@ export const spacetimedb = schema({
   discovery_publication,
   area_participation,
   discovery_block,
+  discovery_page,
   introduction,
   introduction_proposal,
   discovery_report,

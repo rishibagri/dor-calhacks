@@ -1,3 +1,24 @@
+# CS handoff — 2026-10-24T19:00Z, role/cs-app (PR #22)
+
+Status: CS-R1 complete in code, CS-R2 complete in code. **Offline-verified only**: the module has not been published, no two-account run, no browser geolocation or network trace.
+
+## Interfaces now available
+- `SharedStatePort` (`src/lib/backend/ports.ts`): support preferences, nudge delivery, signals (`mySignals`), discovery publish/withdraw/area/page/block, introduction send/respond/cancel/block/report, proposal dismiss; views `myDiscoveryProfile`, `discoveryCards`, `myIntroductions`, `myIntroductionProposals`, `unreadable()`.
+- Module (CS plumbing, Cyber to review): btree indexes on `discovery_publication.owner`, `area_participation.area_key`, `discovery_block.blocker/blocked`, `introduction.sender/recipient`; `discovery_cards` reads only the viewer's area, card-ref order, after the caller's own `discovery_page` cursor, hides accepted introductions; new `set_discovery_page(after_ref)`. Tests: `spacetimedb/tests/discovery_cards.test.ts` (6).
+- Config: `src/lib/discovery/config.ts` (areas + tags); load into the module with the output of `node scripts/discovery-config.ts [db] [--enable]`.
+- `reportCard(shared, ref, reason)` in `src/components/feature/introduction-actions.ts`, ready for DS's `onReport`.
+
+## Next consumer actions
+- Cyber: review the index/cursor/connected-filter change in `views.ts`, `policy_state.ts`, `discovery_effects.ts`, `schema.ts`, `reducers/discovery.ts`.
+- DS: when `DiscoveryResults` gains `onReport`, CS passes `reportCard` (one line in `src/app/discover/page.tsx`).
+- AI: worker job calling `commit_introduction_proposal`; profile revisions are on cards and `my_discovery_profile`.
+- CS next: R3 events on D039.
+
+## Verification
+`npm run check:all` exit 0 (contracts 116, module 143, app 223 + 1 known a3 todo); `npm run ai:check` exit 0; `npx next build --webpack` OK.
+
+---
+
 # Local Desktop reconciliation — pushed in codex/cs-app-integration PR
 
 Current workspace now contains GitHub main `250d4bf` plus uncommitted source changes from `/Users/rishii3/Desktop/calhacks` (generated bindings and worker build/runtime loader). Desktop source, its local configuration, SESSION.md and phase-2 stash remain untouched. Local ignored configuration was imported with owner-only permissions; variable names match DOR_* while configured values were preserved. Never commit configuration or local session notes.

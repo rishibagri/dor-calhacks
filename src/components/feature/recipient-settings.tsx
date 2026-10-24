@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   AVAILABILITIES, AVAILABILITY_LABELS, CONSENT_DURATION_DAYS, SUPPORT_MODES, SUPPORT_MODE_LABELS,
-  buildDelivery, consentExpiry, expectedConsentVersion, formatClock, isConsentActive, localUtcOffsetMinutes, toggle,
+  buildDelivery, consentExpiry, offsetNote, expectedConsentVersion, formatClock, isConsentActive, localUtcOffsetMinutes, toggle,
   type ConsentDurationDays,
 } from './recipient-settings-model';
 
@@ -31,7 +31,29 @@ export function RecipientSettings({ pairId, name }: Props) {
   );
 }
 
+/** Shown instead of a form when the stored row exists but could not be read: no default, only a safe off switch. */
+function Unreadable({ what, actionLabel, onAction }: { what: string; actionLabel: string; onAction: () => Promise<ReducerResult> }) {
+  const [result, setResult] = useState<ReducerResult | null>(null);
+  return (
+    <div className="space-y-2" role="alert">
+      <p className="text-sm">Couldn’t read your {what}. They may still be on.</p>
+      <Button size="sm" variant="outline" onClick={() => void onAction().then(setResult)}>{actionLabel}</Button>
+      <ResultNotice result={result} />
+    </div>
+  );
+}
+
 function DeliveryForm({ pairId }: { pairId: string }) {
+  const shared = useLiveShared();
+  if (shared.unreadable().nudgeDelivery.some((u) => u.pairId === pairId)) {
+    return <Unreadable what="nudge settings" actionLabel="Turn off nudges" onAction={() => shared.setNudgeDelivery({
+      pairId, optedIn: false, quietStartMinute: null, quietEndMinute: null, utcOffsetMinutes: localUtcOffsetMinutes(),
+    })} />;
+  }
+  return <DeliveryFields pairId={pairId} />;
+}
+
+function DeliveryFields({ pairId }: { pairId: string }) {
   const shared = useLiveShared();
   const current = shared.myNudgeDelivery().find((d) => d.pairId === pairId);
   const [optedIn, setOptedIn] = useState<boolean | null>(null);
@@ -58,6 +80,7 @@ function DeliveryForm({ pairId }: { pairId: string }) {
         <Label htmlFor={`opt-${pairId}`}>Let in-app nudges from this connection reach me</Label>
       </div>
       <p className="text-xs text-muted-foreground">Off until you turn it on. Turning it off hides anything pending.</p>
+      <p className="text-xs text-muted-foreground">{offsetNote(current?.utcOffsetMinutes ?? null, localUtcOffsetMinutes())}</p>
       <div className="flex flex-wrap items-end gap-2">
         <div className="space-y-1">
           <Label htmlFor={`qs-${pairId}`} className="text-xs">Quiet from</Label>
@@ -75,6 +98,14 @@ function DeliveryForm({ pairId }: { pairId: string }) {
 }
 
 function PreferencesForm({ pairId }: { pairId: string }) {
+  const shared = useLiveShared();
+  if (shared.unreadable().supportPreferences.some((u) => u.pairId === pairId)) {
+    return <Unreadable what="support preferences" actionLabel="Revoke" onAction={() => shared.revokeSupportPreferences(pairId)} />;
+  }
+  return <PreferencesFields pairId={pairId} />;
+}
+
+function PreferencesFields({ pairId }: { pairId: string }) {
   const shared = useLiveShared();
   const current = shared.mySupportPreferences().find((p) => p.pairId === pairId);
   const active = isConsentActive(current, Date.now());

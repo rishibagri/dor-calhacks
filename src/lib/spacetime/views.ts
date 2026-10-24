@@ -1,15 +1,18 @@
 import type { DisclosureReceipt, Nudge, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
-import type { InviteView, NudgeDeliveryView, PairView, SignalView, SupportPreferencesView } from '@/lib/backend/ports';
-import { findTable, type LooseConnection, type LooseTable } from './bindings';
+import type {
+  DiscoveryCardRow, IntroductionProposalView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, SignalView, SupportPreferencesView,
+} from '@/lib/backend/ports';
+import { findTable, type LooseConnection, type LooseRow, type LooseTable } from './bindings';
 import {
   mapAccount, mapAssignment, mapInvite, mapNudge, mapNudgeDelivery, mapPair, mapPreset, mapReceipt, mapRows,
-  mapSignal, mapSupportPreferences,
+  mapDiscoveryCard, mapIntroduction, mapIntroductionProposal, unreadableRow, mapMyDiscovery, mapSignal, mapSupportPreferences,
 } from './mappers';
 
 /** Caller-filtered views (module defines them; all base tables are private). */
 export const VIEW_NAMES = [
   'my_account', 'my_pairs', 'my_invites', 'my_presets', 'my_preset_assignments', 'my_nudges', 'my_receipts',
   'my_signals', 'my_support_preferences', 'my_nudge_delivery',
+  'my_discovery_profile', 'discovery_cards', 'my_introductions', 'my_introduction_proposals',
 ] as const;
 
 export interface ViewData {
@@ -23,14 +26,26 @@ export interface ViewData {
   readonly signals: SignalView[];
   readonly supportPreferences: SupportPreferencesView[];
   readonly nudgeDelivery: NudgeDeliveryView[];
+  readonly discoveryProfile: MyDiscoveryView | null;
+  readonly discoveryCards: DiscoveryCardRow[];
+  readonly introductions: IntroductionView[];
+  readonly proposals: IntroductionProposalView[];
+  readonly unreadable: { signals: UnreadableRow[]; supportPreferences: UnreadableRow[]; nudgeDelivery: UnreadableRow[] };
 }
 
 export const EMPTY_VIEWS: ViewData = {
   account: null, pairs: [], invites: [], presets: [], assignments: [], nudges: [], receipts: [], signals: [], supportPreferences: [], nudgeDelivery: [],
+  discoveryProfile: null, discoveryCards: [], introductions: [], proposals: [],
+  unreadable: { signals: [], supportPreferences: [], nudgeDelivery: [] },
 };
 
 export function viewTables(conn: LooseConnection): LooseTable[] {
   return VIEW_NAMES.flatMap((n) => findTable(conn, n) ?? []);
+}
+
+/** Rows the mapper refused, identified only by their own primary key and pair (both the caller's own data). */
+function rejectedRows<T>(rows: Iterable<LooseRow>, mapper: (r: LooseRow) => T | null, idKey: string): UnreadableRow[] {
+  return [...rows].filter((r) => mapper(r) === null).map((r) => unreadableRow(r, idKey));
 }
 
 export function readViews(conn: LooseConnection): ViewData {
@@ -45,7 +60,16 @@ export function readViews(conn: LooseConnection): ViewData {
     nudges: mapRows(rows('my_nudges'), mapNudge),
     receipts: mapRows(rows('my_receipts'), mapReceipt),
     signals: mapRows(rows('my_signals'), mapSignal),
+    proposals: mapRows(rows('my_introduction_proposals'), mapIntroductionProposal),
+    unreadable: {
+      signals: rejectedRows(rows('my_signals'), mapSignal, 'signal_id'),
+      supportPreferences: rejectedRows(rows('my_support_preferences'), mapSupportPreferences, 'consent_id'),
+      nudgeDelivery: rejectedRows(rows('my_nudge_delivery'), mapNudgeDelivery, 'delivery_id'),
+    },
     supportPreferences: mapRows(rows('my_support_preferences'), mapSupportPreferences),
     nudgeDelivery: mapRows(rows('my_nudge_delivery'), mapNudgeDelivery),
+    discoveryProfile: mapRows(rows('my_discovery_profile'), mapMyDiscovery)[0] ?? null,
+    discoveryCards: mapRows(rows('discovery_cards'), mapDiscoveryCard),
+    introductions: mapRows(rows('my_introductions'), mapIntroduction),
   };
 }

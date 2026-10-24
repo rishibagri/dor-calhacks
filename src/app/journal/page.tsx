@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { SignalCandidate } from '@dor/contracts';
 import { SavedJournals } from '@/components/feature/saved-journals';
 import { ShareReview } from '@/components/feature/share-review';
@@ -16,6 +16,12 @@ import { VaultControls } from '@/features/privacy/vault-controls';
 function JournalWorkspace({ vault }: { vault: VaultPort }) {
   const reflection = useReflection();
   const [candidate, setCandidate] = useState<SignalCandidate | null>(null);
+  // Clear synchronously on pagehide so a back/forward-cached page never holds the candidate (Cyber review).
+  useEffect(() => {
+    const clear = () => setCandidate(null);
+    window.addEventListener('pagehide', clear);
+    return () => window.removeEventListener('pagehide', clear);
+  }, []);
   return (
     <div className="space-y-8">
       <VoiceReflection vault={vault} reflect={reflection.reflect} onCandidate={(c) => setCandidate(c)} />

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { PREFERENCE_MAX_LIFETIME_MS, validRecipientDelivery, validSupportPreferences } from '@dor/contracts/policy';
 import {
   CONSENT_DURATION_DAYS, buildDelivery, consentExpiry, expectedConsentVersion, formatClock, isConsentActive,
-  localUtcOffsetMinutes, parseClock,
+  formatUtcOffset, localUtcOffsetMinutes, offsetNote, parseClock,
 } from '../recipient-settings-model.ts';
 
 const NOW = Date.parse('2026-10-24T12:00:00Z');
@@ -60,4 +60,13 @@ test('consent is active only when unrevoked and unexpired; version 0 creates', (
 test('form enums match the module validator (no drift)', () => {
   assert.equal(validSupportPreferences({ supportModes: ['short_call', 'encouraging_note', 'shared_activity'], availability: ['today', 'this_week', 'no_preference'] }), true);
   assert.equal(validSupportPreferences({ supportModes: [], availability: [] }), false);
+});
+
+test('offset note names the stored zone and flags drift after a clock change', () => {
+  assert.equal(formatUtcOffset(120), 'UTC+2');
+  assert.equal(formatUtcOffset(-420), 'UTC-7');
+  assert.equal(formatUtcOffset(330), 'UTC+5:30');
+  assert.match(offsetNote(null, 60), /will use UTC\+1/);
+  assert.match(offsetNote(-420, -420), /set in UTC-7\.$/);
+  assert.match(offsetNote(-420, -480), /now UTC-8\. Save again/);
 });

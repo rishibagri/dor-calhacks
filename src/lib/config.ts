@@ -26,3 +26,9 @@ export const spacetimeConfig: SpacetimeConfig = {
   module: clean(process.env.NEXT_PUBLIC_SPACETIMEDB_MODULE) ?? DEFAULT_MODULE,
   jwtTemplate: clean(process.env.NEXT_PUBLIC_CLERK_SPACETIME_JWT_TEMPLATE) ?? DEFAULT_JWT_TEMPLATE,
 };
+
+/**
+ * Set while discovery runs on seeded test accounts (LOCAL_CONNECTIONS.md "Launch"), so the Discover page labels
+ * every card as synthetic. Defaults to true: a real-people launch must opt out explicitly with "false".
+ */
+export const isDiscoverySynthetic: boolean = clean(process.env.NEXT_PUBLIC_DISCOVERY_SYNTHETIC) !== 'false';

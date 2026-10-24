@@ -79,7 +79,7 @@ export const discoveryEnabled = (db: ReadDb): boolean => discoveryList(db, 'enab
 
 type PublicationRow = NonNullable<ReturnType<Ctx['db']['discovery_publication']['publication_id']['find']>>;
 export function findPublicationRow(db: ReadDb, owner: Identity): PublicationRow | undefined {
-  return [...db.discovery_publication.iter()].find(p => p.owner.isEqual(owner));
+  return db.discovery_publication.owner.filter(owner).next().value ?? undefined;
 }
 
 export function toPublicationState(db: ReadDb, p: PublicationRow): PublicationState {
@@ -102,9 +102,8 @@ export function loadDiscoveryParty(db: ReadDb, who: Identity): DiscoveryParty {
 }
 
 export function blockedEitherWay(db: ReadDb, a: Identity, b: Identity): boolean {
-  for (const r of db.discovery_block.iter()) {
-    if ((r.blocker.isEqual(a) && r.blocked.isEqual(b)) || (r.blocker.isEqual(b) && r.blocked.isEqual(a))) return true;
-  }
+  for (const r of db.discovery_block.blocker.filter(a)) if (r.blocked.isEqual(b)) return true;
+  for (const r of db.discovery_block.blocker.filter(b)) if (r.blocked.isEqual(a)) return true;
   return false;
 }
 
