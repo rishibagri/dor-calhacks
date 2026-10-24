@@ -72,7 +72,9 @@ test('nearby: every eligibility flag removes the person, whatever their overlap'
 test('nearby: cards with private or location fields are rejected, never ranked', () => {
   const strong = pool.candidates.find(c => c.ref === 'c-01')!;
   for (const extra of [{ lat: 1 }, { distanceMeters: 5 }, { areaKey: 'cell-1' }, { journal: 'x' }, { supportMode: 'short_call' },
-    { email: 'a@b.c' }]) {
+    { email: 'a@b.c' },
+    // D039: another person's intent kind/expiry must never be an input.
+    { eventIntents: [{ eventId: 'evt-games-night', intent: 'going', expiresAt: '2026-10-25T05:00:00Z' }] }, { theirIntent: 'going' }]) {
     const r = rankNearby(base({ candidates: [{ ...strong, ...extra }] }));
     assert.equal(r.kind, 'none');
     assert.deepEqual(r.excluded, [{ ref: 'c-01', reason: 'invalid_card' }], JSON.stringify(extra));

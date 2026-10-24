@@ -3,7 +3,7 @@
   "owner": "DS",
   "synthetic": true,
   "clock": "2026-10-24T18:00:00Z",
-  "note": "Synthetic stand-in for CS's authorized C8 candidate page (DS consumer proposal shape in src/features/discovery/types.ts). No real people. c-11/c-15 carry fields outside the projection (coordinates, distance) and c-12 an unallowlisted sensitive tag: all must be rejected.",
+  "note": "Synthetic stand-in for CS's authorized C8 candidate page (DS consumer proposal shape in src/features/discovery/types.ts). No real people. c-11/c-15 carry fields outside the projection (coordinates, distance) and c-12 an unallowlisted sensitive tag: all must be rejected. D039: candidates carry only `sharedEventIds` (event IDs a server `event_companions` row would pair with the viewer); another person's intent kind and expiry are never exposed, so c-13's earlier expired intent is dropped as the server drops lapsed intents.",
   "allowedTags": [
     "board-games",
     "hiking",
@@ -65,13 +65,7 @@
         "board-games",
         "coffee"
       ],
-      "eventIntents": [
-        {
-          "eventId": "evt-games-night",
-          "intent": "going",
-          "expiresAt": "2026-10-25T05:00:00Z"
-        }
-      ],
+      "sharedEventIds": ["evt-games-night"],
       "publicationVersion": 1,
       "publicationExpiresAt": "2026-10-26T00:00:00Z",
       "withdrawn": false,
@@ -86,7 +80,7 @@
         "hiking",
         "photography"
       ],
-      "eventIntents": [],
+      "sharedEventIds": [],
       "publicationVersion": 1,
       "publicationExpiresAt": "2026-10-26T00:00:00Z",
       "withdrawn": false,
@@ -101,13 +95,7 @@
         "board-games",
         "film"
       ],
-      "eventIntents": [
-        {
-          "eventId": "evt-games-night",
-          "intent": "interested",
-          "expiresAt": "2026-10-25T05:00:00Z"
-        }
-      ],
+      "sharedEventIds": ["evt-games-night"],
       "publicationVersion": 1,
       "publicationExpiresAt": "2026-10-26T00:00:00Z",
       "withdrawn": false,
@@ -121,7 +109,7 @@
       "tags": [
         "cooking"
       ],
-      "eventIntents": [],
+      "sharedEventIds": [],
       "publicationVersion": 1,
       "publicationExpiresAt": "2026-10-26T00:00:00Z",
       "withdrawn": false,
@@ -136,7 +124,7 @@
         "board-games",
         "coffee"
       ],
-      "eventIntents": [],
+      "sharedEventIds": [],
       "publicationVersion": 1,
       "publicationExpiresAt": "2026-10-26T00:00:00Z",
       "withdrawn": false,
@@ -150,7 +138,7 @@
       "tags": [
         "board-games"
       ],
-      "eventIntents": [],
+      "sharedEventIds": [],
       "publicationVersion": 1,
       "publicationExpiresAt": "2026-10-26T00:00:00Z",
       "withdrawn": true,
@@ -164,7 +152,7 @@
       "tags": [
         "coffee"
       ],
-      "eventIntents": [],
+      "sharedEventIds": [],
       "publicationVersion": 1,
       "publicationExpiresAt": "2026-10-24T12:00:00Z",
       "withdrawn": false,
@@ -180,7 +168,7 @@
         "coffee",
         "film"
       ],
-      "eventIntents": [],
+      "sharedEventIds": [],
       "publicationVersion": 1,
       "publicationExpiresAt": "2026-10-26T00:00:00Z",
       "withdrawn": false,
@@ -194,13 +182,7 @@
       "tags": [
         "live-music"
       ],
-      "eventIntents": [
-        {
-          "eventId": "evt-jazz",
-          "intent": "interested",
-          "expiresAt": "2026-10-25T05:00:00Z"
-        }
-      ],
+      "sharedEventIds": ["evt-jazz"],
       "publicationVersion": 1,
       "publicationExpiresAt": "2026-10-26T00:00:00Z",
       "withdrawn": false,
@@ -214,7 +196,7 @@
       "tags": [
         "coffee"
       ],
-      "eventIntents": [],
+      "sharedEventIds": [],
       "publicationVersion": 1,
       "publicationExpiresAt": "2026-10-26T00:00:00Z",
       "withdrawn": false,
@@ -228,7 +210,7 @@
       "tags": [
         "board-games"
       ],
-      "eventIntents": [],
+      "sharedEventIds": [],
       "publicationVersion": 1,
       "publicationExpiresAt": "2026-10-26T00:00:00Z",
       "withdrawn": false,
@@ -245,7 +227,7 @@
         "board-games",
         "diagnosis-anxiety"
       ],
-      "eventIntents": [],
+      "sharedEventIds": [],
       "publicationVersion": 1,
       "publicationExpiresAt": "2026-10-26T00:00:00Z",
       "withdrawn": false,
@@ -259,13 +241,7 @@
       "tags": [
         "film"
       ],
-      "eventIntents": [
-        {
-          "eventId": "evt-games-night",
-          "intent": "going",
-          "expiresAt": "2026-10-24T10:00:00Z"
-        }
-      ],
+      "sharedEventIds": [],
       "publicationVersion": 1,
       "publicationExpiresAt": "2026-10-26T00:00:00Z",
       "withdrawn": false,
@@ -279,13 +255,7 @@
       "tags": [
         "books"
       ],
-      "eventIntents": [
-        {
-          "eventId": "evt-games-night",
-          "intent": "going",
-          "expiresAt": "2026-10-25T05:00:00Z"
-        }
-      ],
+      "sharedEventIds": ["evt-games-night"],
       "publicationVersion": 1,
       "publicationExpiresAt": "2026-10-26T00:00:00Z",
       "withdrawn": false,
@@ -299,7 +269,7 @@
       "tags": [
         "coffee"
       ],
-      "eventIntents": [],
+      "sharedEventIds": [],
       "publicationVersion": 1,
       "publicationExpiresAt": "2026-10-26T00:00:00Z",
       "withdrawn": false,

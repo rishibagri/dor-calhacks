@@ -3,6 +3,7 @@
  * what a card may show. Shown fields are exactly the published projection: display name, avatar, published tags and
  * the overlap reasons. No percentage, distance, "nearby now" or attendance claim is ever produced.
  */
+import { DISCOVERY_REPORT_REASONS, type DiscoveryReportReason } from '@dor/contracts';
 import type { ActivityItem, ActivityRankResult, RationaleCode } from '../../evaluation/rank.ts';
 import type { DiscoveryCandidate, DiscoveryShortlist, NoShortlistReason, PublishedEventIntent, ShortlistEntry } from './types.ts';
 
@@ -12,7 +13,7 @@ export function tagLabel(slug: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-/** Self-declared intent, never verified attendance. */
+/** The VIEWER's own self-declared intent, never verified attendance. Never used for another person (D039). */
 export const INTENT_LABEL: Record<PublishedEventIntent['intent'], string> = {
   interested: 'Interested',
   going: 'Planning to go',
@@ -28,12 +29,28 @@ export function reasonLines(entry: ShortlistEntry, eventTitle?: string): string[
   const lines: string[] = [];
   if (entry.reasons.includes('shared_interest'))
     lines.push(`You both picked ${joinList(entry.sharedTags.map(t => tagLabel(t).toLowerCase()))}.`);
-  if (entry.reasons.includes('same_event') && entry.theirIntent)
-    lines.push(`You both published an intention for ${eventTitle ?? 'the same event'} (they said: ${INTENT_LABEL[entry.theirIntent].toLowerCase()}).`);
+  // D039: the other person's interested/going is never shown; the line is identical for either kind.
+  if (entry.reasons.includes('same_event') && entry.sharedEventId)
+    lines.push(`You both marked ${eventTitle ?? 'the same event'}.`);
   if (entry.reasons.includes('event_fits_shared_interest'))
     lines.push('The event matches an interest you share.');
   return lines;
 }
+
+/**
+ * Card-level report reasons: exactly the contract allowlist (D038 `report_discovery_user`), never free text. Wording
+ * matches Cyber's introduction report form so a person sees the same choices everywhere.
+ */
+export const REPORT_REASONS: readonly DiscoveryReportReason[] = DISCOVERY_REPORT_REASONS;
+export const REPORT_REASON_LABEL: Record<DiscoveryReportReason, string> = {
+  spam: 'Spam or advertising',
+  harassment: 'Harassment or unwanted contact',
+  impersonation: 'Pretending to be someone else',
+  inappropriate_profile: 'Inappropriate name or interests',
+  other: 'Something else',
+};
+/** D038: reporting also blocks, and the reported person learns nothing about who reported or why. */
+export const REPORT_NOTICE = 'Reporting also blocks them. They are not told who reported or why.';
 
 export interface CardView {
   ref: string;

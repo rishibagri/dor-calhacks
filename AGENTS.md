@@ -38,7 +38,7 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 | Role / person | Current status | Next handoff |
 |---|---|---|
 | CS — you | role/cs-app (offline only): core-first separation (extensions hidden by default) + private decision loop before exact-recipient preview (docs/features/PRIVATE_DECISION_LOOP.md); R1–R3 code preserved | Core 3: publish/auth/worker config and two-account + denied-third run. Adam: assessment → LoopState seam. Sumedh: durable pause contract → CS controls |
-| DS — Nimisha | role/ds-context b077a1e (local, unpushed): `rankNearby` shortlist + `src/features/discovery` components + 15 nearby cases; rankActivities uses safeCatalogueUrl/allowInPerson. Offline/synthetic | CS: compose DiscoveryResults/EventResults and ship C8 candidate query matching `src/features/discovery/types.ts`; Sumedh: confirm projection; Adam: ≤3-entry shortlist; team: ratings |
+| DS — Nimisha | On main: DS-R0–R2 (PR #9), strict `discovery_cards` adapter (PR #13), first DS-R3 cut (PR #17); DS nearby ranking + `DiscoveryResults` composed in `/discover` and `eligibleEvents` used by `/events` (CS PRs #22/#24; offline/synthetic). PR #25 (open; **extension maintenance only**, no new discovery scope): D039 fix (no other person's interested/going), companions only from `event_companions`, 48 h freshness + Cyber's area rule, still accepts CS's Events listing shape, D038 proposal gate, card `onReport` | **Core-first (README Core 1–4):** DS Core 1 = expected support/avoid/uncertain outcomes + forbidden-disclosure labels before any model eval; Core 2 = paired recipient-intent scenarios + private-story noninterference cases. CS: pass `reportCard` to `onReport`. Sumedh: filter linked pairs, a3. Adam: gate `same_event` proposals |
 | Cyber — Sumedh | role/cyber-privacy (on main 2b8e59b): CYBER-R3 guarded catalogue ingestion, C8 event intents (mutual-only overlap), C7 activity approvals (preset-only, off by default), D034 plan finalization with current-source rechecks, `EventPrivacyControls` + exact preview copy (D039). R2 merged (#18). Offline only: contracts 116, module 137, app 193, ai 104; flag off, not published | CS: ACK D039, bindings, ingestion → `upsert_catalogue_event`, preview copy, preset toggle. Adam: `commit_plan_proposal` from `worker_plan_candidates`. Nimisha: `event_companions`. Cyber next: CYBER-R4 adversarial suite |
 | AI — Adam | PR #7 merged: routes/browser helpers, real-policy worker factory, replay ledger and cheaper Droid; isolated Droid evidence only | AI-R1: voice component + worker database adapters; R2/R3: bounded introduction/event workflow; R4: call budgets |
 
@@ -243,3 +243,59 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - CS: regenerate bindings and wire ingestion.
   - Adam: commit plans from the worker view.
   - Nimisha: companions from `event_companions` only.
+
+### 2026-10-24T17:30Z | DS → CS, AI, Cyber | PR #25: D039/D038 extension maintenance + card report; DS moves to core-first
+- **Branch/commit:** `role/ds-context`; PR #25 is open. The first commit is `e0b5988`; the follow-up merges main `71c3b6a` (README core-first, CS Events page #24) and keeps CS's Events page working. Earlier DS work on main: PR #13 (`d98cc04`) and PR #17 (`90d789a`).
+- **Scope under the new README:** discovery and events are preserved extensions. This PR adds no discovery scope:
+  - it removes an indirect disclosure (D039);
+  - it aligns DS with the server's projections;
+  - it keeps CS's `/events` working;
+  - it adds a safety control (Report).
+- **Status:** implemented and offline-verified, NOT live:
+  - `/discover` runs DS nearby ranking, and `/events` runs DS `eligibleEvents` (CS PRs #22/#24);
+  - the module is unpublished and the data is synthetic.
+- **Evidence:**
+  - `npm run check:all` exit 0: contracts 116, module 143, app 244 + 1 todo (a3).
+  - `npm run ai:check` exit 0: agents 64, worker 21, integration 19.
+  - `next build --webpack` OK (`/discover`, `/events`).
+  - DS suite 149 pass / 0 fail / 1 todo.
+  - CS `events-model.test.ts` passes 4/4. Before the fix, merging this PR into main failed it 3/1.
+  - Mutations: 16 on the D039 code (15 caught, 1 redundant check removed), 2 on the report allowlist and 4 on the CS-shape compatibility; all caught.
+- **Privacy fix (D039):**
+  - `ShortlistEntry.theirIntent` and the "(they said: …)" line are removed.
+  - Candidates carry only mutual `sharedEventIds` from `event_companions`.
+  - `rankNearby` rejects cards that carry `eventIntents` or `theirIntent`.
+- **Interfaces:**
+  - `rankEventCompanions({viewer, viewerAreaKey, catalogue, myIntents, cards, companions, allowedTags, now})` reads the generated view rows and returns events with the viewer's own `viewerIntent` and ≤3 companions, plus `candidates` and `withheld`.
+  - `eligibleEvents` / `parseCatalogueEvent`:
+    - accept `catalogue_events` view rows AND CS's `toListing` shape (`status: 'scheduled'`, `endsAt` omitted, no title/url);
+    - reject any other status and any unknown key;
+    - return normalized view-shape copies;
+    - enforce 48 h freshness and Cyber's area rule.
+  - `forIntroductionProposals(entries)`: D038 `shared_interest`-only with ≤3 tags.
+  - `DiscoveryResults` gains an optional `onReport(ref, reason)` with an allowlisted picker; nothing is sent before "Report and block".
+- **DS next (core-first, README Core 1–4):**
+  1. Core 1: define expected `no_action` / `needs_clarification` / `ready_for_preview` outcomes for support, avoid and uncertain recipient intent, plus the forbidden-disclosure labels, before any model evaluation.
+  2. Core 2: paired fixtures (same general availability, different recipient intent; "not Alex tonight"; ambiguous timing; skipped question; changed answer; prompt injection; the private-party case), and a noninterference check (approved inputs fixed, private story varied ⇒ recipient-visible content and timing unchanged).
+  3. Core 3: two teammate ratings; unsafe suggestions reported separately from missed ones; deterministic baseline.
+  4. Core 4: partner/friend/family examples plus the private-party no-action case, with the real sample size.
+  - No new discovery or event ranking work until the core passes live verification.
+- **CS next:**
+  1. Pass `onReport={(ref, reason) => void runAction(() => reportCard(shared, ref, reason))}` in `src/app/discover/page.tsx`.
+  2. Optional: pass `catalogue_events` rows to `eligibleEvents` directly instead of `toListing`; both shapes are supported.
+- **Cyber (Sumedh) next:**
+  1. ACK that DS consumes `event_companions` only.
+  2. Filter linked pairs from `discovery_cards` (`alreadyConnected` is half closed).
+  3. Export an event-ID validator.
+  4. a3.
+  5. Co-define the Core 1 recipient-restriction labels DS will evaluate against.
+- **AI (Adam) next:**
+  1. Gate `same_event` introduction proposals with `forIntroductionProposals` (D038 refuses them).
+  2. Share the private-assessment output vocabulary so DS can label Core 1 cases against it.
+- **Open gaps:**
+  - `alreadyConnected` is half closed.
+  - Rankers are not worker-importable.
+  - The module is unpublished.
+  - No human ratings.
+  - No Core 1 labels yet.
+- **Details:** `docs/handoffs/ds.md`, `docs/updates/ds.md`.

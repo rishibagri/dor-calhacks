@@ -1,16 +1,22 @@
 /**
  * DS ranker input for C8 discovery (contracts/specs/DISCOVERY.md). The wire shape is Cyber's reviewed
  * `DiscoveryCardProjection` (`@dor/contracts/policy`, served by the `discovery_cards` view); `fromDiscoveryCards`
- * (./adapters.ts) is the only way real rows become a `DiscoveryCandidate`. The extra fields below are either not in
- * that projection yet (avatar, event intents: no producer) or server-enforced state the ranker re-checks defensively.
- * These are DS-internal shapes, not wire schemas.
+ * (./adapters.ts) is the only way real rows become a `DiscoveryCandidate`. `sharedEventIds` comes only from the
+ * D039 `event_companions` view (src/evaluation/events.ts). The other extra fields are either not in the projection
+ * (avatar) or server-enforced state the ranker re-checks defensively. These are DS-internal shapes, not wire schemas.
+ *
+ * D039: another person's intent kind (interested/going) and intent expiry are never exposed, so no type here can
+ * carry them for anyone but the viewer.
  *
  * Every field is either a published (opted-in) profile/intent field or a server-computed eligibility flag.
  * There is no location, distance, journal, support preference, quiz extra or contact detail anywhere here.
  */
 import { DISCOVERY_REASON_CODES, type DiscoveryReasonCode } from '@dor/contracts';
 
-/** Published per-event intention (C8 EventIntent projection). "interested"/"going" is self-declared, never attendance. */
+/**
+ * The VIEWER's own published per-event intention (`my_event_intents`). Self-declared, never attendance. Never used
+ * for another person: D039 keeps others' kind and expiry server-side.
+ */
 export interface PublishedEventIntent {
   /** Canonical C7 catalogue event ID. */
   eventId: string;
@@ -29,8 +35,11 @@ export interface DiscoveryCandidate {
   avatarMediaId: string | null;
   /** Published interest tags: slugs from the developer allowlist. */
   tags: string[];
-  /** Currently published event intents. */
-  eventIntents: PublishedEventIntent[];
+  /**
+   * Event IDs for which the server's `event_companions` view says this person and the viewer both currently intend
+   * the same usable event (mutual only; no kind, no expiry). Empty when no companion row exists.
+   */
+  sharedEventIds: string[];
   /** The projection's `revision`. */
   publicationVersion: number;
   /** Null when the expiry is enforced server-side only (the C8 projection does not expose it). */
@@ -65,10 +74,8 @@ export interface ShortlistEntry {
   reasons: ReasonCode[];
   /** Tags both people published (sorted). */
   sharedTags: string[];
-  /** Event both people currently published an intent for, if any. */
+  /** Event both people currently published an intent for, if any. The other person's kind is never included (D039). */
   sharedEventId: string | null;
-  /** The candidate's own published intent for that event. */
-  theirIntent: PublishedEventIntent['intent'] | null;
 }
 
 export type ExclusionReason =
