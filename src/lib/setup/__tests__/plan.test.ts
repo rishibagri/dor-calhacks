@@ -59,6 +59,20 @@ test('secrets in NEXT_PUBLIC_* and insecure remote ws are errors; publishable ke
 test('issuer must be a bare https origin; worker mode requires matching module and a long shared secret', () => {
   assert.ok(errors({ ...goodEnv, DOR_CLERK_ISSUER: 'https://x.clerk.accounts.dev/' }).includes('DOR_CLERK_ISSUER'));
   const w = errors({ ...goodEnv, DOR_SPACETIME_URI: 'ws://localhost:3000', DOR_SPACETIME_MODULE: 'other', DOR_SPACETIME_WORKER_TOKEN: 't',
-    DOR_WORKER_AUTH_TOKEN: 'short', DOR_WORKER_URL: 'http://localhost:8787' }, { worker: true, extensions: false });
+    DOR_WORKER_AUTH_TOKEN: 'short', DOR_WORKER_URL: 'http://localhost:8787', FACTORY_API_KEY: 'synthetic-factory-key' },
+    { worker: true, extensions: false });
   assert.deepEqual(w.sort(), ['DOR_SPACETIME_MODULE', 'DOR_WORKER_AUTH_TOKEN']);
+});
+
+test('worker Droid transport: the SDK default requires FACTORY_API_KEY; cli only warns; unknown values are errors', () => {
+  const worker = { worker: true, extensions: false };
+  const findings = (env: Record<string, string>) => checkEnv({ ...goodEnv, ...env }, worker).filter(f => f.key.startsWith('FACTORY') || f.key === 'DOR_DROID_TRANSPORT');
+  assert.deepEqual(findings({}).map(f => [f.level, f.key]), [['error', 'FACTORY_API_KEY']]);
+  assert.deepEqual(findings({ DOR_DROID_TRANSPORT: 'sdk' }).map(f => [f.level, f.key]), [['error', 'FACTORY_API_KEY']]);
+  assert.deepEqual(findings({ DOR_DROID_TRANSPORT: 'cli' }).map(f => [f.level, f.key]), [['warn', 'FACTORY_API_KEY']]);
+  assert.deepEqual(findings({ FACTORY_API_KEY: 'synthetic-factory-key' }), []);
+  assert.deepEqual(findings({ FACTORY_API_KEY: 'synthetic-factory-key', DOR_DROID_TRANSPORT: 'droid' }).map(f => [f.level, f.key]),
+    [['error', 'DOR_DROID_TRANSPORT']]);
+  assert.equal(JSON.stringify(checkEnv({ ...goodEnv, FACTORY_API_KEY: 'synthetic-factory-key' }, worker)).includes('synthetic-factory-key'), false,
+    'findings name keys, never values');
 });

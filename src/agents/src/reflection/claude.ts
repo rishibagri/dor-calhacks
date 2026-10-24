@@ -1,8 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
-import { AvailabilitySchema, PrivateReflectionSchema, SupportModeSchema, type PrivateReflection,
-  type PrivateReflectionPort, type SignalCandidate } from '@dor/contracts';
+import { AvailabilitySchema, MAX_EXCLUDED_NAMES, MAX_PREFERRED_NAMES, PrivateAssessmentSchema, PrivateReflectionSchema,
+  RECIPIENT_INTENTS, SupportModeSchema, type PrivateAssessment, type PrivateReflection, type PrivateReflectionPort,
+  type SignalCandidate } from '@dor/contracts';
 import { ProviderError, toProviderError } from '../errors.js';
 import { REFLECTION_SYSTEM_PROMPT } from './prompt.js';
 
@@ -13,6 +14,7 @@ export const MAX_SELECTED_TEXT_CHARS = 8000;
 const ModelReflectionSchema = z.object({
   reflection: z.string(),
   candidate: z.object({ supportMode: SupportModeSchema.nullable(), availability: AvailabilitySchema.nullable() }).nullable(),
+  assessment: z.object({ intent: z.enum(RECIPIENT_INTENTS), excludedNames: z.array(z.string()), preferredNames: z.array(z.string()) }),
 });
 type ModelReflection = z.infer<typeof ModelReflectionSchema>;
 
@@ -102,6 +104,29 @@ export class ClaudeReflectionAdapter implements PrivateReflectionPort {
   }
 }
 
+/** Whatever cannot be represented safely means "suggest nothing" (D040): never drop a veto and carry on. */
+const SUGGEST_NOTHING: PrivateAssessment = { intent: 'wants_space', excludedNames: [], preferredNames: [] };
+
+const cleanNames = (names: string[]) => {
+  const out: string[] = [];
+  for (const raw of names) {
+    const name = raw.trim().slice(0, 40).trim();
+    if (name && !out.some(n => n.toLowerCase() === name.toLowerCase())) out.push(name);
+  }
+  return out;
+};
+
+/** Repairs only what is unambiguous (whitespace, case duplicates, overlap); anything else becomes SUGGEST_NOTHING. */
+export function toPrivateAssessment(output: ModelReflection['assessment'] | undefined): PrivateAssessment {
+  if (!output) return SUGGEST_NOTHING;
+  const excludedNames = cleanNames(output.excludedNames);
+  if (excludedNames.length > MAX_EXCLUDED_NAMES) return SUGGEST_NOTHING;
+  const excluded = new Set(excludedNames.map(n => n.toLowerCase()));
+  const preferredNames = cleanNames(output.preferredNames).filter(n => !excluded.has(n.toLowerCase())).slice(0, MAX_PREFERRED_NAMES);
+  const parsed = PrivateAssessmentSchema.safeParse({ intent: output.intent, excludedNames, preferredNames });
+  return parsed.success ? parsed.data : SUGGEST_NOTHING;
+}
+
 export function toPrivateReflection(output: ModelReflection): PrivateReflection {
   let candidate: SignalCandidate | null = null;
   if (output.candidate && (output.candidate.supportMode || output.candidate.availability)) {
@@ -109,7 +134,8 @@ export function toPrivateReflection(output: ModelReflection): PrivateReflection 
     if (output.candidate.supportMode) candidate.supportMode = output.candidate.supportMode;
     if (output.candidate.availability) candidate.availability = output.candidate.availability;
   }
-  const parsed = PrivateReflectionSchema.safeParse({ schemaVersion: 1, reflection: output.reflection.trim(), candidate });
+  const parsed = PrivateReflectionSchema.safeParse({ schemaVersion: 1, reflection: output.reflection.trim(), candidate,
+    assessment: toPrivateAssessment(output.assessment) });
   if (!parsed.success) throw new ProviderError('anthropic', 'invalid_output');
   return parsed.data;
 }

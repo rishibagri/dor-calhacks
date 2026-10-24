@@ -54,5 +54,6 @@ Offline-verified unless stated otherwise.
 - **Factory sponsor path:** the worker's default Droid transport is the SDK (`@factory/droid-sdk` sessions, `worker/src/droid-sdk.ts`). `droid exec` is only the explicit `DOR_DROID_TRANSPORT=cli` fallback. Isolated live SDK run with synthetic stand-ins (not deployed): 4/4 agent-decided.
 - **Core coordination:** a 25 s aggregate job budget covers slot wait and rounds. `/api/reflections` coalesces duplicate in-flight requests and logs metadata-only usage.
 - **Extension paths (not core gates):** plans over `worker_plan_candidates` → `commit_plan_proposal`; the introduction commit over `commit_introduction_proposal` is not wired, because there is no worker-readable candidate source yet.
-- **Not built yet:** the private assessment/clarification outcomes and the recipient pause from the core-first README. That is AI Core 1/2 work and needs reviewed contracts first.
+- **Private assessment (D040), role/ai-voice:** Claude returns an owner-only assessment that only narrows CS's decision loop (`docs/features/PRIVATE_ASSESSMENT.md`). Offline-verified; live Claude evidence pending.
+- **Not built yet:** the durable recipient pause. Cyber owns it (D041); requirements are in `docs/features/RECIPIENT_PAUSE.md`.
 - **Token safety:** offline checks never load `.env.local`; paid runs are explicit.

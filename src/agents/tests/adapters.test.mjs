@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import Anthropic from '@anthropic-ai/sdk';
 import { PrivateReflectionSchema, VoiceSessionSchema } from '@dor/contracts';
 import { CartesiaVoiceAdapter, ClaudeReflectionAdapter, ProviderError, sniffAudioExtension } from '../dist/index.js';
+import { REFLECTION_SYSTEM_PROMPT } from '../dist/reflection/prompt.js';
 
 const json = async (url) => JSON.parse(await readFile(new URL(url, import.meta.url), 'utf8'));
 const reflections = await json('../fixtures/reflection.synthetic.json');
@@ -15,20 +16,29 @@ function claudeStub(respond) {
   return { calls, client: { beta: { messages: { parse: async (params) => { calls.push(params); return respond(params); } } } } };
 }
 const parsed = (parsed_output, stop_reason = 'end_turn') => ({ stop_reason, parsed_output, content: [] });
+const CONNECT = { intent: 'wants_connection', excludedNames: [], preferredNames: [] };
 
 test('reflection fixtures satisfy the C1 contract and their own expectations', () => {
   for (const c of reflections.cases) {
     const output = PrivateReflectionSchema.parse(c.output);
     if ('candidate' in c.expect) assert.deepEqual(output.candidate, c.expect.candidate, c.id);
     if (c.expect.reflectionMentionsCrisisSupport) assert.match(output.reflection, /988|emergency|crisis/i);
+    if ('assessment' in c.expect) assert.deepEqual(output.assessment, c.expect.assessment, c.id);
+    if (c.expect.reflectionMentionsCrisisSupport) assert.equal(output.assessment?.intent, 'wants_space', `${c.id}: crisis suggests nothing`);
+    // Private-party case: nothing owner-facing hints at the event, the excuse, timing or "ask about".
+    if (c.expect.noEventOrTimingCopy) {
+      assert.doesNotMatch(output.reflection, /party|friday|sick|ask about|jordan/i, c.id);
+      assert.deepEqual([...output.assessment.excludedNames, ...output.assessment.preferredNames], [], `${c.id}: no inferred names`);
+    }
   }
 });
 
 test('Claude reflection: request shape carries the selected text only, with fallback and low effort', async () => {
   const { calls, client } = claudeStub(() => parsed({ reflection: ' A synthetic reflection. ',
-    candidate: { supportMode: 'short_call', availability: null } }));
+    candidate: { supportMode: 'short_call', availability: null }, assessment: CONNECT }));
   const result = await new ClaudeReflectionAdapter({ client }).reflect('  SYNTHETIC entry  ', 'req-1');
-  assert.deepEqual(result, { schemaVersion: 1, reflection: 'A synthetic reflection.', candidate: { supportMode: 'short_call' } });
+  assert.deepEqual(result, { schemaVersion: 1, reflection: 'A synthetic reflection.', candidate: { supportMode: 'short_call' },
+    assessment: CONNECT });
   const [request] = calls;
   assert.equal(request.model, 'claude-opus-5-5');
   assert.deepEqual(request.messages, [{ role: 'user', content: 'SYNTHETIC entry' }]);
@@ -153,4 +163,27 @@ test('claude usage: metadata only, reported for success and for every failure pa
   ]);
   assert.ok(seen.every(u => Number.isInteger(u.durationMs)));
   assert.doesNotMatch(JSON.stringify(seen), /SYNTHETIC|req-1/, 'no text or request IDs in usage');
+});
+
+test('D040 assessment repair: whitespace and case duplicates fixed; overlap drops the preference; anything unsafe suggests nothing', async () => {
+  const { toPrivateAssessment } = await import('../dist/index.js');
+  const NOTHING = { intent: 'wants_space', excludedNames: [], preferredNames: [] };
+  assert.deepEqual(toPrivateAssessment({ intent: 'wants_connection', excludedNames: [' Alex ', 'alex'], preferredNames: ['Sam', 'ALEX'] }),
+    { intent: 'wants_connection', excludedNames: ['Alex'], preferredNames: ['Sam'] }, 'an exclusion always wins over a preference');
+  assert.deepEqual(toPrivateAssessment(undefined), NOTHING, 'missing assessment = suggest nothing');
+  assert.deepEqual(toPrivateAssessment({ intent: 'unclear', excludedNames: ['A', 'B', 'C', 'D', 'E', 'F'], preferredNames: [] }), NOTHING,
+    'cannot keep every veto → suggest nothing, never drop one');
+  assert.deepEqual(toPrivateAssessment({ intent: 'wants_connection', excludedNames: ['Al\u202Eex'], preferredNames: [] }), NOTHING);
+  assert.deepEqual(toPrivateAssessment({ intent: 'send_now', excludedNames: [], preferredNames: [] }), NOTHING);
+  assert.equal(toPrivateAssessment({ intent: 'wants_connection', excludedNames: ['x'.repeat(60)], preferredNames: [] }).excludedNames[0].length, 40);
+  assert.equal(toPrivateAssessment({ intent: 'unclear', excludedNames: [], preferredNames: ['A', 'B', 'C', 'D'] }).preferredNames.length, 3,
+    'extra preferences are only an ordering hint and may be trimmed');
+});
+
+test('D040: a reply without an assessment is treated as "suggest nothing", not as consent to ask', async () => {
+  const { client } = claudeStub(() => parsed({ reflection: 'Rest well.', candidate: { supportMode: 'short_call', availability: null } }));
+  const result = await new ClaudeReflectionAdapter({ client }).reflect('SYNTHETIC', 'r');
+  assert.equal(result.assessment.intent, 'wants_space');
+  assert.match(REFLECTION_SYSTEM_PROMPT, /never infer it from events, excuses, contradictions/i);
+  assert.match(REFLECTION_SYSTEM_PROMPT, /can never send anything or choose a person/i);
 });

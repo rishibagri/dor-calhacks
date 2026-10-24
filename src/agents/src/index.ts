@@ -1,5 +1,5 @@
 // Production adapters only. Synthetic doubles live in @dor/agents/testing and must not be wired into live mode.
-export { ClaudeReflectionAdapter, DEFAULT_REFLECTION_MODEL, MAX_SELECTED_TEXT_CHARS, type ClaudeReflectionOptions,
+export { ClaudeReflectionAdapter, DEFAULT_REFLECTION_MODEL, MAX_SELECTED_TEXT_CHARS, toPrivateAssessment, type ClaudeReflectionOptions,
   type ReflectionUsage }
   from './reflection/claude.js';
 export { CartesiaVoiceAdapter, CARTESIA_API_VERSION, DEFAULT_VOICE, MAX_AUDIO_BYTES, MAX_SPOKEN_CHARS,

@@ -8,7 +8,7 @@ Read root AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md and your 
 
 | Export | Implements | Consumer | Status |
 |---|---|---|---|
-| `ClaudeReflectionAdapter` | C1 `PrivateReflectionPort` → `PrivateReflection` | CS `POST /api/reflections` | Implemented, offline-tested. **Not live-verified** (no `ANTHROPIC_API_KEY`). |
+| `ClaudeReflectionAdapter` | C1 `PrivateReflectionPort` → `PrivateReflection` (reflection, enum candidate and the D040 owner-only `assessment`; see docs/features/PRIVATE_ASSESSMENT.md) | CS `POST /api/reflections` | Implemented, offline-tested. **Not live-verified** (no `ANTHROPIC_API_KEY`). |
 | `CartesiaVoiceAdapter` | C1 `VoicePort` (`createSession`, `transcribe`, `synthesize`) | CS `POST /api/voice/session` (+ optional clip proxy) | Implemented, offline-tested. **Not live-verified** (no `CARTESIA_API_KEY`). |
 | `BoundedCoordinator` | C4 `CoordinationPort` | `worker/` | Implemented, offline-tested; live with Factory Droid using offline policy stand-ins. |
 | `eligibleOptions`, `intersectWindow` | Deterministic C4 intersection | DS ranking, evaluation | Implemented. |

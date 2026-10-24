@@ -17,8 +17,11 @@ Status: **implemented offline in CS UI, not a shared contract.** Outcome names (
 - State lives in one component keyed per reflection. It is dropped on Done, a new reflection, pagehide, vault lock, sign-out and account switch.
 
 ## Seams for other roles
-- **AI (Adam):** if the private assessment returns an outcome or suggested exclusions, map it into `LoopState` before `decide()` (for example, start at `no_action` on refusal or timeout, or pre-exclude a named recipient). The model may veto or ask; it may never set `chosen`. Mismatched or invalid output → no action.
-- **Cyber (Sumedh):** the episode exclusion is client-only and lasts one reflection. A durable person-specific pause (server-enforced at approval, use and commit) is not built here; CS will add owner controls once the reviewed contract lands.
+- **AI (Adam): implemented.** See [PRIVATE_ASSESSMENT.md](PRIVATE_ASSESSMENT.md) (D040).
+  - `DecisionLoop` now takes the reflection's optional `assessment`. It starts from `initialLoopState(candidate, assessment)` and filters recipients through `assessedRecipients(recipients, assessment)` on every render. Both helpers come from `src/features/voice/assessment.ts`.
+  - `wants_space` or an invalid assessment → no action. `wants_connection` skips only the company question. Named exclusions are left out for the episode, with an owner-visible note. Preferred names are listed first. Nothing sets `chosen`.
+  - **Durable pause:** [RECIPIENT_PAUSE.md](RECIPIENT_PAUSE.md) (Cyber).
+- **Cyber (Sumedh):** the episode exclusion is client-only and lasts one reflection. A durable person-specific pause (server-enforced at approval, use and commit) is not built here. Its requirements are in [RECIPIENT_PAUSE.md](RECIPIENT_PAUSE.md); CS will add owner controls once the reviewed contract lands.
 - **DS (Nimisha):** paired scenarios (company generally vs this friend, explicit refusal, skip, changed answer) can run against `decide()` directly.
 
 ## Core-first separation
