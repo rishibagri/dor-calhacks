@@ -5,12 +5,14 @@
  * Works with Clerk and/or SpacetimeDB unconfigured: falls back to labeled
  * offline placeholders instead of throwing.
  */
-import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { Fragment, createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { isClerkConfigured, spacetimeConfig } from '@/lib/config';
 import { SpacetimeSharedState, getSpacetimeAvailability } from '@/lib/spacetime';
 import type { SharedStateController } from '@/lib/spacetime';
 import type { ConnectionState, ReflectionPort, SharedStatePort, VaultPort } from './ports';
+import { openAccountVault } from './account-vault';
+import { createReflectionClient } from '@dor/agents/client';
 import { createOfflineSharedState, placeholderReflection, placeholderVault } from './placeholders';
 
 export type { ConnectionState, ReflectionPort, SharedStatePort, VaultPort };
@@ -82,18 +84,40 @@ function ClerkBackend({ children }: { children: ReactNode }) {
   return <Provide auth={auth}>{children}</Provide>;
 }
 
+const routeReflection: ReflectionPort = { status: { kind: 'live' }, reflect: createReflectionClient().reflect };
+const unavailableVault: VaultPort = {
+  ...placeholderVault,
+  status: { kind: 'unconfigured', reason: 'Sign in and enable browser storage to use your local vault.' },
+};
+
+function useAccountVault(userId: string | null): VaultPort {
+  const [current, setCurrent] = useState<{ userId: string; vault: VaultPort } | null>(null);
+  useEffect(() => {
+    if (!userId) return;
+    const controller = new AbortController();
+    void openAccountVault(userId, controller.signal, { lifecycle: window }).then(vault => {
+      if (!controller.signal.aborted) setCurrent({ userId, vault });
+    }).catch(() => {
+      if (!controller.signal.aborted) setCurrent({ userId, vault: unavailableVault });
+    });
+    return () => controller.abort();
+  }, [userId]);
+  return userId && current?.userId === userId ? current.vault : unavailableVault;
+}
+
 function Provide({ auth, children }: { auth: AuthSnapshot; children: ReactNode }) {
   const shared = useSharedController(auth);
+  const vault = useAccountVault(auth.userId);
   const value = useMemo<BackendValue>(
-    () => ({ shared, vault: placeholderVault, reflection: placeholderReflection, userId: auth.userId }),
-    [shared, auth.userId],
+    () => ({ shared, vault, reflection: auth.userId ? routeReflection : placeholderReflection, userId: auth.userId }),
+    [shared, vault, auth.userId],
   );
-  return <BackendContext.Provider value={value}>{children}</BackendContext.Provider>;
+  return <BackendContext.Provider value={value}><Fragment key={auth.userId ?? 'signed-out'}>{children}</Fragment></BackendContext.Provider>;
 }
 
 function NoClerkBackend({ children }: { children: ReactNode }) {
   const value = useMemo<BackendValue>(
-    () => ({ shared: UNCONFIGURED_NO_CLERK, vault: placeholderVault, reflection: placeholderReflection, userId: null }),
+    () => ({ shared: UNCONFIGURED_NO_CLERK, vault: unavailableVault, reflection: placeholderReflection, userId: null }),
     [],
   );
   return <BackendContext.Provider value={value}>{children}</BackendContext.Provider>;
@@ -118,7 +142,9 @@ export function useSharedState(): SharedStatePort {
 }
 
 export function useVault(): VaultPort {
-  return useBackend().vault;
+  const { vault } = useBackend();
+  useSyncExternalStore(vault.subscribe.bind(vault), vault.getVersion.bind(vault), () => 0);
+  return vault;
 }
 
 export function useReflection(): ReflectionPort {

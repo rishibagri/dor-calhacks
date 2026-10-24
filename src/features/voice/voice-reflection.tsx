@@ -147,7 +147,7 @@ export function VoiceReflection({ vault, reflect, getVoiceSession, onCandidate, 
       <section aria-labelledby="voice-entry-heading" className="space-y-3">
         <h2 id="voice-entry-heading" className="sr-only">New entry</h2>
         <Label htmlFor="voice-entry" className="text-sm text-muted-foreground">
-          Type, or record and then correct the transcript here. Nothing leaves this device until you ask for a reflection.
+          Type privately, or record through Cartesia and then correct the transcript here. Reflection sends your selected text to Claude.
         </Label>
         <Textarea id="voice-entry" ref={entry} rows={12} value={draft} disabled={recording || finalizing}
           onChange={e => { setDraft(e.target.value); setSaveNote(null); }}
