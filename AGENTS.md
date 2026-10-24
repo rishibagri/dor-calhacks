@@ -38,7 +38,7 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 | Role / person | Current status | Next handoff |
 |---|---|---|
 | CS — you | role/cs-app (offline only): core-first separation (extensions hidden by default) + private decision loop before exact-recipient preview (docs/features/PRIVATE_DECISION_LOOP.md); R1–R3 code preserved | Core 3: publish/auth/worker config and two-account + denied-third run. Adam: assessment → LoopState seam. Sumedh: durable pause contract → CS controls |
-| DS — Nimisha | On main: DS-R0–R3 extension work (PRs #9/#13/#17/#25; `/discover` + `/events` consume DS rankers; offline/synthetic). Core 1/2 (role/ds-context, PR open): `decision-cases.json` 24 labeled cases + six forbidden-disclosure labels, paired scenarios + noninterference against CS `decide()`; 22/24 match, missed 0, 2 known gaps | Adam: assessment → `excludeForNow` seam (r4 entry-only refusal). CS: validate candidate with `SignalCandidateSchema` in the loop (i2). Sumedh: review labels vs pause semantics; a3. DS next: Core 3 ratings + baseline comparison |
+| DS — Nimisha | On main: DS-R0–R3 extension work (PRs #9/#13/#17/#25; `/discover` + `/events` consume DS rankers; offline/synthetic). PR #32 open: Core 1/2 decision-loop eval, now v2 through D040 (`initialLoopState` → `assessedRecipients` → `decide`): 44 labeled cases (19 from AI's reflection fixture), 42/44, appropriate silence 18/19, missed 0/8, 1 unsafe suggestion (i2), 1 forbidden-disclosure case (r4m), 0 excluded surfaced; r5 resolved to `no_action` | Adam + CS: missing-assessment refusal (r4m). CS: validate candidate in the loop (i2). Sumedh: labels vs D041 pause; a3. DS next: Core 3 ratings + baseline |
 | Cyber — Sumedh | role/cyber-privacy (on main 2b8e59b): CYBER-R3 guarded catalogue ingestion, C8 event intents (mutual-only overlap), C7 activity approvals (preset-only, off by default), D034 plan finalization with current-source rechecks, `EventPrivacyControls` + exact preview copy (D039). R2 merged (#18). Offline only: contracts 116, module 137, app 193, ai 104; flag off, not published | CS: ACK D039, bindings, ingestion → `upsert_catalogue_event`, preview copy, preset toggle. Adam: `commit_plan_proposal` from `worker_plan_candidates`. Nimisha: `event_companions`. Cyber next: CYBER-R4 adversarial suite |
 | AI — Adam | On main (#27): Droid SDK worker default, 25 s job budget, reflection dedupe, plan/intro extension paths. role/ai-voice (PR pending): **D040 private assessment**, i.e. Claude returns an owner-only `assessment` (intent + explicit name exclusions/preferences) that only narrows CS's decision loop (docs/features/PRIVATE_ASSESSMENT.md); doctor now requires FACTORY_API_KEY for the SDK default. Offline only | Cyber: durable pause per docs/features/RECIPIENT_PAUSE.md (D041). CS: review the DecisionLoop/journal wiring. DS: evaluate the assessment cases. Adam next: live Claude run on synthetic cases (needs key + go-ahead) |
 
@@ -334,3 +334,43 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - The module is unpublished.
 - **Run:** `node --test src/evaluation/__tests__/decision-loop.test.ts`; `node src/evaluation/report.ts --write`.
 - **Details:** `docs/handoffs/ds.md`, `docs/updates/ds.md`, `src/evaluation/results/latest.md`.
+
+### 2026-10-24T20:00Z | DS → AI, CS, Cyber | Core 1/2 v2: decision-loop evaluation through D040 private assessment (PR #32 update)
+- **Branch/commit:** `role/ds-context` with main `126f072` merged (`23a8eed`, no conflicts), pushed to the open PR #32 (not merged).
+- **Status:** implemented and offline-verified, synthetic only, NOT live. AI's fixture outputs are hand-written, not recorded Claude responses, so this measures the loop given an assessment, not Claude's accuracy.
+- **What changed (DS files only):**
+  - `src/evaluation/fixtures/decision-cases.json` v2, 44 cases:
+    - 19 new `a*` cases reference all 10 cases in `src/agents/fixtures/reflection.synthetic.json` by ID. Nothing is copied; DS overrides exist only for explicit variants.
+    - New r4m: the same refusal, with a missing assessment.
+    - The v1 assessment inputs moved to the D040 shape; the labels are unchanged.
+  - `src/evaluation/decision-loop.ts`:
+    - `initialLoopState` → owner taps → `decide(assessedRecipients(...))`;
+    - `resolveCases`;
+    - metrics reported separately: appropriate silence, missed suggestions, unsafe suggestions, excluded person surfaced, forbidden disclosures.
+  - Tests cover every screen (each step prefix):
+    - excluded people stay excluded;
+    - no story term appears, and recipient copy exists only at a preview;
+    - D040 never chooses a person;
+    - all AI fixture cases are covered, with no duplicated data.
+  - The `report.ts` section is updated.
+- **Evidence:**
+  - DS decision suite: 54 pass / 0 fail / 2 todo (r4m, i2).
+  - Report: 42/44; appropriate silence 18/19; missed 0/8; unsafe suggestions 1 (i2); excluded surfaced 0; forbidden-disclosure findings 1 (r4m).
+  - `npm run check:all` exit 0: contracts 117, module 150, app 328 pass / 0 fail / 3 todo (a3, r4m, i2).
+  - `npm run ai:check` exit 0: agents 69, worker 42, integration 36.
+  - AI assessment + CS loop tests: 21/21.
+  - Mutations on `assessment.ts`: 3/4 caught by DS. "Invalid → offer everyone" is masked by `initialLoopState`; AI's own test catches it.
+- **AI (Adam) next:**
+  1. **r4m:** a reflection with a candidate but no `assessment` currently asks normally, so an explicit "not Alex" in the entry is not honored. With CS, decide whether a missing assessment alongside a candidate should fail closed (`suggestsNothing`) or keep asking. Today the owner is still the only one who can pick and approve.
+  2. Run the 10 reflection cases through real Claude (Core 3, with approval), then rerun `node src/evaluation/report.ts` on the recorded outputs.
+- **CS (Rishi) next:**
+  1. **i2 (still open):** parse the candidate with `SignalCandidateSchema` in `startLoop`/`initialLoopState`; `previewDisclosure` already denies it downstream.
+  2. Co-decide r4m with Adam.
+- **Cyber (Sumedh) next:** review the six forbidden-disclosure labels against D041 (`RECIPIENT_PAUSE.md`). DS adds the change-of-mind-during-generation case once the pause lands.
+- **r5 resolved (DS owner decision):** when the owner taps an assessment-excluded person, the loop ends with `no_action: no_recipient`.
+  - This is preferred because the excluded person must not be contacted or substituted automatically, and re-asking would invite a second choice.
+  - Verified against PRIVATE_ASSESSMENT.md §3, README "Deterministic exclusion", CS `decide()` and AI's assessment test.
+  - The v1 label (`needs_clarification`, who, [p-sam]) is kept in the case's `labelHistory`. No other label changed.
+- **DS next:** Core 3: two teammate ratings, compared with the deterministic baseline.
+- **Run:** `node --test src/evaluation/__tests__/decision-loop.test.ts`; `node src/evaluation/report.ts --write`.
+- **Details:** `docs/updates/ds.md`, `docs/handoffs/ds.md`, `src/evaluation/results/latest.md`.

@@ -1,23 +1,26 @@
 /**
  * DS Core 1/2 evaluator for the owner-only decision loop (README "Reasoning layer", PRIVATE_DECISION_LOOP.md).
  *
- * Replays a case's owner taps through CS's pure model (`decide()` and its step functions), then collects every
+ * Replays a case through the D040 path the journal uses: `initialLoopState(candidate, assessment)` (AI), the owner's
+ * taps (CS step functions), then `decide(state, assessedRecipients(recipients, assessment))`. It collects every
  * surface the case can produce: owner-facing system copy (question, note, no-action copy, preview sentence),
  * recipient-visible copy (preview recipientCopy, nudge template) and the offered/previewed people. Scores the
  * result against labels written before any run (fixtures/decision-cases.json); never relabels to match.
  *
  * Offline and synthetic. The private story is handed in as the PrivateReflection text, the seam CS's journal
  * receives. No stage is allowed to read it, and noninterference checks that none does. Evaluation-only consumer
- * of CS's model, as PRIVATE_DECISION_LOOP.md invites; production code must not import this file.
+ * of CS's model and AI's assessment helpers, as PRIVATE_DECISION_LOOP.md / PRIVATE_ASSESSMENT.md §4 invite;
+ * production code must not import this file.
  */
 import {
   NUDGE_TEMPLATE_COPY, PrivateReflectionSchema, RecipientPresetAssignmentSchema, RelationshipPresetSchema,
   previewDisclosure, type DisclosurePreview, type RelationshipPreset, type SignalCandidate,
 } from '@dor/contracts';
 import {
-  NO_ACTION_COPY, QUESTION_COPY, QUESTION_NOTE, answerCompany, answerWho, decide, excludeForNow, startLoop,
+  NO_ACTION_COPY, QUESTION_COPY, QUESTION_NOTE, answerCompany, answerWho, decide, excludeForNow,
   type CompanyAnswer, type LoopState, type Outcome, type Recipient,
 } from '../components/feature/decision-loop-model.ts';
+import { assessedRecipients, initialLoopState, leftOutByAssessment } from '../features/voice/assessment.ts';
 import { buildNudge, matchSignal } from './matching.ts';
 
 export const FORBIDDEN_LABELS = [
@@ -32,16 +35,36 @@ export interface DecisionCase {
   story: string;
   candidate: unknown;
   recipients: string[];
-  /** What a correct private assessment hands the loop. It may exclude; it may never choose. null = none today. */
-  assessment: { exclude: string[] } | null;
+  /** D040 PrivateAssessment handed to the loop (may be deliberately invalid); null = missing. */
+  assessment: unknown;
   steps: Step[];
   expected: { kind: Outcome['kind']; reason?: string; recipient?: string; question?: string; options?: string[] };
   forbidden: Partial<Record<ForbiddenLabel, string[]>>;
   knownGap?: string;
 }
+/** A fixture row: either inline story/candidate/assessment, or a reference into AI's reflection fixture. */
+export type DecisionRow = Omit<DecisionCase, 'story' | 'candidate' | 'assessment'> & Partial<DecisionCase> & {
+  reflectionRef?: string; candidateOverride?: unknown; assessmentOverride?: unknown;
+};
+export interface ReflectionFixture { cases: { id: string; input: string; output: { candidate: unknown; assessment?: unknown } }[] }
 export interface DecisionFile {
   clock: string; ownerId: string; people: Record<string, Person>; cases: DecisionCase[];
-  noninterference: { candidate: SignalCandidate; recipients: string[]; steps: Step[]; stories: string[] };
+  noninterference: { candidate: SignalCandidate; assessment: unknown; recipients: string[]; steps: Step[]; stories: string[] };
+}
+
+/** Fills reflectionRef rows from AI's fixture (no copy kept in DS), applying DS overrides. Unknown refs throw. */
+export function resolveCases(file: Omit<DecisionFile, 'cases'> & { cases: DecisionRow[] }, reflections: ReflectionFixture): DecisionFile {
+  const cases = file.cases.map((row): DecisionCase => {
+    if (!row.reflectionRef) return row as DecisionCase;
+    const r = reflections.cases.find((c) => c.id === row.reflectionRef);
+    if (!r) throw new Error(`unknown reflectionRef ${row.reflectionRef}`);
+    return {
+      ...row, story: r.input,
+      candidate: 'candidateOverride' in row ? row.candidateOverride : r.output.candidate,
+      assessment: 'assessmentOverride' in row ? row.assessmentOverride : (r.output.assessment ?? null),
+    } as DecisionCase;
+  });
+  return { ...file, cases };
 }
 
 export interface Surfaces {
@@ -56,10 +79,14 @@ export interface Surfaces {
 export interface Leak { label: ForbiddenLabel; term: string; surface: 'owner' | 'recipient' | 'offered' }
 export interface DecisionScore {
   id: string; outcome: Outcome; matches: boolean; leaks: Leak[];
-  /** Worse than expected in the sharing direction: an unexpected preview, a wrong recipient or any leak. */
+  /** Unsafe suggestion: a preview where none was expected, or for the wrong person. Leaks are counted separately. */
   unsafe: boolean;
-  /** A preview was expected and did not happen. Reported separately from unsafe (README Core 3). */
+  /** Missed suggestion: a preview was expected and did not happen (README Core 3). */
   missed: boolean;
+  /** Appropriate silence: no_action expected and produced. */
+  silence: boolean;
+  /** People the episode excluded (owner taps or assessment) who were offered or previewed anyway. */
+  excludedSurfaced: string[];
 }
 
 const SYNTHETIC_PRESET = (ownerId: string, now: Date): RelationshipPreset => RelationshipPresetSchema.parse({
@@ -72,19 +99,25 @@ export function recipientsOf(file: DecisionFile, ids: readonly string[]): Recipi
   return ids.map((pairId) => ({ pairId, name: file.people[pairId]!.name }));
 }
 
-/** Starts from a full PrivateReflection (the journal seam) so the story is present but must stay unread. */
+/**
+ * Starts from a full PrivateReflection (the journal seam) so the story is present but must stay unread. Inputs the
+ * contract rejects are passed through raw, so what is measured is the loop's own handling of them.
+ */
 export function replay(file: DecisionFile, story: string, candidate: unknown, recipientIds: readonly string[],
-  steps: readonly Step[], assessment: DecisionCase['assessment'] = null): { state: LoopState; outcome: Outcome } {
-  const reflection = PrivateReflectionSchema.safeParse({ schemaVersion: 1, reflection: story, candidate });
-  // A candidate the contract rejects is passed through raw so CS's own handling is what gets measured.
-  let s = startLoop(reflection.success ? reflection.data.candidate : (candidate as SignalCandidate | null));
-  for (const id of assessment?.exclude ?? []) s = excludeForNow(s, id);
+  steps: readonly Step[], assessment: unknown = null): { state: LoopState; outcome: Outcome; excluded: string[] } {
+  const reflection = PrivateReflectionSchema.safeParse({ schemaVersion: 1, reflection: story, candidate,
+    ...(assessment === null ? {} : { assessment }) });
+  const c = reflection.success ? reflection.data.candidate : (candidate as SignalCandidate | null);
+  const a = reflection.success ? reflection.data.assessment : assessment;
+  let s = initialLoopState(c, a);
   for (const step of steps) {
     if ('company' in step) s = answerCompany(s, step.company);
     else if ('who' in step) s = answerWho(s, step.who);
     else s = excludeForNow(s, step.exclude);
   }
-  return { state: s, outcome: decide(s, recipientsOf(file, recipientIds)) };
+  const recipients = recipientsOf(file, recipientIds);
+  const excluded = [...new Set([...s.excluded, ...leftOutByAssessment(recipients, a).map((r) => r.pairId)])];
+  return { state: s, outcome: decide(s, assessedRecipients(recipients, a)), excluded };
 }
 
 export function surfacesOf(file: DecisionFile, outcome: Outcome): Surfaces {
@@ -137,19 +170,24 @@ function matchesExpected(c: DecisionCase, o: Outcome): boolean {
 }
 
 export function scoreCase(file: DecisionFile, c: DecisionCase): DecisionScore {
-  const { outcome } = replay(file, c.story, c.candidate, c.recipients, c.steps, c.assessment);
-  const leaks = leaksOf(file, c, surfacesOf(file, outcome));
+  const { outcome, excluded } = replay(file, c.story, c.candidate, c.recipients, c.steps, c.assessment);
+  const surfaces = surfacesOf(file, outcome);
+  const leaks = leaksOf(file, c, surfaces);
   const matches = matchesExpected(c, outcome);
   const expectPreview = c.expected.kind === 'ready_for_preview';
   const gotPreview = outcome.kind === 'ready_for_preview';
-  const unsafe = leaks.length > 0 || (gotPreview && (!expectPreview || outcome.recipient.pairId !== c.expected.recipient));
-  return { id: c.id, outcome, matches, leaks, unsafe, missed: expectPreview && !gotPreview };
+  const unsafe = gotPreview && (!expectPreview || outcome.recipient.pairId !== c.expected.recipient);
+  return {
+    id: c.id, outcome, matches, leaks, unsafe, missed: expectPreview && !gotPreview,
+    silence: c.expected.kind === 'no_action' && outcome.kind === 'no_action',
+    excludedSurfaced: surfaces.offered.filter((id) => excluded.includes(id)),
+  };
 }
 
 /** Everything a recipient or the delivery schedule could depend on, for one story. Must not vary with the story. */
 export function observable(file: DecisionFile, story: string) {
   const n = file.noninterference;
-  const { outcome } = replay(file, story, n.candidate, n.recipients, n.steps);
+  const { outcome } = replay(file, story, n.candidate, n.recipients, n.steps, n.assessment);
   const s = surfacesOf(file, outcome);
   let nudge: unknown = null;
   if (s.preview?.kind === 'shareable' && outcome.kind === 'ready_for_preview') {
