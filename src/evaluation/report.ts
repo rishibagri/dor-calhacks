@@ -5,13 +5,15 @@ import { execFileSync } from 'node:child_process';
 import { RecipientPresetAssignmentSchema, RelationshipPresetSchema } from '@kinetic/contracts';
 import { FakeClock, FakeDisclosurePolicy } from '@kinetic/contracts/fakes';
 import { buildPreview, matchSignal } from './matching.ts';
-import { RANKERS, evaluate, type CaseFile, type CatalogueFile } from './metrics.ts';
+import { NEARBY_RANKERS, RANKERS, evaluate, evaluateNearby, type CaseFile, type CatalogueFile, type NearbyCaseFile, type NearbyPoolFile } from './metrics.ts';
 import { rankActivities } from './rank.ts';
 
 const load = async (f: string) => JSON.parse(await readFile(new URL(`./fixtures/${f}`, import.meta.url), 'utf8'));
 const support = await load('evaluation-cases.json');
 const cases: CaseFile = await load('activity-cases.json');
 const catalogue: CatalogueFile = await load('activity-catalogue.json');
+const nearbyCases: NearbyCaseFile = await load('nearby-cases.json');
+const nearbyPool: NearbyPoolFile = await load('nearby-candidates.json');
 let revision = 'unknown';
 try {
   revision = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim();
@@ -50,6 +52,9 @@ const chained = shared.map(s => {
   return `| ${s.id} | ${s.availability ?? '—'} | ${r.kind === 'ranked' ? r.suggestions.map(x => x.activityId).join(', ') : r.reason} |`;
 });
 
+// 4. Nearby/event shortlist: DS vs naive most-tags baseline.
+const nearby = Object.entries(NEARBY_RANKERS).map(([name, fn]) => evaluateNearby(name, fn, nearbyCases, nearbyPool));
+
 const out = `# DS evaluation results
 
 Revision \`${revision}\`, clock \`${support.clock}\`, deterministic (no seed or provider). All inputs are synthetic; policy
@@ -82,6 +87,25 @@ ${cases.cases.map((c, i) => `| ${c.id} | ${summaries.map(s => {
   const o = s.outcomes[i]!;
   const body = o.result.kind === 'ranked' ? o.result.suggestions.map(x => x.activityId).join(', ') : `no_suggestion: ${o.result.reason}`;
   return o.falseSuggestions.length ? `${body} (**false:** ${o.falseSuggestions.join(', ')})` : body;
+}).join(' | ')} |`).join('\n')}
+
+## Nearby/event shortlist, ${nearbyCases.cases.length} labeled cases (${nearby[0]!.positive} positive, ${nearby[0]!.noAction} no-action)
+| Metric | ${nearby.map(s => s.ranker).join(' | ')} |
+|---|${nearby.map(() => '---').join('|')}|
+| Top-1 relevant (positive cases) | ${nearby.map(s => pct(s.top1Relevant, s.positive)).join(' | ')} |
+| Mean precision@3 (positive cases) | ${nearby.map(s => s.meanPrecisionAt3.toFixed(2)).join(' | ')} |
+| Missed positives | ${nearby.map(s => s.missedPositives).join(' | ')} |
+| Cases with a false match | ${nearby.map(s => pct(s.casesWithFalseMatch, s.cases)).join(' | ')} |
+| False matches (total suggested people) | ${nearby.map(s => s.falseMatchCount).join(' | ')} |
+| Correct no-action | ${nearby.map(s => pct(s.noActionCorrect, s.noAction)).join(' | ')} |
+| No-action with the expected reason | ${nearby.map(s => pct(s.noActionReasonMatch, s.noAction)).join(' | ')} |
+
+| Case | ${nearby.map(s => s.ranker).join(' | ')} |
+|---|${nearby.map(() => '---').join('|')}|
+${nearbyCases.cases.map((c, i) => `| ${c.id} | ${nearby.map(s => {
+  const o = s.outcomes[i]!;
+  const body = o.result.kind === 'shortlist' ? o.result.entries.map(e => e.ref).join(', ') : `none: ${o.result.reason}`;
+  return o.falseMatches.length ? `${body} (**false:** ${o.falseMatches.join(', ')})` : body;
 }).join(' | ')} |`).join('\n')}
 
 ## Chained: shared_activity nudges from the 30 cases → ds_rules_v1 (no approved interests)

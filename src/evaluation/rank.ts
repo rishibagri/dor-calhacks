@@ -11,6 +11,7 @@
  * ActivityItem is a DS consumer proposal for the planned C7 `ActivityCatalogueItem` (docs/features/ACTIVITY_DISCOVERY.md).
  * It is not a contract type; replace it with the C7 import once CS/Cyber land the reviewed schema.
  */
+import { safeCatalogueUrl } from '@kinetic/contracts';
 import type { ApprovedSignal, Availability, SupportMode } from '@kinetic/contracts';
 
 /** Structurally identical to AI's `AckOption` (src/agents coordination); redeclared to import only contracts. */
@@ -96,6 +97,11 @@ export interface ActivityRankInput {
   utcOffsetMinutes: number;
   /** Developer-configured source sites (never model-supplied). */
   allowedSourceSites: string[];
+  /**
+   * In-person events are eligible only for local-event discovery over the developer-configured regional feed
+   * (D028/D031). Default false: existing long-distance connections get online activities only.
+   */
+  allowInPerson?: boolean;
   limit?: number;
 }
 
@@ -130,15 +136,14 @@ export function parseActivityItem(raw: unknown): ActivityItem | null {
   return ok ? (raw as ActivityItem) : null;
 }
 
-/** https only, no credentials, host must equal the declared source site. Returns the dedupe key or null. */
+/**
+ * Link safety is Cyber's `safeCatalogueUrl` (D028), checked against the row's own declared site so a row cannot
+ * point at another allowlisted host. Returns the dedupe key (host + path, query dropped) or null when unsafe.
+ */
 function canonicalUrl(item: ActivityItem): string | null {
-  let url: URL;
-  try {
-    url = new URL(item.sourceUrl);
-  } catch {
-    return null;
-  }
-  if (url.protocol !== 'https:' || url.username || url.password || url.hostname !== item.sourceSite.toLowerCase()) return null;
+  const safe = safeCatalogueUrl(item.sourceUrl, [item.sourceSite.toLowerCase()]);
+  if (safe === null) return null;
+  const url = new URL(safe);
   return `${url.hostname}${url.pathname.replace(/\/+$/, '')}`;
 }
 
@@ -178,10 +183,10 @@ export function rankActivities(input: ActivityRankInput): ActivityRankResult {
       ? (raw as { activityId: string }).activityId : null);
     const out = (reason: ExclusionReason) => excluded.push({ activityId: id, reason });
     if (!item) { out('invalid_item'); continue; }
+    if (!allowedSites.has(item.sourceSite.toLowerCase())) { out('source_not_allowed'); continue; }
     const key = canonicalUrl(item);
     if (key === null) { out('unsafe_url'); continue; }
-    if (!allowedSites.has(item.sourceSite.toLowerCase())) { out('source_not_allowed'); continue; }
-    if (item.format !== 'online') { out('format_out_of_scope'); continue; }
+    if (item.format !== 'online' && !input.allowInPerson) { out('format_out_of_scope'); continue; }
     if (item.freshness === 'expired' || now - Date.parse(item.fetchedAt) > MAX_SOURCE_AGE_MS) { out('expired_source'); continue; }
     if (item.schedule.kind === 'unknown') { out('time_unverified'); continue; }
     if (item.schedule.kind === 'scheduled') {
