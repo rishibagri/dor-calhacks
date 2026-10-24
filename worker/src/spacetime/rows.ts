@@ -1,5 +1,5 @@
 import { DEFAULT_RECIPIENT_DELIVERY, type ApprovedSignal, type PolicySnapshot, type RecipientDelivery,
-  type StoredSignal } from '@kinetic/contracts';
+  type RecipientSupportPreferences, type StoredSignal } from '@kinetic/contracts';
 
 /**
  * Pure mappers from the worker-only views (spacetimedb/src/views.ts: worker_signal_context, worker_delivery)
@@ -148,6 +148,27 @@ export function toDeliveryContext(row: Row): DeliveryContext {
       utcOffsetMinutes: int(field(row, 'utc_offset_minutes'), 'utc_offset_minutes'),
     },
     lastNudgeAt: last === undefined ? null : new Date(epochMs(last, 'last_nudge_at')),
+  };
+}
+
+function strings(row: Row, name: string): string[] {
+  const v = field(row, name);
+  if (!Array.isArray(v) || v.some(x => typeof x !== 'string')) throw new RowShapeError(name);
+  return [...v] as string[];
+}
+
+/**
+ * One worker_support_preferences row (D035) → the recipient's consent record. The view lists only standing
+ * consents in accepted pairs, so revokedAt is null; the coordinator still Zod-validates and checks expiry.
+ */
+export function toSupportPreferences(row: Row): RecipientSupportPreferences {
+  return {
+    schemaVersion: 1, consentId: str(row, 'consent_id'),
+    consentVersion: int(field(row, 'consent_version'), 'consent_version'), pairId: str(row, 'pair_id'),
+    recipientId: identityHex(field(row, 'recipient'), 'recipient'), purpose: 'support_nudge',
+    supportModes: strings(row, 'support_modes') as RecipientSupportPreferences['supportModes'],
+    availability: strings(row, 'availability') as RecipientSupportPreferences['availability'],
+    expiresAt: new Date(epochMs(field(row, 'expires_at'), 'expires_at')).toISOString(), revokedAt: null,
   };
 }
 

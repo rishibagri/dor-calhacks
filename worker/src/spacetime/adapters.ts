@@ -1,7 +1,7 @@
 import type { PolicyStateReader } from '@kinetic/contracts';
 import type { DeliveryStatePort, RecipientPreferencesPort } from '@kinetic/agents';
 import type { ApprovedSignalSource, CommitRejection, CoordinationCommitPort, CoordinationResult } from '../jobs.js';
-import { mapRows, NOT_OPTED_IN, toApprovedSignal, toDeliveryContext, toSignalContext } from './rows.js';
+import { mapRows, NOT_OPTED_IN, toApprovedSignal, toDeliveryContext, toSignalContext, toSupportPreferences } from './rows.js';
 
 /** commit_nudge reducer arguments (spacetimedb/src/reducers/coordination.ts). */
 export interface CommitNudgeArgs {
@@ -10,6 +10,9 @@ export interface CommitNudgeArgs {
   template_id: string;
   source_signal_ids: string[];
   source_consent_versions: number[];
+  /** The recipient preference consent the coordinator's ACK was based on (D035); commit_nudge rechecks it. */
+  recipient_consent_id: string;
+  recipient_consent_version: number;
 }
 
 /**
@@ -22,6 +25,8 @@ export interface WorkerStateSource {
   signalContext(): Promise<Iterable<unknown>>;
   /** Current rows of the worker_delivery view. */
   delivery(): Promise<Iterable<unknown>>;
+  /** Current rows of the worker_support_preferences view (D035). A source without it has no consent: no nudge. */
+  supportPreferences?(): Promise<Iterable<unknown>>;
   /** Calls commit_nudge; rejects with the reducer's `code: reason` message on refusal. */
   commitNudge(args: CommitNudgeArgs): Promise<void>;
 }
@@ -59,10 +64,18 @@ export class SpacetimeDeliveryState implements DeliveryStatePort {
   }
 }
 
-/**
- * Recipient support-preference consent has no authoritative table yet (CYBER-R1). Until it does, live mode
- * has no consent record and therefore proposes no nudge. Replace with a view-backed reader, never a fixture.
- */
+/** The recipient's own consent from worker_support_preferences (D035). No row, or no view, means none (fail closed). */
+export class SpacetimeRecipientPreferences implements RecipientPreferencesPort {
+  constructor(private readonly source: WorkerStateSource) {}
+
+  async current(pairId: string, recipientId: string) {
+    if (!this.source.supportPreferences) return null;
+    return mapRows(await this.source.supportPreferences(), toSupportPreferences)
+      .find(p => p.pairId === pairId && p.recipientId === recipientId) ?? null;
+  }
+}
+
+/** Always "no consent record": proposes no nudge. Kept for callers that must run without the preferences view. */
 export class UnavailableRecipientPreferences implements RecipientPreferencesPort {
   async current(): Promise<null> {
     return null;
@@ -90,10 +103,14 @@ export class SpacetimeCommit implements CoordinationCommitPort {
   async commit(result: CoordinationResult): Promise<CommitRejection[]> {
     const rejections: CommitRejection[] = [];
     for (const nudge of result.proposedNudges) {
+      // Bind the exact recipient consent the compatible ACK for this nudge's source was based on.
+      const ack = result.acknowledgements.find(a => a.decision === 'compatible' && nudge.sourceSignalIds.includes(a.signalId));
+      if (!ack) { rejections.push({ nudgeId: nudge.id, outcome: 'policy_denied' }); continue; }
       try {
         await this.source.commitNudge({
           nudge_id: nudge.id, pair_id: nudge.pairId, template_id: nudge.templateId,
           source_signal_ids: [...nudge.sourceSignalIds], source_consent_versions: [...nudge.sourceConsentVersions],
+          recipient_consent_id: ack.recipientConsentId, recipient_consent_version: ack.recipientConsentVersion,
         });
       } catch (error) {
         const outcome = classifyCommitError(error);
@@ -105,9 +122,9 @@ export class SpacetimeCommit implements CoordinationCommitPort {
   }
 }
 
-/** All database-backed worker ports over one source. Preferences stay fail-closed until CYBER-R1. */
+/** All database-backed worker ports over one source. Preferences default to the worker_support_preferences view. */
 export function spacetimeWorkerPorts(source: WorkerStateSource, preferences: RecipientPreferencesPort =
-  new UnavailableRecipientPreferences()) {
+  new SpacetimeRecipientPreferences(source)) {
   return {
     policyState: new SpacetimePolicyStateReader(source), signals: new SpacetimeSignalSource(source),
     delivery: new SpacetimeDeliveryState(source), commit: new SpacetimeCommit(source), preferences,
