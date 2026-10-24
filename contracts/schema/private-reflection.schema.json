@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "reflection": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "candidate": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "supportMode": {
+              "type": "string",
+              "enum": [
+                "short_call",
+                "encouraging_note",
+                "shared_activity"
+              ]
+            },
+            "availability": {
+              "type": "string",
+              "enum": [
+                "today",
+                "this_week",
+                "no_preference"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "reflection",
+    "candidate"
+  ],
+  "additionalProperties": false
+}
