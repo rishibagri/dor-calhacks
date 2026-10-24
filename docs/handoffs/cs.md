@@ -2,7 +2,7 @@
 Status: Milestone 1 implemented on `role/cs-app`; offline-verified only. No live Clerk, SpacetimeDB, vault, or provider integration has run.
 
 ## Update at each handoff
-- UTC timestamp and branch/commit: 2026-10-24T02:39Z, `role/cs-app`, commit "feat: CS milestone 1 app shell, identity seam, SpacetimeDB module" (see `git log origin/role/cs-app`).
+- UTC timestamp and branch/commit: 2026-10-24T02:39Z, `role/cs-app`, feature commit `082ab47` (handoff doc follow-up on top).
 - Completed work and interface IDs:
   - Next.js 16 App Router shell (`src/app`), Tailwind 4 + shadcn, nav: Home, Onboarding, Journal, Connections, Nudges, Privacy. Design pass ran (design-taste-frontend → impeccable → emil-design-eng).
   - Integration seam `src/lib/backend/ports.ts`: `SharedStatePort` (C2/C5 reducers + `my_*` views), `VaultPort` (C1, Cyber), `ReflectionPort` (C1, AI), `AdapterStatus` so UI shows honest live/unconfigured/not_implemented status. Hooks from `@/lib/backend`: `useSharedState`, `useVault`, `useReflection`, `useConnectionState`.
