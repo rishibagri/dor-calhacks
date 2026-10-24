@@ -1,18 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import type { Nudge } from '@kinetic/contracts';
+import { NUDGE_TEMPLATE_COPY } from '@kinetic/contracts';
 import type { ReducerResult } from '@/lib/backend/ports';
 import { useLiveShared } from '@/components/shell/use-live';
 import { ResultNotice } from '@/components/shell/result-notice';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-const COPY: Record<Nudge['templateId'], string> = {
-  offer_short_call: 'Someone you are connected with would welcome a short call. Want to offer one?',
-  offer_note: 'Someone you are connected with would welcome a kind note. Want to send one?',
-  offer_shared_activity: 'Someone you are connected with would welcome a shared activity. Want to suggest one?',
-};
+// Recipient copy comes from the contract so it is identical to what the owner previewed (FLOWS F3/F7).
+const COPY = NUDGE_TEMPLATE_COPY;
 const SNOOZE_MS = 24 * 60 * 60 * 1000;
 const ENTER = 'motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200';
 

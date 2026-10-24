@@ -73,5 +73,64 @@
     "presetAssignmentVersion": 1,
     "action": "approved",
     "createdAt": "2026-10-24T00:00:00Z"
+  },
+  "PrivateReflection": {
+    "schemaVersion": 1,
+    "reflection": "Synthetic reflection: it sounds like this week asked a lot of you, and a little connection might help.",
+    "candidate": {
+      "supportMode": "short_call",
+      "availability": "this_week"
+    }
+  },
+  "VoiceSession": {
+    "schemaVersion": 1,
+    "provider": "cartesia",
+    "accessToken": "synthetic-not-a-real-token",
+    "expiresAt": "2026-10-24T00:01:00Z",
+    "apiVersion": "2026-08-14",
+    "sttModel": "ink-2",
+    "sttEncoding": "pcm_s16le",
+    "sttSampleRate": 16000,
+    "ttsModel": "sonic-3.6",
+    "ttsVoiceId": "db6b0ed5-d5d3-463d-ae85-518a07d3c2b4"
+  },
+  "RecipientSupportPreferences": {
+    "schemaVersion": 1,
+    "consentId": "synthetic-recipient-consent",
+    "consentVersion": 1,
+    "pairId": "partners-pair",
+    "recipientId": "partners-b",
+    "purpose": "support_nudge",
+    "supportModes": [
+      "short_call",
+      "encouraging_note"
+    ],
+    "availability": [
+      "this_week"
+    ],
+    "expiresAt": "2099-01-01T00:00:00Z",
+    "revokedAt": null
+  },
+  "CoordinationJob": {
+    "schemaVersion": 1,
+    "jobId": "synthetic-job",
+    "pairId": "partners-pair",
+    "requestId": "synthetic-request",
+    "signalIds": [
+      "partners-signal"
+    ],
+    "createdAt": "2026-10-24T00:00:00Z"
+  },
+  "CoordinationOutcome": {
+    "schemaVersion": 1,
+    "requestId": "synthetic-request",
+    "pairId": "partners-pair",
+    "signalIds": [
+      "partners-signal"
+    ],
+    "outcome": "nudge_proposed",
+    "rounds": 1,
+    "nudgeId": "synthetic-nudge",
+    "decidedBy": "agent"
   }
 }

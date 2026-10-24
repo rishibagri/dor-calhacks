@@ -1,31 +1,58 @@
-# 36-hour execution plan
-T+0 is the team's agreed start. Planning occupies exactly the first 30 minutes. Checkpoints are integration gates; implementation continues throughout. Rotate brief rest breaks rather than assuming 144 fully productive person-hours.
+# Shared dependencies, integration gates and coordination
 
-| Window | CS: app/integration | DS: context/evaluation | Cyber: privacy/security | AI: voice/private agents | Exit evidence |
-|---|---|---|---|---|---|
-| 0:00–0:10 | Confirm Kinetic journey and selected stack | Select three stories | Define disclosure boundary | Confirm voice/provider route | Shared product decision |
-| 0:10–0:20 | Read API/types and preset/vault contracts | Define fixtures and scoring | Approve policy contract | Approve agent envelope | Freeze v1 contracts |
-| 0:20–0:30 | Claim files, boot shell | Seed fixtures | Threat sketch | Voice spike setup | All four coding at minute 30 |
-| 0:30–3 | Next.js shell, Clerk/SpacetimeDB identity, reducer/view stubs, Vercel preview | Quiz mapping, preset fixtures, three scenarios and 30-case evaluation set | Zod policy guards, local-vault key design, private view spike | Cartesia + Claude voice spike, Factory worker/runtime spike | Live provider feasibility; shared stub-driven app |
-| 3–7 | Skippable quiz UI, vault, accepted pair, preset and disclosure review | Quiz/profile mapping, sample .ics parsing, matching and cooldown fixtures | Preset/assignment version guards, vault crypto, reducer enforcement | Owner reflection, coarse candidate extraction, structured output | First live voice → private journal → approval path |
-| 7–12 | Wire SpacetimeDB pair views/subscriptions, inbox, deploy | Compatibility/availability scoring; useful/irrelevant examples | Cross-user isolation, injection and revoked-consent tests | Real Factory-triggered bounded exchange with timeout/retry | Real two-user journey on deployment by hour 12 |
-| 12–17 | Polished interactions, history, error recovery | Three full seeded journeys, baseline comparison, nudge feedback | Privacy center, unlink/delete, sanitized audit receipts | Nudge wording from safe enums, no raw context in shared prompts | All three scenarios; private facts blocked |
-| 17–22 | Accessibility, mobile sizing, integration fixes | Evaluate 30 cases; report matching quality and no-action accuracy | Revocation race, pair reassignment, log leak review | Latency tuning, interruptions, typed fallback, model failure | Core acceptance; scope lock for stretch |
-| 22–27 | Approved stretch + visual polish | Improve ranking quality, edge cases, and feedback analysis | Regression and boundary review | Approved stretch + voice reliability | Release candidate; all supported scenarios verified |
-| 27–31 | Fix blockers, production smoke checks | Final regression evaluation and quality report | Final privacy verification and honest claims | Voice/agent failure recovery checks | Stable release candidate by hour 31 |
-| 31–34 | Feature freeze, deploy stable revision, seed/reset | Verify fixtures/reset, document evaluation results | Verify no secrets/personal data in artifacts | Verify latency, retries, and provider failures | Release documentation ready at hour 34 |
-| 34–36 | Buffer for deployment/submission failures | Final quality checks and handoff | Final release smoke test | Voice/agent release support | Release verified; remaining buffer for blockers |
+The detailed master phases are in [README.md](../README.md). Every person has a full phase plan with the same P0–P9 clock: [CS](roles/cs.md), [Nimisha/DS](roles/ds.md), [Adam/AI](roles/ai.md), [Sumedh/Cyber](roles/cyber.md). Times are relative to the original sprint start, not an instruction to restart completed work. Planning is only the first 30 minutes.
 
-## Gates and recovery
-- Hour 3: if live voice is blocked, AI timeboxes another 60 minutes while CS integrates the typed adapter. Keep Cartesia as the intended voice path; label fallback honestly.
-- Hour 7: if real authentication/storage is blocked, CS resolves it before polish; do not substitute cross-user-unisolated storage.
-- Hour 12: if the live path is incomplete, all work focuses on integration. Retain three scenarios, consent, and privacy checks; cut stretch.
-- Hour 22: zero known cross-user leaks, all fixed privacy cases pass, core story works. Failing the privacy gate blocks real-user mode; use clearly labeled synthetic fixtures only.
-- Hour 27: verify the release candidate across all three supported relationship scenarios.
-- Hour 31: stable release candidate, completed evaluation report, and documented recovery steps.
+## Critical path
+```mermaid
+flowchart LR
+  A[CS identity and module] --> D[Cyber guarded approval]
+  B[Cyber local vault] --> C[AI private reflection]
+  C --> D
+  E[DS explicit profile and expected outcomes] --> D
+  D --> F[AI bounded worker plus DS ranking]
+  F --> G[CS live nudge UI]
+  H[CS Apify public catalogue] --> I[DS activity ranking]
+  J[Cyber reviewed activity contracts] --> I
+  I --> K[AI proposal workflow]
+  K --> L[CS two-person acceptance]
+```
 
-## Cadence and dependencies
-Each role gives a 2-minute handoff every 3 hours; no extended planning meetings. CS supplies stubs by hour 3 so UI, AI, policy, and ranking advance independently. Cyber supplies validator signature by hour 3. AI supplies safe candidate fixtures by hour 3. DS supplies three seeds by hour 3. Contract changes require affected-role ACK and fixture update in the same PR. CS merges compatible PRs every 2–3 hours; Cyber reviews boundary changes, AI reviews model/schema changes, DS checks scenario quality. Every role owns implementation, tests, and documentation for its surface.
+## Exactly who hands what to whom
+| Producer | Artifact | Consumer | Required by | Consumer ACK |
+|---|---|---|---|---|
+| CS | Identity/caller mapping, module rows/views, app adapter ports | Sumedh, Adam | P1 | Can validate real caller and identify permitted data |
+| Sumedh | VaultPort incl. profiles/extras; unlock/key behavior | CS | P2 | Existing UI saves/loads without plaintext fallback |
+| Adam | Private reflection/voice adapter and reviewed response shape | CS, Sumedh | P2 | Authenticated route renders/persists only locally |
+| Nimisha | Quiz/profile fixtures, no-action semantics | CS, Adam, Sumedh | P1/P2 | Skip/space/D015 handled consistently |
+| Sumedh | Real policy guards and exact approval/version rules | CS, Adam | P2/P3 | Direct calls cannot bypass consent |
+| CS | Guarded signal read, job store/claim/result API | Adam | P3 | Worker uses limited identity and cannot self-approve |
+| Nimisha | Pure rank hook and expected outcomes | Adam | P2/P3 | Coordinator uses matching without private-state access |
+| Adam | Bounded outcome, recheck, retry/cancel semantics | CS, Sumedh | P3 | Real result commits once under current consent |
+| CS | Normalized Apify catalogue, stable IDs/freshness | Nimisha, Adam | P3/P4 | Missing/expired records handled explicitly |
+| CS + Sumedh | Reviewed C7 proposal and new activity consent rules | Nimisha, Adam | Before P6 sharing | Schemas/fixtures/guards agreed; no C3 overloading |
+| All | Three scenario traces and final verification | CS release integrator | P5/P7 | Current revision and evidence recorded |
 
-## Selected-stack gates
-By hour 3, prove Factory subprocess/daemon hosting outside the frontend runtime, Cartesia input/output, Claude structured response, and authenticated SpacetimeDB caller-filtered views. Do not defer identity/authorization as optional for real data. Keep Google OAuth optional and use sample .ics schedules. Quiz is 6–8 questions and skippable; sharing uses confirmed relationship presets only, with named-recipient per-item approval. Event curiosity cards, aura and group matching remain scope candidates until explicitly prioritized and covered by disclosure contracts.
+## Shared-file edit ownership
+- `src/lib/backend/ports.ts`: CS coordinates; Adam proposes reflection/voice additions; Sumedh proposes vault/policy additions. Shared wire types belong in contracts, not duplicate app-only definitions.
+- `src/components/feature/quiz-model.ts`: starter by CS; Nimisha claims semantic changes with CS, who owns rendering.
+- `spacetimedb/src/schema.ts`, module exports and client bindings: CS coordinates. Sumedh claims approval/guard/suppression tests and files; neither edits another claimed file concurrently.
+- `src/app/api/reflections/` and voice route: Adam owns provider handler after file claim; CS supplies identity/session wiring. Both review logging and token exposure with Sumedh.
+- `src/server/discovery/` and discovery route: CS owns; Nimisha defines consumed fields; Sumedh reviews inputs/source handling.
+- Contracts: producer plus affected consumer review, and Sumedh for privacy. AI-branch proposal on Adam’s branch remains a proposal until reviewed/merged.
+
+## Shared acceptance gates
+- **G1, P1 end:** every adapter has a consumer-facing signature/fixture and an owner; runtime/credential blockers logged.
+- **G2, P2 end:** private journal/reflection and exact named approval work with real guards; no sharing from skipped quiz.
+- **G3, P3 end:** deployed two-account flow reaches a nudge using a real bounded worker; wrong/expired/revoked input denied.
+- **G4, P4 end:** partners/friends/family all work and receipts show only approved fields; catalogue source returns clean records independently.
+- **G5, P5 end:** fixed privacy cases pass, quality results are measured, failure paths work. This gate controls stretch; it does not waive known failures.
+- **G6, P6 end:** source-backed activity proposal can be accepted by both users only if reviewed activity contracts/guards landed; otherwise catalogue remains read-only and core path stays intact.
+- **G7, P7/P8:** stable revision, real deployment smoke evidence, source/provider limitations and rollback documented.
+
+## If a dependency slips
+Work on independent tests/UI with explicit fixtures; record what remains non-live. If core integration misses P3, cancel stretch and focus all owners on their specific missing boundary. Apify failure must not block journaling, consent or existing nudges. New activity sharing waits for contract/guard review; show catalogue only rather than bypassing permission. Provider failure offers typed entry or no suggestion, never fabricated live output. Known privacy failure blocks real-user mode.
+
+## Communication and safe syncing
+Use task IDs CS-P#, DS-P#, AI-P#, CYBER-P#. Each meaningful handoff includes branch/commit, files/contracts, evidence, next named consumer action and blocker. Consumers ACK usable handoffs; shared dashboard is for cross-role next actions. Read logs hourly, raise blockers within 15 minutes, hold at most a short handoff every 3 hours.
+
+Fetch and merge origin/main into your role branch; preserve local work and resolve conflicts with the relevant owner. Do not reset/force-update another person’s branch or overwrite their handoff history. This planning update is pushed to main; active roles consume it by merging main themselves. Small role PRs reach main every 2–3 hours. Video planning stays separate in docs/DEMO.md.

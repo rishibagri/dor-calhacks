@@ -5,11 +5,11 @@ Next.js provider-facing routes use JSON and authenticated sessions. Shared-state
 |---|---|---|
 | POST /api/pairs/invites | {} | opaque expiring invite; no contact upload |
 | POST /api/pairs/accept | {inviteToken} | accepted pair; both identities verified |
-| POST /api/voice/session | {} | short-lived scoped session or server proxy; never master key |
+| POST /api/voice/session | {} | `VoiceSession` (C1): 60 s Cartesia access token with stt+tts grants, model/voice/version settings; never the master key |
 | Local vault: saveJournal | {text, localId} | encrypted owner-only IndexedDB entry; no server persistence |
 | Local vault: listJournals | local cursor | decrypted only within the unlocked owner session |
-| POST /api/reflections | {selectedText, clientRequestId} | transient Claude processing; private reflection/candidate returned to local vault; no body logging or server persistence |
-| POST /api/signals/preview | {proposedSignal,pairId,recipientPolicyVersion,presetAssignmentVersion} | exact fixed-template recipient preview, canonical payload revision; no raw local candidate draft |
+| POST /api/reflections | {selectedText, clientRequestId} | `PrivateReflection` (C1): transient Claude processing; private reflection plus nullable enum-only candidate returned to local vault; no body logging or server persistence |
+| Local device: previewDisclosure | candidate + accepted pair + preset/assignment snapshot | exact named-recipient preview; no API call or server-visible candidate; reducer rechecks authoritative state at approval |
 | POST /api/signals/approve | {proposedSignal,pairId,payloadRevision,recipientPolicyVersion,presetAssignmentVersion,consentVersion,clientRequestId} | approved signal ID; validate displayed revision, recipient, expiry, membership |
 | POST /api/signals/:id/revoke | {} | revoked; cancel queued uses, invalidate derived cached nudges |
 | POST /api/coordination/run | {pairId,clientRequestId} | bounded exchange + eligible nudges; authenticated member trigger only |
@@ -19,7 +19,9 @@ Next.js provider-facing routes use JSON and authenticated sessions. Shared-state
 | Local vault: deleteJournal + revoke signals | {localId,derivedSignalIds} | delete local ciphertext; revoke associated signals via guarded reducer without uploading local journal identifiers |
 | DELETE /api/pairs/:id | {} | unlink, invalidate scoped signals, suppress queued use |
 
-Approve, revoke, coordination, and delivery use transactions/version checks so retries cannot resurrect revoked consent. Idempotency keys are scoped to authenticated user and operation. Voice binary transport and exact Cartesia SDK configuration are adapter details; AI publishes them after the first spike. No journal content in URL paths or query parameters.
+Approve, revoke, coordination, and delivery use transactions/version checks so retries cannot resurrect revoked consent. Idempotency keys are scoped to authenticated user and operation. Voice binary transport and exact Cartesia SDK configuration are adapter details; AI published them after the first spike in src/agents/README.md (browser streaming client pending). No journal content in URL paths or query parameters.
 
 ## Relationship presets and assignments
 `set_relationship_preset` takes presetKind (partner/friend/family), allowedCategories, purpose, expectedVersion and expiresAt; the authenticated owner confirms settings, and the reducer increments the preset version atomically. `assign_relationship_preset` takes pairId, recipientId, presetKind and expectedAssignmentVersion; reducer validates owner and accepted relationship. No per-person category overrides. Preset tightening invalidates affected pending work for all assigned connections; reassignment invalidates prior assignment permissions. Each signal approval binds recipient, preset version and assignment version. Direct reducer calls must enforce the same rules. `my_nudges`, `my_receipts` and `my_preset_assignments` are caller-filtered views. Quiz results have no shared endpoint. Strict Zod validation applies at API/worker boundaries and equivalent deterministic guards apply inside reducers.
+
+Core flow clarification: FLOWS.md and main D016–D020 define device-only preview, per-pair recipient opt-in, quiet hours/cooldown, and F7 commit-time revalidation. The preview step performs no network write; transient provider reflection processing is separately disclosed.
