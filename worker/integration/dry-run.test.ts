@@ -7,8 +7,8 @@ import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Timestamp } from 'spacetimedb';
-import { createLiveWorker, SignalWatcher, spacetimeWorkerPorts, type WorkerStateSource } from '../dist/index.js';
-import { allSignals, approveArgs, confirmPreset, grantPrefs, jwtAuth, mod, pairUp, setup, view, type World }
+import { createLiveWorker, DISCONNECTED, SignalWatcher, spacetimeWorkerPorts, type WorkerStateSource } from '../dist/index.js';
+import { allSignals, approveArgs, confirmPreset, grantPrefs, inDays, jwtAuth, mod, pairUp, setup, view, type World }
   from '../../spacetimedb/tests/helpers';
 
 const BOTH = { support_mode: 'short_call', availability: 'this_week' };
@@ -267,5 +267,135 @@ describe('watcher: approved signals become jobs exactly once', () => {
     await watcher.sweep();
     expect(seen).toEqual(['nudge_proposed', 'nudge_proposed']);
     expect(view<any>(w, w.bob, mod.my_nudges).map(n => n.template_id).sort()).toEqual(['offer_note', 'offer_short_call']);
+  });
+});
+
+/** D041: Alice pauses Bob (owner-only); the real reducer, read back through Alice's own pause view. */
+function pauseBob(w: World, pairId: string, hours = 12) {
+  const expected_version = (view<any>(w, w.alice, mod.my_recipient_pauses).find(p => p.pair_id === pairId)?.version ?? 0) as number;
+  w.call(w.alice, ctx => mod.pause_recipient(ctx, { pair_id: pairId, expires_at: inDays(w, hours / 24), expected_version }));
+}
+function resumeBob(w: World, pairId: string) {
+  const expected_version = (view<any>(w, w.alice, mod.my_recipient_pauses).find(p => p.pair_id === pairId)?.version ?? 0) as number;
+  w.call(w.alice, ctx => mod.resume_recipient(ctx, { pair_id: pairId, expected_version }));
+}
+
+// D041 through the real worker: the "preferred design" needs no worker change. Paused pairs leave
+// worker_signal_context, the coordinator rechecks policy after the model (before any fallback commit), and
+// commit_nudge refuses a late pause; classifyCommitError records it as policy_denied.
+describe('D041 recipient pause → worker: no nudge, ever, for pre-pause work', () => {
+  it('paused before the job: the signal is gone from the worker view; 0 Droid calls, no nudge', async () => {
+    const { w, pairId, worker } = world();
+    optIn(w, pairId);
+    const sig = approve(w, BOTH);
+    pauseBob(w, pairId);
+    expect(view(w, worker, mod.worker_signal_context)).toHaveLength(0);
+    const droid = scriptedDroid();
+    const live = liveWorker(w, harnessSource(w, worker), droid);
+    expect((await live.runJob(job(pairId, sig.signal_id))).map(o => o.outcome)).toEqual(['policy_denied']);
+    expect(droid.calls()).toBe(0);
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
+  });
+
+  it('paused while the model runs: the post-generation recheck refuses it (covers the fixed-template fallback)', async () => {
+    const { w, pairId, worker } = world();
+    optIn(w, pairId);
+    const sig = approve(w, BOTH);
+    // An unusable reply forces both rounds to fail, so the coordinator reaches the fixed-template fallback path.
+    const droid = scriptedDroid('not json', () => { if (view(w, w.alice, mod.my_recipient_pauses).length === 0) pauseBob(w, pairId); });
+    const live = liveWorker(w, harnessSource(w, worker), droid);
+    expect((await live.runJob(job(pairId, sig.signal_id))).map(o => o.outcome)).toEqual(['policy_denied']);
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
+  });
+
+  it('paused after the recheck, just before commit: commit_nudge refuses and the outcome records policy_denied', async () => {
+    const { w, pairId, worker } = world();
+    optIn(w, pairId);
+    const sig = approve(w, BOTH);
+    const live = liveWorker(w, harnessSource(w, worker, { beforeCommit: () => pauseBob(w, pairId) }), scriptedDroid());
+    const [outcome] = await live.runJob(job(pairId, sig.signal_id));
+    expect(outcome!.outcome).toBe('policy_denied');
+    expect(outcome!.nudgeId).toBeUndefined();
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
+  });
+
+  it('pause then resume: the pre-pause signal stays dead (no resurrection); only a fresh approval can nudge', async () => {
+    const { w, pairId, worker } = world();
+    optIn(w, pairId);
+    const old = approve(w, BOTH, 'r-old');
+    pauseBob(w, pairId);
+    resumeBob(w, pairId);
+    const droid = scriptedDroid();
+    const live = liveWorker(w, harnessSource(w, worker), droid);
+    expect((await live.runJob(job(pairId, old.signal_id))).map(o => o.outcome)).toEqual(['policy_denied']);
+    expect(droid.calls()).toBe(0);
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
+    // A new, separately approved signal after the resume is ordinary work again.
+    const fresh = approve(w, BOTH, 'r-new');
+    expect((await live.runJob(job(pairId, fresh.signal_id))).map(o => o.outcome)).toEqual(['nudge_proposed']);
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(1);
+  });
+
+  it('a nudge committed before the pause disappears from the recipient view once paused', async () => {
+    const { w, pairId, worker } = world();
+    optIn(w, pairId);
+    const sig = approve(w, BOTH);
+    const live = liveWorker(w, harnessSource(w, worker), scriptedDroid());
+    expect((await live.runJob(job(pairId, sig.signal_id))).map(o => o.outcome)).toEqual(['nudge_proposed']);
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(1);
+    pauseBob(w, pairId);
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
+  });
+});
+
+// Core 3 audit (HIGH): the live connection now throws DISCONNECTED on every read and commit while it is down.
+// These cases drive the real module through a source that drops at the worst moments.
+describe('dropped database connection mid-job: no lost or duplicate nudge, no burned retries', () => {
+  it('drop before the commit reaches the server: nothing committed; the next sweep after reconnect commits once', async () => {
+    const { w, pairId, worker } = world();
+    optIn(w, pairId);
+    approve(w, BOTH);
+    let drops = 0;
+    const base = harnessSource(w, worker);
+    const source: WorkerStateSource = { ...base, commitNudge: async args => {
+      if (drops < 2) { drops++; throw new Error(DISCONNECTED); }
+      return base.commitNudge(args);
+    } };
+    const droid = scriptedDroid();
+    const live = liveWorker(w, source, droid);
+    const outcomes: string[] = [], errors: string[] = [];
+    // maxAttempts 1: a disconnect must not count, or the signal would be abandoned after the first outage.
+    const watcher = new SignalWatcher(source, { run: j => live.runJob(j), maxAttempts: 1,
+      onOutcome: os => outcomes.push(...os.map(o => o.outcome)), onError: e => errors.push((e as Error).message) });
+    await watcher.sweep();
+    await watcher.sweep();
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
+    await watcher.sweep();
+    expect(errors).toEqual([DISCONNECTED, DISCONNECTED]);
+    expect(outcomes).toEqual(['nudge_proposed']);
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(1);
+  });
+
+  it('drop after the commit landed but before the ack: the retry never creates a second nudge', async () => {
+    const { w, pairId, worker } = world();
+    optIn(w, pairId);
+    approve(w, BOTH);
+    let dropped = false;
+    const base = harnessSource(w, worker);
+    const source: WorkerStateSource = { ...base, commitNudge: async args => {
+      await base.commitNudge(args);
+      if (!dropped) { dropped = true; throw new Error(DISCONNECTED); }
+    } };
+    const droid = scriptedDroid();
+    const live = liveWorker(w, source, droid);
+    const outcomes: string[] = [];
+    const watcher = new SignalWatcher(source, { run: j => live.runJob(j), maxAttempts: 1,
+      onOutcome: os => outcomes.push(...os.map(o => o.outcome)) });
+    await watcher.sweep();
+    await watcher.sweep();
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(1);
+    // The retry sees the committed nudge through the delivery gate: cooldown, before any model call.
+    expect(outcomes).toEqual(['cooldown']);
+    expect(droid.calls()).toBe(1);
   });
 });

@@ -4,6 +4,21 @@ Read `docs/roles/ai.md` and README **R0–R6** for current assignments. The hist
 
 ---
 
+# AI handoff — backend lock-in (2026-10-24 ~20:10Z)
+
+- **Done (offline):**
+  - **Worker resilience** (audit HIGH): auto-reconnect, fail closed while disconnected, event-driven sweeps, exit-for-restart, `/healthz` 503.
+  - **D041 pause** worker cases (5) and mid-job disconnect cases (2).
+  - **Nickname exclusions** and `unmatchedExclusions` (audit MEDIUM).
+  - Checks: ai:check (69/49/43), typecheck, test:app 348 + 2 todo.
+- **Live (isolated):** Claude assessment hard safety 10/10 on Opus 5.5 at ~$0.01/call; Cartesia token/TTS/STT pass.
+- **Open:**
+  - r4m is resolved as D042: CS's app guard (#37) plus a contract rule requiring an assessment with any candidate (AI).
+  - Stage B browser voice (needs Adam at a browser).
+  - Stage C paid nudge delivery: needs `FACTORY_API_KEY` where the published DB lives, either Rishi's `dor-local` or our own local server per the RUNBOOK.
+  - Model choice for reflection (Haiku 5.5 vs Sonnet 5.5 bake-off, ~$0.06).
+- **For CS:** RUNBOOK §3 supervisor/healthz note. `unmatchedExclusions` is optional UI.
+
 # AI handoff — Core 1/2 private assessment (2026-10-24 ~19:10Z)
 
 - **What:** Claude's reflection now also returns an owner-only `assessment` (D040): `wants_connection`, `unclear` or `wants_space`, plus explicit excluded and preferred names. CS's `DecisionLoop` applies it through `src/features/voice/assessment.ts`. It can only stop, skip the company question, leave named people out or order people first. It never chooses or sends. Spec: `docs/features/PRIVATE_ASSESSMENT.md`.

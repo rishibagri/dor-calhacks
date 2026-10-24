@@ -24,7 +24,8 @@ test('only the highlighted text is sent; otherwise the whole entry; empty and ov
 
 test('the candidate is separated from what may be persisted', () => {
   const reply = PrivateReflectionSchema.parse({ schemaVersion: 1, reflection: 'It sounds like a long week.',
-    candidate: { supportMode: 'short_call', availability: 'today' } });
+    candidate: { supportMode: 'short_call', availability: 'today' },
+    assessment: { intent: 'wants_connection', excludedNames: [], preferredNames: [] } }); // D042: required with a candidate
   const { persist, memoryOnly } = splitReflection(reply);
   assert.deepEqual(Object.keys(persist), ['reflection'], 'only reflection text is persistable');
   assert.equal(JSON.stringify(persist).includes('short_call'), false);

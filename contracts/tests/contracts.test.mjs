@@ -89,11 +89,13 @@ test('private reflection candidates are enum-only and never carry journal text',
     sourceJournalId: 'local-1' }).success, false);
 });
 
-test('D040 private assessment: optional, bounded, names only, never both excluded and preferred', async () => {
+test('D040/D042 private assessment: required with a candidate, bounded, names only, never both excluded and preferred', async () => {
   const { PrivateReflectionSchema, PrivateAssessmentSchema } = await import('../dist/index.js');
   const base = { schemaVersion: 1, reflection: 'r', candidate: { supportMode: 'short_call' } };
   const a = (over = {}) => ({ intent: 'wants_connection', excludedNames: [], preferredNames: [], ...over });
-  assert.equal(PrivateReflectionSchema.safeParse(base).success, true, 'assessment is optional (additive)');
+  assert.equal(PrivateReflectionSchema.safeParse(base).success, false, 'D042: a candidate without an assessment is invalid');
+  assert.equal(PrivateReflectionSchema.safeParse({ ...base, candidate: null }).success, true, 'nothing to share: assessment optional');
+  assert.equal(PrivateReflectionSchema.safeParse({ ...base, candidate: null, assessment: a({ intent: 'wants_space' }) }).success, true);
   assert.equal(PrivateReflectionSchema.safeParse({ ...base, assessment: a({ excludedNames: ['Alex'], preferredNames: ['Sam'] }) }).success, true);
   for (const bad of [
     a({ intent: 'send_now' }), a({ excludedNames: ['A', 'B', 'C', 'D', 'E', 'F'] }), a({ preferredNames: ['A', 'B', 'C', 'D'] }),
