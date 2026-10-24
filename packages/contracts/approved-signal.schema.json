@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:closer:approved-signal:v1",
+  "title": "ApprovedSignal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "signalId",
+    "pairId",
+    "senderId",
+    "recipientId",
+    "purpose",
+    "supportMode",
+    "availability",
+    "consentVersion",
+    "expiresAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "signalId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "pairId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "senderId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "recipientId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "purpose": {
+      "const": "support_nudge"
+    },
+    "supportMode": {
+      "enum": [
+        "short_call",
+        "encouraging_note",
+        "shared_activity"
+      ]
+    },
+    "availability": {
+      "enum": [
+        "today",
+        "this_week",
+        "no_preference"
+      ]
+    },
+    "consentVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
