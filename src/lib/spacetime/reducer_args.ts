@@ -4,9 +4,10 @@
  * the single adapter file to adjust (see README.md).
  */
 import { Timestamp } from 'spacetimedb';
+import { DISCOVERY_AUDIENCES, DISCOVERY_NOTICE_VERSION } from '@dor/contracts/policy';
 import type { SharedStatePort } from '@/lib/backend/ports';
 
-type Input<K extends 'setRelationshipPreset' | 'assignRelationshipPreset' | 'approveSignal' | 'setSupportPreferences' | 'setNudgeDelivery'> = Parameters<
+type Input<K extends 'setRelationshipPreset' | 'assignRelationshipPreset' | 'approveSignal' | 'setSupportPreferences' | 'setNudgeDelivery' | 'publishDiscoveryProfile'> = Parameters<
   SharedStatePort[K]
 >[0];
 
@@ -56,4 +57,20 @@ export const reducerArgs = {
     quietEndMinute: i.quietEndMinute ?? undefined,
     utcOffsetMinutes: i.utcOffsetMinutes,
   }),
+  // C8: audience and notice version are fixed by the contract, never user-chosen.
+  publishDiscoveryProfile: (i: Input<'publishDiscoveryProfile'>) => ({
+    displayName: i.displayName,
+    interestTags: [...i.interestTags],
+    audience: DISCOVERY_AUDIENCES[0],
+    noticeVersion: DISCOVERY_NOTICE_VERSION,
+    expiresAt: date(i.expiresAt).toISOString(),
+    expectedRevision: i.expectedRevision,
+  }),
+  setDiscoveryArea: (areaKey: string) => ({ areaKey }),
+  cardRef: (cardRef: string) => ({ cardRef }),
+  introId: (introId: string) => ({ introId }),
+  sendIntroductionRequest: (cardRef: string, clientRequestId: string) => ({ cardRef, clientRequestId }),
+  respondIntroductionRequest: (introId: string, accept: boolean) => ({ introId, accept }),
+  reportDiscoveryUser: (target: { kind: 'card' | 'introduction'; ref: string }, reason: string) =>
+    ({ targetKind: target.kind, targetRef: target.ref, reason }),
 };

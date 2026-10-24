@@ -42,7 +42,7 @@ const between = (r: { sender: Identity; recipient: Identity }, a: Identity, b: I
   (r.sender.isEqual(a) && r.recipient.isEqual(b)) || (r.sender.isEqual(b) && r.recipient.isEqual(a));
 
 export function introductionsBetween(db: ReadDb, a: Identity, b: Identity): IntroRow[] {
-  return [...db.introduction.iter()].filter(r => between(r, a, b));
+  return [...db.introduction.sender.filter(a), ...db.introduction.sender.filter(b)].filter(r => between(r, a, b));
 }
 
 /**

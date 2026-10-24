@@ -102,3 +102,21 @@ export const block_discovery_user = spacetimedb.reducer(
     applyBlock(ctx, target.owner, false); // also closes pending/accepted introductions and proposals between them
   }
 );
+
+/** Card refs are opaque newId() strings; anything else is refused rather than used as a scan bound. */
+const MAX_CARD_REF = 128;
+
+/**
+ * Caller-only discovery paging (CS-R2): discovery_cards shows cards after `after_ref` in card-ref order.
+ * '' returns to the first page. The cursor is the caller's own row and reveals nothing about anyone else.
+ */
+export const set_discovery_page = spacetimedb.reducer(
+  { after_ref: t.string() },
+  (ctx, { after_ref }) => {
+    requireAccount(ctx);
+    if (after_ref.length > MAX_CARD_REF || /[^A-Za-z0-9_-]/.test(after_ref)) fail('invalid', 'after_ref');
+    const cur = ctx.db.discovery_page.owner.find(ctx.sender);
+    if (cur) ctx.db.discovery_page.owner.update({ owner: ctx.sender, after_ref });
+    else ctx.db.discovery_page.insert({ owner: ctx.sender, after_ref });
+  }
+);

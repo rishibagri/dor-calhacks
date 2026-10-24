@@ -75,3 +75,17 @@ export function expectedConsentVersion(pref: SupportPreferencesView | undefined)
 export function toggle<T>(list: readonly T[], item: T): T[] {
   return list.includes(item) ? list.filter((x) => x !== item) : [...list, item];
 }
+
+export function formatUtcOffset(minutes: number): string {
+  const sign = minutes < 0 ? '-' : '+';
+  const abs = Math.abs(minutes);
+  const m = abs % 60;
+  return `UTC${sign}${Math.floor(abs / 60)}${m ? `:${String(m).padStart(2, '0')}` : ''}`;
+}
+
+/** Quiet hours are stored with the offset at save time; say so, and flag drift (e.g. after a clock change). */
+export function offsetNote(savedOffset: number | null, currentOffset: number): string {
+  if (savedOffset === null) return `Quiet hours will use ${formatUtcOffset(currentOffset)}, this device's current time zone.`;
+  if (savedOffset === currentOffset) return `Quiet hours are set in ${formatUtcOffset(savedOffset)}.`;
+  return `Quiet hours are set in ${formatUtcOffset(savedOffset)}, but this device is now ${formatUtcOffset(currentOffset)}. Save again to update.`;
+}

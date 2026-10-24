@@ -302,6 +302,11 @@ const discoveryCardRow = t.row('DiscoveryCardRow', {
  * other published participants in the same configured area with no block either way. Opaque card refs and
  * approved public fields only: no identity, area key, expiry, pair, preset, preference, quiz or journal data.
  * Bounded to DISCOVERY_CARD_LIMIT; never a user directory.
+ *
+ * CS-R2 indexed query: reads only area_participation rows in the viewer's area (btree on area_key), never the whole
+ * publication table. Cards are in card-ref order after the viewer's own discovery_page cursor, so a client can page
+ * through a dense area deterministically. People the viewer already has an accepted introduction with are left out
+ * (they are connected; a card would only invite a refused request).
  */
 export const discovery_cards = spacetimedb.view(
   { name: 'discovery_cards', public: true }, t.array(discoveryCardRow),
@@ -310,18 +315,29 @@ export const discovery_cards = spacetimedb.view(
     if (!enabled || !ctx.db.account.identity.find(ctx.sender)) return [];
     const viewer = loadDiscoveryParty(ctx.db, ctx.sender);
     if (!viewer.publication || !viewer.area) return [];
-    const cards = [];
-    for (const r of ctx.db.discovery_publication.iter()) {
-      if (cards.length >= DISCOVERY_CARD_LIMIT) break;
-      if (r.owner.isEqual(ctx.sender)) continue;
-      const target = loadDiscoveryParty(ctx.db, r.owner);
-      if (!guardDiscoveryVisibility(viewer, target, blockedEitherWay(ctx.db, ctx.sender, r.owner), enabled, null).ok) continue;
-      const c = projectDiscoveryCard(target.publication!, viewer.publication.interestTags);
-      cards.push({ card_ref: c.cardRef, display_name: c.displayName, interest_tags: c.interestTags, shared_tags: c.sharedTags, revision: c.revision });
+    const after = ctx.db.discovery_page.owner.find(ctx.sender)?.after_ref ?? '';
+    const connected = acceptedCounterparts(ctx.db, ctx.sender);
+    const eligible = [];
+    for (const a of ctx.db.area_participation.area_key.filter(viewer.area.areaKey)) {
+      if (a.owner.isEqual(ctx.sender) || connected.has(a.owner.toHexString())) continue;
+      const target = loadDiscoveryParty(ctx.db, a.owner);
+      if (!target.publication || target.publication.publicationId <= after) continue;
+      if (!guardDiscoveryVisibility(viewer, target, blockedEitherWay(ctx.db, ctx.sender, a.owner), enabled, null).ok) continue;
+      eligible.push(projectDiscoveryCard(target.publication, viewer.publication.interestTags));
     }
-    return cards;
+    eligible.sort((x, y) => (x.cardRef < y.cardRef ? -1 : x.cardRef > y.cardRef ? 1 : 0));
+    return eligible.slice(0, DISCOVERY_CARD_LIMIT).map(c => (
+      { card_ref: c.cardRef, display_name: c.displayName, interest_tags: c.interestTags, shared_tags: c.sharedTags, revision: c.revision }));
   }
 );
+
+/** Hex identities the caller has an accepted introduction with (indexed on both sides). */
+function acceptedCounterparts(db: ReadDb, me: Identity): Set<string> {
+  const out = new Set<string>();
+  for (const r of db.introduction.sender.filter(me)) if (r.status === 'accepted') out.add(r.recipient.toHexString());
+  for (const r of db.introduction.recipient.filter(me)) if (r.status === 'accepted') out.add(r.sender.toHexString());
+  return out;
+}
 
 // ---- C8 introductions (CYBER-R2, PROPOSED) ----
 

@@ -11,8 +11,10 @@ import {
   RelationshipPresetSchema,
 } from '@dor/contracts';
 import type { ApprovedSignal, DisclosureReceipt, Nudge, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
-import { validRecipientDelivery, validSupportPreferences } from '@dor/contracts/policy';
-import type { InviteView, NudgeDeliveryView, PairView, SignalView, SupportPreferencesView } from '@/lib/backend/ports';
+import { MAX_INTEREST_TAGS, MAX_PUBLIC_NAME, validRecipientDelivery, validSupportPreferences } from '@dor/contracts/policy';
+import type {
+  DiscoveryCardRow, IntroductionProposalView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, SignalView, SupportPreferencesView,
+} from '@/lib/backend/ports';
 import { toCamel, type LooseRow } from './bindings';
 
 type Mapper<T> = (row: LooseRow) => T | null;
@@ -178,6 +180,66 @@ export const mapNudgeDelivery: Mapper<NudgeDeliveryView> = (row) => {
   };
   return validRecipientDelivery(view) ? view : null;
 };
+
+function strings(row: LooseRow, key: string, max: number): string[] | null {
+  const v = get(row, key);
+  return Array.isArray(v) && v.length <= max && v.every((x) => typeof x === 'string') ? [...v] as string[] : null;
+}
+
+export const mapMyDiscovery: Mapper<MyDiscoveryView> = (row) => {
+  const interestTags = strings(row, 'interest_tags', MAX_INTEREST_TAGS);
+  const revision = num(row, 'revision');
+  const flags = ['withdrawn', 'expired', 'area_active', 'discovery_enabled'].map((k) => get(row, k));
+  if (!interestTags || revision === null || !flags.every((f) => typeof f === 'boolean')) return null;
+  const [withdrawn, expired, areaActive, discoveryEnabled] = flags as boolean[];
+  return {
+    publicationId: str(row, 'publication_id'), published: str(row, 'publication_id') !== null, displayName: str(row, 'display_name'), interestTags, revision,
+    expiresAt: str(row, 'expires_at'), withdrawn, expired, areaKey: str(row, 'area_key'),
+    areaExpiresAt: str(row, 'area_expires_at'), areaActive, discoveryEnabled,
+  };
+};
+
+/** Maps to exactly the C8 projection keys; DS's adapter does the strict content validation before ranking. */
+export const mapDiscoveryCard: Mapper<DiscoveryCardRow> = (row) => {
+  const cardRef = str(row, 'card_ref');
+  const displayName = str(row, 'display_name');
+  const interestTags = strings(row, 'interest_tags', MAX_INTEREST_TAGS);
+  const sharedTags = strings(row, 'shared_tags', MAX_INTEREST_TAGS);
+  const revision = num(row, 'revision');
+  if (!cardRef || !displayName || displayName.length > MAX_PUBLIC_NAME || !interestTags || !sharedTags || revision === null) return null;
+  return { cardRef, displayName, interestTags, sharedTags, revision };
+};
+
+const INTRO_STATUS: readonly IntroductionView['status'][] = ['pending', 'accepted', 'declined', 'closed'];
+
+export const mapIntroduction: Mapper<IntroductionView> = (row) => {
+  const introId = str(row, 'intro_id');
+  const direction = str(row, 'direction');
+  const status = INTRO_STATUS.find((s) => s === str(row, 'status'));
+  const createdAt = str(row, 'created_at');
+  const sharedTags = strings(row, 'shared_tags', MAX_INTEREST_TAGS);
+  if (!introId || (direction !== 'incoming' && direction !== 'outgoing') || !status || !createdAt || !sharedTags) return null;
+  // Outgoing rows never carry "declined" (D038); treat one as a server bug and drop it rather than reveal it.
+  if (direction === 'outgoing' && status === 'declined') return null;
+  return { introId, direction, status, counterpartName: str(row, 'counterpart_name'), sharedTags, createdAt, expiresAt: str(row, 'expires_at') };
+};
+
+const OPENERS: readonly IntroductionProposalView['openerId'][] = ['suggest_shared_interest', 'suggest_event_together'];
+
+export const mapIntroductionProposal: Mapper<IntroductionProposalView> = (row) => {
+  const proposalId = str(row, 'proposal_id');
+  const candidateRef = str(row, 'candidate_ref');
+  const reasonCode = str(row, 'reason_code');
+  const openerId = OPENERS.find((o) => o === str(row, 'opener_id'));
+  const sharedTags = strings(row, 'shared_tags', MAX_INTEREST_TAGS);
+  const expiresAt = str(row, 'expires_at');
+  if (!proposalId || !candidateRef || !reasonCode || !openerId || !sharedTags || !expiresAt) return null;
+  return { proposalId, candidateRef, reasonCode, openerId, sharedTags, expiresAt };
+};
+
+export function unreadableRow(row: LooseRow, idKey: string): UnreadableRow {
+  return { id: str(row, idKey), pairId: str(row, 'pair_id') };
+}
 
 export function mapRows<T>(rows: Iterable<LooseRow>, mapper: Mapper<T>): T[] {
   const out: T[] = [];

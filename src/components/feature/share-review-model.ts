@@ -10,6 +10,8 @@ import {
 import type { PairView, SharedStatePort } from '@/lib/backend/ports';
 
 export type ApprovalInput = Parameters<SharedStatePort['approveSignal']>[0];
+/** Everything approve_signal needs except the request ID, which is bound to the payload at tap time. */
+export type ApprovalDraft = Omit<ApprovalInput, 'clientRequestId'>;
 
 export interface ShareRecipient {
   pairId: string;
@@ -30,13 +32,12 @@ export interface PrepareShareInput {
   pair: PairView;
   presets: readonly RelationshipPreset[];
   assignments: readonly RecipientPresetAssignment[];
-  clientRequestId: string;
   now: Date;
 }
 
 export type PreparedShare =
   | { kind: 'not_ready'; preview: Exclude<DisclosurePreview, { kind: 'shareable' }> }
-  | { kind: 'ready'; preview: Extract<DisclosurePreview, { kind: 'shareable' }>; approval: ApprovalInput };
+  | { kind: 'ready'; preview: Extract<DisclosurePreview, { kind: 'shareable' }>; approval: ApprovalDraft };
 
 /** The caller's own assignment to this pair's counterpart, and the preset it points at. */
 function standing(input: PrepareShareInput): { preset: RelationshipPreset | null; assignment: RecipientPresetAssignment | null } {
@@ -61,14 +62,13 @@ export function prepareShare(input: PrepareShareInput, recipientName: string): P
     presetAssignmentVersion: assignment.assignmentVersion,
     consentVersion: DISCLOSURE_CONSENT_VERSION,
   };
-  const approval: ApprovalInput = {
+  const approval: ApprovalDraft = {
     pairId: input.pair.pairId,
     ...preview.payload,
     ...versions,
     payloadRevision: payloadRevision({
       pairId: input.pair.pairId, recipientId: input.pair.counterpartIdentityHex, ...preview.payload, ...versions,
     }),
-    clientRequestId: input.clientRequestId,
   };
   return { kind: 'ready', preview, approval };
 }
@@ -89,9 +89,15 @@ export function describeNotReady(preview: PreparedShare & { kind: 'not_ready' })
   return DENIAL_COPY[preview.preview.reason] ?? 'Sharing is not allowed for this person right now.';
 }
 
-/** Fresh opaque ID per preview; reused only to retry that same approval (approve_signal is idempotent on it). */
-export function newClientRequestId(): string {
-  return crypto.randomUUID();
+export interface RequestIdSlot { key: string; id: string }
+
+/**
+ * Request ID for this approval: reused only while the pair and payloadRevision are unchanged (a retry is then
+ * idempotent), and fresh whenever either changes, e.g. preset versions moved while the review was open.
+ */
+export function requestIdFor(draft: ApprovalDraft, prev: RequestIdSlot | null, mint: () => string = () => crypto.randomUUID()): RequestIdSlot {
+  const key = `${draft.pairId}:${draft.payloadRevision}`;
+  return prev?.key === key ? prev : { key, id: mint() };
 }
 
 export type SignalStatus = 'active' | 'revoked' | 'expired';
