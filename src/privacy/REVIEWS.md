@@ -212,3 +212,15 @@ Verdict: **ACK with two conditions.**
   - Single-flight lock and a 6 h refresh window.
 - **Condition 1:** the regional source lives in the Apify *task's* saved input (`APIFY_TASK_ID`), outside the repo, so it can't be reviewed. Record the Actor id, pinned build and region/search string (non-secret) in `feeds.ts` or `docs/RUNBOOK.md`, and pin the build.
 - **Condition 2:** confirm the task input holds only a developer-chosen public region and source, with no personal or test-account data. README D045 Phase 1 compares a Luma and a Meetup Actor; whichever is chosen, its hosts must be in `SOURCE_HOSTS` and in the module's `source_hosts` config, and its field map must stay the minimal `title/startDate/endDate/url/isCancelled`.
+
+## 2026-10-25: D045 Phase 4 adversarial and boundary audit (Cyber)
+Verdict: **no release-blocking finding.** Offline evidence only.
+- **New corpus** `src/privacy/__tests__/adversarial.test.ts` (5 groups) runs against the real guards and CS's real `normalizeItem` (imported read-only):
+  1. **18 SSRF and lookalike URLs** (http, javascript:, data:, file:, loopback, link-local metadata, IPv6, credentials, ports, `lu.ma.evil.com`, `evil.com/lu.ma`, `lu.ma@evil.com`, punycode, scheme-relative) never become a source URL.
+  2. **Oversized and malformed records:** titles are capped at 120; non-string, empty, unparseable, past or beyond-horizon records are dropped; venue, organizer, attendee and coordinate fields never survive.
+  3. **Prompt-injection titles** are dropped at ingestion, and bidi, zero-width and markup are stripped.
+  4. **Profile stuffing:** extra fields (including a JSON `__proto__` key) are refused; emails (also full-width look-alikes, caught after NFKC), phones, handles, domains, UUIDs, bidi or zero-width and over-length names are refused; a sensitive tag is refused even in a draft (D046).
+  5. **Apify queries** refuse location, user ids, free text, identifiers, oversized limits and sensitive topics.
+- **Already covered elsewhere:** third-account access, rate-limit exhaustion, expiry and revocation races, and replay (D038/D039/D041/D043 suites, `newcomer_journey`, `consent_independence`).
+- **Output projection:** discovery cards have exactly 5 fields, nudges 4, receipts are sender-own.
+- **Logging:** worker and reflection-route logs are metadata only (event, codes, counts, durations, an 8-character identity prefix). LOW note: worker `fatal` keeps up to 80 characters of an error message; today those are codes. Keep it that way.
