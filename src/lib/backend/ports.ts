@@ -141,6 +141,15 @@ export interface CatalogueEventView {
   fetchedAt: string;
 }
 
+/** Ingestion health for one configured feed (`catalogue_status`). Operational metadata only. */
+export interface CatalogueStatusView {
+  feedKey: string;
+  lastAttemptAt: string;
+  lastSuccessAt: string | null;
+  lastStatus: 'ok' | 'failed';
+  recordCount: number;
+}
+
 /** The caller's own event intent (`my_event_intents`), withdrawn ones included so the next version is known. */
 export interface EventIntentRow {
   eventId: string;
@@ -290,6 +299,7 @@ export interface SharedStatePort {
   myIntroductions(): IntroductionView[]; // my_introductions
   myIntroductionProposals(): IntroductionProposalView[]; // my_introduction_proposals
   catalogueEvents(): CatalogueEventView[]; // catalogue_events
+  catalogueStatus(): CatalogueStatusView[]; // catalogue_status
   myEventIntents(): EventIntentRow[]; // my_event_intents
   eventCompanions(): EventCompanionRow[]; // event_companions
   myActivityApprovals(): ActivityApprovalRow[]; // my_activity_approvals

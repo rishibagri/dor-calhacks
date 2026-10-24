@@ -26,6 +26,10 @@ export class SpacetimeSharedState implements SharedStateController {
   private disposed = false;
   private refreshQueued = false;
   private readonly listeners = new Set<() => void>();
+  /** Connections whose table callbacks are registered (a reconnect may hand back a new object). */
+  private readonly wired = new WeakSet<LooseConnection>();
+  /** The one live subscription; replaced, never stacked, on reconnect. */
+  private subscription: { conn: LooseConnection; handle: unknown } | null = null;
 
   constructor(private readonly opts: AdapterOptions) {
     void this.start();
@@ -42,6 +46,8 @@ export class SpacetimeSharedState implements SharedStateController {
 
   dispose(): void {
     this.disposed = true;
+    if (this.subscription) endSubscription(this.subscription.handle);
+    this.subscription = null;
     this.conn?.disconnect();
     this.conn = null;
     this.identityHex = null;
@@ -73,27 +79,38 @@ export class SpacetimeSharedState implements SharedStateController {
       .withToken(token)
       .withTokenProvider(refresh);
     b = b.withAutomaticReconnect?.() ?? b;
-    b = b.onConnect((c, id) => this.onConnected(c, id.toHexString(), true));
-    b = b.onAutomaticReconnect?.((c, id) => this.onConnected(c, id.toHexString(), false)) ?? b;
+    b = b.onConnect((c, id) => this.onConnected(c, id.toHexString()));
+    b = b.onAutomaticReconnect?.((c, id) => this.onConnected(c, id.toHexString())) ?? b;
     b = b.onConnectError((_c, e) => this.fail(e));
     b = b.onDisconnect((_c, e) => this.onDisconnected(e));
     this.conn = b.build();
   }
 
-  private onConnected(conn: LooseConnection, identityHex: string, first: boolean): void {
+  private onConnected(conn: LooseConnection, identityHex: string): void {
     if (this.disposed) return conn.disconnect();
     if (this.identityHex !== null && this.identityHex !== identityHex) this.views = EMPTY_VIEWS;
     this.conn = conn;
     this.identityHex = identityHex;
-    if (first) viewTables(conn).forEach((t) => {
-      const cb = () => this.queueRefresh();
-      t.onInsert?.(cb); t.onDelete?.(cb); t.onUpdate?.(cb);
-    });
-    conn.subscriptionBuilder()
+    if (!this.wired.has(conn)) {
+      this.wired.add(conn);
+      viewTables(conn).forEach((t) => {
+        const cb = () => this.queueRefresh();
+        t.onInsert?.(cb); t.onDelete?.(cb); t.onUpdate?.(cb);
+      });
+    }
+    this.resubscribe(conn);
+    this.set({ phase: 'connected', identityHex }, { kind: 'live' });
+  }
+
+  /** Exactly one subscription per adapter: end the previous one on the same connection before opening another. */
+  private resubscribe(conn: LooseConnection): void {
+    const prev = this.subscription;
+    if (prev && prev.conn === conn) endSubscription(prev.handle);
+    const handle = conn.subscriptionBuilder()
       .onApplied(() => this.queueRefresh())
       .onError(() => this.fail(new Error('subscription error')))
       .subscribe(VIEW_NAMES.map((n) => `SELECT * FROM ${n}`));
-    this.set({ phase: 'connected', identityHex }, { kind: 'live' });
+    this.subscription = { conn, handle };
   }
 
   private onDisconnected(error?: Error): void {
@@ -199,6 +216,7 @@ export class SpacetimeSharedState implements SharedStateController {
   myIntroductions = () => this.views.introductions;
   myIntroductionProposals = () => this.views.proposals;
   catalogueEvents = () => this.views.catalogue;
+  catalogueStatus = () => this.views.catalogueStatus;
   myEventIntents = () => this.views.eventIntents;
   eventCompanions = () => this.views.companions;
   myActivityApprovals = () => this.views.activityApprovals;
@@ -206,3 +224,12 @@ export class SpacetimeSharedState implements SharedStateController {
   unreadable = () => this.views.unreadable;
 }
 
+/** SDK handles expose unsubscribe() once applied; ending an already-ended or unapplied one is a no-op. */
+function endSubscription(handle: unknown): void {
+  const h = handle as { isActive?: () => boolean; unsubscribe?: () => void } | null;
+  try {
+    if (h?.unsubscribe && (h.isActive?.() ?? true)) h.unsubscribe();
+  } catch {
+    // Unsubscribing a handle the server already dropped throws in some SDK versions; nothing else to clean up.
+  }
+}

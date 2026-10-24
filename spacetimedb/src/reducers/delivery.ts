@@ -29,12 +29,12 @@ export const set_nudge_delivery = spacetimedb.reducer(
       quiet_start_minute: args.quiet_start_minute, quiet_end_minute: args.quiet_end_minute,
       utc_offset_minutes: args.utc_offset_minutes, updated_at: ctx.timestamp,
     };
-    const cur = [...ctx.db.nudge_delivery.iter()].find(d => d.pair_id === args.pair_id && d.recipient.isEqual(ctx.sender));
+    const cur = [...ctx.db.nudge_delivery.recipient.filter(ctx.sender)].find(d => d.pair_id === args.pair_id);
     if (cur) ctx.db.nudge_delivery.delivery_id.update({ ...cur, ...row });
     else ctx.db.nudge_delivery.insert({ delivery_id: newId(ctx), ...row });
     if (!args.opted_in) {
-      for (const n of [...ctx.db.nudge.iter()]) {
-        if (n.pair_id === args.pair_id && n.recipient_id.isEqual(ctx.sender) && !n.suppressed) {
+      for (const n of [...ctx.db.nudge.pair_id.filter(args.pair_id)]) {
+        if (n.recipient_id.isEqual(ctx.sender) && !n.suppressed) {
           ctx.db.nudge.id.update({ ...n, suppressed: true });
         }
       }

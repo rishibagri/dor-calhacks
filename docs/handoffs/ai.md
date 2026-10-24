@@ -4,6 +4,20 @@ Read `docs/roles/ai.md` and README **R0–R6** for current assignments. The hist
 
 ---
 
+# AI handoff — Core 1/2 private assessment (2026-10-24 ~19:10Z)
+
+- **What:** Claude's reflection now also returns an owner-only `assessment` (D040): `wants_connection`, `unclear` or `wants_space`, plus explicit excluded and preferred names. CS's `DecisionLoop` applies it through `src/features/voice/assessment.ts`. It can only stop, skip the company question, leave named people out or order people first. It never chooses or sends. Spec: `docs/features/PRIVATE_ASSESSMENT.md`.
+- **Evidence:** offline only.
+  - `check:all`: contracts 117, module 143, app 273 + 1 todo
+  - `ai:check`: agents 69, worker 42, integration 36
+  - build OK; 4/4 mutations caught
+- **Asks:**
+  - **CS:** review the edits in `decision-loop.tsx`, `journal/page.tsx` and `src/lib/setup/plan.ts`.
+  - **Sumedh:** durable pause per `docs/features/RECIPIENT_PAUSE.md` (D041).
+  - **Nimisha:** evaluate the assessment cases.
+- **Next (Adam):** live Claude run on the synthetic cases (needs `ANTHROPIC_API_KEY` + go-ahead). After D041 lands: worker integration cases (pause before, during, and pause → resume).
+- **Team post:** `docs/team-messages/core2-private-assessment.md`.
+
 # AI handoff — core-first checkpoint (2026-10-24 ~18:20Z)
 
 The README now puts the partner/friend/family journey first (Core 1–4) and lists the sponsor targets. For AI:

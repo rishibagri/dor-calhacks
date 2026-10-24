@@ -5,7 +5,7 @@
 import { safeCatalogueUrl } from '@dor/contracts';
 import { eligibleEvents } from '../../evaluation/events.ts';
 import type {
-  CatalogueEventView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, MyDiscoveryView, PlanView,
+  CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, MyDiscoveryView, PlanView,
 } from '../../lib/backend/ports.ts';
 import { DISCOVERY_TAGS } from '../../lib/discovery/config.ts';
 import { SOURCE_HOSTS } from '../../lib/catalogue/feeds.ts';
@@ -73,4 +73,22 @@ export function canCancel(p: PlanView): boolean {
 
 export function formatWhen(iso: string, locale?: string): string {
   return new Date(iso).toLocaleString(locale, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+export type SourceState =
+  | { kind: 'never_loaded' }
+  | { kind: 'unavailable'; lastSuccessAt: string | null }
+  | { kind: 'stale'; lastSuccessAt: string }
+  | { kind: 'ok'; lastSuccessAt: string };
+
+/**
+ * Honest source state for the viewer's area feed (R3): never loaded, last run failed, last good fetch too old, or ok.
+ * `maxAgeMs` is the catalogue freshness limit; the page never implies a live feed.
+ */
+export function sourceState(status: readonly CatalogueStatusView[], areaKey: string | null, nowMs: number, maxAgeMs: number): SourceState {
+  const row = areaKey ? status.find((s) => s.feedKey === areaKey) : undefined;
+  if (!row || (row.lastSuccessAt === null && row.lastStatus === 'ok')) return { kind: 'never_loaded' };
+  if (row.lastStatus === 'failed') return { kind: 'unavailable', lastSuccessAt: row.lastSuccessAt };
+  if (nowMs - Date.parse(row.lastSuccessAt!) > maxAgeMs) return { kind: 'stale', lastSuccessAt: row.lastSuccessAt! };
+  return { kind: 'ok', lastSuccessAt: row.lastSuccessAt! };
 }

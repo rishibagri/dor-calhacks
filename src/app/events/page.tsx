@@ -6,7 +6,8 @@ import { IntegrationStatus } from '@/components/shell/integration-status';
 import { EventCard } from '@/components/feature/event-card';
 import { PlansList } from '@/components/feature/plans-list';
 import { discoverStage } from '@/components/feature/discover-model';
-import { eventCards } from '@/components/feature/events-model';
+import { CATALOGUE_MAX_SOURCE_AGE_MS } from '@dor/contracts';
+import { eventCards, formatWhen, sourceState } from '@/components/feature/events-model';
 import { isDiscoverySynthetic } from '@/lib/config';
 import { ExtensionGate } from '@/components/feature/extension-gate';
 import { areaLabel } from '@/lib/discovery/config';
@@ -21,6 +22,11 @@ export default function EventsPage() {
     cards: shared.discoveryCards(), now,
   });
   const area = areaLabel(me?.areaKey ?? null);
+  const source = sourceState(shared.catalogueStatus(), me?.areaActive ? me.areaKey : null, now.getTime(), CATALOGUE_MAX_SOURCE_AGE_MS);
+  const sourceNote = source.kind === 'never_loaded' ? 'No listings have been loaded for this area yet.'
+    : source.kind === 'unavailable' ? `The event source is unavailable right now${source.lastSuccessAt ? `; showing listings from ${formatWhen(source.lastSuccessAt)}` : ''}.`
+    : source.kind === 'stale' ? `Listings were last updated ${formatWhen(source.lastSuccessAt)} and may be out of date.`
+    : null;
 
   return (
     <ExtensionGate title="Events" controls={<PlansList />}>
@@ -43,7 +49,8 @@ export default function EventsPage() {
         <section aria-label="Upcoming events" className="space-y-3">
           <h2 className="text-lg font-semibold">Coming up{area ? ` in ${area}` : ''}</h2>
           {isDiscoverySynthetic && <p className="text-xs text-muted-foreground">Test data: events and people here may be synthetic.</p>}
-          {cards.length === 0 && (
+          {sourceNote && <p role="status" className="text-sm text-muted-foreground">{sourceNote}</p>}
+          {cards.length === 0 && source.kind === 'ok' && (
             <p className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
               No upcoming events from the listed source in your area right now. Listings refresh a few times a day.
             </p>

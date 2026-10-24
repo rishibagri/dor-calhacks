@@ -44,7 +44,8 @@ export function bootstrapSteps(o: BootstrapOptions): Step[] {
     { title: 'Load catalogue source-host allowlist', argv: call(o, 'set_discovery_config', 'source_hosts', o.sourceHosts) },
     {
       title: o.enableExtensions ? 'Enable discovery/event extensions' : 'Keep discovery/event extensions OFF (core release)',
-      argv: call(o, 'set_discovery_config', 'enabled', [o.enableExtensions ? 'true' : 'false']),
+      // The module accepts exactly ['true'] (on) or [] (off).
+      argv: call(o, 'set_discovery_config', 'enabled', o.enableExtensions ? ['true'] : []),
     },
     {
       title: 'Generate client bindings',
@@ -145,7 +146,12 @@ export function checkEnv(env: SetupEnv, mode: { worker: boolean; extensions: boo
     need('DOR_WORKER_AUTH_TOKEN', 'shared secret between app routes and worker');
     if (set(env, 'DOR_WORKER_AUTH_TOKEN') && val(env, 'DOR_WORKER_AUTH_TOKEN').length < 32) add('error', 'DOR_WORKER_AUTH_TOKEN', 'use at least 32 random characters');
     need('DOR_WORKER_URL', 'where app routes reach the worker');
-    need('FACTORY_API_KEY', 'Droid on a deployed host', 'warn');
+    // The worker's Droid calls use the Factory Droid SDK by default, which needs the key; without it the worker
+    // refuses to start. DOR_DROID_TRANSPORT=cli falls back to `droid exec`, where a CLI login also works.
+    const transport = val(env, 'DOR_DROID_TRANSPORT') || 'sdk';
+    if (transport !== 'sdk' && transport !== 'cli') add('error', 'DOR_DROID_TRANSPORT', 'must be "sdk" (default) or "cli"');
+    if (transport === 'cli') need('FACTORY_API_KEY', 'droid exec on a deployed host (a local CLI login also works)', 'warn');
+    else need('FACTORY_API_KEY', 'Factory Droid SDK (worker default); set DOR_DROID_TRANSPORT=cli to use droid exec instead');
   }
 
   if (mode.extensions) {

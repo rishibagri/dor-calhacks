@@ -5,3 +5,6 @@ These are drafts for the user to forward; no messages were sent to teammates or 
 - [Nimisha — DS](ds.md)
 - [Adam — AI](ai.md)
 - [Sumedh — Cyber](cyber.md)
+
+## Latest topic updates
+- [Core 1/2: Claude private assessment, durable pause, worker key](core2-private-assessment.md) (Adam, 2026-10-24)

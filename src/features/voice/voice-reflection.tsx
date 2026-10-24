@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { PrivateReflection, SignalCandidate, VoiceSession } from '@dor/contracts';
+import type { PrivateAssessment, PrivateReflection, SignalCandidate, VoiceSession } from '@dor/contracts';
 import { RouteError, createReflectionClient, createVoiceSessionClient, speak } from '@dor/agents/client';
 import type { VaultPort } from '@/lib/backend/ports';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { describeCandidate, insertTranscript, reflectFailureCopy, speakableText, splitReflection, textToReflect,
   voiceFailureCopy, type Selection } from './model';
 import { useDictation, type UseDictationOptions } from './use-dictation';
+import { suggestsNothing } from './assessment';
 
 export interface VoiceReflectionProps {
   /** The owner's LocalVault (CS composes the per-account instance). Saving is disabled unless unlocked. */
@@ -22,9 +23,11 @@ export interface VoiceReflectionProps {
   getVoiceSession?: ((signal?: AbortSignal) => Promise<VoiceSession>) | null;
   /**
    * The reflection's suggested share, held in memory only. CS routes it into the device-only preview and
-   * per-item approval; nothing is shared until the owner approves there. Called with null when cleared.
+   * per-item approval; nothing is shared until the owner approves there. Called with null when cleared. The third
+   * argument is Claude's owner-only private assessment (D040), also in memory only and never persisted: it may only
+   * narrow the private decision loop (docs/features/PRIVATE_ASSESSMENT.md).
    */
-  onCandidate?: (candidate: SignalCandidate | null, entryLocalId: string) => void;
+  onCandidate?: (candidate: SignalCandidate | null, entryLocalId: string, assessment?: PrivateAssessment) => void;
   /** Test seams for the dictation hook. */
   dictation?: Pick<UseDictationOptions, 'mic' | 'socket'>;
 }
@@ -32,7 +35,7 @@ export interface VoiceReflectionProps {
 type ReflectState =
   | { phase: 'idle' }
   | { phase: 'pending'; abort: AbortController }
-  | { phase: 'done'; reflection: string; candidate: SignalCandidate | null; scope: 'selection' | 'entry' }
+  | { phase: 'done'; reflection: string; candidate: SignalCandidate | null; assessment?: PrivateAssessment; scope: 'selection' | 'entry' }
   | { phase: 'failed'; message: string };
 
 const errorCode = (e: unknown) => e instanceof RouteError ? e.code
@@ -100,8 +103,8 @@ export function VoiceReflection({ vault, reflect, getVoiceSession, onCandidate, 
     try {
       const reply = await reflectFn(toSend.text, crypto.randomUUID(), abort.signal);
       if (abort.signal.aborted) return;
-      const { persist, memoryOnly } = splitReflection(reply);
-      setResult({ phase: 'done', reflection: persist.reflection, candidate: memoryOnly, scope: toSend.scope });
+      const { persist, memoryOnly, assessment } = splitReflection(reply);
+      setResult({ phase: 'done', reflection: persist.reflection, candidate: memoryOnly, assessment, scope: toSend.scope });
     } catch (e) {
       setResult(errorCode(e) === 'aborted' ? { phase: 'idle' } : { phase: 'failed', message: reflectFailureCopy(errorCode(e)) });
     }
@@ -143,7 +146,9 @@ export function VoiceReflection({ vault, reflect, getVoiceSession, onCandidate, 
     }
   }
 
-  const suggestion = result.phase === 'done' ? describeCandidate(result.candidate) : null;
+  // D040: "I'd like some space" (or an assessment that cannot be used safely) means nothing is suggested at all.
+  const suggestion = result.phase === 'done' && !suggestsNothing(result.candidate, result.assessment)
+    ? describeCandidate(result.candidate) : null;
 
   return (
     <div className="space-y-6">
@@ -210,7 +215,7 @@ export function VoiceReflection({ vault, reflect, getVoiceSession, onCandidate, 
           <CardFooter className="flex flex-wrap gap-2">
             {sessionFn && <Button variant="outline" onClick={() => void readAloud(result.reflection)}>{speaking ? 'Stop reading' : 'Read aloud'}</Button>}
             {suggestion && onCandidate && (
-              <Button variant="secondary" onClick={() => onCandidate(result.candidate, entryId)}>Review what to share</Button>
+              <Button variant="secondary" onClick={() => onCandidate(result.candidate, entryId, result.assessment)}>Review what to share</Button>
             )}
           </CardFooter>
         </Card>

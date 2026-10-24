@@ -8,8 +8,8 @@ import { findPreferenceRow, fromMs } from '../policy_state';
 
 /** Suppress the caller's pending nudges in a pair (their consent no longer covers them). */
 function suppressRecipientNudges(ctx: Ctx, pairId: string): void {
-  for (const n of [...ctx.db.nudge.iter()]) {
-    if (n.pair_id === pairId && n.recipient_id.isEqual(ctx.sender) && !n.suppressed) {
+  for (const n of [...ctx.db.nudge.pair_id.filter(pairId)]) {
+    if (n.recipient_id.isEqual(ctx.sender) && !n.suppressed) {
       ctx.db.nudge.id.update({ ...n, suppressed: true });
     }
   }
