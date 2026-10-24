@@ -27,7 +27,8 @@
     "test:app": "node --test \"src/**/__tests__/*.test.ts\"",
     "ai:build": "npm run build -w @kinetic/contracts && npm run build -w @kinetic/agents && npm run build -w @kinetic/worker",
     "ai:check": "npm run ai:build && npm test -w @kinetic/agents && npm test -w @kinetic/worker && npm run test:integration -w @kinetic/worker",
-    "ai:live": "npm run ai:build && npm run live -w @kinetic/agents && npm run live -w @kinetic/worker"
+    "ai:live": "npm run ai:build && npm run live -w @kinetic/agents && npm run live -w @kinetic/worker",
+    "ai:dryrun": "npm run ai:build && npm run test:integration -w @kinetic/worker -- full-dry-run"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.20",
