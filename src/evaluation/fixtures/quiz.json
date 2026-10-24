@@ -1,0 +1,60 @@
+{
+  "fixtureVersion": 2,
+  "owner": "DS",
+  "note": "DS quiz mapping spec, aligned to the app's QuizAnswers (src/components/feature/quiz-model.ts) per D015. Not a wire contract. Wording is CS's; option values are the contract. Raw answers stay in the local vault. No answer grants consent, assigns or confirms a preset, or changes live access.",
+  "skippable": true,
+  "questions": [
+    {
+      "id": "q1", "answerKey": "afterLongDay", "select": "multiple", "prompt": "After a long day, what helps?",
+      "target": "profile.preferredSupportModes + extras.prefersSpace",
+      "options": [
+        { "value": "short_call", "profileValue": "short_call" },
+        { "value": "encouraging_note", "profileValue": "encouraging_note" },
+        { "value": "shared_activity", "profileValue": "shared_activity" },
+        { "value": "space", "profileValue": null, "extras": { "prefersSpace": true },
+          "note": "Not exclusive in the app. Contributes no support mode; DS matching treats prefersSpace as no-action even when other modes are present." }
+      ]
+    },
+    {
+      "id": "q2", "answerKey": "friendQuiet", "select": "multiple", "prompt": "When a friend goes quiet, what do you prefer?",
+      "target": "profile.preferredSupportModes",
+      "openQuestion": "DS-Q2 (to CS): this asks how the owner reaches out, but is merged into the modes the owner wants to receive. DS recommends local-only. Fixtures follow current main until decided.",
+      "options": [
+        { "value": "encouraging_note", "profileValue": "encouraging_note" },
+        { "value": "shared_activity", "profileValue": "shared_activity" }
+      ]
+    },
+    {
+      "id": "q3", "select": "parts", "prompt": "Which tone and rhythm feel right?",
+      "parts": [
+        { "answerKey": "tone", "target": "profile.communicationStyle", "values": ["direct", "gentle", "playful"] },
+        { "answerKey": "rhythm", "target": "profile.rhythm", "values": ["spontaneous", "planned", "flexible"] }
+      ]
+    },
+    {
+      "id": "q4", "answerKey": "overwhelmed", "select": "single", "prompt": "When overwhelmed, how should suggestions behave?",
+      "target": "profile.suggestionIntensity", "values": ["fewer", "quiet", "paused"]
+    },
+    {
+      "id": "q5", "answerKey": "activities", "select": "multiple", "prompt": "Which activities make connecting easy?",
+      "target": "extras.activities", "values": ["talking", "games", "watching_together", "creating", "other"],
+      "freeText": { "answerKey": "activitiesNote", "target": "extras.activitiesNote", "maxLength": 200,
+        "rule": "Kept only when 'other' is selected; trimmed; empty becomes null. Local only." }
+    },
+    {
+      "id": "q6", "answerKey": "scheduleSuggestions", "select": "single", "prompt": "How should the app approach schedule suggestions?",
+      "target": "extras.scheduleSuggestions", "values": ["only_after_review", "keep_private"],
+      "note": "Neither value grants calendar access or coarse_availability sharing."
+    },
+    {
+      "id": "q7", "answerKey": "categories", "select": "multiple", "prompt": "Which categories might you consider sharing?",
+      "target": "profile.draftSharingCategories", "values": ["support_preference", "coarse_availability"],
+      "note": "Empty means neither or skipped. Draft suggestions only: presets still need owner confirmation and every item needs approval."
+    },
+    {
+      "id": "q8", "answerKey": "reviewComfort", "select": "single", "prompt": "Before connecting someone, how much review feels comfortable?",
+      "target": "extras.reviewComfort", "values": ["review_everything", "quick_review"],
+      "note": "Comfort only. approvalMode stays each_item; no value enables automatic sharing."
+    }
+  ]
+}
