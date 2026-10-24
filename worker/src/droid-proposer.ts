@@ -240,8 +240,8 @@ export function buildPlanPrompt(input: PlanProposalInput): string {
 }
 
 export function buildIntroPrompt(input: IntroProposalInput): string {
-  const options = input.candidates.map((c, i) =>
-    `${i}: shared interests ${JSON.stringify(c.overlapTags)}; shared events ${c.sharedEventCount}`).join('\n');
+  const options = input.candidates.map((c, i) => `${i}: reasons ${JSON.stringify(c.reasons)}; shared interests ` +
+    `${JSON.stringify(c.sharedTags)}; ${c.sharedEvent ? 'both plan to attend the same event' : 'no shared event'}`).join('\n');
   return [
     input.round === 2 ? 'Your previous reply could not be used. Follow the reply format exactly.\n' : '',
     'You help one person in Kinetic decide whether to introduce themselves to someone nearby. You see only interests both people chose to publish.',

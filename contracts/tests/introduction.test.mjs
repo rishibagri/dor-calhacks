@@ -3,12 +3,13 @@ import assert from 'node:assert/strict';
 import { IntroductionOutcomeSchema, IntroductionProposalSchema, IntroductionShortlistSchema } from '../dist/index.js';
 
 // SYNTHETIC opaque refs; no names, bios, areas or contact details exist in these shapes.
-const candidate = (ref, over = {}) => ({ cardRef: ref, publicationVersion: 1, overlapTags: ['board_games'], sharedEventIds: [], ...over });
+const candidate = (ref, over = {}) => ({ ref, publicationVersion: 1, reasons: ['shared_interest'], sharedTags: ['board-games'],
+  sharedEventId: null, ...over });
 const shortlist = (over = {}) => ({ schemaVersion: 1, requestId: 'req-1', viewerRef: 'card-viewer', viewerPublicationVersion: 2,
-  candidates: [candidate('card-a'), candidate('card-b', { overlapTags: ['hiking', 'coffee'] })], ...over });
+  candidates: [candidate('card-a'), candidate('card-b', { sharedTags: ['hiking', 'coffee'] })], ...over });
 const proposal = (over = {}) => ({ schemaVersion: 1, proposalId: 'intro_1', requestId: 'req-1', viewerRef: 'card-viewer',
   candidateRef: 'card-a', viewerPublicationVersion: 2, candidatePublicationVersion: 1, reasonCode: 'shared_interest',
-  sharedTags: ['board_games'], openerId: 'suggest_shared_interest', revision: 1, createdAt: '2026-10-24T06:00:00Z',
+  sharedTags: ['board-games'], openerId: 'suggest_shared_interest', revision: 1, createdAt: '2026-10-24T06:00:00Z',
   expiresAt: '2026-10-25T06:00:00Z', decidedBy: 'deterministic', ...over });
 
 test('shortlist: at most three unique, stated-overlap candidates; never the viewer; no extra fields', () => {
@@ -18,8 +19,14 @@ test('shortlist: at most three unique, stated-overlap candidates; never the view
   reject({ candidates: ['a', 'b', 'c', 'd'].map(r => candidate(r)) }, 'more than three');
   reject({ candidates: [candidate('a'), candidate('a')] }, 'duplicate candidate');
   reject({ candidates: [candidate('card-viewer')] }, 'self');
-  reject({ candidates: [candidate('a', { overlapTags: [], sharedEventIds: [] })] }, 'no stated overlap');
-  reject({ candidates: [candidate('a', { overlapTags: ['Board Games!'] })] }, 'free text as a tag');
+  reject({ candidates: [candidate('a', { sharedTags: [] })] }, 'no stated overlap');
+  reject({ candidates: [candidate('a', { sharedTags: ['Board Games!'] })] }, 'free text as a tag');
+  reject({ candidates: [candidate('a', { reasons: [] })] }, 'no reason');
+  reject({ candidates: [candidate('a', { reasons: ['compatibility_92'] })] }, 'unknown reason');
+  reject({ candidates: [candidate('a', { sharedEventId: 'evt-1' })] }, 'shared event without the same_event reason');
+  reject({ candidates: [candidate('a', { reasons: ['same_event'] })] }, 'same_event reason without the event');
+  assert.equal(IntroductionShortlistSchema.safeParse(shortlist({ candidates: [candidate('a', { reasons: ['same_event', 'shared_interest'],
+    sharedEventId: 'evt-1' })] })).success, true, 'DS same-event entry');
   reject({ candidates: [candidate('a', { displayName: 'Ana' })] }, 'unknown candidate field');
   reject({ candidates: [candidate('a', { coarseArea: 'cell-123' })] }, 'area never reaches the AI step');
   reject({ journal: 'x' }, 'unknown shortlist field');

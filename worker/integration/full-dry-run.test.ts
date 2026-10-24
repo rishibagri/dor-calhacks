@@ -176,8 +176,8 @@ describe('full AI dry run', () => {
     const intro = new IntroductionCoordinator({ proposer: new DroidIntroProposer({ runner }), clock: { now: () => new Date() },
       eligibility: { current: async () => ({ viewerPublicationVersion: 1, candidatePublicationVersion: 1 }) } }); // SYNTHETIC: no C8 state yet
     const shortlist = { schemaVersion: 1, requestId: 'dry-intro', viewerRef: 'card-newcomer', viewerPublicationVersion: 1,
-      candidates: [{ cardRef: 'card-1', publicationVersion: 1, overlapTags: ['running'], sharedEventIds: [] },
-        { cardRef: 'card-2', publicationVersion: 1, overlapTags: ['board_games', 'coffee'], sharedEventIds: [] }] };
+      candidates: [{ ref: 'card-1', publicationVersion: 1, reasons: ['shared_interest'], sharedTags: ['running'], sharedEventId: null },
+        { ref: 'card-2', publicationVersion: 1, reasons: ['shared_interest'], sharedTags: ['board-games', 'coffee'], sharedEventId: null }] };
     const empty = await step(J, 'empty area: no candidates', ['real', 'synthetic'], () => intro.propose({ ...shortlist, candidates: [] }),
       r => r.outcome.outcome, r => r.outcome.modelCalls);
     expect(empty.outcome.modelCalls).toBe(0);
@@ -193,7 +193,7 @@ describe('full AI dry run', () => {
     const now = Date.now(), H = 3_600_000;
     const ev = (id: string, hours: number, topics: string[]) => ({ eventId: id, startsAt: new Date(now + hours * H).toISOString(),
       status: 'scheduled' as const, fetchedAt: new Date(now - H).toISOString(), topics, format: 'in_person' as const });
-    const events = [ev('evt-games', 30, ['board_games']), ev('evt-run', 40, ['running'])]; // SYNTHETIC catalogue records
+    const events = [ev('evt-games', 30, ['board-games']), ev('evt-run', 40, ['running'])]; // SYNTHETIC catalogue records
     const runner = new DroidRunner(scriptedRunner(['{"decision":"suggest","eventIndex":0}']).options);
     const plans = new PlanCoordinator({ proposer: new DroidPlanProposer({ runner }), clock: { now: () => new Date() },
       current: { current: async (_b, _r, id) => ({ intentVersions: { ana: 1, ben: 1 }, bothIntend: true, // SYNTHETIC intents

@@ -5,7 +5,11 @@ import { IntroductionCoordinator, InvalidShortlistError } from '../dist/index.js
 // SYNTHETIC opaque refs and tags only.
 const NOW = new Date('2026-10-24T06:00:00Z');
 const clock = { now: () => NOW };
-const cand = (ref, over = {}) => ({ cardRef: ref, publicationVersion: 1, overlapTags: ['board_games'], sharedEventIds: [], ...over });
+/** DS ShortlistEntry shape plus publication version; `sharedEventId` implies the same_event reason. */
+const cand = (ref, over = {}) => {
+  const c = { ref, publicationVersion: 1, reasons: ['shared_interest'], sharedTags: ['board-games'], sharedEventId: null, ...over };
+  return c.sharedEventId ? { ...c, reasons: ['same_event', ...c.reasons.filter(r => r !== 'same_event')] } : c;
+};
 const shortlist = (candidates, over = {}) => ({ schemaVersion: 1, requestId: 'req-1', viewerRef: 'card-v',
   viewerPublicationVersion: 3, candidates, ...over });
 
@@ -41,7 +45,7 @@ test('zero candidates or zero still-eligible candidates: no proposal and zero mo
 
 test('one eligible candidate: deterministic proposal, zero model calls', async () => {
   const p = proposer();
-  const r = await coordinator(eligibility({}, { blocked: new Set(['b']) }), p).propose(shortlist([cand('a', { overlapTags: ['hiking', 'coffee'] }), cand('b')]));
+  const r = await coordinator(eligibility({}, { blocked: new Set(['b']) }), p).propose(shortlist([cand('a', { sharedTags: ['hiking', 'coffee'] }), cand('b')]));
   assert.equal(p.inputs.length, 0);
   assert.deepEqual([r.outcome.outcome, r.outcome.decidedBy, r.outcome.modelCalls, r.outcome.eligible], ['proposed', 'deterministic', 0, 1]);
   assert.deepEqual([r.proposal.candidateRef, r.proposal.reasonCode, r.proposal.sharedTags, r.proposal.openerId],
@@ -50,17 +54,17 @@ test('one eligible candidate: deterministic proposal, zero model calls', async (
 });
 
 test('a shared event is the deterministic lead', async () => {
-  const r = await coordinator(eligibility(), proposer()).propose(shortlist([cand('a', { sharedEventIds: ['evt-9'] })]));
+  const r = await coordinator(eligibility(), proposer()).propose(shortlist([cand('a', { sharedEventId: 'evt-9' })]));
   assert.deepEqual([r.proposal.reasonCode, r.proposal.eventId, r.proposal.sharedTags, r.proposal.openerId],
     ['same_event', 'evt-9', [], 'suggest_event_together']);
 });
 
 test('two or three candidates: one model call; the prompt has tags and counts only, never refs or versions', async () => {
   const p = proposer({ decision: 'suggest', candidateIndex: 1, lead: 'tag', tagIndex: 1 });
-  const r = await coordinator(eligibility(), p).propose(shortlist([cand('a'), cand('b', { overlapTags: ['hiking', 'coffee'], sharedEventIds: ['evt-1'] })]));
+  const r = await coordinator(eligibility(), p).propose(shortlist([cand('a'), cand('b', { sharedTags: ['hiking', 'coffee'], sharedEventId: 'evt-1' })]));
   assert.equal(p.inputs.length, 1);
-  assert.deepEqual(p.inputs[0], { candidates: [{ overlapTags: ['board_games'], sharedEventCount: 0 },
-    { overlapTags: ['hiking', 'coffee'], sharedEventCount: 1 }], round: 1 });
+  assert.deepEqual(p.inputs[0], { candidates: [{ reasons: ['shared_interest'], sharedTags: ['board-games'], sharedEvent: false },
+    { reasons: ['same_event', 'shared_interest'], sharedTags: ['hiking', 'coffee'], sharedEvent: true }], round: 1 });
   const prompt = JSON.stringify(p.inputs[0]);
   for (const secret of ['card-', 'req-1', 'evt-1']) assert.equal(prompt.includes(secret), false, `prompt leaks ${secret}`);
   assert.deepEqual([r.outcome.decidedBy, r.proposal.candidateRef, r.proposal.sharedTags], ['agent', 'b', ['coffee', 'hiking']]);

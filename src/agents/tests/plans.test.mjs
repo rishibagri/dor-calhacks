@@ -9,7 +9,7 @@ const HOUR = 3_600_000;
 const iso = (ms) => new Date(ms).toISOString();
 const clock = { now: () => new Date(NOW) };
 const event = (id, over = {}) => ({ eventId: id, startsAt: iso(NOW + 30 * HOUR), status: 'scheduled', fetchedAt: iso(NOW - HOUR),
-  topics: ['board_games'], format: 'in_person', ...over });
+  topics: ['board-games'], format: 'in_person', ...over });
 const request = (events, { a = ['e1', 'e2', 'e3'], b = ['e1', 'e2', 'e3'], ...over } = {}) => ({ schemaVersion: 1,
   requestId: 'req-1', basis: { kind: 'introduction', ref: 'intro_1' },
   participants: [{ ref: 'ben', intentVersion: 2, eventIds: a }, { ref: 'ana', intentVersion: 1, eventIds: b }], events, ...over });
@@ -58,13 +58,13 @@ test('one usable mutual event: deterministic revision-1 proposal, zero model cal
 });
 
 test('several events: one call that sees topics/format/time only; at most three options', async () => {
-  const events = ['e1', 'e2', 'e3', 'e4'].map((id, i) => event(id, { topics: [`topic_${i}`], startsAt: iso(NOW + (20 + i) * HOUR) }));
+  const events = ['e1', 'e2', 'e3', 'e4'].map((id, i) => event(id, { topics: [`topic-${i}`], startsAt: iso(NOW + (20 + i) * HOUR) }));
   const p = proposer({ decision: 'suggest', eventIndex: 2 });
   const r = await coordinator(current({ events: Object.fromEntries(events.map(e => [e.eventId, e])) }), p)
     .propose(request(events, { a: ['e1', 'e2', 'e3', 'e4'], b: ['e1', 'e2', 'e3', 'e4'] }));
   assert.equal(p.inputs.length, 1);
   assert.equal(p.inputs[0].events.length, 3);
-  assert.deepEqual(p.inputs[0].events[0], { topics: ['topic_0'], format: 'in_person', startsInHours: 20 });
+  assert.deepEqual(p.inputs[0].events[0], { topics: ['topic-0'], format: 'in_person', startsInHours: 20 });
   for (const leak of ['e1', 'ana', 'ben', 'intro_1', 'req-1', 'fetchedAt']) assert.equal(JSON.stringify(p.inputs[0]).includes(leak), false, leak);
   assert.deepEqual([r.outcome.decidedBy, r.proposal.eventId], ['agent', 'e3']);
 });

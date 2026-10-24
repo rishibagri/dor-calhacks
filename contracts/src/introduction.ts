@@ -14,8 +14,14 @@ const version = z.number().int().positive();
 const time = z.string().datetime({ offset: true });
 const unique = <T>(values: T[]) => new Set(values).size === values.length;
 
-/** A published interest tag as a bounded slug. The allowlist itself is CS/Cyber's C8 publication contract. */
-export const DiscoveryTagSchema = z.string().regex(/^[a-z][a-z0-9_]{1,31}$/);
+/**
+ * A published interest tag as a bounded slug: the same shape as the catalogue topic allowlist (catalogue.ts) and
+ * DS's discovery ranker. The allowlist itself is CS/Cyber's C8 publication contract.
+ */
+export const DiscoveryTagSchema = z.string().regex(/^[a-z][a-z0-9-]{1,31}$/);
+/** DS shortlist explanation codes (src/features/discovery/types.ts REASON_CODES). No compatibility percentage. */
+export const DISCOVERY_REASON_CODES = ['shared_interest', 'same_event', 'event_fits_shared_interest'] as const;
+export const DiscoveryReasonCodeSchema = z.enum(DISCOVERY_REASON_CODES);
 export const INTRODUCTION_REASON_CODES = ['shared_interest', 'same_event'] as const;
 export const IntroductionReasonCodeSchema = z.enum(INTRODUCTION_REASON_CODES);
 export const INTRODUCTION_OPENER_IDS = ['suggest_shared_interest', 'suggest_event_together'] as const;
@@ -27,20 +33,26 @@ export const INTRODUCTION_OPENER_COPY: Record<(typeof INTRODUCTION_OPENER_IDS)[n
 };
 export const MAX_SHORTLIST = 3;
 
-/** One DS-shortlisted, already-eligible candidate. Overlap only: never the candidate's other fields. */
+/**
+ * One DS-shortlisted, already-eligible candidate: DS's ShortlistEntry (ref, reasons, sharedTags, sharedEventId)
+ * plus the publication version it was ranked against. Overlap only: never the candidate's other card fields.
+ */
 export const IntroductionCandidateSchema = z.object({
-  cardRef: id, publicationVersion: version,
-  overlapTags: z.array(DiscoveryTagSchema).max(8).refine(unique, 'Duplicate tags'),
-  /** Canonical C7 event IDs both people explicitly published intent for (R3); empty for nearby-only. */
-  sharedEventIds: z.array(id).max(4).refine(unique, 'Duplicate events'),
-}).strict().refine(c => c.overlapTags.length > 0 || c.sharedEventIds.length > 0, 'A candidate needs a stated overlap');
+  ref: id, publicationVersion: version,
+  reasons: z.array(DiscoveryReasonCodeSchema).min(1).max(3).refine(unique, 'Duplicate reasons'),
+  sharedTags: z.array(DiscoveryTagSchema).max(10).refine(unique, 'Duplicate tags'),
+  /** Canonical C7 event both people currently published intent for, if any. */
+  sharedEventId: id.nullable(),
+}).strict()
+  .refine(c => c.sharedTags.length > 0 || c.sharedEventId !== null, 'A candidate needs a stated overlap')
+  .refine(c => c.reasons.includes('same_event') === (c.sharedEventId !== null), 'same_event reason needs exactly the shared event');
 
 /** DS → AI. Candidates are in DS rank order and were filtered in authoritative state before ranking. */
 export const IntroductionShortlistSchema = z.object({
   schemaVersion: z.literal(1), requestId: id, viewerRef: id, viewerPublicationVersion: version,
   candidates: z.array(IntroductionCandidateSchema).max(MAX_SHORTLIST)
-    .refine(cs => unique(cs.map(c => c.cardRef)), 'Duplicate candidates'),
-}).strict().refine(s => s.candidates.every(c => c.cardRef !== s.viewerRef), 'The viewer cannot be their own candidate');
+    .refine(cs => unique(cs.map(c => c.ref)), 'Duplicate candidates'),
+}).strict().refine(s => s.candidates.every(c => c.ref !== s.viewerRef), 'The viewer cannot be their own candidate');
 
 /** AI → viewer-only proposal state (CS) and guarded finalization (Cyber). Versions bind it to what was published. */
 export const IntroductionProposalSchema = z.object({
@@ -66,6 +78,7 @@ export const IntroductionOutcomeSchema = z.object({
 }).strict();
 
 export type DiscoveryTag = z.infer<typeof DiscoveryTagSchema>;
+export type DiscoveryReasonCode = z.infer<typeof DiscoveryReasonCodeSchema>;
 export type IntroductionCandidate = z.infer<typeof IntroductionCandidateSchema>;
 export type IntroductionShortlist = z.infer<typeof IntroductionShortlistSchema>;
 export type IntroductionProposal = z.infer<typeof IntroductionProposalSchema>;

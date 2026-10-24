@@ -58,7 +58,7 @@ test('a revision clears earlier acceptances; only a pending plan can be revised'
 });
 
 const event = (id, over = {}) => ({ eventId: id, startsAt: '2026-10-25T18:00:00Z', status: 'scheduled',
-  fetchedAt: '2026-10-24T06:00:00Z', topics: ['board_games'], format: 'in_person', ...over });
+  fetchedAt: '2026-10-24T06:00:00Z', topics: ['board-games'], format: 'in_person', ...over });
 
 test('plan request: two different people, events without source text', () => {
   const req = { schemaVersion: 1, requestId: 'req-1', basis: { kind: 'introduction', ref: 'intro_1' },

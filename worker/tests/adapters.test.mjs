@@ -111,16 +111,17 @@ test('droid slots: concurrent runs never share a directory; extra calls queue, o
 
 test('intro prompt: published overlap tags and event counts only; ack and intro agents share one slot pool', async () => {
   const { buildIntroPrompt, DroidIntroProposer, DroidAckProposer: Ack, DroidRunner } = await import('../dist/index.js');
-  const prompt = buildIntroPrompt({ candidates: [{ overlapTags: ['board_games'], sharedEventCount: 0 },
-    { overlapTags: ['hiking'], sharedEventCount: 2 }], round: 2 });
+  const prompt = buildIntroPrompt({ candidates: [{ reasons: ['shared_interest'], sharedTags: ['board-games'], sharedEvent: false },
+    { reasons: ['same_event'], sharedTags: ['hiking'], sharedEvent: true }], round: 2 });
   assert.match(prompt, /previous reply could not be used/);
-  assert.match(prompt, /0: shared interests \["board_games"\]; shared events 0/);
+  assert.match(prompt, /0: reasons \["shared_interest"\]; shared interests \["board-games"\]; no shared event/);
+  assert.match(prompt, /1: reasons \["same_event"\]; shared interests \["hiking"\]; both plan to attend the same event/);
   assert.match(prompt, /"decision":"none"/);
   const { runs, spawn } = heldSpawn();
   const runner = new DroidRunner({ spawn, env: {}, concurrency: 1, timeoutMs: 5000 });
   const intro = new DroidIntroProposer({ runner });
   const ack = new Ack({ runner });
-  const first = intro.propose({ candidates: [{ overlapTags: ['hiking'], sharedEventCount: 0 }], round: 1 }, 'r1');
+  const first = intro.propose({ candidates: [{ reasons: ['shared_interest'], sharedTags: ['hiking'], sharedEvent: false }], round: 1 }, 'r1');
   const second = ack.propose(input, 'r2');
   await until(() => runs.length >= 1);
   await new Promise(r => setTimeout(r, 20));
@@ -135,9 +136,9 @@ test('intro prompt: published overlap tags and event counts only; ack and intro 
 
 test('plan prompt: topics, format and lead time only', async () => {
   const { buildPlanPrompt } = await import('../dist/index.js');
-  const prompt = buildPlanPrompt({ events: [{ topics: ['board_games'], format: 'in_person', startsInHours: 30 },
+  const prompt = buildPlanPrompt({ events: [{ topics: ['board-games'], format: 'in_person', startsInHours: 30 },
     { topics: ['film'], format: 'online', startsInHours: 6 }], round: 1 });
-  assert.match(prompt, /0: topics \["board_games"\]; in person; starts in about 30 hours/);
+  assert.match(prompt, /0: topics \["board-games"\]; in person; starts in about 30 hours/);
   assert.match(prompt, /1: topics \["film"\]; online; starts in about 6 hours/);
   assert.doesNotMatch(prompt, /previous reply/);
 });

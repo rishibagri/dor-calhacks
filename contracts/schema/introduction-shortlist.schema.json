@@ -27,7 +27,7 @@
       "items": {
         "type": "object",
         "properties": {
-          "cardRef": {
+          "ref": {
             "type": "string",
             "minLength": 1,
             "maxLength": 128
@@ -37,29 +37,46 @@
             "exclusiveMinimum": 0,
             "maximum": 9007199254740991
           },
-          "overlapTags": {
-            "maxItems": 8,
+          "reasons": {
+            "minItems": 1,
+            "maxItems": 3,
             "type": "array",
             "items": {
               "type": "string",
-              "pattern": "^[a-z][a-z0-9_]{1,31}$"
+              "enum": [
+                "shared_interest",
+                "same_event",
+                "event_fits_shared_interest"
+              ]
             }
           },
-          "sharedEventIds": {
-            "maxItems": 4,
+          "sharedTags": {
+            "maxItems": 10,
             "type": "array",
             "items": {
               "type": "string",
-              "minLength": 1,
-              "maxLength": 128
+              "pattern": "^[a-z][a-z0-9-]{1,31}$"
             }
+          },
+          "sharedEventId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
-          "cardRef",
+          "ref",
           "publicationVersion",
-          "overlapTags",
-          "sharedEventIds"
+          "reasons",
+          "sharedTags",
+          "sharedEventId"
         ],
         "additionalProperties": false
       }
