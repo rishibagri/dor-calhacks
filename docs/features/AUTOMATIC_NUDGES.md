@@ -26,7 +26,7 @@ Per-nudge sender preview is optional **only** for a pair where the owner explici
 The worker and `commit_nudge` still require recipient opt-in, D035 support consent, quiet hours and cooldown, plus the exact rule version that approved each signal (`standingApprovalStands` in `commit_nudge`, `worker_signal_context`, `my_nudges`). Recipient copy stays the fixed template. Suppression is silent to the recipient.
 
 ## Revocation and no resurrection
-`revoke_standing_consent({pair_id})`, rule replacement, or a D041 pause ends the rule now and revokes its unused approvals and their nudges. Resuming a pause never re-enables a rule; the owner sets a new one. Expiry goes through `sweep_expired`.
+`revoke_standing_consent({pair_id})`, rule replacement, a D041 pause, or unlinking the pair (CS, either member's rule) ends the rule now and revokes its unused approvals and their nudges. Resuming a pause never re-enables a rule; the owner sets a new one. Expiry goes through `sweep_expired`.
 
 ## Owner view
 `my_standing_consents → {pair_id, categories, version, expires_at, active, created_at}[]`. Join `pair_id` to `my_pairs` for the name. No one else, including the recipient, has a view of rules.
