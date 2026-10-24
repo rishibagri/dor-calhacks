@@ -8,3 +8,4 @@ export { BoundedCoordinator, AckProposalSchema, MAX_ROUNDS, type AckProposal, ty
 export { eligibleOptions, intersectWindow, type AckOption } from './coordination/eligibility.js';
 export { ProviderError, httpStatusFor, toProviderError, type Provider, type ProviderErrorCode } from './errors.js';
 export { PROVIDER_PROCESSING } from './disclosure.js';
+export { handleReflectionRequest, handleVoiceSessionRequest, RateLimiter, type RouteSession } from './http/routes.js';
