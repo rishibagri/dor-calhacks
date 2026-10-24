@@ -4,7 +4,7 @@ import { AgentAckSchema, ApprovedSignalSchema, CoordinationOutcomeSchema, NUDGE_
   RecipientSupportPreferencesSchema, nudgeDelivery, templateForSignal, type AgentAck, type ApprovedSignal,
   type Availability, type Clock, type CoordinationOutcome, type CoordinationOutcomeCode, type CoordinationPort,
   type DisclosurePolicyPort, type Nudge, type RecipientDelivery, type RecipientSupportPreferences,
-  type SupportMode } from '@kinetic/contracts';
+  type SupportMode } from '@dor/contracts';
 import { eligibleOptions, sameOption, type AckOption } from './eligibility.js';
 
 export const MAX_ROUNDS = 2;

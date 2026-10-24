@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { NUDGE_TEMPLATE_COPY } from '@kinetic/contracts';
+import { NUDGE_TEMPLATE_COPY } from '@dor/contracts';
 import type { ReducerResult } from '@/lib/backend/ports';
 import { useLiveShared } from '@/components/shell/use-live';
 import { ResultNotice } from '@/components/shell/result-notice';

@@ -1,23 +1,23 @@
 // Live Factory Droid check of the bounded exchange with synthetic fixtures.
 // REAL: droid exec subprocess and model call. OFFLINE STAND-INS (labeled in output): contracts FakeDisclosurePolicy,
 // fixture recipient preferences and delivery state. This is an isolated Droid check, not end-to-end verification.
-// Usage: node scripts/live-droid.mjs [--runs N] [--model ID]   (model also via KINETIC_DROID_MODEL)
+// Usage: node scripts/live-droid.mjs [--runs N] [--model ID]   (model also via DOR_DROID_MODEL)
 import { spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
-import { FakeClock, FakeDisclosurePolicy } from '@kinetic/contracts/fakes';
-import { BoundedCoordinator } from '@kinetic/agents';
+import { FakeClock, FakeDisclosurePolicy } from '@dor/contracts/fakes';
+import { BoundedCoordinator } from '@dor/agents';
 import { DEFAULT_DROID_MODEL, DroidAckProposer } from '../dist/index.js';
 
 try { process.loadEnvFile(new URL('../../.env.local', import.meta.url)); } catch { /* optional */ }
 const arg = (name) => { const i = process.argv.indexOf(name); return i === -1 ? undefined : process.argv[i + 1]; };
 const runs = Math.max(1, Math.min(10, Number(arg('--runs')) || 1));
-const model = arg('--model') || process.env.KINETIC_DROID_MODEL || DEFAULT_DROID_MODEL;
+const model = arg('--model') || process.env.DOR_DROID_MODEL || DEFAULT_DROID_MODEL;
 const json = async (url) => JSON.parse(await readFile(new URL(url, import.meta.url), 'utf8'));
 const scenarios = await json('../../contracts/fixtures/scenarios.json');
 const { preferences, defaultDelivery } = await json('../../src/agents/fixtures/coordination.synthetic.json');
 const standIns = { policy: 'offline FakeDisclosurePolicy', preferences: 'synthetic fixture', delivery: 'synthetic opted-in fixture', commit: 'none' };
 
-const version = spawnSync(process.env.KINETIC_DROID_PATH || 'droid', ['--version'], { encoding: 'utf8' });
+const version = spawnSync(process.env.DOR_DROID_PATH || 'droid', ['--version'], { encoding: 'utf8' });
 if (version.status !== 0) {
   console.log(JSON.stringify({ check: 'factory.droid', status: 'SKIPPED_MISSING_RUNTIME', missing: 'droid CLI on PATH' }));
   process.exit(0);
@@ -27,8 +27,8 @@ console.log(JSON.stringify({ check: 'factory.droid.runtime', droidVersion: versi
 
 // One proposer for the whole run, as in the worker: its reused workdir is what lets the prompt cache hit.
 const usage = [];
-const droid = new DroidAckProposer({ model, droidPath: process.env.KINETIC_DROID_PATH || undefined,
-  timeoutMs: Number(process.env.KINETIC_DROID_TIMEOUT_MS) || undefined, onUsage: (u) => usage.push(u) });
+const droid = new DroidAckProposer({ model, droidPath: process.env.DOR_DROID_PATH || undefined,
+  timeoutMs: Number(process.env.DOR_DROID_TIMEOUT_MS) || undefined, onUsage: (u) => usage.push(u) });
 
 // Friends with a sender window gives two eligible options, so the model has a real choice to make.
 const cases = [

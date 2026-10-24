@@ -2,7 +2,7 @@
 // Always read in the same transaction as the write the guard protects.
 import type { Identity, Timestamp } from 'spacetimedb';
 import type { InferSchema, ViewCtx } from 'spacetimedb/server';
-import type { AreaState, DeliveryGate, DiscoveryParty, PolicySnapshot, PublicationState, StoredSignal, SupportPreferenceState } from '@kinetic/contracts/policy';
+import type { AreaState, DeliveryGate, DiscoveryParty, PolicySnapshot, PublicationState, StoredSignal, SupportPreferenceState } from '@dor/contracts/policy';
 import type { spacetimedb } from './schema';
 import type { Ctx } from './errors';
 

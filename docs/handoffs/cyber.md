@@ -81,7 +81,7 @@ Status: CYBER-P2/P3 implemented on `role/cyber-privacy` @ `34e70f7`. Offline-ver
   - source recheck, worker check, worker-view gate, replay resurrection
   - record AAD, fixed IV, key extractability, lock, recovery rotation
 - Bug found and fixed before merge: the worker views compared `find() !== undefined`, but SpacetimeDB's `find` returns `null`, so the views were visible to every caller.
-- **Not verified:** a published module, the real Clerk JWT mapping, concurrent transactions, the CLI bundling of `@kinetic/contracts/policy`, or the real-browser vault (pagehide, on-disk IndexedDB). Offline harness results do not prove deployed isolation.
+- **Not verified:** a published module, the real Clerk JWT mapping, concurrent transactions, the CLI bundling of `@dor/contracts/policy`, or the real-browser vault (pagehide, on-disk IndexedDB). Offline harness results do not prove deployed isolation.
 
 ## Consumer and exact next action
 - **CS:**

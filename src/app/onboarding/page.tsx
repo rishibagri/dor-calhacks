@@ -12,7 +12,7 @@ import {
   ACTIVITY_LABELS, CATEGORY_LABELS, EMPTY_ANSWERS, LONG_DAY_LABELS, QUESTION_COUNT, buildProfile,
   buildQuizExtras, countAnswered, toggle, type LongDayChoice, type QuizAnswers, type SupportMode,
 } from '@/components/feature/quiz-model';
-import type { SharingCategory } from '@kinetic/contracts';
+import type { SharingCategory } from '@dor/contracts';
 import type { ConnectActivity } from '@/lib/backend/ports';
 
 const longDayOptions = (Object.keys(LONG_DAY_LABELS) as LongDayChoice[]).map((v) => ({ value: v, label: LONG_DAY_LABELS[v] }));
@@ -82,7 +82,7 @@ export default function OnboardingPage() {
           <CardDescription>Leave any blank. Answers stay in this tab&apos;s memory unless saved to the local vault.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <Question legend="1. After a long day, what helps?" hint="Choosing space means Kinetic suggests nothing for that moment.">
+          <Question legend="1. After a long day, what helps?" hint="Choosing space means dor suggests nothing for that moment.">
             <MultiChoice name="q1" options={longDayOptions} value={a.afterLongDay}
               onChange={(v, on) => set({ afterLongDay: toggle(a.afterLongDay, v, on) })} />
           </Question>

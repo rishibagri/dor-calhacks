@@ -2,8 +2,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { ApprovedSignalSchema, AVAILABILITIES, SUPPORT_MODES } from '@kinetic/contracts';
-import type { ApprovedSignal, Availability, SupportMode } from '@kinetic/contracts';
+import { ApprovedSignalSchema, AVAILABILITIES, SUPPORT_MODES } from '@dor/contracts';
+import type { ApprovedSignal, Availability, SupportMode } from '@dor/contracts';
 import { rankAckOptions, rankActivities, type AckOption, type ActivityRankInput } from '../rank.ts';
 import { RANKERS, evaluate, inputFor, type CaseFile, type CatalogueFile } from '../metrics.ts';
 

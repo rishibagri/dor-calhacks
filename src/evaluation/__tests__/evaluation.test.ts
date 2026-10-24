@@ -3,9 +3,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { AgentAckSchema, ApprovedSignalSchema, RecipientPresetAssignmentSchema, RelationshipPresetSchema } from '@kinetic/contracts';
-import type { PolicyResult } from '@kinetic/contracts';
-import { FakeClock, FakeDisclosurePolicy } from '@kinetic/contracts/fakes';
+import { AgentAckSchema, ApprovedSignalSchema, RecipientPresetAssignmentSchema, RelationshipPresetSchema } from '@dor/contracts';
+import type { PolicyResult } from '@dor/contracts';
+import { FakeClock, FakeDisclosurePolicy } from '@dor/contracts/fakes';
 import { buildNudge, buildPreview, intersectAvailability, matchSignal, type MatchResult, type PreviewResult } from '../matching.ts';
 
 const data = JSON.parse(await readFile(new URL('../fixtures/evaluation-cases.json', import.meta.url), 'utf8'));

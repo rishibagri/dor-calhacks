@@ -1,6 +1,6 @@
 // AI dry run: the built worker (dist) against the REAL SpacetimeDB module running in-process — Cyber's
 // reducers, worker-only views and guards, not fakes. What is synthetic is labeled: the accounts, the Droid
-// subprocess (scripted unless KINETIC_DRYRUN_LIVE_DROID=1). Recipient consent is recorded through the real
+// subprocess (scripted unless DOR_DRYRUN_LIVE_DROID=1). Recipient consent is recorded through the real
 // set_support_preferences reducer and read via worker_support_preferences (D035). This is offline evidence, not a
 // published module or a deployed worker.
 import { EventEmitter } from 'node:events';
@@ -12,7 +12,7 @@ import { allSignals, approveArgs, confirmPreset, grantPrefs, jwtAuth, mod, pairU
   from '../../spacetimedb/tests/helpers';
 
 const BOTH = { support_mode: 'short_call', availability: 'this_week' };
-const LIVE_DROID = process.env.KINETIC_DRYRUN_LIVE_DROID === '1';
+const LIVE_DROID = process.env.DOR_DRYRUN_LIVE_DROID === '1';
 type Auth = ReturnType<typeof jwtAuth>;
 
 /** The worker's view of the module: worker-only views and commit_nudge, called as `who`. */
@@ -53,7 +53,7 @@ function world(cats = ['support_preference', 'coarse_availability'], { consent =
   const { pairId } = pairUp(w);
   confirmPreset(w, w.alice, pairId, 'partner', cats);
   if (consent) grantPrefs(w, w.bob, pairId, BOB_MODES, ['today', 'this_week']);
-  const worker = jwtAuth('kinetic-worker', 50n, 'https://worker.spacetimedb.example');
+  const worker = jwtAuth('dor-worker', 50n, 'https://worker.spacetimedb.example');
   const workerId = w.h.withReducerTx(worker, ctx => ctx.sender);
   w.h.withReducerTx(w.admin, ctx => mod.set_worker_identity(ctx, { worker: workerId, enabled: true }));
   const bobHex = w.h.withReducerTx(w.bob, ctx => ctx.sender.toHexString());

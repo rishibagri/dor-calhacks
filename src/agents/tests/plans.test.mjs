@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { InvalidPlanRequestError, PlanCoordinator } from '../dist/index.js';
-import { applyPlanAction } from '@kinetic/contracts/plan-lifecycle';
+import { applyPlanAction } from '@dor/contracts/plan-lifecycle';
 
 // SYNTHETIC refs, events and catalogue records. No source text exists in these shapes.
 const NOW = Date.parse('2026-10-24T12:00:00Z');

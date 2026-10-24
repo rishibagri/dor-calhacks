@@ -51,7 +51,7 @@ export function normalizeRecoveryCode(code: string): string | null {
   return c.length === 32 && [...c].every(ch => B32.includes(ch)) ? c : null;
 }
 
-const aad = (...parts: (string | number)[]) => enc.encode(['kinetic-vault', `v${VAULT_FORMAT}`, ...parts].join('/'));
+const aad = (...parts: (string | number)[]) => enc.encode(['dor-vault', `v${VAULT_FORMAT}`, ...parts].join('/'));
 
 export async function passphraseKek(passphrase: string, salt: Bytes, iterations: number): Promise<CryptoKey> {
   const base = await subtle().importKey('raw', enc.encode(normalizePassphrase(passphrase)), 'PBKDF2', false, ['deriveKey']);

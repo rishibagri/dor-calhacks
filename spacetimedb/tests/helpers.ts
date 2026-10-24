@@ -1,10 +1,10 @@
 import { ConnectionId } from 'spacetimedb';
 import { createModuleTestHarness, TestAuth } from 'spacetimedb/server/test-utils';
 import * as mod from '../src/index';
-import { DISCLOSURE_CONSENT_VERSION, payloadRevision } from '@kinetic/contracts/policy';
+import { DISCLOSURE_CONSENT_VERSION, payloadRevision } from '@dor/contracts/policy';
 
-export const ISSUER = 'https://kinetic-test.clerk.accounts.dev';
-export const AUDIENCE = 'kinetic';
+export const ISSUER = 'https://dor-test.clerk.accounts.dev';
+export const AUDIENCE = 'dor';
 export { mod };
 
 export function jwtAuth(sub: string, conn: bigint, issuer = ISSUER, aud: string[] = [AUDIENCE]) {

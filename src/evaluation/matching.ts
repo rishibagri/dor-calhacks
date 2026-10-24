@@ -9,10 +9,10 @@
  *   The disclosure decision is an input from DisclosurePolicyPort (Cyber); this module never
  *   grants consent and treats any policy denial as final.
  */
-import { AgentAckSchema, ApprovedSignalSchema, AvailabilitySchema, NudgeSchema, SupportModeSchema } from '@kinetic/contracts';
+import { AgentAckSchema, ApprovedSignalSchema, AvailabilitySchema, NudgeSchema, SupportModeSchema } from '@dor/contracts';
 import type {
   AgentAck, ApprovedSignal, Availability, Nudge, PolicyResult, RecipientPresetAssignment, RelationshipPreset, SupportMode,
-} from '@kinetic/contracts';
+} from '@dor/contracts';
 
 export const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 

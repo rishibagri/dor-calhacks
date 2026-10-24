@@ -2,8 +2,8 @@
 // Prints markdown; pass --write to also save src/evaluation/results/latest.md. No provider or live source is used.
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
-import { RecipientPresetAssignmentSchema, RelationshipPresetSchema } from '@kinetic/contracts';
-import { FakeClock, FakeDisclosurePolicy } from '@kinetic/contracts/fakes';
+import { RecipientPresetAssignmentSchema, RelationshipPresetSchema } from '@dor/contracts';
+import { FakeClock, FakeDisclosurePolicy } from '@dor/contracts/fakes';
 import { buildPreview, matchSignal } from './matching.ts';
 import { NEARBY_RANKERS, RANKERS, evaluate, evaluateNearby, type CaseFile, type CatalogueFile, type NearbyCaseFile, type NearbyPoolFile } from './metrics.ts';
 import { rankActivities } from './rank.ts';

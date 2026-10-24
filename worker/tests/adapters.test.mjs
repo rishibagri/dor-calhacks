@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { existsSync } from 'node:fs';
 import { PassThrough } from 'node:stream';
-import { ProviderError } from '@kinetic/agents';
+import { ProviderError } from '@dor/agents';
 import { DroidAckProposer, SpacetimeCommit, SpacetimeDeliveryState, SpacetimePolicyStateReader, SpacetimeRecipientPreferences,
   SpacetimeSignalSource, WORKER_VIEWS, classifyCommitError, mapRows, spacetimeWorkerPorts, toSignalContext,
   toSupportPreferences } from '../dist/index.js';

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import type { PrivateReflectionPort, VoicePort } from '@kinetic/contracts';
+import type { PrivateReflectionPort, VoicePort } from '@dor/contracts';
 import { ProviderError, httpStatusFor } from '../errors.js';
 import { MAX_SELECTED_TEXT_CHARS } from '../reflection/claude.js';
 

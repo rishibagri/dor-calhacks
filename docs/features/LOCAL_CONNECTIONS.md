@@ -41,7 +41,7 @@ Support only deliberate public venue/topic choices after a reviewed allowlist an
 - Journal text/audio/private reflections and raw quiz answers remain private. They are never discovery ranking inputs on the shared worker.
 - Shared discovery may use only explicitly published tags/intents and authorized coarse eligibility. Profile identity can be visible to the human; agent prompts should receive the minimal tags/options and opaque references, with public names resolved only for display when allowed.
 - Existing D028 Apify inputs reject location. Preserve that guard. Use a developer-configured city/campus source/feed common to users, with allowed generic topics; geographic source configuration needs explicit Cyber review. Do not encode device-derived cells as a topic/locale or user search.
-- Matching happens inside Kinetic. No profile, relationship, account/pair ID, attendance intention or private preference is sent to Apify.
+- Matching happens inside dor. No profile, relationship, account/pair ID, attendance intention or private preference is sent to Apify.
 - Public event venue addresses may appear as source-backed event information; a person's location never becomes an event address field.
 - Source content is inert untrusted data. Sanitize text/URLs, cap size, dedupe, keep provenance and never grant tools to scraped instructions.
 

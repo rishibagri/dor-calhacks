@@ -1,7 +1,7 @@
 import type { Identity } from 'spacetimedb';
 import { Timestamp } from 'spacetimedb';
 import { fail, type Ctx, type AccountRow, type PairRow } from './errors';
-import { audienceAllowed } from '@kinetic/contracts/policy';
+import { audienceAllowed } from '@dor/contracts/policy';
 import { CATEGORIES, PRESET_KINDS } from './constants';
 type Account = AccountRow;
 type Pair = PairRow;

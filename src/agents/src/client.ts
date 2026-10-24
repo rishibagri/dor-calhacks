@@ -1,8 +1,8 @@
 /**
  * Browser-safe clients for the AI routes. No provider SDKs, keys or Node APIs; responses are schema-checked
- * before they reach UI code. Import from `@kinetic/agents/client`.
+ * before they reach UI code. Import from `@dor/agents/client`.
  */
-import { PrivateReflectionSchema, VoiceSessionSchema, type PrivateReflection, type VoiceSession } from '@kinetic/contracts';
+import { PrivateReflectionSchema, VoiceSessionSchema, type PrivateReflection, type VoiceSession } from '@dor/contracts';
 
 /** Route failure with the API error code only (`unauthenticated`, `invalid`, `rate_limited`, `unavailable`, ...). */
 export class RouteError extends Error {

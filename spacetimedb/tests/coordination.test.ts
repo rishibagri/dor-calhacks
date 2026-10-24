@@ -18,7 +18,7 @@ function world(cats = ['support_preference', 'coarse_availability']) {
   confirmPreset(w, w.alice, pairId, 'partner', cats);
   const pref = grantPrefs(w, w.bob, pairId);
   bound = { recipient_consent_id: pref.consent_id, recipient_consent_version: pref.consent_version };
-  const worker = jwtAuth('kinetic-worker', 50n, 'https://worker.spacetimedb.example');
+  const worker = jwtAuth('dor-worker', 50n, 'https://worker.spacetimedb.example');
   const workerId = w.h.withReducerTx(worker, ctx => ctx.sender);
   w.h.withReducerTx(w.admin, ctx => mod.set_worker_identity(ctx, { worker: workerId, enabled: true }));
   return { w, pairId, worker };

@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { VoiceSession } from '@kinetic/contracts';
-import { VoiceDictation, type DictationSnapshot, type VoiceDictationDeps } from '@kinetic/agents/client';
+import type { VoiceSession } from '@dor/contracts';
+import { VoiceDictation, type DictationSnapshot, type VoiceDictationDeps } from '@dor/agents/client';
 
 const IDLE: DictationSnapshot = { state: 'idle', transcript: '', partial: '', speaking: false, error: null };
 

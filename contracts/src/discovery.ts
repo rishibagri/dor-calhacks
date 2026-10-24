@@ -1,6 +1,6 @@
 /**
  * PROPOSED C8 discovery guards (Cyber, D031/D035; CS/DS/AI review pending). Runtime-dependency-free so the
- * SpacetimeDB module enforces the same rules (re-exported from `@kinetic/contracts/policy`).
+ * SpacetimeDB module enforces the same rules (re-exported from `@dor/contracts/policy`).
  *
  * Three separate consents (contracts/specs/DISCOVERY.md): profile publication, introduction acceptance,
  * and C2/C3 pair sharing. Nothing here reads or grants pair signals, presets, support preferences, quiz

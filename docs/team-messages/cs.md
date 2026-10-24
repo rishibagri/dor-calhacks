@@ -1,6 +1,6 @@
 # Forwardable reset message — CS
 
-Kinetic's focus has expanded: AI should help people connect with people. We are keeping existing partner/friend/family support and adding nearby introductions plus local-event connections. The confirmed UX is one-time approximate location and opted-in public profiles visible before an invite is accepted.
+dor's focus has expanded: AI should help people connect with people. We are keeping existing partner/friend/family support and adding nearby introductions plus local-event connections. The confirmed UX is one-time approximate location and opted-in public profiles visible before an invite is accepted.
 
 Merge the latest main into your current role branch; preserve your code. Read AGENTS.md → README/PRD/PROJECT_KNOWLEDGE → contracts/README → docs/PLAN + TECH_STACK + specs → docs/roles/cs.md and your handoff. R0–R6 replace old P scheduling, not completed implementation or the original 36-hour deadline.
 

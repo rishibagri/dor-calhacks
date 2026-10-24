@@ -1,4 +1,4 @@
-# Architecture contract v2 — Kinetic
+# Architecture contract v2 — dor
 Selected technologies: see docs/TECH_STACK.md. This supersedes the server-stored Postgres journal design.
 
 ## Trust zones and data flow

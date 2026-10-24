@@ -364,12 +364,12 @@ test('preference validation and standing (views: no clock)', () => {
 });
 
 test('JWT audience: fail closed on empty allowlist, missing or foreign audience', () => {
-  assert.equal(audienceAllowed(['kinetic'], ['kinetic']), true);
-  assert.equal(audienceAllowed(['other-app', 'kinetic'], ['kinetic']), true);
-  assert.equal(audienceAllowed(['other-app'], ['kinetic']), false);
-  assert.equal(audienceAllowed([], ['kinetic']), false);
-  assert.equal(audienceAllowed(undefined, ['kinetic']), false);
-  assert.equal(audienceAllowed(['kinetic'], []), false);
+  assert.equal(audienceAllowed(['dor'], ['dor']), true);
+  assert.equal(audienceAllowed(['other-app', 'dor'], ['dor']), true);
+  assert.equal(audienceAllowed(['other-app'], ['dor']), false);
+  assert.equal(audienceAllowed([], ['dor']), false);
+  assert.equal(audienceAllowed(undefined, ['dor']), false);
+  assert.equal(audienceAllowed(['dor'], []), false);
   assert.equal(audienceAllowed([''], ['']), false);
 });
 

@@ -1,5 +1,5 @@
-import type { PolicyStateReader } from '@kinetic/contracts';
-import type { DeliveryStatePort, RecipientPreferencesPort } from '@kinetic/agents';
+import type { PolicyStateReader } from '@dor/contracts';
+import type { DeliveryStatePort, RecipientPreferencesPort } from '@dor/agents';
 import type { ApprovedSignalSource, CommitRejection, CoordinationCommitPort, CoordinationResult } from '../jobs.js';
 import { mapRows, NOT_OPTED_IN, toApprovedSignal, toDeliveryContext, toSignalContext, toSupportPreferences } from './rows.js';
 

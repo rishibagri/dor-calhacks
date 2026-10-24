@@ -1,12 +1,12 @@
 # src/privacy — disclosure policy, guards and reviews (Cyber)
 
-One policy implementation lives in the shared package (AGENTS.md: cross-boundary imports only via `@kinetic/contracts`). CS's device preview, the SpacetimeDB reducers/views, routes and the worker all call it (D026).
+One policy implementation lives in the shared package (AGENTS.md: cross-boundary imports only via `@dor/contracts`). CS's device preview, the SpacetimeDB reducers/views, routes and the worker all call it (D026).
 
 | Import | Contents | Runtime deps | Use in |
 |---|---|---|---|
-| `@kinetic/contracts/policy` | Core semantics:<br>• `evaluateDisclosure` (F3 core)<br>• `guardApproval` (F4)<br>• `guardSignalUse` / `guardSignalStanding` (each use, views)<br>• `guardNudgeCommit` (F7: sources, recipient preference consent, F5 gate)<br>• `guardPreferenceStanding`, `validSupportPreferences` (C4 recipient consent, D035)<br>• `audienceAllowed` (JWT `aud`, D035)<br>• proposed C8: `guardPublicationDraft`, `guardAreaKey`, `guardDiscoveryVisibility`, `projectDiscoveryCard`, `discoveryErrorCode`<br>• `nudgeDelivery`, `validRecipientDelivery`, `templateForSignal`, `matchesPreviewPayload`, `payloadRevision`, `policyErrorCode`<br>• constants and enums | none | SpacetimeDB module (authoritative) |
-| `@kinetic/contracts` | All of the above, plus:<br>• `previewDisclosure` + copy (device F3)<br>• `DisclosurePolicy` (real `DisclosurePolicyPort`) + `sameApprovedPayload` (presented vs stored envelope)<br>• `guardPublicCatalogueQuery` / `safeCatalogueUrl` (proposed C7 boundary) | Zod | UI, routes, worker |
-| `@kinetic/contracts/fakes` | `FakeDisclosurePolicy` | — | offline tests only |
+| `@dor/contracts/policy` | Core semantics:<br>• `evaluateDisclosure` (F3 core)<br>• `guardApproval` (F4)<br>• `guardSignalUse` / `guardSignalStanding` (each use, views)<br>• `guardNudgeCommit` (F7: sources, recipient preference consent, F5 gate)<br>• `guardPreferenceStanding`, `validSupportPreferences` (C4 recipient consent, D035)<br>• `audienceAllowed` (JWT `aud`, D035)<br>• proposed C8: `guardPublicationDraft`, `guardAreaKey`, `guardDiscoveryVisibility`, `projectDiscoveryCard`, `discoveryErrorCode`<br>• `nudgeDelivery`, `validRecipientDelivery`, `templateForSignal`, `matchesPreviewPayload`, `payloadRevision`, `policyErrorCode`<br>• constants and enums | none | SpacetimeDB module (authoritative) |
+| `@dor/contracts` | All of the above, plus:<br>• `previewDisclosure` + copy (device F3)<br>• `DisclosurePolicy` (real `DisclosurePolicyPort`) + `sameApprovedPayload` (presented vs stored envelope)<br>• `guardPublicCatalogueQuery` / `safeCatalogueUrl` (proposed C7 boundary) | Zod | UI, routes, worker |
+| `@dor/contracts/fakes` | `FakeDisclosurePolicy` | — | offline tests only |
 
 Docs in this folder: [REVIEWS.md](REVIEWS.md) (D016–D021 verdicts, C8 review), [ACTIVITY_CONSENT.md](ACTIVITY_CONSENT.md) (C7/Apify boundary). The vault lives in `src/vault/` ([DESIGN.md](../vault/DESIGN.md)); its UI controls in `src/features/privacy/` ([README](../features/privacy/README.md)).
 
@@ -51,7 +51,7 @@ Docs in this folder: [REVIEWS.md](REVIEWS.md) (D016–D021 verdicts, C8 review),
 - Default UI state is **off**. Capture `utc_offset_minutes` as the negation of `new Date().getTimezoneOffset()`.
 
 ### CS + Adam: worker (F6/F7)
-1. Ops: publish, then `spacetime call kinetic set_worker_identity '<worker identity hex>' true` as the module owner. The worker connects with its own SpacetimeDB token and never registers an account.
+1. Ops: publish, then `spacetime call dor set_worker_identity '<worker identity hex>' true` as the module owner. The worker connects with its own SpacetimeDB token and never registers an account.
 2. The worker reads `worker_signal_context`, which lists only signals that currently have standing, plus snapshot metadata. Map each row into `PolicyStateReader.load()`:
    - `signal`: `StoredSignal` from the signal columns (`expiresAtMs = expires_at` in ms, `revokedAtMs: null`)
    - `snapshot.pair`: `{pairId, memberA: pair_member_a hex, memberB: pair_member_b hex|null, status: pair_status}`
@@ -65,8 +65,8 @@ Docs in this folder: [REVIEWS.md](REVIEWS.md) (D016–D021 verdicts, C8 review),
 - `set_support_preferences({pair_id, support_modes, availability, expires_at, expected_version})`, `revoke_support_preferences({pair_id})`. Read back via `my_support_preferences`. Default UI state: no consent (no row). Show the expiry; offer renew and revoke.
 
 ### Ops (CS): auth and sweep
-1. Clerk JWT template (`NEXT_PUBLIC_CLERK_SPACETIME_JWT_TEMPLATE`): set a fixed `aud` claim, e.g. `"aud": "kinetic-spacetimedb"`.
-2. After publish, as module owner: `spacetime call kinetic set_auth_issuer '"<clerk issuer>"' true` **and** `spacetime call kinetic set_auth_audience '"kinetic-spacetimedb"' true`. Without an audience, every user reducer fails `unauthenticated`.
+1. Clerk JWT template (`NEXT_PUBLIC_CLERK_SPACETIME_JWT_TEMPLATE`): set a fixed `aud` claim, e.g. `"aud": "dor-spacetimedb"`.
+2. After publish, as module owner: `spacetime call dor set_auth_issuer '"<clerk issuer>"' true` **and** `spacetime call dor set_auth_audience '"dor-spacetimedb"' true`. Without an audience, every user reducer fails `unauthenticated`.
 3. `init` schedules `sweep_expired` every 60 s. Confirm one `expiry_sweep` row exists after publish.
 
 ### CS: discovery (proposed C8, off by default)
@@ -77,7 +77,7 @@ Build every Actor input via `guardPublicCatalogueQuery(input, ACTIVITY_TOPIC_ALL
 
 ## Known gaps (2026-10-24, CYBER-R1)
 - Nothing is published. All reducer and view evidence comes from the in-process SpacetimeDB harness, which doesn't prove deployed isolation, real JWT mapping, the real scheduler or concurrent transactions.
-- **Views can't check `aud`** (ViewCtx has no `senderAuth`). A token from the same Clerk instance minted for another audience maps to the same Identity and could read that user's own `my_*` rows; reducers refuse it. Mitigation: use a Clerk instance (distinct issuer) dedicated to Kinetic, since a separate JWT template keeps the same iss/sub.
+- **Views can't check `aud`** (ViewCtx has no `senderAuth`). A token from the same Clerk instance minted for another audience maps to the same Identity and could read that user's own `my_*` rows; reducers refuse it. Mitigation: use a Clerk instance (distinct issuer) dedicated to dor, since a separate JWT template keeps the same iss/sub.
 - Expiry in views is bounded by the 60 s sweep, not exact. The sweep scans whole tables (fine for the demo; index it in R4). `expired_record` markers are never pruned.
 - No rate limiting on `approve_signal`, `set_nudge_delivery`, `set_support_preferences` or the discovery reducers yet (R2/R4).
 - C8 is proposed: introductions/invites, report, invite limits and repeat-probe limits are R2. Discovery stays disabled until the C8 ACKs.

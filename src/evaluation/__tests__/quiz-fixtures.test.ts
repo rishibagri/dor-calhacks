@@ -7,7 +7,7 @@ import { readFile } from 'node:fs/promises';
 import {
   AgentAckSchema, ApprovedSignalSchema, DisclosureReceiptSchema, LocalConnectionProfileSchema,
   RecipientPresetAssignmentSchema, RelationshipPresetSchema,
-} from '@kinetic/contracts';
+} from '@dor/contracts';
 
 const load = async (name: string) => JSON.parse(await readFile(new URL(`../fixtures/${name}`, import.meta.url), 'utf8'));
 const quiz = await load('quiz.json');

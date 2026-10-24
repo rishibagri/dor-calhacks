@@ -1,9 +1,9 @@
 // AI-owned route (claimed in docs/updates/ai.md; CS owns session middleware and app wiring).
 // Transient Claude reflection over owner-selected text. Never log or persist request bodies.
 import { auth } from '@clerk/nextjs/server';
-import { ClaudeReflectionAdapter, RateLimiter, handleReflectionRequest, type RouteSession } from '@kinetic/agents';
+import { ClaudeReflectionAdapter, RateLimiter, handleReflectionRequest, type RouteSession } from '@dor/agents';
 
-const reflection = new ClaudeReflectionAdapter({ model: process.env.KINETIC_CLAUDE_MODEL || undefined });
+const reflection = new ClaudeReflectionAdapter({ model: process.env.DOR_CLAUDE_MODEL || undefined });
 const limiter = new RateLimiter({ limit: 12, windowMs: 60_000 });
 
 async function session(): Promise<RouteSession> {

@@ -1,5 +1,5 @@
 import { t } from 'spacetimedb/server';
-import { PREFERENCE_MAX_LIFETIME_MS, validSupportPreferences } from '@kinetic/contracts/policy';
+import { PREFERENCE_MAX_LIFETIME_MS, validSupportPreferences } from '@dor/contracts/policy';
 import { spacetimedb } from '../schema';
 import { fail, type Ctx } from '../errors';
 import { parseFuture, requireAccount, requireAcceptedPair, requireMemberPair } from '../guards';

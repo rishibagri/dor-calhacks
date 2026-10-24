@@ -1,12 +1,12 @@
 /**
- * Kinetic app-side integration seam (CS-owned).
+ * dor app-side integration seam (CS-owned).
  *
  * UI code depends ONLY on these interfaces. Concrete adapters:
  *   - SpacetimeDB adapter (src/lib/spacetime/*)  — CS
  *   - Vault adapter (src/vault/*)                — Cyber (not yet implemented)
  *   - Reflection/voice adapters (src/agents/*)   — AI (not yet implemented)
  *
- * Wire shapes come from @kinetic/contracts. Do not redefine them here.
+ * Wire shapes come from @dor/contracts. Do not redefine them here.
  * Authorization is enforced inside SpacetimeDB reducers/views, never by these
  * client interfaces; a client-side "ok" is not permission.
  */
@@ -20,7 +20,7 @@ import type {
   RelationshipPreset,
   RelationshipPresetKind,
   SharingCategory,
-} from '@kinetic/contracts';
+} from '@dor/contracts';
 
 export type { AgentAck, ApprovedSignal, DisclosureReceipt, LocalConnectionProfile, Nudge };
 

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { SharingCategorySchema } from '@kinetic/contracts';
-import type { RelationshipPresetKind, SharingCategory } from '@kinetic/contracts';
+import { SharingCategorySchema } from '@dor/contracts';
+import type { RelationshipPresetKind, SharingCategory } from '@dor/contracts';
 import type { ReducerResult } from '@/lib/backend/ports';
 import { useLiveShared } from '@/components/shell/use-live';
 import { ResultNotice } from '@/components/shell/result-notice';

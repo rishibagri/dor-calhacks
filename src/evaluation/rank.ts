@@ -11,8 +11,8 @@
  * ActivityItem is a DS consumer proposal for the planned C7 `ActivityCatalogueItem` (docs/features/ACTIVITY_DISCOVERY.md).
  * It is not a contract type; replace it with the C7 import once CS/Cyber land the reviewed schema.
  */
-import { safeCatalogueUrl } from '@kinetic/contracts';
-import type { ApprovedSignal, Availability, SupportMode } from '@kinetic/contracts';
+import { safeCatalogueUrl } from '@dor/contracts';
+import type { ApprovedSignal, Availability, SupportMode } from '@dor/contracts';
 
 /** Structurally identical to AI's `AckOption` (src/agents coordination); redeclared to import only contracts. */
 export interface AckOption { supportMode: SupportMode; availability?: Availability }

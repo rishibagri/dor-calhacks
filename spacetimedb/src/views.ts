@@ -3,7 +3,7 @@ import type { Identity } from 'spacetimedb';
 import {
   DISCOVERY_CARD_LIMIT, guardDiscoveryVisibility, guardPreferenceStanding, guardSignalStanding, projectDiscoveryCard,
   templateForSignal,
-} from '@kinetic/contracts/policy';
+} from '@dor/contracts/policy';
 import { spacetimedb, account, approved_signal, nudge, disclosure_receipt, nudge_delivery, support_preference } from './schema';
 import {
   blockedEitherWay, discoveryEnabled, hex, loadDiscoveryParty, loadPreference, loadStanding, signalExpiredMarked,

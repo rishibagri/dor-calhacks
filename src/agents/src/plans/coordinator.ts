@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { PlanOutcomeSchema, PlanRequestSchema, SharedPlanProposalSchema, type CatalogueEventRef, type Clock,
-  type PlanOutcome, type PlanOutcomeCode, type PlanRequest, type SharedPlanProposal } from '@kinetic/contracts';
+  type PlanOutcome, type PlanOutcomeCode, type PlanRequest, type SharedPlanProposal } from '@dor/contracts';
 
 export const PLAN_MAX_ROUNDS = 2;
 export const PLAN_MAX_OPTIONS = 3;

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import Anthropic from '@anthropic-ai/sdk';
-import { PrivateReflectionSchema, VoiceSessionSchema } from '@kinetic/contracts';
+import { PrivateReflectionSchema, VoiceSessionSchema } from '@dor/contracts';
 import { CartesiaVoiceAdapter, ClaudeReflectionAdapter, ProviderError, sniffAudioExtension } from '../dist/index.js';
 
 const json = async (url) => JSON.parse(await readFile(new URL(url, import.meta.url), 'utf8'));

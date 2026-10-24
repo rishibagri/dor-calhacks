@@ -1,4 +1,4 @@
-import type { ApprovedSignal, Availability, RecipientSupportPreferences, SupportMode } from '@kinetic/contracts';
+import type { ApprovedSignal, Availability, RecipientSupportPreferences, SupportMode } from '@dor/contracts';
 
 /** One ACK the recipient's own consent already permits; agents choose among these, never outside them. */
 export interface AckOption { supportMode: SupportMode; availability?: Availability }

@@ -1,4 +1,4 @@
-import type { DisclosureReceipt, Nudge, RecipientPresetAssignment, RelationshipPreset } from '@kinetic/contracts';
+import type { DisclosureReceipt, Nudge, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
 import type { InviteView, PairView } from '@/lib/backend/ports';
 import { findTable, type LooseConnection, type LooseTable } from './bindings';
 import {

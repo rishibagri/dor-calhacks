@@ -14,7 +14,7 @@ function world() {
   const { pairId } = pairUp(w);
   confirmPreset(w, w.alice, pairId, 'partner', ['support_preference', 'coarse_availability']);
   w.call(w.bob, ctx => mod.set_nudge_delivery(ctx, { pair_id: pairId, opted_in: true, quiet_start_minute: undefined, quiet_end_minute: undefined, utc_offset_minutes: 0 }));
-  const worker = jwtAuth('kinetic-worker', 50n, 'https://worker.spacetimedb.example');
+  const worker = jwtAuth('dor-worker', 50n, 'https://worker.spacetimedb.example');
   const workerId = w.h.withReducerTx(worker, ctx => ctx.sender);
   w.h.withReducerTx(w.admin, ctx => mod.set_worker_identity(ctx, { worker: workerId, enabled: true }));
   const args = approveArgs(w, w.alice, pairId, { support_mode: 'short_call', availability: 'this_week' });

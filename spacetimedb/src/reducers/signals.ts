@@ -1,6 +1,6 @@
 import { t } from 'spacetimedb/server';
 import { Timestamp } from 'spacetimedb';
-import { DISCLOSURE_PURPOSE, guardApproval, policyErrorCode } from '@kinetic/contracts/policy';
+import { DISCLOSURE_PURPOSE, guardApproval, policyErrorCode } from '@dor/contracts/policy';
 import { spacetimedb } from '../schema';
 import { fail } from '../errors';
 import { otherMember, requireAccount } from '../guards';

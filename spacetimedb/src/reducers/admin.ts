@@ -1,6 +1,6 @@
 import { t } from 'spacetimedb/server';
 import { ScheduleAt } from 'spacetimedb';
-import { validSlugAllowlist } from '@kinetic/contracts/policy';
+import { validSlugAllowlist } from '@dor/contracts/policy';
 import { spacetimedb } from '../schema';
 import { fail, type Ctx } from '../errors';
 import { SWEEP_INTERVAL_MICROS } from '../constants';

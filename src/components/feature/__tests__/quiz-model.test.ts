@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ApprovedSignalSchema } from '@kinetic/contracts';
+import { ApprovedSignalSchema } from '@dor/contracts';
 import { EMPTY_ANSWERS, buildProfile, buildQuizExtras, countAnswered } from '../quiz-model.ts';
 
 test('"space" maps to no support mode (no-action case) and is kept local', () => {

@@ -11,7 +11,7 @@ import type {
   DiscoveryCandidate, DiscoveryMode, DiscoveryShortlist, DiscoveryViewer, ExclusionReason, NoShortlistReason,
   PublishedEventIntent, ReasonCode, ShortlistEntry,
 } from '../features/discovery/types.ts';
-import { DISCOVERY_CARD_LIMIT, MAX_INTEREST_TAGS, MAX_PUBLIC_NAME } from '@kinetic/contracts/policy';
+import { DISCOVERY_CARD_LIMIT, MAX_INTEREST_TAGS, MAX_PUBLIC_NAME } from '@dor/contracts/policy';
 
 /** Initial proposals from docs/features/LOCAL_CONNECTIONS.md; benchmarks, not measured capacity. */
 export const MAX_CANDIDATES = DISCOVERY_CARD_LIMIT;

@@ -1,6 +1,6 @@
-# src/agents — `@kinetic/agents`
+# src/agents — `@dor/agents`
 
-AI-owned provider adapters and the bounded coordinator. Wire types come from `@kinetic/contracts`; this package adds implementations, not new wire shapes. Synthetic doubles are exported only from `@kinetic/agents/testing` and must never run in live mode.
+AI-owned provider adapters and the bounded coordinator. Wire types come from `@dor/contracts`; this package adds implementations, not new wire shapes. Synthetic doubles are exported only from `@dor/agents/testing` and must never run in live mode.
 
 Read root AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md and your role/handoff before implementation.
 
@@ -15,12 +15,12 @@ Read root AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md and your 
 | `ProviderError`, `httpStatusFor` | Sanitized error codes → API error envelope | CS routes | Implemented. |
 | `PROVIDER_PROCESSING` | Facts for provider-processing notices | CS copy, Cyber review | Retention is **unverified** for both providers. |
 | `handleReflectionRequest`, `handleVoiceSessionRequest`, `RateLimiter` | Authenticated route handlers behind `src/app/api/reflections` and `src/app/api/voice/session` | CS app wiring | Implemented, unit-tested. On a running Next build without Clerk they return 503. **Not exercised with a signed-in user or real keys.** |
-| `@kinetic/agents/client`: `createReflectionClient`, `createVoiceSessionClient`, `VoiceDictation`, `speak`, `startMicCapture` | Browser-safe route clients and voice helpers | CS UI hooks | Logic unit-tested with fake socket, mic and fetch. **Mic, AudioWorklet and Web Audio playback are not yet run in a browser.** |
+| `@dor/agents/client`: `createReflectionClient`, `createVoiceSessionClient`, `VoiceDictation`, `speak`, `startMicCapture` | Browser-safe route clients and voice helpers | CS UI hooks | Logic unit-tested with fake socket, mic and fetch. **Mic, AudioWorklet and Web Audio playback are not yet run in a browser.** |
 
 ### Reflection (`POST /api/reflections`)
 `new ClaudeReflectionAdapter().reflect(selectedText, clientRequestId)` returns `{ schemaVersion: 1, reflection, candidate }`. `candidate` is `null` or `{ supportMode?, availability? }` with contract enums only. Store the whole result in the owner's local vault. It is a draft: the UI builds the named-recipient preview from it, and nothing is shared without the guarded approval flow.
 
-- Model `claude-opus-5-5` (override `KINETIC_CLAUDE_MODEL`), effort `low`, structured output, server-side `fallbacks: "default"` (a declined request is retried on another Claude model, so it stays with Anthropic), 8 s timeout, 1 retry, SDK logging off.
+- Model `claude-opus-5-5` (override `DOR_CLAUDE_MODEL`), effort `low`, structured output, server-side `fallbacks: "default"` (a declined request is retried on another Claude model, so it stays with Anthropic), 8 s timeout, 1 retry, SDK logging off.
 - Sends only the selected text and a fixed system prompt: no user, pair or request identifiers.
 - Journal text is treated as data. Injection attempts cannot widen the output, because the candidate is enum-only and checked against the strict contract schema.
 - If the text suggests self-harm, the reflection points to emergency or crisis support (988 in the US) and the candidate is forced to `null`. **Team decision needed:** confirm this behavior and its copy.
@@ -38,9 +38,9 @@ Read root AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md and your 
 - Both use Clerk `auth()`. With no Clerk publishable key they return **503**, never anonymous access; with no user, 401.
 - Bodies are strict: unknown fields return 422. Limits are 12 reflections and 10 voice sessions per user per minute, in memory per instance.
 - Errors return `{error:{code,message,requestId}}` with codes `unauthenticated`, `invalid`, `rate_limited` or `unavailable`. Provider messages and input are never echoed, and responses are `no-store`.
-- Root `predev`, `prebuild:app` and `typecheck` now build `@kinetic/agents` before Next.
+- Root `predev`, `prebuild:app` and `typecheck` now build `@dor/agents` before Next.
 
-### Browser (`@kinetic/agents/client`; no provider SDKs, keys or Node APIs)
+### Browser (`@dor/agents/client`; no provider SDKs, keys or Node APIs)
 - `createReflectionClient().reflect(text, clientRequestId, signal?)` and `createVoiceSessionClient().createSession()` validate responses with the contract schemas and throw `RouteError(status, code)`.
 - `new VoiceDictation({ getSession, onChange })` handles mic → PCM s16 16 kHz → `wss://api.cartesia.ai/stt/turns/websocket` (`ink-2`, `access_token` and `cartesia_version` query params).
   - States: `idle`, `starting`, `listening`, `finalizing`, `stopped`, `error`.
@@ -73,6 +73,6 @@ Availability intersection: `no_preference` defers to the other side, equal windo
 ## Commands
 ```sh
 npm run ai:check   # build contracts + agents + worker, run offline tests (no network)
-npm run live -w @kinetic/agents   # live Claude/Cartesia checks; SKIPPED_MISSING_CREDENTIAL without keys
+npm run live -w @dor/agents   # live Claude/Cartesia checks; SKIPPED_MISSING_CREDENTIAL without keys
 ```
 Live checks read `ANTHROPIC_API_KEY` and `CARTESIA_API_KEY` from the environment or the repo-root `.env.local`. They print statuses, latencies and candidate enums, never keys or tokens.

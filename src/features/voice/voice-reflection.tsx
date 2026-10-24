@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { PrivateReflection, SignalCandidate, VoiceSession } from '@kinetic/contracts';
-import { RouteError, createReflectionClient, createVoiceSessionClient, speak } from '@kinetic/agents/client';
+import type { PrivateReflection, SignalCandidate, VoiceSession } from '@dor/contracts';
+import { RouteError, createReflectionClient, createVoiceSessionClient, speak } from '@dor/agents/client';
 import type { VaultPort } from '@/lib/backend/ports';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';

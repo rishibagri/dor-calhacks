@@ -1,7 +1,7 @@
 // AI-owned route (claimed in docs/updates/ai.md; CS owns session middleware and app wiring).
 // Mints a short-lived scoped Cartesia token for the signed-in browser; the master key never leaves the server.
 import { auth } from '@clerk/nextjs/server';
-import { CartesiaVoiceAdapter, RateLimiter, handleVoiceSessionRequest, type RouteSession } from '@kinetic/agents';
+import { CartesiaVoiceAdapter, RateLimiter, handleVoiceSessionRequest, type RouteSession } from '@dor/agents';
 
 const voice = new CartesiaVoiceAdapter();
 const limiter = new RateLimiter({ limit: 10, windowMs: 60_000 });

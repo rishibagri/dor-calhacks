@@ -1,5 +1,5 @@
 {
-  "name": "@kinetic/spacetimedb-module",
+  "name": "@dor/spacetimedb-module",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "check": "npm run typecheck && npm test"
   },
   "dependencies": {
-    "@kinetic/contracts": "0.1.0",
+    "@dor/contracts": "0.1.0",
     "spacetimedb": "2.13.0"
   },
   "devDependencies": {

@@ -12,7 +12,7 @@
  * - `withdrawn`/`blocked: false`: the view already drops those rows (guardDiscoveryVisibility);
  * - `alreadyConnected: false`: nothing computes it for discovery yet (open gap, raised to CS/Cyber).
  */
-import { looksLikeContactOrId, MAX_INTEREST_TAGS, MAX_PUBLIC_NAME, type DiscoveryCardProjection } from '@kinetic/contracts/policy';
+import { looksLikeContactOrId, MAX_INTEREST_TAGS, MAX_PUBLIC_NAME, type DiscoveryCardProjection } from '@dor/contracts/policy';
 import { rankNearby, type NearbyInput } from '../../evaluation/nearby.ts';
 import type { DiscoveryCandidate, DiscoveryShortlist } from './types.ts';
 

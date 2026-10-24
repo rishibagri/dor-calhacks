@@ -1,5 +1,5 @@
 {
-  "name": "@kinetic/worker",
+  "name": "@dor/worker",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -23,8 +23,8 @@
     "test:integration": "vitest run --config integration/vitest.config.ts"
   },
   "dependencies": {
-    "@kinetic/agents": "0.1.0",
-    "@kinetic/contracts": "0.1.0",
+    "@dor/agents": "0.1.0",
+    "@dor/contracts": "0.1.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {

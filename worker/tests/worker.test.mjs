@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { createServer } from 'node:http';
 import { PassThrough } from 'node:stream';
 import { readFile } from 'node:fs/promises';
-import { ProviderError } from '@kinetic/agents';
+import { ProviderError } from '@dor/agents';
 import { DroidAckProposer, JobConflictError, JobLedger, buildAckPrompt, createJobRequestHandler, createLiveWorker,
   extractJsonObject, runCoordinationJob } from '../dist/index.js';
 
@@ -75,7 +75,7 @@ test('droid usage is reported as numbers only', async () => {
 test('droid subprocess inherits no Claude, Cartesia or worker secrets', async () => {
   const { calls, spawn } = fakeSpawn({ stdout: envelope('{"decision":"decline"}') });
   const env = { PATH: '/usr/bin', HOME: '/home/synthetic', FACTORY_API_KEY: 'fk-synthetic', ANTHROPIC_API_KEY: 'sk-ant-synthetic',
-    CARTESIA_API_KEY: 'sk_car_synthetic', KINETIC_WORKER_AUTH_TOKEN: 'synthetic-worker-token', CLERK_SECRET_KEY: 'synthetic' };
+    CARTESIA_API_KEY: 'sk_car_synthetic', DOR_WORKER_AUTH_TOKEN: 'synthetic-worker-token', CLERK_SECRET_KEY: 'synthetic' };
   await new DroidAckProposer({ spawn, env }).propose(input, 'req');
   assert.deepEqual(calls[0].options.env, { PATH: '/usr/bin', HOME: '/home/synthetic', FACTORY_API_KEY: 'fk-synthetic' });
 });
@@ -84,7 +84,7 @@ test('droid prompt contains approved enums and options only', () => {
   const prompt = buildAckPrompt(input);
   assert.match(prompt, /"supportMode":"short_call"/);
   assert.match(prompt, /0: \{"supportMode":"short_call","availability":"this_week"\}/);
-  assert.equal(/signal|pair|consent|journal/i.test(prompt.replace(/approved|Kinetic/g, '')), false);
+  assert.equal(/signal|pair|consent|journal/i.test(prompt.replace(/approved|dor/g, '')), false);
   assert.match(buildAckPrompt({ ...input, round: 2 }), /previous reply could not be used/);
 });
 
