@@ -92,16 +92,18 @@ describe('F5 recipient gate (D017 opt-in default off, D018 quiet hours/cooldown)
     expect(nudges(w)).toHaveLength(0);
   });
 
-  it('opted-in recipient gets the nudge; sender gets a sender-only "used" receipt', () => {
+  it('opted-in recipient gets the nudge; the "used" outcome is recorded privately but never shown to the sender', () => {
     const { w, pairId, worker } = world();
     optIn(w, w.bob, pairId);
     const sig = approve(w, BOTH);
     commit(w, worker, commitArgs(pairId, sig));
     const [n] = view<any>(w, w.bob, mod.my_nudges);
     expect(n.template_id).toBe('offer_short_call');
-    expect(n.expires_at.microsSinceUnixEpoch).toBeLessThanOrEqual(sig.expires_at.microsSinceUnixEpoch);
+    expect(Object.keys(n).sort()).toEqual(['id', 'pair_id', 'template_id', 'visible_until']); // audit item 2
     expect(view<any>(w, w.alice, mod.my_receipts).map(r => [r.action, r.categories]))
-      .toEqual([['approved', ['support_preference', 'coarse_availability']], ['used', ['support_preference', 'coarse_availability']]]);
+      .toEqual([['approved', ['support_preference', 'coarse_availability']]]); // audit item 3: no 'used'
+    const table = w.h.withReducerTx(w.admin, ctx => [...ctx.db.disclosure_receipt.iter()].map(r => r.action));
+    expect(table).toContain('used'); // the audit trail still exists privately
     expect(view(w, w.bob, mod.my_receipts)).toHaveLength(0);
     expect(view(w, w.alice, mod.my_nudges)).toHaveLength(0);
   });

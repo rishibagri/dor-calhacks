@@ -3,9 +3,10 @@ import type { Ctx } from './errors';
 import { newId } from './ids';
 
 /**
- * Invalidate queued use for a pair: revoke active signals (receipt 'suppressed') and
- * suppress nudges built from them. With `owner`, only that sender's signals are affected
- * (reassignment / preset tightening); without it, everything on the pair (unlink).
+ * Invalidate queued use for a pair: revoke active signals and suppress nudges built from them. With `owner`
+ * (always the caller: reassignment, preset tightening, D041 pause), only that sender's signals are affected and the
+ * receipt is `revoked`, because it is the owner's own action. Without it (unlink), everything on the pair is affected
+ * and the receipt is `suppressed`, which `my_receipts` never projects (Core 3 audit item 3).
  */
 export function suppressPairWork(ctx: Ctx, pairId: string, owner?: Identity): void {
   const affected = new Set<string>();
@@ -21,7 +22,7 @@ export function suppressPairWork(ctx: Ctx, pairId: string, owner?: Identity): vo
         .filter(Boolean),
       consent_version: s.consent_version, recipient_policy_version: s.recipient_policy_version,
       preset_assignment_version: s.preset_assignment_version,
-      action: 'suppressed', created_at: ctx.timestamp,
+      action: owner ? 'revoked' : 'suppressed', created_at: ctx.timestamp,
     });
   }
   for (const n of [...ctx.db.nudge.pair_id.filter(pairId)]) {
