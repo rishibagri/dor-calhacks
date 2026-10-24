@@ -13,7 +13,8 @@ export { PlanWatcher, SpacetimePlanState, PLAN_PARTICIPANTS, classifyPlanCommitE
 export { SpacetimeCommit, SpacetimeDeliveryState, SpacetimePolicyStateReader, SpacetimeSignalSource,
   SpacetimeRecipientPreferences, UnavailableRecipientPreferences, classifyCommitError, spacetimeWorkerPorts, type CommitNudgeArgs,
   type CommitIntroductionArgs, type CommitPlanArgs, type WorkerStateSource } from './spacetime/adapters.js';
-export { SpacetimeWorkerConnection, WORKER_VIEWS, OPTIONAL_WORKER_VIEWS, type SpacetimeWorkerOptions } from './spacetime/connection.js';
+export { SpacetimeWorkerConnection, WORKER_VIEWS, OPTIONAL_WORKER_VIEWS, DISCONNECTED, isDisconnected, type WorkerConnectionEvent, type SpacetimeWorkerOptions } from './spacetime/connection.js';
 export { toApprovedSignal, toDeliveryContext, toPlanCandidate, toSignalContext, toSupportPreferences, mapRows, RowShapeError,
   type PlanCandidate } from './spacetime/rows.js';
 export { SignalWatcher, type SignalWatcherOptions } from './watcher.js';
+export { WorkerLoop, type LoopConnection, type WorkerLoopOptions } from './loop.js';

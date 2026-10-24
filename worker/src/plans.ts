@@ -3,6 +3,7 @@ import { PlanOutcomeSchema, type CatalogueEventRef, type Clock, type PlanOutcome
 import { PlanCoordinator, type PlanCurrentStatePort } from '@dor/agents';
 import type { CommitPlanArgs, WorkerStateSource } from './spacetime/adapters.js';
 import { mapRows, toPlanCandidate, type PlanCandidate } from './spacetime/rows.js';
+import { isDisconnected } from './spacetime/connection.js';
 import { DroidPlanProposer, type DroidRunner } from './droid-proposer.js';
 import { DEFAULT_JOB_DEADLINE_MS } from './live.js';
 
@@ -188,7 +189,8 @@ export class PlanWatcher {
         this.attempts.delete(key);
         this.options.onOutcome?.(outcome);
       } catch (error) {
-        this.attempts.set(key, (this.attempts.get(key) ?? 0) + 1);
+        // A dropped connection is retried after reconnecting; plan IDs are stable, so a landed commit is a no-op.
+        if (!isDisconnected(error)) this.attempts.set(key, (this.attempts.get(key) ?? 0) + 1);
         this.options.onError?.(error);
       }
     }

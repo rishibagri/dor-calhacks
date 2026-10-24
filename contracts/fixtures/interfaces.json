@@ -80,6 +80,11 @@
     "candidate": {
       "supportMode": "short_call",
       "availability": "this_week"
+    },
+    "assessment": {
+      "intent": "wants_connection",
+      "excludedNames": [],
+      "preferredNames": []
     }
   },
   "VoiceSession": {
