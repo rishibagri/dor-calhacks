@@ -41,3 +41,9 @@ The detailed personal assessment requested by the user is kept local and deliver
 
 ## Reset verification — main d7285eb plus documentation changes
 Fresh locked install completed. `npm run check:all` exited 0: contracts 63, in-process module 52, typecheck clean, app/vault/evaluation 102 passed + 1 known TODO (semantic signal ID). `npm run ai:check` exited 0: agents 45, worker 10. Default app build was blocked by environment restrictions (font download, then Turbopack port/process operation); alternate `npm run build:app -- --webpack` passed. This is compile/offline evidence, not deployed/provider/browser evidence. Local link/phase/decision-ID and `git diff --check` validation passed. No runtime schema or implementation code changed by this reset; no paid provider/Actor call ran.
+
+## CS integration follow-up — codex/cs-app-integration (2026-10-24)
+
+Supersedes the older placeholder statements for this branch only: account-specific LocalVault initialization now uses hashed Clerk account namespaces, cancellation/pagehide locking and reactive lifecycle state. Journal and Privacy compose the existing VoiceReflection and VaultControls; journal can save, list, open and delete local entries/reflections. Account change remounts private UI; locking unmounts the editor. Generated client/worker SpacetimeDB bindings and Node ESM build fixes from the Desktop working copy are included. No shared contract shapes changed.
+
+Still not done: candidate-to-recipient preview/approval UI, recipient support-preference settings, Discover/event page composition, authoritative event intent/plan persistence, Apify catalogue, worker credentials/deployed auth, and real-browser/provider E2E verification. Claude is not configured locally; Cartesia configuration is not proof of live operation. No deployment or paid provider test was performed. Relationship safety requirements and their limited regression evidence are in docs/features/RELATIONSHIP_SAFETY.md.

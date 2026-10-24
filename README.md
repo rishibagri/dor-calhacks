@@ -267,3 +267,9 @@ Configuration is documented in [.env.example](.env.example); keep real values lo
 Main remains authoritative for shared contracts. Each owner merges it into their active branch; never reset teammates' work. Log R-task IDs, exact files, evidence and next consumer; ACK handoffs when usable and raise blockers within 15 minutes. Read all four logs before interface edits and hourly. Small PRs every 2–3 hours keep integration manageable.
 
 The repository is private; shared contracts are visible to all invited teammates. This README keeps the detailed product/architecture/ownership/verification organization inspired by [FaultLine](https://github.com/Jay-Thpr/FaultLine). Video planning stays in its own file. See [decisions](docs/DECISIONS.md) for the original agreements and this reset.
+
+## Latest CS integration checkpoint (2026-10-24)
+
+On `codex/cs-app-integration`, the journal and privacy pages now compose the real per-account encrypted vault, recovery controls and voice/reflection component. Saved journals can be reopened or deleted locally. Generated SpacetimeDB bindings are included for app and worker; the worker build handles their Node ESM imports. This supersedes the earlier placeholder inventory for this branch, not its remaining deployment gates.
+
+Next CS gates: exact recipient approval flow, recipient preference controls, Discover/event composition and catalogue, then configured worker/database two-account verification. Voice and reflection use authenticated routes; availability still depends on provider configuration. See [relationship safety](docs/features/RELATIONSHIP_SAFETY.md) for the private-event leakage boundary and [project knowledge](PROJECT_KNOWLEDGE.md) for implementation versus live evidence.
