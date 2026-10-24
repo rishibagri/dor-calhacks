@@ -86,7 +86,7 @@ export default function OnboardingPage() {
             <MultiChoice name="q1" options={longDayOptions} value={a.afterLongDay}
               onChange={(v, on) => set({ afterLongDay: toggle(a.afterLongDay, v, on) })} />
           </Question>
-          <Question legend="2. When a friend goes quiet, what do you prefer?">
+          <Question legend="2. When you've gone quiet for a while, what would you like from a friend?">
             <MultiChoice name="q2" options={quietOptions} value={a.friendQuiet}
               onChange={(v, on) => set({ friendQuiet: toggle(a.friendQuiet, v, on) })} />
           </Question>
