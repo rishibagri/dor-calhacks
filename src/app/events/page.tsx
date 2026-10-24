@@ -8,6 +8,7 @@ import { PlansList } from '@/components/feature/plans-list';
 import { discoverStage } from '@/components/feature/discover-model';
 import { eventCards } from '@/components/feature/events-model';
 import { isDiscoverySynthetic } from '@/lib/config';
+import { ExtensionGate } from '@/components/feature/extension-gate';
 import { areaLabel } from '@/lib/discovery/config';
 
 export default function EventsPage() {
@@ -22,6 +23,7 @@ export default function EventsPage() {
   const area = areaLabel(me?.areaKey ?? null);
 
   return (
+    <ExtensionGate title="Events" controls={<PlansList />}>
     <div className="mx-auto max-w-3xl space-y-8">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Events</h1>
@@ -51,5 +53,6 @@ export default function EventsPage() {
       )}
       <PlansList />
     </div>
+    </ExtensionGate>
   );
 }
