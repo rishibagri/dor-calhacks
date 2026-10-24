@@ -11,7 +11,7 @@ import { spacetimedb } from '../schema';
 import { fail, type Ctx } from '../errors';
 import { requireAccount } from '../guards';
 import { newId } from '../ids';
-import { blockedEitherWay, discoveryEnabled, fromMs, loadDiscoveryParty, toMs } from '../policy_state';
+import { blockedEitherWay, connectedCounterparts, discoveryEnabled, fromMs, loadDiscoveryParty, toMs } from '../policy_state';
 import { applyBlock, consumeRate, introductionsBetween, requireDiscovery, toIntroductionState } from '../discovery_effects';
 
 function refuse(reason: IntroductionDenyReason): never {
@@ -53,6 +53,8 @@ export const send_introduction_request = spacetimedb.reducer(
       refuse('request_id_reused');
     }
     const target = visibleCardOwner(ctx, card_ref);
+    // Already connected through an accepted pair: an introduction would add nothing (and isn't a way back in).
+    if (connectedCounterparts(ctx.db, ctx.sender).has(target.owner.toHexString())) refuse('already_connected');
     const nowMs = toMs(ctx.timestamp);
     const sender = loadDiscoveryParty(ctx.db, ctx.sender), recipient = loadDiscoveryParty(ctx.db, target.owner);
     const pendingOut = [...ctx.db.introduction.sender.filter(ctx.sender)].filter(r => r.status === 'pending' &&
