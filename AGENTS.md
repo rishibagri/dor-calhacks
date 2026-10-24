@@ -35,7 +35,7 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 |---|---|---|
 | CS — you | M1/D015 plus core flow draft merged through d4cc763; disclosure.ts and FLOWS.md exist, not reducer/UI-wired; live bindings/auth pending | CS-P1/P2: wire reviewed F3/F4/F5/F7 flow: device-only preview, guarded approval, per-pair opt-in/delivery gate and commit; own Apify source/catalogue per docs/features/ACTIVITY_DISCOVERY.md |
 | DS — Nimisha | Active DS branch 42ff908 reports fixtures/matching/evaluation; not yet merged | DS-P1/P2: review D015 and previewDisclosure/nudgeDelivery expectations (space, opt-in, quiet hours, cooldown), claim quiz semantics, publish rank hook |
-| Cyber — Sumedh | role/cyber-privacy @ 34e70f7 (merged main 982cfb0; PR pending). One policy (D026): disclosure.ts delegates to zod-free policy.ts; guarded approve_signal, set_nudge_delivery (opt-in default off), worker-only commit_nudge + worker views; real LocalVault (VaultPort incl. profile/extras); Apify input/link guards (D027); D016–D021 reviewed. Offline only: contracts 63, module 52, app 79, ai 40; not published | CS: ACK D026/D027 + VaultPort additions; wire LocalVault + create/unlock/recovery UI; publish module and run live two-account smoke. Adam: worker uses DisclosurePolicy over worker_signal_context; commit via commit_nudge; never show outcomes to sender. Cyber next: recipient-preferences consent table, expiry sweep, aud check |
+| Cyber — Sumedh | role/cyber-privacy @ 34e70f7 (merged main 982cfb0; PR #6). One policy (D026): disclosure.ts delegates to zod-free policy.ts; guarded approve_signal, set_nudge_delivery (opt-in default off), worker-only commit_nudge + worker views; real LocalVault (VaultPort incl. profile/extras); Apify input/link guards (D027); D016–D021 reviewed. Offline only: contracts 63, module 52, app 79, ai 40; not published | CS: ACK D026/D027 + VaultPort additions; wire LocalVault + create/unlock/recovery UI; publish module and run live two-account smoke. Adam: worker uses DisclosurePolicy over worker_signal_context; commit via commit_nudge; never show outcomes to sender. Cyber next: recipient-preferences consent table, expiry sweep, aud check |
 | AI — Adam | M1/D021 adapters and worker merged via PR #4; limited Droid tests, full policy/app integration pending | AI-P1/P2: preserve branch, review merged D021 interfaces against main SignalCandidateSchema and D016–D020 flows, authenticated provider routes, real policy/worker ports; note missing keys/latency |
 
 Detailed shared phases are in README.md; per-owner phases in docs/roles/*.md; exact producer/consumer dependencies in docs/PLAN.md. These are current planning assignments, not completion evidence. Merge main into your active role branch; do not reset or force-update other roles.
@@ -69,9 +69,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - `DisclosurePolicy` (`@kinetic/contracts`) is the real `DisclosurePolicyPort` for routes and the worker.
   - `approve_signal` enforces the guard and the table gained `client_request_id`.
   - New sender-only `my_signals` view; `my_receipts` is now sender-only; `my_nudges` rechecks that each source signal is still valid.
-  - Decision D017.
+  - Decision D026.
 - **CS next:**
-  1. ACK D017.
+  1. ACK D026.
   2. In the preview route, compute `payloadRevision({pairId, recipientId: counterpartHex, supportMode, availability, recipientPolicyVersion, presetAssignmentVersion, consentVersion: DISCLOSURE_CONSENT_VERSION})` and pass it unchanged to `approve_signal`.
   3. Use `my_signals` in the privacy center.
   4. Regenerate bindings after publish.
@@ -90,7 +90,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **Details:** `docs/handoffs/cyber.md`, `docs/updates/cyber.md`, `src/privacy/README.md`.
 
 ### 2026-10-24T05:30Z | Cyber → CS, AI, DS | CYBER-P2/P3: one policy, F5/F7 enforcement, real vault, C7 boundary
-- **Branch/commit:** `role/cyber-privacy` @ `34e70f7`. Merged `origin/main` @ `982cfb0` (no reset). PR to main pending; read the remote role branch until it merges.
+- **Branch/commit:** `role/cyber-privacy` @ `34e70f7`. Merged `origin/main` @ `982cfb0` (no reset). PR #6 to main is open; read the remote role branch until it merges.
 - **Status:** implemented and offline-verified, NOT live. The SpacetimeDB module is unpublished, and harness results do not prove deployed isolation.
 - **Evidence:**
   - `npm run check:all` exits 0: contracts 63/63, schemas current, module 52/52, app typecheck, app tests 79/79.

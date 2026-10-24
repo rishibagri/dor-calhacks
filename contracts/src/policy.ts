@@ -117,8 +117,11 @@ function payloadShapeOk(p: { supportMode?: unknown; availability?: unknown }): p
   return true;
 }
 
-/** F4: the approval payload is the preview payload; no other field may change between them. */
-export function sameApprovedPayload(preview: { supportMode?: string; availability?: string },
+/**
+ * F4: the approval payload is the preview payload; no other field may change between them.
+ * (Distinct from `sameApprovedPayload` in policy-port.ts: full presented-vs-stored envelope comparison.)
+ */
+export function matchesPreviewPayload(preview: { supportMode?: string; availability?: string },
   signal: { supportMode?: string; availability?: string }): boolean {
   return preview.supportMode === signal.supportMode && preview.availability === signal.availability;
 }
@@ -245,7 +248,7 @@ export function guardApproval(req: ApprovalRequest, s: PolicySnapshot): Approval
     pairStatus: cp.recipientId ? s.pair!.status : 'pending', preset: s.preset, assignment: s.assignment, nowMs: s.nowMs,
   });
   if (ev.kind === 'denied') return deny(ev.reason);
-  if (ev.kind !== 'shareable' || !sameApprovedPayload(ev.payload, candidate)) return deny('blocked_category');
+  if (ev.kind !== 'shareable' || !matchesPreviewPayload(ev.payload, candidate)) return deny('blocked_category');
   const { preset, assignment } = s as { preset: PresetState; assignment: AssignmentState };
   if (assignment.assignmentVersion !== req.presetAssignmentVersion ||
     preset.version !== req.recipientPolicyVersion) return deny('stale_policy');
@@ -290,7 +293,7 @@ function standing(sig: StoredSignal, s: Omit<PolicySnapshot, 'nowMs'>, nowMs: nu
     pairStatus: cp.recipientId ? s.pair!.status : 'pending', preset: s.preset, assignment: s.assignment, nowMs,
   });
   if (ev.kind === 'denied') return deny(ev.reason);
-  if (ev.kind !== 'shareable' || !sameApprovedPayload(ev.payload, payload)) return deny('blocked_category');
+  if (ev.kind !== 'shareable' || !matchesPreviewPayload(ev.payload, payload)) return deny('blocked_category');
   const { preset, assignment } = s as { preset: PresetState; assignment: AssignmentState };
   if (preset.policyId !== sig.recipientPolicyId || assignment.assignmentVersion !== sig.presetAssignmentVersion ||
     preset.version !== sig.recipientPolicyVersion) return deny('stale_policy');

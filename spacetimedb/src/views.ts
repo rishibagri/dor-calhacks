@@ -133,7 +133,7 @@ export const my_signals = spacetimedb.view(
 );
 
 /**
- * Sender-only (D017). Recipients must not see approved/revoked/suppressed receipts: that would
+ * Sender-only (D026). Recipients must not see approved/revoked/suppressed receipts: that would
  * reveal a disclosure that produced no nudge, or a revocation. Recipients learn only via my_nudges.
  */
 export const my_receipts = spacetimedb.view(

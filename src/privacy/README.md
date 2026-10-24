@@ -4,8 +4,8 @@ One policy implementation lives in the shared package (AGENTS.md: cross-boundary
 
 | Import | Contents | Runtime deps | Use in |
 |---|---|---|---|
-| `@kinetic/contracts/policy` | Core semantics:<br>• `evaluateDisclosure` (F3 core)<br>• `guardApproval` (F4)<br>• `guardSignalUse` / `guardSignalStanding` (each use, views)<br>• `guardNudgeCommit` (F7, including the F5 gate)<br>• `nudgeDelivery`, `validRecipientDelivery`, `templateForSignal`, `sameApprovedPayload`, `payloadRevision`, `policyErrorCode`<br>• constants and enums | none | SpacetimeDB module (authoritative) |
-| `@kinetic/contracts` | All of the above, plus:<br>• `previewDisclosure` + copy (device F3)<br>• `DisclosurePolicy` (real `DisclosurePolicyPort`)<br>• `guardPublicCatalogueQuery` / `safeCatalogueUrl` (proposed C7 boundary) | Zod | UI, routes, worker |
+| `@kinetic/contracts/policy` | Core semantics:<br>• `evaluateDisclosure` (F3 core)<br>• `guardApproval` (F4)<br>• `guardSignalUse` / `guardSignalStanding` (each use, views)<br>• `guardNudgeCommit` (F7, including the F5 gate)<br>• `nudgeDelivery`, `validRecipientDelivery`, `templateForSignal`, `matchesPreviewPayload`, `payloadRevision`, `policyErrorCode`<br>• constants and enums | none | SpacetimeDB module (authoritative) |
+| `@kinetic/contracts` | All of the above, plus:<br>• `previewDisclosure` + copy (device F3)<br>• `DisclosurePolicy` (real `DisclosurePolicyPort`) + `sameApprovedPayload` (presented vs stored envelope)<br>• `guardPublicCatalogueQuery` / `safeCatalogueUrl` (proposed C7 boundary) | Zod | UI, routes, worker |
 | `@kinetic/contracts/fakes` | `FakeDisclosurePolicy` | — | offline tests only |
 
 Docs in this folder: [REVIEWS.md](REVIEWS.md) (D016–D021 verdicts), [ACTIVITY_CONSENT.md](ACTIVITY_CONSENT.md) (C7/Apify boundary). The vault lives in `src/vault/` ([DESIGN.md](../vault/DESIGN.md)).
