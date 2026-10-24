@@ -1,20 +1,21 @@
-import { BookOpen, Bell, CalendarDays, Compass, Link2, ShieldCheck, Sparkles } from 'lucide-react';
+import { BookOpen, Bell, CalendarDays, Compass, Link2, ShieldCheck, type LucideIcon } from 'lucide-react';
 
-import { areExtensionsEnabled } from '@/lib/config';
+import { isDiscoveryUiEnabled } from '@/lib/config';
+import { orderNav } from './nav-order';
 
-/** Core journey items. */
-const CORE_ITEMS = [
-  { href: '/onboarding', label: 'Onboarding', icon: Sparkles },
-  { href: '/journal', label: 'Journal', icon: BookOpen },
-  { href: '/connections', label: 'Connections', icon: Link2 },
-  { href: '/nudges', label: 'Nudges', icon: Bell },
-  { href: '/privacy', label: 'Privacy', icon: ShieldCheck },
-] as const;
+/** D045 transition-first: Discover first, then Events, then the existing-relationship paths. Six tabs fit the mobile bar. */
+interface NavItem { href: string; label: string; icon: LucideIcon }
 
-/** Preserved extensions (nearby introductions, local events), shown only when NEXT_PUBLIC_DOR_EXTENSIONS=true. */
-const EXTENSION_ITEMS = [
+const DISCOVERY_ITEMS: readonly NavItem[] = [
   { href: '/discover', label: 'Discover', icon: Compass },
   { href: '/events', label: 'Events', icon: CalendarDays },
-] as const;
+];
 
-export const NAV_ITEMS = areExtensionsEnabled ? [...CORE_ITEMS, ...EXTENSION_ITEMS] : [...CORE_ITEMS];
+const OTHER_ITEMS: readonly NavItem[] = [
+  { href: '/connections', label: 'Connections', icon: Link2 },
+  { href: '/journal', label: 'Journal', icon: BookOpen },
+  { href: '/nudges', label: 'Nudges', icon: Bell },
+  { href: '/privacy', label: 'Privacy', icon: ShieldCheck },
+];
+
+export const NAV_ITEMS = orderNav(DISCOVERY_ITEMS, OTHER_ITEMS, isDiscoveryUiEnabled);

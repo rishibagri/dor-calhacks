@@ -5,41 +5,51 @@
  *   node scripts/ingest-catalogue.ts --fetch                  # call Apify (costs credits), print report
  *   ... [--commit <database>] [--force]                       # also upsert via `spacetime call` as the ingester
  *
- * Env for --fetch: APIFY_API_TOKEN, APIFY_TASK_ID. The Apify *task* holds the developer-reviewed regional source
- * configuration (D028/D031: never device-derived); this script only overrides the generic, guarded query
- * (topic, limit, locale). The token goes in a header and is never printed.
+ * Env for --fetch: APIFY_API_TOKEN, APIFY_ACTOR_ID (+ optional APIFY_ACTOR_BUILD, APIFY_SOURCE=luma|meetup,
+ * APIFY_MAX_ITEMS<=50, APIFY_TOPICS, APIFY_WINDOW_DAYS, APIFY_TIMEOUT_MS). Region, caps and the request body come from
+ * src/server/discovery/config.ts (fixed, never device-derived; guarded by D028). The token goes in a header only.
+ * Without --fetch or --fixture the script is a dry run and makes no network call. See docs/features/APIFY_SOURCE.md.
  * --commit requires the CLI to be logged in as an identity registered with set_worker_identity (or the owner).
  * Single-flight: a lock file per feed; at most one fetch per REFRESH_WINDOW_MS unless --force.
  */
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import type { PublicCatalogueQuery } from '@dor/contracts';
+import { loadCatalogue, loadDiscoveryConfig } from '../src/server/discovery/index.ts';
 import { AREA_KEYS, DISCOVERY_TAGS } from '../src/lib/discovery/config.ts';
 import { FEEDS, FIELD_MAP, REFRESH_WINDOW_MS, SOURCE_HOSTS, SOURCE_KEY } from '../src/lib/catalogue/feeds.ts';
 import { feedQueries, ingest, shouldRefresh, type UpsertArgs } from '../src/lib/catalogue/ingest.ts';
 
 const CACHE_DIR = join(process.cwd(), '.cache', 'catalogue');
-const FETCH_TIMEOUT_MS = 120_000;
 const args = process.argv.slice(2);
 const flag = (name: string) => args.includes(name);
 const value = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
 const allow = { tags: DISCOVERY_TAGS, areas: AREA_KEYS, hosts: SOURCE_HOSTS };
 
-async function runTask(query: PublicCatalogueQuery): Promise<unknown[]> {
-  const token = process.env.APIFY_API_TOKEN, task = process.env.APIFY_TASK_ID;
-  if (!token || !task) throw new Error('APIFY_API_TOKEN and APIFY_TASK_ID are required for --fetch');
-  const res = await fetch(`https://api.apify.com/v2/actor-tasks/${encodeURIComponent(task)}/run-sync-get-dataset-items?clean=true&limit=${query.limit}`, {
-    method: 'POST',
-    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    // Only the guarded generic fields. The task's saved input supplies the reviewed regional source.
-    body: JSON.stringify({ searchTerms: query.topics, maxItems: query.limit, ...(query.locale ? { language: query.locale } : {}) }),
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  });
-  if (!res.ok) throw new Error(`Apify task failed with HTTP ${res.status}`);
-  const body: unknown = await res.json();
-  if (!Array.isArray(body)) throw new Error('Apify dataset was not an array');
-  return body;
+/** --fetch: server-only adapter (src/server/discovery): fixed config, capped, cached 6 h, one in-flight request. */
+async function fetchViaAdapter(): Promise<void> {
+  const db = value('--commit');
+  const lockFile = join(CACHE_DIR, 'apify.lock'), stampFile = join(CACHE_DIR, 'apify.json');
+  const last = existsSync(stampFile) ? (JSON.parse(readFileSync(stampFile, 'utf8')) as { fetchedAtMs: number }).fetchedAtMs : null;
+  if (!flag('--force') && !shouldRefresh(last, Date.now(), REFRESH_WINDOW_MS)) {
+    console.log(JSON.stringify({ skipped: 'within_refresh_window', lastFetchedAt: new Date(last!).toISOString() }));
+    return;
+  }
+  if (existsSync(lockFile)) throw new Error(`another ingestion holds ${lockFile}`);
+  writeFileSync(lockFile, String(process.pid), { flag: 'wx' });
+  try {
+    const r = await loadCatalogue(process.env);
+    if (db) r.upserts.forEach((u) => commit(db, u));
+    for (const areaKey of r.config.areaKeys) if (db) recordRun(db, areaKey, true, r.upserts.filter((u) => u.area_key === areaKey).length);
+    writeFileSync(stampFile, JSON.stringify({ fetchedAtMs: Date.parse(r.provenance.fetchedAt), count: r.upserts.length }));
+    console.log(JSON.stringify({ provenance: r.provenance, committed: Boolean(db), upserts: r.upserts.length, rejected: r.rejected,
+      events: db ? undefined : r.upserts }, null, 2));
+  } catch (e) {
+    if (db) for (const a of AREA_KEYS.filter((k) => k.startsWith('berkeley-'))) { try { recordRun(db, a, false, 0); } catch { /* report the original failure */ } }
+    throw e;
+  } finally {
+    rmSync(lockFile, { force: true });
+  }
 }
 
 /** SATS JSON for `spacetime call`: options are {"some": v} / {"none": []}. */
@@ -57,8 +67,14 @@ function recordRun(db: string, feedKey: string, ok: boolean, count: number): voi
 
 async function main(): Promise<void> {
   const fixture = value('--fixture');
-  if (!fixture && !flag('--fetch')) throw new Error('pass --fixture <file> (offline) or --fetch (Apify)');
+  if (!fixture && !flag('--fetch')) { // dry run: validate configuration only, no network, no spend
+    const c = loadDiscoveryConfig(process.env);
+    console.log(JSON.stringify({ dryRun: true, hint: 'pass --fixture <file> (offline) or --fetch (calls Apify, costs credits)',
+      config: c.ok ? { ...c.config, token: 'set' } : { notConfigured: c.reason } }, null, 2));
+    return;
+  }
   mkdirSync(CACHE_DIR, { recursive: true });
+  if (!fixture) return fetchViaAdapter();
   for (const feed of FEEDS) {
     const q = feedQueries(feed, allow);
     if (!q.ok) throw new Error(`feed ${feed.areaKey} refused by the D028 query guard: ${q.reason}`);
@@ -73,11 +89,9 @@ async function main(): Promise<void> {
     try {
       const fetchedAtMs = Date.now();
       const datasets: Record<string, unknown[]> = {};
-      if (fixture) {
+      {
         const raw = JSON.parse(readFileSync(fixture, 'utf8')) as Record<string, unknown[]>;
         for (const t of feed.topics) datasets[t] = Array.isArray(raw[t]) ? raw[t]! : [];
-      } else {
-        for (const query of q.queries) datasets[query.topics[0]!] = await runTask(query); // sequential: bounded cost
       }
       const report = ingest(datasets, { sourceKey: SOURCE_KEY, feed, map: FIELD_MAP, allow, fetchedAtMs, nowMs: Date.now() });
       const db = value('--commit');

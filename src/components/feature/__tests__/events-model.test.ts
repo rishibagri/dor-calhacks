@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canAccept, canCancel, eventCards, isIntentActive, nextIntentVersion, orderPlans, sourceState } from '../events-model.ts';
+import { canAccept, canCancel, eventCards, isIntentActive, nextIntentVersion, orderPlans, sourceHostOf, sourceState } from '../events-model.ts';
 
 const NOW = new Date('2026-10-24T12:00:00Z');
 const me = { publicationId: 'pub', published: true, displayName: 'A', interestTags: ['hiking'], revision: 1, expiresAt: '2026-10-27T00:00:00Z',
@@ -62,4 +62,10 @@ test('source state: never loaded, unavailable keeps last success, stale by age, 
   assert.equal(sourceState([row({ lastSuccessAt: new Date(now - 49 * H).toISOString() })], 'berkeley-campus', now, 48 * H).kind, 'stale');
   assert.equal(sourceState([row({})], 'berkeley-campus', now, 48 * H).kind, 'ok');
   assert.equal(sourceState([row({ feedKey: 'sf-mission' })], 'berkeley-campus', now, 48 * H).kind, 'never_loaded');
+});
+
+test('sourceHostOf shows the bare host of a validated link and null otherwise', () => {
+  assert.equal(sourceHostOf('https://www.meetup.com/x/1'), 'meetup.com');
+  assert.equal(sourceHostOf(null), null);
+  assert.equal(sourceHostOf('nonsense'), null);
 });

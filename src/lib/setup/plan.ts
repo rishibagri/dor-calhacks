@@ -154,12 +154,11 @@ export function checkEnv(env: SetupEnv, mode: { worker: boolean; extensions: boo
     else need('FACTORY_API_KEY', 'Factory Droid SDK (worker default); set DOR_DROID_TRANSPORT=cli to use droid exec instead');
   }
 
+  // D045: Discover/Events are core UI (on unless NEXT_PUBLIC_DOR_DISCOVERY=off); the module flag stays authoritative.
+  if (val(env, 'NEXT_PUBLIC_DOR_DISCOVERY') === 'off') add('warn', 'NEXT_PUBLIC_DOR_DISCOVERY', 'Discover/Events UI is hidden; the transition-first journey needs it');
   if (mode.extensions) {
-    if (val(env, 'NEXT_PUBLIC_DOR_EXTENSIONS') !== 'true') add('warn', 'NEXT_PUBLIC_DOR_EXTENSIONS', 'extensions requested but the UI flag is not "true"');
     need('APIFY_API_TOKEN', 'catalogue ingestion', 'warn');
     need('APIFY_TASK_ID', 'reviewed Apify task holding the regional source', 'warn');
-  } else if (val(env, 'NEXT_PUBLIC_DOR_EXTENSIONS') === 'true') {
-    add('warn', 'NEXT_PUBLIC_DOR_EXTENSIONS', 'extensions UI is on for a core setup');
   }
   return out;
 }

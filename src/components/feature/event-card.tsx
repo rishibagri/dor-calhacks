@@ -11,7 +11,7 @@ import { runAction } from '@/features/privacy/introduction-model';
 import { intentPreviewCopy, runEventAction, sourceAgeLabel } from '@/features/privacy/event-consent-model';
 import { orThrow } from './introduction-actions';
 import { newIntroductionRequestId } from './discover-model';
-import { formatWhen, isIntentActive, nextIntentVersion, type EventCard as EventCardData } from './events-model';
+import { formatWhen, isIntentActive, sourceHostOf, nextIntentVersion, type EventCard as EventCardData } from './events-model';
 
 type Kind = 'interested' | 'going';
 const KIND_LABEL: Record<Kind, string> = { interested: 'Interested', going: 'Planning to go' };
@@ -51,7 +51,9 @@ export function EventCard({ card, synthetic }: { card: EventCardData; synthetic:
           <time dateTime={event.startsAt}>{formatWhen(event.startsAt)}</time> · {event.topics.map(tagLabel).join(', ')}
         </p>
         <p className="text-xs text-muted-foreground">
-          {synthetic ? 'Test event, not a real listing' : sourceAgeLabel(Date.parse(event.fetchedAt), Date.now())}
+          {synthetic && 'Test event, not a real listing · '}
+          {sourceHostOf(link) ? `Source: ${sourceHostOf(link)} · ` : 'Source link unavailable · '}
+          {sourceAgeLabel(Date.parse(event.fetchedAt), Date.now())}
           {link && <> · <a className="underline" href={link} target="_blank" rel="noopener noreferrer nofollow">Event page</a></>}
         </p>
       </CardHeader>

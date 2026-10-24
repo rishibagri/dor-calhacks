@@ -34,8 +34,8 @@ export const spacetimeConfig: SpacetimeConfig = {
 export const isDiscoverySynthetic: boolean = clean(process.env.NEXT_PUBLIC_DISCOVERY_SYNTHETIC) !== 'false';
 
 /**
- * Core-first release (README "Current direction"): Discover and Events are preserved extensions, hidden unless this is
- * exactly "true". The core journey must work with it off, without location permission or an event source.
- * Hiding is presentation only; the module's discovery flag and guards remain the authority.
+ * D045 transition-first: Discover and Events are part of the core journey and shown by default. Set
+ * NEXT_PUBLIC_DOR_DISCOVERY=off to hide them (escape hatch). Hiding is presentation only; the module's
+ * `set_discovery_config enabled` flag and guards remain the authority.
  */
-export const areExtensionsEnabled: boolean = clean(process.env.NEXT_PUBLIC_DOR_EXTENSIONS) === 'true';
+export const isDiscoveryUiEnabled: boolean = clean(process.env.NEXT_PUBLIC_DOR_DISCOVERY)?.toLowerCase() !== 'off';
