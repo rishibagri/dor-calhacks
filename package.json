@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "workspaces": [
     "contracts",
+    "spacetimedb",
     "src/agents",
     "worker"
   ],
@@ -11,12 +12,41 @@
     "node": ">=20"
   },
   "scripts": {
+    "predev": "npm run build -w @kinetic/contracts",
+    "dev": "next dev",
+    "prebuild:app": "npm run build -w @kinetic/contracts",
+    "build:app": "next build",
+    "start": "next start",
+    "typecheck": "npm run build -w @kinetic/contracts && tsc --noEmit",
     "build": "npm run build -w @kinetic/contracts",
     "test": "npm run test -w @kinetic/contracts",
     "check": "npm run check -w @kinetic/contracts",
+    "check:module": "npm run check -w @kinetic/spacetimedb-module",
+    "check:all": "npm run check && npm run check:module && npm run typecheck",
     "contracts:schema": "npm run schema -w @kinetic/contracts",
     "ai:build": "npm run build -w @kinetic/contracts && npm run build -w @kinetic/agents && npm run build -w @kinetic/worker",
     "ai:check": "npm run ai:build && npm test -w @kinetic/agents && npm test -w @kinetic/worker",
     "ai:live": "npm run ai:build && npm run live -w @kinetic/agents && npm run live -w @kinetic/worker"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^7.9.20",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cn": "^0.5.0",
+    "lucide-react": "^1.61.0",
+    "next": "^16.4.3",
+    "radix-ui": "^1.8.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "spacetimedb": "^2.13.0",
+    "tailwind-merge": "^3.7.0",
+    "tw-animate-css": "^1.4.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.3"
   }
 }
