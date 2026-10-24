@@ -12,6 +12,7 @@ User-selected stack; replaces the earlier Postgres proposal. This is a planning 
 | Voice | Cartesia API/SDK | Voice check-ins, transcription and spoken updates, verified adapter configuration | Cartesia |
 | Privacy | TypeScript + Zod | Strict validation and recipient/category/purpose enforcement | — |
 | Private vault | IndexedDB + Web Crypto | Encrypted local journals, transcripts, quiz answers and preferences | — |
+| External discovery | Apify API / server-side client | Public activity catalogue ingestion, normalization/cache and source provenance; CS-owned | — |
 | Calendar | Sample .ics parser initially; optional Google Calendar API | Private schedule analysis; approved coarse availability only | Google |
 | Authentication | Clerk default proposal; Auth.js alternative | Verified account identity mapped to SpacetimeDB caller | — |
 | Deployment | Vercel + hosted SpacetimeDB + separate compatible Factory worker | Frontend/API, shared state, agent execution | — |
@@ -33,4 +34,7 @@ User-selected stack; replaces the earlier Postgres proposal. This is a planning 
 - [Next.js](https://nextjs.org/docs), [Google Calendar](https://developers.google.com/workspace/calendar/api)
 
 ## Scope distinction
-Core delivery remains private voice reflection → explicit disclosure approval → recipient-specific coordination → live nudge. Event curiosity cards, bandwidth aura, and group matching are supported by the selected stack but need their own product/consent contracts before commitment. Start calendars with synthetic .ics schedules. Group sharing must never inherit pair consent; it needs explicit audience membership and consent per recipient.
+Core delivery remains private voice reflection → explicit disclosure approval → recipient-specific coordination → live nudge. Added user-approved scope: one Apify activity catalogue and consent-reviewed mutual activity proposals; CS owns ingestion, Nimisha matching, Adam coordination and Sumedh disclosure enforcement. C7/new activity categories must be reviewed before shared delivery. Bandwidth aura and group matching remain uncommitted candidates. Start calendars with synthetic .ics schedules. Group sharing must never inherit pair consent; it needs explicit audience membership and consent per recipient.
+
+## Apify processing boundary
+Server-only token and configured public source; no journals, private quiz extras, pair IDs or person-specific context in Actor input. Collect a generic public catalogue and match inside Kinetic. See docs/features/ACTIVITY_DISCOVERY.md. No source/Actor or paid run is selected by this plan.

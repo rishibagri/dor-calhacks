@@ -1,3 +1,9 @@
+# Current coordination update — Sumedh (Cyber)
+
+Read your updated detailed plan in docs/roles/cyber.md and shared README.md phases. Task IDs are CYBER-P#; Cyber uses CYBER-P#. CS owns Apify ingestion; Nimisha matching; Adam bounded proposals; Sumedh disclosure/vault. Preserve existing work and review the main/role-branch status before selecting the first unmet phase. Forwardable message: docs/team-messages/cyber.md. This notice does not ACK or complete any pending implementation/contract review.
+
+---
+
 # CYBER handoff
 Status: ready for implementation; planning/contract scaffold only.
 

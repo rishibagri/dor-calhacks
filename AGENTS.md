@@ -31,12 +31,14 @@ Maintain the dashboard below when a change reaches main. During branch work, app
 
 Update format: UTC timestamp | owner | task | status | branch/commit | files/interfaces changed | verification | next handoff | blockers. Never include personal journal data or credentials. Tag the target role and include exact next action. ACK incoming blockers in your role log. Raise blocked interfaces within 15 minutes.
 
-| Role | Current status | Next handoff |
+| Role / person | Current status | Next handoff |
 |---|---|---|
-| CS | M1 merged (PR #1); D015 fixture/quiz fix on role/cs-app @ d6e9a6b, PR pending. Shell, SpacetimeDB module (16 harness tests), Clerk-JWT adapter written; nothing live yet | Logic/flow review (signal preview + approval loop) before API work; then publish module + live two-account smoke test |
-| DS | Planned | Build fixtures on updated `contracts/fixtures/scenarios.json` (each scenario now has `confirmedPreset` + `presetAssignment`; friends omits availability). Use quiz `prefersSpace` / empty `preferredSupportModes` as a no-action case. Ref: D015 |
-| Cyber | Planned | Review D015 fixture preset records (privacy boundary). Implement `VaultPort` in `src/vault/` incl. `saveQuizExtras`/`loadQuizExtras` (`src/lib/backend/ports.ts`). Policy guard inside `approve_signal` (`spacetimedb/src/reducers/signals.ts`). Review `spacetimedb/src/guards.ts`. Open questions in docs/handoffs/cs.md |
-| AI | Planned | Implement `ReflectionPort` (`src/lib/backend/ports.ts`) behind authenticated `POST /api/reflections` + voice session route. Note: friends `approvedSignal` fixture no longer has `availability` |
+| CS — you | M1 and D015 merged through inspected main 8e208df; offline app/module evidence; live bindings/auth still pending | CS-P1/P2: real identity/module path, exact preview integration with Sumedh/Adam; own Apify source/catalogue per docs/features/ACTIVITY_DISCOVERY.md |
+| DS — Nimisha | Quiz starter and fixtures exist; DS implementation not established on inspected main | DS-P1/P2: review D015/space/extras, claim quiz semantics with CS, publish rank hook and labeled expectations |
+| Cyber — Sumedh | Vault placeholder and approve_signal refusal on inspected main | CYBER-P1/P2: real VaultPort incl. extras; coordinate guard/approval files with CS; review D015 and Adam D016 |
+| AI — Adam | AI branch reports M1/D016/worker and limited Droid tests; not merged into inspected main | AI-P1/P2: preserve branch, review D016 consumers, authenticated provider routes, real policy/worker ports; note missing keys/latency |
+
+Detailed shared phases are in README.md; per-owner phases in docs/roles/*.md; exact producer/consumer dependencies in docs/PLAN.md. These are current planning assignments, not completion evidence. Merge main into your active role branch; do not reset or force-update other roles.
 
 ## Ownership and handoffs
 Use the ownership table in README.md. CS owns SpacetimeDB module plumbing; Cyber owns reusable authorization semantics and reviews the boundary. Shared contract edits need affected producer/consumer review. Before pausing or handing off, update docs/handoffs/<role>.md and your role log with branch/commit, exact interface, evidence, next consumer action and blocker. Refresh PROJECT_KNOWLEDGE.md after significant merges.

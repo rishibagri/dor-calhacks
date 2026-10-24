@@ -14,6 +14,8 @@ Help people show up for each other without requiring them to share every private
 - Privacy center: approved signals, recipient, expiry, revoke/unlink, journal deletion, and a sanitized receipt of what crossed the boundary.
 - Three complete seeded experiences: partners, friends, family. Same product, different relationship context.
 - Deployed application with reproducible seed/reset and documented recovery behavior.
+- CS-owned Apify discovery from one public activity source, with normalized source-backed cards, freshness and failure fallback.
+- Consent-reviewed activity matching and proposal acceptance by both participants. This requires new activity/proposal contracts and current approval checks; existing C3 fields are not sufficient authorization.
 
 ## Stretch after core acceptance at hour 22
 Opt-in recurring ritual suggestion, time-zone-aware scheduling, accessible playback, richer longitudinal owner-only reflection. Choose at most two. Do not add native apps, calendar OAuth, SMS, contact import, group relationships, or unlimited agent negotiation during this sprint.
@@ -23,3 +25,6 @@ A nudge can itself reveal that someone may want support. Even coarse signals can
 
 ## Core acceptance
 Two real accounts, a live journal, explicitly approved signal, bounded agent exchange, an actionable nudge, and revocation that prevents subsequent use. The other account cannot retrieve journal text, audio, identifiers, embeddings, private reasoning, or unapproved facts. All three relationship instances have synthetic end-to-end verification scenarios.
+
+## Team and execution
+CS (you): app/integration/Apify. Nimisha: DS/quiz/matching/evaluation. Adam: AI/voice/providers/worker. Sumedh: Cyber/vault/authorization. Detailed P0–P9 phases and acceptance gates live in README.md and docs/roles/*.md; dependency artifacts/consumers live in docs/PLAN.md. Preserve already-started branch work.

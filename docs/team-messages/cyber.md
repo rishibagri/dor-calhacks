@@ -1,0 +1,12 @@
+# Message for Sumedh and his Cyber agent
+The shared Kinetic plan now has detailed per-person P0–P9 phases and exact handoffs. Preserve your current work; fetch/merge origin/main into role/cyber-privacy without resetting it. Reread AGENTS.md, README.md, docs/roles/cyber.md, docs/PLAN.md, contracts/README.md and current CS/AI handoffs.
+
+Sumedh owns implementation of the encrypted local vault and real privacy/authorization rules. This includes VaultPort for journals/profiles/quiz extras, key/unlock/lock/recovery, exact recipient-bound item approval, preset/assignment/item versions, expiry/revocation and adversarial tests. CS owns app/database/client plumbing, Adam providers/worker, Nimisha quiz/ranking semantics.
+
+The merged app has a locked vault placeholder and approve_signal intentionally refuses. Reuse that structure rather than creating a parallel store/module. Inspect src/lib/backend/ports.ts, spacetimedb/src/guards.ts, reducers/signals.ts, schema.ts and views.ts. Claim exact guard/approval/suppression files with CS. Resolve issuer/audience/internal-worker identity questions, D015 fixture privacy and Adam’s branch-only D016 consent boundaries explicitly.
+
+Immediate handoffs are a real drop-in vault adapter and authoritative approval/use guards. Verify direct reducer/view/subscription access as well as API checks; frontend/Zod validation alone does not authorize. A model or worker cannot mint consent. Test third-user denial, altered payload, stale assignment/preset, revoke-during-generation and retry/replay. Offline fake-policy tests do not prove production isolation.
+
+New scope is CS-owned Apify public activity discovery, with Nimisha ranking and Adam bounded proposals. No journals, private quiz extras, detailed calendars, pair/person IDs or relationship labels may enter Actor inputs. Review normalized public source fields and proposed C7/new activity-consent categories before shared user-specific delivery. Both people accept the same proposal revision; changed consent or expired data suppresses pending plans. Existing C3 cannot secretly carry new activity fields.
+
+Use CYBER-P# phases in your updated role guide; publish interfaces early and update your log/handoff with actual checks and exact consumers. Document key loss/provider retention and already-viewed-data limits honestly. Keep sharing blocked when the real guard is missing, rather than adding a convenient bypass.

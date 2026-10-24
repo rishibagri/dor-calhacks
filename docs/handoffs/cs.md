@@ -1,3 +1,9 @@
+# Current coordination update — CS (you)
+
+Read your updated detailed plan in docs/roles/cs.md and shared README.md phases. Task IDs are CS-P#; Cyber uses CYBER-P#. CS owns Apify ingestion; Nimisha matching; Adam bounded proposals; Sumedh disclosure/vault. Preserve existing work and review the main/role-branch status before selecting the first unmet phase. Forwardable message: docs/team-messages/cs.md. This notice does not ACK or complete any pending implementation/contract review.
+
+---
+
 # CS handoff
 Status: Milestone 1 implemented on `role/cs-app`; offline-verified only. No live Clerk, SpacetimeDB, vault, or provider integration has run.
 

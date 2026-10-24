@@ -1,37 +1,34 @@
 # Kinetic — persistent project knowledge
 
-## Current product decisions
-Voice journaling for partners, friends and family separated by distance. Private raw context persists in an encrypted local vault. Owner-approved minimal signals enable bounded agent coordination and considerate in-app nudges. The quiz is 6–8 questions, skippable, covering communication, support, bandwidth and suggested sharing. Sharing uses partner/friend/family presets only, assigned explicitly to a named person; each item still needs exact approval.
+## Confirmed product and team
+Voice/typed private reflection for partners, friends and family separated by distance. The 6–8-question quiz is skippable and personalizes communication, support, bandwidth and draft sharing preferences. Partner/friend/family presets require confirmation and explicit named assignment; each disclosed item still needs exact approval. Journals and private quiz extras persist in the local encrypted vault, with disclosed transient provider processing.
 
-## Selected stack
-Next.js/React/TypeScript + Tailwind/shadcn; SpacetimeDB private tables, reducers and caller-filtered views; Claude; Cartesia; Factory Droid in a compatible separate worker; TypeScript/Zod; IndexedDB/Web Crypto; sample .ics schedules, optional Google Calendar OAuth; Vercel plus hosted SpacetimeDB. See docs/TECH_STACK.md.
+User-confirmed owners: **CS = you; DS = Nimisha; AI = Adam; Cyber = Sumedh.** CS additionally owns Apify public activity discovery. Matching and mutual accepted activity proposals are approved scope, gated on reviewed new consent/contracts. Calls are complemented by useful reasons/timing to connect, not promised to be replaced.
 
-## Governing rule
-The model proposes; explicit consent and deterministic code authorize. Quiz results never create sharing permission. Raw context is never sent to peer agents, shared stores or Factory coordination sessions. Selected audio/text goes to disclosed providers for processing; do not claim cloud-free operation or end-to-end encrypted inference.
+## Current baseline and evidence classification
+Inspected main includes CS work through `8e208df`: Next.js shell/pages, app adapter ports, private SpacetimeDB module/reducers/views, client adapter, eight-question quiz and D015 fixture fix. CS handoffs report offline contract checks (14 after D015), module harness (16), app quiz checks (4), typecheck and app build. These results are attributed to the existing CS handoff, not newly rerun for this documentation change.
 
-## Implementation snapshot
-- Product, phases, roles, privacy and onboarding contracts: documented.
-- Shared contract package: schemas/types, adapter ports, synthetic fixtures and offline fakes/checks.
-- Next.js application, SpacetimeDB module, local encryption, real providers and deployed worker: not implemented here.
-- Offline verification: shared TypeScript build, seven generated schemas, 12 contract tests, local document links; current npm audit reports no vulnerabilities. No live provider/application verification or measured usefulness/latency results. Passing offline contracts is not production authorization evidence.
-- main is the shared baseline; role branches are work lanes, not isolated specifications. Read current remote branch heads before making claims about other people's work.
+On inspected main, approval deliberately refuses pending Cyber policy; vault is locked placeholder; generated bindings/Clerk/module connection are not live-verified. No end-to-end deployed privacy proof exists from these harnesses. Do not rebuild completed shell/module interfaces.
 
-## Ownership and next handoff
-| Role | Area | First handoff |
+Adam’s remote AI role branch (`5ccd4ba` inspected) reports M1 provider/worker adapters and D016 contract proposals, tests and limited live Droid runs with fake policy/fixture preferences. It reports missing Claude/Cartesia credentials and latency variability. This is branch-reported evidence, not a merged/live-full-pipeline claim. Preserve that branch and review its proposed shapes before integration.
+
+Nimisha and Sumedh implementation is not established by inspected main/logs. Apify source/Actor choice, ingestion and mutual-plan C7 are planning only; no source selected, API job run or production code added by the planning update.
+
+## Current next handoffs
+| Owner | Next artifact | Consumer |
 |---|---|---|
-| CS | UI/API, SpacetimeDB integration, deployment | Authenticated shell + reducer/view stubs |
-| DS | Quiz/profile mapping, ranking and evaluation | Quiz/profile fixture + scenario expectations |
-| Cyber | Vault, Zod policy, preset/version/revocation, private views | Key design + real authorization signature |
-| AI | Claude, Cartesia, Factory worker, bounded exchange | Runtime spike + schema-valid extraction fixture |
+| CS (you) | Real identity/module/bindings path and reviewed integration ports; one Apify source sample/config | Sumedh, Adam, Nimisha |
+| Nimisha | ACK/review D015, quiz/profile semantics, rank hook and expected no-action cases | CS, Adam, Sumedh |
+| Adam | Preserve/review D016 with consumers; authenticated reflection/voice and worker ports | CS, Sumedh, Nimisha |
+| Sumedh | Real VaultPort incl. local extras; exact guarded approval and worker consent access | CS, Adam |
 
-Each role keeps docs/updates/<role>.md and docs/handoffs/<role>.md current. Record timestamp, branch/commit, evidence, consumers, blockers and next action. Never journal content or secrets.
+## Contract boundaries
+Model/quiz/source output never grants permission. SpacetimeDB reducers/views enforce identity, membership, named recipient, exact approval, preset/assignment/item versions, expiry/revocation. Factory gets approved structured data only. Apify gets generic public catalogue inputs only; source text is untrusted data. C3 currently supports support/availability only; C7 activity/proposal and new consent fields must be reviewed before sharing them.
 
-## Open decisions and risks
-- Event curiosity cards, aura and group matching need prioritized scope and new disclosure contracts.
-- Validate worker runtime, provider account access/retention, Cartesia endpoints and Clerk/SpacetimeDB mapping in the first three hours.
-- Cyber must finalize vault unlock/key/recovery design; account login does not recover a local key.
-- Optional Google OAuth and production authentication polish do not make identity/authorization optional for real data.
-- The DS quiz mapping and visual profile must be preference-based, editable and non-diagnostic.
+## Execution references
+README.md contains detailed shared phases and gates. Each docs/roles/<role>.md contains the matching per-person tasks, file ownership, evidence and handoffs. docs/PLAN.md names producer/consumer dependencies and edit boundaries. docs/features/ACTIVITY_DISCOVERY.md scopes Apify. Forwardable changes are in docs/team-messages/. Video remains separate in docs/DEMO.md.
 
-## Maintenance
-Refresh this snapshot after a substantive merge; cite real verification and distinguish planned, implemented, deployed and live-verified. Decisions live in docs/DECISIONS.md; requirements in PRD.md; interfaces in contracts/README.md. Video planning stays in docs/DEMO.md.
+## Risks and unresolved work
+Live provider credentials/retention, Factory runtime/latency, Clerk identity mapping and real module deployment require evidence. Sumedh must decide key/unlock/recovery and resolve current identity bypass/audience questions with CS. D015 and D016 reviews must be ACKed explicitly, not assumed. Source/Actor schema, cost limits and usage conditions need verification with Apify. Group matching, additional feeds, aura and automatic external actions are not committed by this update.
+
+Keep knowledge current after significant merges. Report planned, implemented, offline-tested, deployed and live-verified separately; cite actual branch/commit and results. Never secrets or private journal content.
