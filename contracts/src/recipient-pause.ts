@@ -1,7 +1,8 @@
 /**
- * PROPOSED Core 1 recipient restriction semantics (Cyber, D040; CS/AI/DS review pending). Reference guards only:
- * no reducer, view, worker or UI uses these yet, and no wire type changes until the review lands (Core 2).
- * Runtime-dependency-free so the module can enforce the same rules (re-exported from `@dor/contracts/policy`).
+ * Recipient pause guards (Cyber, D041, implemented offline). `guardPauseRequest` and `pauseActive` are enforced by the
+ * module's `pause_recipient` / `resume_recipient` / `pauseInForce`; `guardNotPaused`, `pauseInvalidates` and
+ * `previewRecipients` are the same rules for clients and tests. Runtime-dependency-free (re-exported from
+ * `@dor/contracts/policy`).
  *
  * Two owner-side restrictions, both NARROWING only (they never broaden a preset or create permission):
  *  - Episode exclusion: "not Alex" for the current private decision. Device-only, never stored on the server,

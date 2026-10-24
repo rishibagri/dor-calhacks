@@ -2,6 +2,7 @@
 // Always read in the same transaction as the write the guard protects.
 import type { Identity, Timestamp } from 'spacetimedb';
 import type { InferSchema, ViewCtx } from 'spacetimedb/server';
+import { pauseActive } from '@dor/contracts/policy';
 import type { AreaState, DeliveryGate, DiscoveryParty, PolicySnapshot, PublicationState, StoredSignal, SupportPreferenceState } from '@dor/contracts/policy';
 import type { spacetimedb } from './schema';
 import type { Ctx } from './errors';
@@ -69,7 +70,7 @@ export function toStoredSignal(s: SignalRow): StoredSignal {
 }
 
 // ---- Expiry markers (written by sweep_expired; views have no clock) ----
-export type ExpiryKind = 'signal' | 'preference' | 'publication' | 'area' | 'intent' | 'catalogue' | 'activity';
+export type ExpiryKind = 'signal' | 'preference' | 'publication' | 'area' | 'intent' | 'catalogue' | 'activity' | 'pause';
 export const expiryKey = (kind: ExpiryKind, id: string, version: number): string => `${kind}:${id}:${version}`;
 export const isExpiredMarked = (db: ReadDb, kind: ExpiryKind, id: string, version: number): boolean =>
   Boolean(db.expired_record.record_key.find(expiryKey(kind, id, version))); // find() returns null, not undefined
@@ -146,4 +147,26 @@ export function loadDeliveryGate(db: ReadDb, recipient: Identity, pairId: string
       quietEndMinute: row.quiet_end_minute ?? null, utcOffsetMinutes: row.utc_offset_minutes,
     } : null,
   };
+}
+
+// ---- D041 recipient pause (owner index, then pair: never a whole-table scan) ----
+type PauseRow = NonNullable<ReturnType<Ctx['db']['recipient_pause']['pause_id']['find']>>;
+
+export function findPauseRow(db: ReadDb, owner: Identity, pairId: string): PauseRow | undefined {
+  for (const p of db.recipient_pause.owner.filter(owner)) if (p.pair_id === pairId) return p;
+  return undefined;
+}
+
+/**
+ * Whether `owner` is pausing the other member of `pairId` now. Fail closed: a row that exists counts as in force
+ * unless it is explicitly resumed or known to have lapsed (by ctx clock in reducers, by the sweep marker in views).
+ */
+export function pauseInForce(db: ReadDb, owner: Identity, pairId: string, nowMs: number | null): boolean {
+  const p = findPauseRow(db, owner, pairId);
+  if (!p) return false;
+  return pauseActive({
+    pauseId: p.pause_id, ownerId: hex(p.owner), targetId: hex(p.target), pairId: p.pair_id, version: p.version,
+    expiresAtMs: toMs(p.expires_at), resumedAtMs: p.resumed_at ? toMs(p.resumed_at) : null,
+    expiredMarked: isExpiredMarked(db, 'pause', p.pause_id, p.version),
+  }, nowMs);
 }

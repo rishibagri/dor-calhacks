@@ -1,4 +1,45 @@
-# CYBER handoff (Sumedh): current, Core 1
+# CYBER handoff (Sumedh): current, Core 2 (D041 recipient pause)
+
+Status: implemented offline on `role/cyber-privacy` (on main `126f072`, including #30 and #31). Not published or live-verified.
+
+## Reviews done
+- **CS #30 index rewrite:** ACK, no leak. Caller filters are unchanged in meaning; `pair_member` is consistent on invite, accept, unlink and re-pair; nothing new is visible to a third account (`src/privacy/REVIEWS.md`).
+- **AI D040 private assessment:** ACK with 4 conditions. The main one: it may offer a pause but never set one, and `ShareReview` approval stays mandatory (`src/privacy/REVIEWS.md`).
+
+## D041 as built
+| Piece | Name |
+|---|---|
+| Set / extend | `pause_recipient({pair_id, expires_at, expected_version})`: 15 min to 30 days; revokes the owner's standing approvals and C7 approvals in the pair, suppresses their nudges |
+| Resume | `resume_recipient({pair_id, expected_version})`: restores nothing |
+| Owner view | `my_recipient_pauses {pair_id, version, expires_at, active, created_at}` |
+| Enforcement | `approve_signal` (`unauthorized: recipient_paused`), `worker_signal_context` (omitted), `commit_nudge` (`stale: revoked`, same as revocation), `my_nudges` (hidden) |
+| Expiry | `sweep_expired` marker `pause:<id>:<version>`; fail closed until swept |
+
+## Evidence (offline, provider keys stripped)
+- `check:all` exit 0: contracts 124, schemas current, module 170, typecheck, app 275 + 1 known todo.
+- `ai:check` exit 0: agents 69, worker 42, worker integration 36.
+- `next build --webpack` ok.
+- Mutation checks: 16 of 16 caught (12 pause guards incl. defence-in-depth, 3 #30 filters, 1 refusal-indistinguishability).
+
+## Exact next actions
+- **CS (Rishi):**
+  1. Regenerate bindings.
+  2. Add pause/resume controls in Connections and Privacy over `pause_recipient`, `resume_recipient` and `my_recipient_pauses`, joined to `my_pairs`. Show the end time; never ask for a reason.
+  3. Copy: "{name} isn't notified"; anything already shared is withdrawn; a nudge they already saw will disappear.
+  4. The decision loop may *offer* a pause for an excluded person; only the owner's tap sets it.
+- **Adam:**
+  1. No worker code change is needed (preferred design).
+  2. Please add `worker/integration` cases: pause before the job, pause during generation, pause then resume (the old signal stays dead), and the fallback path. Expect `policy_denied`.
+  3. Keep D040 conditions 1–4.
+- **Nimisha:** add the paired evals: same availability, Alex paused vs Jo not; and pause-then-resume never revives.
+- **Cyber next (Core 3):** live two-account plus denied-third run of the pause and revoke-during-generation cases once CS publishes; recipient-visible surface inspection.
+
+## Deferred to the front-end pass
+- Raw server text in `discovery-profile.tsx` / `discovery-area.tsx` (see the Core 1 section below).
+
+---
+
+# CYBER handoff (Sumedh): Core 1 (superseded by Core 2 above; the D040 number there was reassigned, so the pause is D041)
 
 **Plan change (README #26, sponsor feedback):** Core 1–4 are the active milestones, and R0–R6 are historical. The core product is the existing-relationship flow: private reflection → clarify → exact named-recipient approval → guarded delivery → dismiss/pause/revoke. Discovery, events and Apify are preserved extensions with their guards intact, not core dependencies.
 

@@ -78,6 +78,13 @@ Client: `send_introduction_request({card_ref, client_request_id})` (a fresh rand
 ### Adam: introduction proposals (D033 → D038)
 Commit each proposal with the worker identity through `commit_introduction_proposal({proposal_id, viewer_ref, candidate_ref, viewer_publication_version, candidate_publication_version, reason_code: 'shared_interest', shared_tags, event_id: none, opener_id: 'suggest_shared_interest', decided_by, expires_at})`. `proposal_id` must match `^[A-Za-z0-9_-]{8,64}$` (a UUID qualifies). The reducer is the authority: treat `stale:*`, `not_found:*`, `unauthorized: withdrawn` and `invalid:*` as no proposal, and `unauthorized: worker only` as a deployment fault. `same_event` is refused until R3.
 
+### CS: recipient pause controls (D041, core)
+- **Reducers:** `pause_recipient({pair_id, expires_at, expected_version})` and `resume_recipient({pair_id, expected_version})`. `expected_version` is the row's `version` from `my_recipient_pauses` (0 for none). Join `pair_id` to `my_pairs` to show the name. Show `expires_at`, offer resume, and never ask for a reason.
+- **Copy rule:** "{name} isn't notified." Also say that anything already shared with them is withdrawn now, and that a nudge they already saw will disappear.
+- **The assessment and clarification answers may *offer* a pause, never set one** (D040 review condition 1).
+- **`approve_signal` refuses with `unauthorized: recipient_paused`.** Show "Sharing with {name} is paused until {time}."
+- **Bindings:** regenerate them for the new reducers and view.
+
 ### CS: events, intents and plans (C7/C8, D039)
 Ingestion (server only): after the D028-guarded Apify run, call `upsert_catalogue_event` as the module owner or the allow-listed worker, once per normalized record. Set `set_discovery_config({key:'source_hosts', values:[...]})` first. Client: `catalogue_events` (filter by your own area on the device), `publish_event_intent` / `revoke_event_intent` with `my_event_intents` for the version, `event_companions` for mutual overlap, `respond_plan({plan_id, revision, accept})` / `cancel_plan` with `my_plans`. Existing pairs: a preset toggle for `activity_interest` (off by default, owner-confirmed) plus `approve_activity_interest` / `revoke_activity_interest` with `my_activity_approvals`. Use the preview strings in `src/features/privacy/event-consent-model.ts` verbatim and compose `<EventPrivacyControls>`.
 
@@ -87,7 +94,11 @@ Read `worker_plan_candidates` (worker identity). For each row, `commit_plan_prop
 ### CS: Apify (C7)
 Build every Actor input via `guardPublicCatalogueQuery(input, ACTIVITY_TOPIC_ALLOWLIST)`, and render source links only via `safeCatalogueUrl`. See ACTIVITY_CONSENT.md.
 
-## Known gaps (2026-10-24, CYBER-R3)
+## Known gaps (2026-10-24, Core 2)
+- **D041 pause is offline only.**
+  - In clockless views, a lapsed pause stays "in force" until the next 60 s sweep. That fails closed.
+  - A nudge the counterpart already saw disappears on pause, the same as any revoke. That's an unavoidable inference, stated in the owner copy.
+  - `my_recipient_pauses` still lists a pause for a pair that was later unlinked. It's harmless (the unlinked pair can't share), and CS can hide it using `my_pairs` status.
 - Nothing is published. All reducer and view evidence comes from the in-process SpacetimeDB harness, which doesn't prove deployed isolation, real JWT mapping, the real scheduler or concurrent transactions.
 - **Views can't check `aud`** (ViewCtx has no `senderAuth`). A token from the same Clerk instance minted for another audience maps to the same Identity and could read that user's own `my_*` rows; reducers refuse it. Mitigation: use a Clerk instance (distinct issuer) dedicated to dor, since a separate JWT template keeps the same iss/sub.
 - Expiry in views is bounded by the 60 s sweep, not exact. The sweep scans whole tables (fine for the demo; index it in R4). `expired_record` markers are never pruned.
