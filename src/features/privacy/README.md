@@ -1,12 +1,15 @@
 # src/features/privacy — privacy controls component (Cyber)
 
-Status: **implemented, offline-verified over the real `LocalVault`; not composed into a page or seen in a real browser.**
+Status: vault controls **implemented and offline-verified over the real `LocalVault`**; introduction controls (CYBER-R2) **implemented, model-tested only, not composed into a page or seen in a real browser.**
 
 | File | What it is |
 |---|---|
 | `vault-controller.ts` | UI-free state machine for create, show the recovery code once, unlock, recover, change passphrase, lock and delete. Tested with `node --test` against `LocalVault` + `IndexedDbVaultStore` (fake-indexeddb). |
 | `vault-controls.tsx` | Thin `'use client'` shadcn view: `<VaultControls vault={vault} />`. |
 | `__tests__/vault-controller.test.ts` | 10 tests: validation, show-once code, constant error copy, backoff, recovery rotation, passphrase change, typed delete, vault-initiated lock, StrictMode re-mount. |
+| `introduction-model.ts` | CYBER-R2: groups `my_introductions` rows, report reason labels (same allowlist as the server), fixed copy for refusals (server text is never shown). |
+| `introduction-controls.tsx` | `<IntroductionControls introductions={rows} discoverable={bool} actions={port} />`: accept / decline / block / report on incoming requests, cancel outgoing, block/report connections, "stop being discoverable now". |
+| `__tests__/introduction-model.test.ts` | 5 tests: grouping, fixed copy, no decline wording, reasons match the server, `runAction` never throws. |
 
 ## CS: how to compose it
 ```tsx
@@ -19,6 +22,23 @@ const vault = useMemo(() => new LocalVault({
 - Pass the **same** `LocalVault` instance the journal and quiz pages use, so a lock anywhere is reflected everywhere. The controller follows vault-initiated locks (idle, pagehide).
 - Put it on a page with no third-party scripts, analytics or session replay (src/vault/DESIGN.md "Browser hardening").
 - Don't wrap the inputs in controlled state. Secrets are read from the form on submit, then the form is reset.
+
+## CS: how to compose the introduction controls (D038)
+```tsx
+const rows = useLiveShared().myIntroductions(); // map the my_introductions view to IntroductionView (camelCase)
+const profile = useLiveShared().myDiscoveryProfile();
+const actions: IntroductionActionsPort = {
+  respond: (introId, accept) => reducers.respondIntroductionRequest({ introId, accept }),
+  cancel: (introId) => reducers.cancelIntroductionRequest({ introId }),
+  block: (introId) => reducers.blockIntroductionParticipant({ introId }),
+  report: (introId, reason) => reducers.reportDiscoveryUser({ targetKind: 'introduction', targetRef: introId, reason }),
+  withdraw: () => reducers.withdrawDiscoveryProfile({}),
+};
+<IntroductionControls introductions={rows} discoverable={Boolean(profile?.areaActive && !profile?.withdrawn)} actions={actions} />
+```
+- Regenerate bindings after the module change; the reducer and view names above come from D038. The `useLiveShared` hooks are illustrative: use whatever CS's live layer exposes.
+- Card-level block/report on the Discover page uses `block_discovery_user({card_ref})` and `report_discovery_user({target_kind:'card', ...})`.
+- The server decides everything; the component only renders the view and shows fixed copy. Never add a "declined" state for the sender.
 
 ## What it guarantees, and what it doesn't
 - The recovery code exists only in controller memory until the user retypes its last group. It is never persisted, logged or sent.

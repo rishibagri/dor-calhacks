@@ -40,5 +40,13 @@ export const sweep_expired = spacetimedb.reducer(
     for (const a of ctx.db.area_participation.iter()) {
       if (a.active && a.expires_at.microsSinceUnixEpoch <= now) mark('area', hex(a.owner), a.revision);
     }
+    for (const r of [...ctx.db.introduction.iter()]) {
+      if (r.expires_at.microsSinceUnixEpoch > now) continue;
+      if (r.status === 'pending') ctx.db.introduction.intro_id.update({ ...r, status: 'expired', sender_closed: true });
+      else if (r.status === 'declined' && !r.sender_closed) ctx.db.introduction.intro_id.update({ ...r, sender_closed: true });
+    }
+    for (const p of [...ctx.db.introduction_proposal.iter()]) {
+      if (p.expires_at.microsSinceUnixEpoch <= now) ctx.db.introduction_proposal.proposal_id.delete(p.proposal_id);
+    }
   }
 );

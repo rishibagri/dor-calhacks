@@ -39,7 +39,7 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 |---|---|---|
 | CS — you | App/quiz/client adapter implemented; app composition still uses placeholders; actual bindings/auth/deployment unverified | CS-R1: compose real vault/voice features and generate bindings; CS-R2/R3: coarse-area discovery state and one Apify catalogue |
 | DS — Nimisha | role/ds-context b077a1e (local, unpushed): `rankNearby` shortlist + `src/features/discovery` components + 15 nearby cases; rankActivities uses safeCatalogueUrl/allowInPerson. Offline/synthetic | CS: compose DiscoveryResults/EventResults and ship C8 candidate query matching `src/features/discovery/types.ts`; Sumedh: confirm projection; Adam: ≤3-entry shortlist; team: ratings |
-| Cyber — Sumedh | role/cyber-privacy @ 0021c16/9b82854 (PR #10): CYBER-R1 recipient preference consent bound into commit_nudge, JWT aud allowlist, 60 s expiry/snooze sweep, proposed C8 publish/withdraw/area/block guards (flag off), privacy controls component over real LocalVault (D035). Offline only: contracts 84, module 84, app 141, ai 55; not published | CS: ACK D035, set Clerk `aud` + `set_auth_audience`, compose `VaultControls`, preference settings UI. Adam: `worker_support_preferences` + consent binding in `commit_nudge`; hyphenated tags. Cyber next: CYBER-R2 introductions/report/limits |
+| Cyber — Sumedh | role/cyber-privacy (uncommitted, on main 030ead2): CYBER-R2 introduction request/accept/cancel with no decline oracle, block/report with cascades, per-caller repeat-probe limits, worker-guarded AI proposal commit, `IntroductionControls` component, enforcement matrix (D038). Offline only: contracts 105, module 113, app 186, ai 104; flag off, not published | CS: ACK D038, regenerate bindings, compose `IntroductionControls`. Adam: `commit_introduction_proposal`. Nimisha: D038 no-action evals. Cyber next: CYBER-R3 event intents/plan finalization |
 | AI — Adam | PR #7 merged: routes/browser helpers, real-policy worker factory, replay ledger and cheaper Droid; isolated Droid evidence only | AI-R1: voice component + worker database adapters; R2/R3: bounded introduction/event workflow; R4: call budgets |
 
 R0–R6 replace the old P-phase schedule without resetting code or the original deadline. Detailed shared phases are in README.md; per-owner phases in docs/roles/*.md; exact producer/consumer dependencies in docs/PLAN.md. These are current planning assignments, not completion evidence. Merge main into your active role branch; do not reset or force-update other roles.
@@ -218,3 +218,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **What changed:** the product name is **dor** (lowercase), replacing Kinetic/Closer. Packages `@kinetic/*` → `@dor/*`, env vars `KINETIC_*` → `DOR_*`, module/audience defaults `dor` / `dor-spacetimedb`, vault labels `dor-vault`, payload domain `dor-payload-v1`. D001 and CS's D036 (capitalised "Dor", copy only) are kept as history; D037 completes the rename in lowercase.
 - **Evidence:** `check:all` and `ai:check` exit 0; `next build` ok; audit 0.
 - **Everyone next:** merge main, `npm install`, replace any `@kinetic/` imports or `KINETIC_` env names on your branch (`git grep -l '@kinetic/\|KINETIC_'`), and update local `.env` files.
+
+### 2026-10-24T16:30Z | Cyber → CS, AI, DS | CYBER-R2: introductions, report, limits, proposal commit guard (D038)
+- **Status:** implemented and offline-verified, NOT live; discovery flag stays off; uncommitted on `role/cyber-privacy` (on main `030ead2`) until the owner commits.
+- **Interfaces:**
+  - Reducers: `send_introduction_request`, `respond_introduction_request`, `cancel_introduction_request`, `block_introduction_participant`, `report_discovery_user`, `dismiss_introduction_proposal`, worker-only `commit_introduction_proposal`.
+  - Views: `my_introductions`, `my_introduction_proposals`.
+  - Guards in `@dor/contracts/policy`. Component: `src/features/privacy/introduction-controls.tsx`. Matrix: `src/privacy/DISCOVERY_ENFORCEMENT.md`.
+- **Evidence:** `check:all` and `ai:check` exit 0; 20/20 mutations caught.
+- **Next:**
+  - CS: regenerate bindings and compose the controls.
+  - Adam: commit proposals through the guarded reducer.
+  - Nimisha: D038 rejection cases as no-action evals.
