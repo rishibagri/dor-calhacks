@@ -56,7 +56,7 @@ export default function PrivacyPage() {
       <Card>
         <CardHeader>
           <CardTitle>Receipts</CardTitle>
-          <CardDescription>Every time an approval was made, used, revoked or suppressed.</CardDescription>
+          <CardDescription>Every approval you made and every one you revoked. What the other person did with it is never shown here.</CardDescription>
         </CardHeader>
         <CardContent>
           {receipts.length === 0 && <p className="text-sm text-muted-foreground">No receipts yet.</p>}
