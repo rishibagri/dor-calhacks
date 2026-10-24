@@ -51,6 +51,35 @@ export const DisclosureReceiptSchema = z.object({
   recipientPolicyVersion: z.number().int().positive(), presetAssignmentVersion: z.number().int().positive(),
   action: z.enum(['approved', 'used', 'revoked', 'suppressed']), createdAt: time,
 }).strict();
+const unique = <T>(v: T[]) => new Set(v).size === v.length;
+/** C1 browser voice session from POST /api/voice/session. Short-lived scoped token, never the provider master key. */
+export const VoiceSessionSchema = z.object({
+  schemaVersion: z.literal(1), provider: z.literal('cartesia'), accessToken: z.string().min(1).max(4096),
+  expiresAt: time, apiVersion: id, sttModel: id, sttEncoding: z.literal('pcm_s16le'),
+  sttSampleRate: z.literal(16000), ttsModel: id, ttsVoiceId: id,
+}).strict();
+/** C4 recipient's own consented preferences; the only recipient input an ACK may use. */
+export const RecipientSupportPreferencesSchema = z.object({
+  schemaVersion: z.literal(1), consentId: id, consentVersion: z.number().int().positive(),
+  pairId: id, recipientId: id, purpose: z.literal('support_nudge'),
+  supportModes: z.array(SupportModeSchema).min(1).refine(unique, 'Duplicate support modes'),
+  availability: z.array(AvailabilitySchema).refine(unique, 'Duplicate availability windows'),
+  expiresAt: time, revokedAt: time.nullable(),
+}).strict();
+/** C4 content-free trigger: IDs only, never transcripts or candidate drafts. */
+export const CoordinationJobSchema = z.object({
+  schemaVersion: z.literal(1), jobId: id, pairId: id, requestId: id,
+  signalIds: z.array(id).min(1).max(4).refine(unique, 'Duplicate signal IDs'), createdAt: time,
+}).strict();
+export const CoordinationOutcomeCodeSchema = z.enum(['nudge_proposed', 'policy_denied', 'preferences_unavailable',
+  'no_intersection', 'recipient_declined', 'not_opted_in', 'quiet_hours', 'cooldown', 'proposer_failed_fallback',
+  'proposer_failed_no_suggestion']);
+/** C4 sanitized result record: codes, IDs and versions only. */
+export const CoordinationOutcomeSchema = z.object({
+  schemaVersion: z.literal(1), requestId: id, pairId: id, signalIds: z.array(id).min(1),
+  outcome: CoordinationOutcomeCodeSchema, rounds: z.number().int().min(0).max(2),
+  nudgeId: id.optional(), decidedBy: z.enum(['none', 'agent', 'fixed_template']),
+}).strict();
 export type SupportMode = z.infer<typeof SupportModeSchema>;
 export type Availability = z.infer<typeof AvailabilitySchema>;
 export type SharingCategory = z.infer<typeof SharingCategorySchema>;
@@ -62,3 +91,8 @@ export type LocalConnectionProfile = z.infer<typeof LocalConnectionProfileSchema
 export type AgentAck = z.infer<typeof AgentAckSchema>;
 export type Nudge = z.infer<typeof NudgeSchema>;
 export type DisclosureReceipt = z.infer<typeof DisclosureReceiptSchema>;
+export type VoiceSession = z.infer<typeof VoiceSessionSchema>;
+export type RecipientSupportPreferences = z.infer<typeof RecipientSupportPreferencesSchema>;
+export type CoordinationJob = z.infer<typeof CoordinationJobSchema>;
+export type CoordinationOutcomeCode = z.infer<typeof CoordinationOutcomeCodeSchema>;
+export type CoordinationOutcome = z.infer<typeof CoordinationOutcomeSchema>;

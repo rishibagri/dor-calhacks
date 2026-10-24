@@ -31,12 +31,14 @@ Maintain the dashboard below when a change reaches main. During branch work, app
 
 Update format: UTC timestamp | owner | task | status | branch/commit | files/interfaces changed | verification | next handoff | blockers. Never include personal journal data or credentials. Tag the target role and include exact next action. ACK incoming blockers in your role log. Raise blocked interfaces within 15 minutes.
 
-| Role | Current status | Next handoff |
+| Role / person | Current status | Next handoff |
 |---|---|---|
-| CS | M1 merged (PR #1); D015 fixture/quiz fix on role/cs-app @ d6e9a6b, PR pending. Shell, SpacetimeDB module (16 harness tests), Clerk-JWT adapter written; nothing live yet | Logic/flow review (signal preview + approval loop) before API work; then publish module + live two-account smoke test |
-| DS | Planned | Build fixtures on updated `contracts/fixtures/scenarios.json` (each scenario now has `confirmedPreset` + `presetAssignment`; friends omits availability). Use quiz `prefersSpace` / empty `preferredSupportModes` as a no-action case. Ref: D015 |
-| Cyber | M1 on role/cyber-privacy @ 129c31f (PR pending): C6 guards in `@kinetic/contracts/policy`, authoritative `approve_signal`, sender-only `my_signals`/`my_receipts`, vault design (`src/vault/DESIGN.md`). Offline only: contracts 40/40, module 36/36; module not published | CS: ACK D017, compute `payloadRevision` in preview, ACK VaultPort additions, add JWT `aud` check. AI: live worker uses `DisclosurePolicy`; co-design `commit_nudge`. Cyber next: vault crypto + IndexedDB adapter |
-| AI | Planned | Implement `ReflectionPort` (`src/lib/backend/ports.ts`) behind authenticated `POST /api/reflections` + voice session route. Note: friends `approvedSignal` fixture no longer has `availability` |
+| CS — you | M1/D015 plus core flow draft merged through d4cc763; disclosure.ts and FLOWS.md exist, not reducer/UI-wired; live bindings/auth pending | CS-P1/P2: wire reviewed F3/F4/F5/F7 flow: device-only preview, guarded approval, per-pair opt-in/delivery gate and commit; own Apify source/catalogue per docs/features/ACTIVITY_DISCOVERY.md |
+| DS — Nimisha | Active DS branch 42ff908 reports fixtures/matching/evaluation; not yet merged | DS-P1/P2: review D015 and previewDisclosure/nudgeDelivery expectations (space, opt-in, quiet hours, cooldown), claim quiz semantics, publish rank hook |
+| Cyber — Sumedh | M1 on role/cyber-privacy @ 129c31f (PR #6): C6 guards in `@kinetic/contracts/policy`, authoritative `approve_signal`, sender-only `my_signals`/`my_receipts`, vault design (`src/vault/DESIGN.md`). Offline only: contracts 40/40, module 36/36; module not published | CYBER-P1/P2: reconcile existing Cyber policy with CS-drafted disclosure.ts/FLOWS.md, preserve branch guards; real VaultPort incl. extras; review merged AI D021 |
+| AI — Adam | M1/D021 adapters and worker merged via PR #4; limited Droid tests, full policy/app integration pending | AI-P1/P2: preserve branch, review merged D021 interfaces against main SignalCandidateSchema and D016–D020 flows, authenticated provider routes, real policy/worker ports; note missing keys/latency |
+
+Detailed shared phases are in README.md; per-owner phases in docs/roles/*.md; exact producer/consumer dependencies in docs/PLAN.md. These are current planning assignments, not completion evidence. Merge main into your active role branch; do not reset or force-update other roles.
 
 ## Ownership and handoffs
 Use the ownership table in README.md. CS owns SpacetimeDB module plumbing; Cyber owns reusable authorization semantics and reviews the boundary. Shared contract edits need affected producer/consumer review. Before pausing or handing off, update docs/handoffs/<role>.md and your role log with branch/commit, exact interface, evidence, next consumer action and blocker. Refresh PROJECT_KNOWLEDGE.md after significant merges.
@@ -67,9 +69,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - `DisclosurePolicy` (`@kinetic/contracts`) is the real `DisclosurePolicyPort` for routes and the worker.
   - `approve_signal` enforces the guard and the table gained `client_request_id`.
   - New sender-only `my_signals` view; `my_receipts` is now sender-only; `my_nudges` rechecks that each source signal is still valid.
-  - Decision D017.
+  - Decision D026.
 - **CS next:**
-  1. ACK D017.
+  1. ACK D026.
   2. In the preview route, compute `payloadRevision({pairId, recipientId: counterpartHex, supportMode, availability, recipientPolicyVersion, presetAssignmentVersion, consentVersion: DISCLOSURE_CONSENT_VERSION})` and pass it unchanged to `approve_signal`.
   3. Use `my_signals` in the privacy center.
   4. Regenerate bindings after publish.

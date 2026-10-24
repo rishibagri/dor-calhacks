@@ -1,3 +1,9 @@
+# Current coordination update — Sumedh (Cyber)
+
+Read your updated detailed plan in docs/roles/cyber.md and shared README.md phases. Task IDs are CYBER-P#; Cyber uses CYBER-P#. CS owns Apify ingestion; Nimisha matching; Adam bounded proposals; Sumedh disclosure/vault. Preserve existing work and review the main/role-branch status before selecting the first unmet phase. Forwardable message: docs/team-messages/cyber.md. This notice does not ACK or complete any pending implementation/contract review.
+
+---
+
 # CYBER handoff
 Status: Milestone 1 implemented on `role/cyber-privacy`; offline-verified only. Nothing is published or live.
 
@@ -23,7 +29,7 @@ Status: Milestone 1 implemented on `role/cyber-privacy`; offline-verified only. 
     - the exact payload revision
   - Recipient, policy id and expiry are derived server-side. Retries are idempotent per sender and never resurrect a revoked signal. Each approval writes an `approved` receipt.
   - Views: new `my_signals` (sender-only); `my_receipts` is now sender-only; `my_nudges` hides any nudge whose source lost standing, even without a suppression write.
-  - Vault key/unlock/recovery design: `src/vault/DESIGN.md`. Guard docs and integration steps: `src/privacy/README.md`. Decision D017.
+  - Vault key/unlock/recovery design: `src/vault/DESIGN.md`. Guard docs and integration steps: `src/privacy/README.md`. Decision D026.
 - **Verification (offline, actual results):**
   - `npm ci && npm run check:all` exits 0: contracts 40/40, generated schemas current, module tsc plus vitest 36/36, app typecheck clean, test:app 4/4.
   - `npx next build` succeeds; `npm audit` reports 0 vulnerabilities.
@@ -64,7 +70,7 @@ Status: Milestone 1 implemented on `role/cyber-privacy`; offline-verified only. 
 
 ## Consumer and exact next action
 - **CS:**
-  1. ACK D017.
+  1. ACK D026.
   2. In the preview route, compute `payloadRevision({...})` with `consentVersion: DISCLOSURE_CONSENT_VERSION` and the counterpart hex, and pass it unchanged to `approve_signal`.
   3. Use `my_signals` for the privacy center.
   4. Regenerate bindings after publish (`approved_signal.client_request_id`, `my_signals`).
@@ -78,7 +84,7 @@ Status: Milestone 1 implemented on `role/cyber-privacy`; offline-verified only. 
 
 ## Blockers / unresolved contract decisions
 - The `spacetime` CLI is not installed, so publish and bundle are untested. That includes whether the CLI bundler resolves `@kinetic/contracts/policy` from the workspace; it requires `npm run build -w @kinetic/contracts` first.
-- D017 needs CS and AI ACK. The `VaultPort` additions need CS ACK.
+- D026 needs CS and AI ACK. The `VaultPort` additions need CS ACK.
 - Recipient nudge opt-in and the recipient-preferences consent guard (D016 `RecipientSupportPreferences`) are not modelled in the module yet.
 
 ## Planned work (next)

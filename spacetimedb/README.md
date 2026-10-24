@@ -27,7 +27,7 @@ Views: `my_account`, `my_pairs`, `my_invites`, `my_presets`, `my_preset_assignme
 
 ## Placeholders (not final)
 - `approve_signal` enforces Cyber's C6 `guardApproval` (from `@kinetic/contracts/policy`; see src/privacy/README.md). `nudge` stays empty in production until a guarded worker `commit_nudge` reducer exists (tests seed nudges via internal writes from guarded signals).
-- `my_receipts` and `my_signals` are sender-only (D017); `my_nudges` rechecks source-signal standing. Views cannot check expiry (no clock): a scheduled sweep is still needed.
+- `my_receipts` and `my_signals` are sender-only (D026); `my_nudges` rechecks source-signal standing. Views cannot check expiry (no clock): a scheduled sweep is still needed.
 - Build contracts before the module check (`npm run check:module` does this).
 - Invite TTL (24h), snooze cap (30d) are placeholder constants in `src/constants.ts`.
 - Receipts' `categories` for suppressed/revoked signals are derived from which fields the signal carries.

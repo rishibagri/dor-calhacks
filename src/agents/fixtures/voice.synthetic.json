@@ -1,0 +1,19 @@
+{
+  "synthetic": true,
+  "source": "Shape examples for C1 VoicePort. The token is not real; no audio is stored in the repository.",
+  "session": {
+    "schemaVersion": 1,
+    "provider": "cartesia",
+    "accessToken": "synthetic-not-a-real-token",
+    "expiresAt": "2026-10-24T00:01:00Z",
+    "apiVersion": "2026-08-14",
+    "sttModel": "ink-2",
+    "sttEncoding": "pcm_s16le",
+    "sttSampleRate": 16000,
+    "ttsModel": "sonic-3.6",
+    "ttsVoiceId": "db6b0ed5-d5d3-463d-ae85-518a07d3c2b4"
+  },
+  "transcribe": { "request": { "audio": "<wav|webm|ogg|mp3|flac|m4a bytes, <= 10 MiB>" }, "response": { "text": "Synthetic check-in: today felt long but okay." } },
+  "synthesize": { "request": { "text": "Synthetic check-in: today felt long but okay." }, "response": { "mimeType": "audio/wav", "encoding": "pcm_s16le", "sampleRate": 24000 } },
+  "liveRoundTripPhrase": "Kinetic voice check. Today felt long, but I am okay."
+}
