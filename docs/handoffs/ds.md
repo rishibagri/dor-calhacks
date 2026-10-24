@@ -5,7 +5,7 @@ Read `docs/roles/ds.md` and README **R0–R6** for current assignments. The hist
 ---
 
 # DS handoff — R phases (latest)
-Status at `role/ds-context` @ `b077a1e` + docs commit, on main `4fe469a`. **Committed locally, not pushed** (owner request). Everything is offline and synthetic. Nothing is live, and the components are not yet composed into a real page.
+Status at `role/ds-context` @ `b077a1e` + docs commit, on main `4fe469a`. **Merged to main via PR #9 @ `fab86d6`.** Everything is offline and synthetic. Nothing is live, and the components are not yet composed into a real page.
 
 ## Delivered (DS-R0–R2)
 - **Consumer proposal:** `src/features/discovery/types.ts` defines the C8 shapes DS needs (`DiscoveryCandidate`, `DiscoveryViewer`, `PublishedEventIntent`, `DiscoveryMode`, `ReasonCode`, `DiscoveryShortlist`). These are not contract types; swap them for reviewed `@kinetic/contracts` C8 exports when they land.

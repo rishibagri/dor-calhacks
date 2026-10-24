@@ -11,9 +11,10 @@ import type {
   DiscoveryCandidate, DiscoveryMode, DiscoveryShortlist, DiscoveryViewer, ExclusionReason, NoShortlistReason,
   PublishedEventIntent, ReasonCode, ShortlistEntry,
 } from '../features/discovery/types.ts';
+import { DISCOVERY_CARD_LIMIT, MAX_INTEREST_TAGS, MAX_PUBLIC_NAME } from '@kinetic/contracts/policy';
 
 /** Initial proposals from docs/features/LOCAL_CONNECTIONS.md; benchmarks, not measured capacity. */
-export const MAX_CANDIDATES = 50;
+export const MAX_CANDIDATES = DISCOVERY_CARD_LIMIT;
 export const SHORTLIST_SIZE = 3;
 export const SAME_EVENT_SCORE = 2;
 export const EVENT_FITS_SCORE = 1;
@@ -21,9 +22,10 @@ export const EVENT_FITS_SCORE = 1;
 const CARD_KEYS = new Set(['ref', 'displayName', 'avatarMediaId', 'tags', 'eventIntents', 'publicationVersion',
   'publicationExpiresAt', 'withdrawn', 'blocked', 'alreadyConnected']);
 const INTENT_KEYS = new Set(['eventId', 'intent', 'expiresAt']);
-/** Same slug shape as Cyber's catalogue topic allowlist (contracts/src/catalogue.ts). */
+/** Same slug shape as Cyber's catalogue topic and C8 publication allowlists (contracts/src/{catalogue,discovery}.ts). */
 const TAG_RE = /^[a-z][a-z0-9-]{1,31}$/;
-const MAX_REF = 128, MAX_NAME = 60, MAX_TAGS = 10, MAX_INTENTS = 10;
+/** Name and tag bounds are the C8 publication limits, so nothing the server would refuse can rank. */
+const MAX_REF = 128, MAX_NAME = MAX_PUBLIC_NAME, MAX_TAGS = MAX_INTEREST_TAGS, MAX_INTENTS = 10;
 
 export interface NearbyInput {
   viewer: DiscoveryViewer;
@@ -58,7 +60,7 @@ export function parseCandidate(raw: unknown, allowedTags: Set<string>): Discover
   const ok = isStr(c.ref, MAX_REF) && isStr(c.displayName, MAX_NAME) &&
     (c.avatarMediaId === null || isStr(c.avatarMediaId, MAX_REF)) && validTags(c.tags, allowedTags) &&
     Array.isArray(c.eventIntents) && c.eventIntents.length <= MAX_INTENTS && c.eventIntents.every(validIntent) &&
-    Number.isSafeInteger(c.publicationVersion) && (c.publicationVersion as number) > 0 && isTime(c.publicationExpiresAt) &&
+    Number.isSafeInteger(c.publicationVersion) && (c.publicationVersion as number) > 0 && (c.publicationExpiresAt === null || isTime(c.publicationExpiresAt)) &&
     typeof c.withdrawn === 'boolean' && typeof c.blocked === 'boolean' && typeof c.alreadyConnected === 'boolean';
   return ok ? (raw as DiscoveryCandidate) : null;
 }
@@ -98,7 +100,7 @@ export function rankNearby(input: NearbyInput): DiscoveryShortlist {
     if (c.ref === viewer.ref) { out('self'); continue; }
     if (c.blocked) { out('blocked'); continue; }
     if (c.withdrawn) { out('withdrawn'); continue; }
-    if (Date.parse(c.publicationExpiresAt) <= now) { out('expired_publication'); continue; }
+    if (c.publicationExpiresAt !== null && Date.parse(c.publicationExpiresAt) <= now) { out('expired_publication'); continue; }
     if (c.alreadyConnected) { out('already_connected'); continue; }
     if (input.mode.kind === 'event') {
       const eventId = input.mode.eventId;
