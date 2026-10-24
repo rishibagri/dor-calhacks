@@ -2,13 +2,17 @@
 
 /**
  * Discover results (DS). Receives authorized data via props only; it never fetches, subscribes or sends anything.
- * Inviting and blocking are explicit user actions passed back to the page (CS), which calls the guarded reducers.
+ * Inviting, blocking and reporting are explicit user actions passed back to the page (CS), which calls the guarded
+ * reducers. Report sends nothing until the person picks an allowlisted reason and confirms.
  */
+import { useId, useState } from 'react';
+import type { DiscoveryReportReason } from '@dor/contracts';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import type { DiscoveryCandidate, DiscoveryShortlist } from './types';
-import { emptyState, toCardViews, type CardView, type EmptyAction } from './view-model';
+import { emptyState, REPORT_NOTICE, REPORT_REASON_LABEL, REPORT_REASONS, toCardViews, type CardView, type EmptyAction } from './view-model';
 
 export interface DiscoveryResultsProps {
   shortlist: DiscoveryShortlist;
@@ -18,6 +22,8 @@ export interface DiscoveryResultsProps {
   eventTitle?: string;
   onInvite: (ref: string) => void;
   onBlock: (ref: string) => void;
+  /** Card-level report (D038, `report_discovery_user` with kind `card`). Omitted ⇒ no Report button. */
+  onReport?: (ref: string, reason: DiscoveryReportReason) => void;
   onEmptyAction?: (action: Exclude<EmptyAction, null>) => void;
   /** Refs with an invitation already sent or in flight. */
   invitedRefs?: ReadonlySet<string>;
@@ -32,7 +38,29 @@ const ACTION_LABEL: Record<Exclude<EmptyAction, null>, string> = {
   browse_events: 'Browse public events',
 };
 
-function PersonCard({ card, invited, onInvite, onBlock }: { card: CardView; invited: boolean; onInvite: () => void; onBlock: () => void }) {
+function ReportForm({ onReport, onCancel }: { onReport: (reason: DiscoveryReportReason) => void; onCancel: () => void }) {
+  const [reason, setReason] = useState<DiscoveryReportReason>('spam');
+  const id = useId();
+  return (
+    <form className="grid gap-2 rounded-md border p-3" onSubmit={(e) => { e.preventDefault(); onReport(reason); }}>
+      <Label htmlFor={id}>Why are you reporting?</Label>
+      <select id={id} className="h-9 rounded-md border bg-background px-2 text-sm" value={reason}
+        onChange={(e) => setReason(e.target.value as DiscoveryReportReason)}>
+        {REPORT_REASONS.map((r) => <option key={r} value={r}>{REPORT_REASON_LABEL[r]}</option>)}
+      </select>
+      <p className="text-sm text-muted-foreground">{REPORT_NOTICE}</p>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" size="sm" variant="destructive">Report and block</Button>
+        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>Cancel</Button>
+      </div>
+    </form>
+  );
+}
+
+function PersonCard({ card, invited, onInvite, onBlock, onReport }: {
+  card: CardView; invited: boolean; onInvite: () => void; onBlock: () => void; onReport?: (reason: DiscoveryReportReason) => void;
+}) {
+  const [reporting, setReporting] = useState(false);
   return (
     <li className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200"><Card><CardContent className="space-y-3 pt-6">
       <div className="flex items-center gap-3">
@@ -46,12 +74,18 @@ function PersonCard({ card, invited, onInvite, onBlock }: { card: CardView; invi
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" onClick={onInvite} disabled={invited}>{invited ? 'Invitation sent' : 'Send introduction request'}</Button>
         <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={onBlock}>Block</Button>
+        {onReport && !reporting && (
+          <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => setReporting(true)}>Report</Button>
+        )}
       </div>
+      {onReport && reporting && (
+        <ReportForm onReport={(reason) => { setReporting(false); onReport(reason); }} onCancel={() => setReporting(false)} />
+      )}
     </CardContent></Card></li>
   );
 }
 
-export function DiscoveryResults({ shortlist, candidates, eventTitle, onInvite, onBlock, onEmptyAction, invitedRefs, synthetic }: DiscoveryResultsProps) {
+export function DiscoveryResults({ shortlist, candidates, eventTitle, onInvite, onBlock, onReport, onEmptyAction, invitedRefs, synthetic }: DiscoveryResultsProps) {
   const cards = toCardViews(shortlist, candidates, eventTitle);
   const heading = shortlist.mode === 'event' ? 'People interested in this event' : 'People in your selected area';
   return (
@@ -77,7 +111,8 @@ export function DiscoveryResults({ shortlist, candidates, eventTitle, onInvite, 
           <ul className="space-y-3">
             {cards.map((c) => (
               <PersonCard key={c.ref} card={c} invited={invitedRefs?.has(c.ref) ?? false}
-                onInvite={() => onInvite(c.ref)} onBlock={() => onBlock(c.ref)} />
+                onInvite={() => onInvite(c.ref)} onBlock={() => onBlock(c.ref)}
+                onReport={onReport ? (reason) => onReport(c.ref, reason) : undefined} />
             ))}
           </ul>
         </>

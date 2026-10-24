@@ -4,54 +4,69 @@ Read `docs/roles/ds.md` and README **R0–R6** for current assignments. The hist
 
 ---
 
-# DS handoff — Day 2, DS-R3 (latest)
-Status: `role/ds-context` on main `6c15b28`, DS-R3 changes **uncommitted, awaiting owner review**. Everything DS owns is still offline and synthetic. The previous handoff below remains accurate for DS-R0–R2.
+# DS handoff — Day 2, D039 compatibility + card report (latest)
+Status: on `role/ds-context`, based on main `6093b2a` (after CS PR #22). These changes are **uncommitted, awaiting owner review**. The first DS-R3 cut (`90d789a`) is on main via PR #17; this change replaces its event logic. DS nearby code now runs inside CS's Discover page, but only offline and on synthetic data.
 
-## Integrated vs synthetic (as of main 6c15b28)
+## Integrated vs synthetic (as of main 6093b2a)
 | Piece | In the running app? | Evidence |
 |---|---|---|
-| `rankNearby`, `rankDiscoveryCards` adapter, `DiscoveryResults`, `EventResults` | **No.** No page imports them; there is no Discover route | `grep` of `src/app`, `src/components`, `src/lib` finds no discovery usage |
-| `discovery_cards` / `my_discovery_profile` generated bindings | Generated only. Shape matches the DS adapter; nothing subscribes to them | `src/lib/spacetime/module_bindings/discovery_cards_table.ts` |
-| C8 reducers/views (publish, area, block, sweep) | Module code + in-process tests only; module **unpublished**, discovery flag off | Cyber/CS logs |
-| Event intents (C8 EventIntent) | **Does not exist** server-side: no table, view or card field. Real rows always give `eventIntents: []` | `spacetimedb/src` has no event-intent table |
-| Regional event feed (C7 + `areaKey`) | **Does not exist.** `fixtures/event-listings.json` is a synthetic stand-in | — |
-| `rankEventCompanions` / `eligibleEvents` (DS-R3) | No. Pure functions + 21 tests over synthetic fixtures | `src/evaluation/__tests__/events.test.ts` |
-| `rankAckOptions` in the worker | No. The worker can't import `src/evaluation` | no import in `worker/` or `src/agents` |
-| Eval numbers | Synthetic labels from one DS annotator; no human ratings | `results/latest.md` |
+| `rankDiscoveryCards` + `DiscoveryResults` (nearby) | **Composed:** `/discover` (CS PR #22) ranks `discovery_cards` through the DS adapter and renders `DiscoveryResults` with invite/block. Offline only: module unpublished; cards labelled synthetic unless `NEXT_PUBLIC_DISCOVERY_SYNTHETIC=false` | `src/app/discover/page.tsx`, `src/components/feature/discover-model.ts` |
+| Card-level Report (`onReport`) | DS prop added here; **CS still needs to pass `reportCard`** (one line) | `src/features/discovery/discovery-results.tsx` |
+| `rankEventCompanions`, `eligibleEvents`, `EventResults` | **No.** No event page yet (CS-R3) | — |
+| Event view bindings (`catalogue_events`, `my_event_intents`, `event_companions`) | Generated in PR #22; field names match the DS row interfaces; CS has no event mappers yet | `src/lib/spacetime/module_bindings/*_table.ts` |
+| C8/D038/D039 reducers and views | Module code + in-process tests only; unpublished, discovery flag off | Cyber/CS logs |
+| `alreadyConnected` | **Half closed:** `discovery_cards` now hides accepted introductions (CS `4844ae6`), not existing pairs. The DS adapter stays `false` | `spacetimedb/src/views.ts` |
+| Regional event feed | Not wired; `fixtures/event-listings.json` is synthetic | — |
+| Rankers in the worker | No | — |
+| Eval numbers | Synthetic labels from one DS annotator; no human ratings | `results/latest.md` (metrics unchanged) |
 
-## Delivered (DS-R3, uncommitted)
-- **`eligibleEvents(events, viewerAreaKey, allowedTags, now)`** (`src/evaluation/events.ts`). Catalogue only, never looks at people. An event is eligible when it is in person, has `areaKey === viewerAreaKey` (null area = none), is `scheduled`, starts ≥30 min and ≤14 days from now, was fetched ≤72 h ago, and has only allowlisted topics. Any key outside `CatalogueEventRef` + `areaKey` (a venue, for example) rejects the row. Duplicate IDs resolve to the latest fetch; on a tie the more restrictive status wins, so a conflicting cancelled copy hides the event. Results are order-independent.
-- **`rankEventCompanions({viewer, viewerAreaKey, events, candidates, allowedTags, now, limit?})`**. For each eligible event the viewer published a current intent for, it runs `rankNearby` event mode (unchanged). It returns ≤3 events, soonest first, as `{eventId, viewerIntent, companions: ShortlistEntry[≤3]}`. No-result reasons: `not_published`, `no_active_area`, `no_eligible_event`, `viewer_no_event_intent`, `no_companions`. Shared tags alone never make an event companion; both people must have published a current intent for the same eligible event. Block/withdraw/expired publication/already connected/self are removed by `rankNearby`.
-- **`EventListing`** is a DS consumer proposal (contracts `CatalogueEventRef` plus the coarse `areaKey` of the regional feed), not a wire type.
-- Evidence: 21 new tests; DS suite 142 pass / 0 fail / 1 todo (a3); `tsc --noEmit` clean; 10/10 targeted mutations caught. Eval report unchanged (no new labeled cases in metrics yet).
+## What changed (D039 / D038 compatibility)
+- **Privacy (D039 "the kind is never shown to others").** `ShortlistEntry.theirIntent` is removed, and so is the card line "(they said: planning to go)". The line now reads "You both marked {event}." for either kind. `DiscoveryCandidate.eventIntents` (other people's kind and expiry) is replaced by `sharedEventIds`: mutual event IDs taken only from `event_companions`. `rankNearby` rejects a card that carries `eventIntents` or `theirIntent`. The candidate fixture was converted the same way; ranking results and eval metrics are unchanged.
+- **Companions come from the server.** `rankEventCompanions({viewer, viewerAreaKey, catalogue, myIntents, cards, companions, allowedTags, now})` reads:
+  - `catalogue_events`, the public catalogue;
+  - `my_event_intents`, the viewer's own intents;
+  - `discovery_cards`, through the strict adapter;
+  - `event_companions`, mutual `(cardRef, eventId)` pairs.
+
+  DS no longer decides who intends what; it only narrows. A companion row is withheld, and reported in `withheld`, when it:
+  - has any extra field, such as a leaked `kind` (`invalid_companion`);
+  - is for an event the viewer doesn't currently intend here (`not_mutual_here`);
+  - has no visible card (`card_not_visible`).
+
+  It returns `{events: [{eventId, viewerIntent (own), companions ≤3}], candidates, eligibility, withheld}`, or `none` with one of: `not_published`, `no_active_area`, `no_eligible_event`, `viewer_no_event_intent`, `no_companions`.
+- **Alignment with the backend.**
+  - Freshness is now the contracts `CATALOGUE_MAX_SOURCE_AGE_MS` (48 h, the server's intent rule), down from 72 h.
+  - Area keys use Cyber's rule via `validSlugAllowlist([key], 'area')`, and a test proves it equals `guardAreaKey`.
+  - Event IDs use the server's shape.
+  - Catalogue rows must have exactly the view's keys; a `status`, `venue` or other extra field rejects the row.
+  - A duplicated event ID now withholds every copy instead of picking one.
+- **D038.** `forIntroductionProposals(entries)` (`src/features/discovery/adapters.ts`) withholds entries the server's `commit_introduction_proposal` would refuse (`same_event`-only, or no shared tag). It passes the rest on as `shared_interest` with at most 3 tags. The "no decline oracle" copy test is added.
+- **Card report (PR #22 ask).** `DiscoveryResults` gains an optional `onReport(ref, reason)`. It shows a Report button, which opens a picker limited to the contract `DISCOVERY_REPORT_REASONS` (same wording as Cyber's introduction form) with the D038 notice "Reporting also blocks them. They are not told who reported or why." Nothing is sent until the person confirms "Report and block"; without the prop, no button appears.
+- **Tag allowlist (PR #22 ask): confirmed.** `src/lib/discovery/config.ts` `DISCOVERY_TAGS` equals the DS fixture allowlist (10 non-sensitive slugs).
+- **Evidence (on main `6093b2a` + these changes):** DS suite 147 pass / 0 fail / 1 todo (a3); `tsc --noEmit` clean; `npm run check:all` exit 0 (contracts 116, module 143, app 228 + 1 todo); `npm run ai:check` exit 0 (agents 64, worker 21, integration 19); `next build --webpack` OK with `/discover` prerendered. Mutations: 16 tried on the D039 code (15 caught; the 16th exposed a redundant check, which was removed), and 2 on the report allowlist (both caught). The React component itself has no render test (`node --test` can't load TSX); its logic is tested through the view model.
 
 ## Messages to send (exact integration work)
-**→ CS: compose discovery into the app.**
-1. Add a Discover route. Subscribe to `my_discovery_profile` and `discovery_cards`.
-2. Viewer = `{ ref: publicationId, published: discoveryEnabled && !withdrawn && !expired && areaActive, tags: interestTags, eventIntents: [] }`.
-3. Nearby: `rankDiscoveryCards({ viewer, rows: discovery_cards, mode: { kind: 'nearby' }, allowedTags, now })`, then `<DiscoveryResults shortlist candidates onInvite onBlock onEmptyAction invitedRefs synthetic />`. Wire `onInvite`/`onBlock` to guarded reducers only. Keep `synthetic` on while seeded.
-4. Hide the "same event" UI on real data until event intents exist (they always come back empty today).
-5. For local events, provide the regional feed rows as `CatalogueEventRef + areaKey` and the viewer's `areaKey` from `my_discovery_profile` (only when `areaActive`), then call `rankEventCompanions`.
-6. Decide the ranker import path for the worker (root `package.json` is yours).
+**→ CS:**
+1. In `src/app/discover/page.tsx`, pass `onReport={(ref, reason) => void runAction(() => reportCard(shared, ref, reason))}` to `<DiscoveryResults>`.
+2. CS-R3 events: add mappers for `catalogue_events`, `my_event_intents` and `event_companions` (camelCase, ISO times, `null` for empty optionals; your `plain()` already does this). Call `rankEventCompanions({viewer, viewerAreaKey, catalogue, myIntents, cards, companions, allowedTags: DISCOVERY_TAGS, now})`, with `viewerAreaKey` only while `areaActive`. Render each event's companions with `<DiscoveryResults shortlist={{kind: 'shortlist', mode: 'event', entries: companions, excluded: [], truncated: false}} candidates={result.candidates} eventTitle=… />`.
+3. Invite, block and report go through guarded reducers only.
+4. Decide the ranker import path for the worker.
 
-**→ Sumedh (Cyber): two server-side gaps block real event and nearby correctness.**
-1. C8 EventIntent producer: table + publish/revoke reducers + an `eventIntents` field (`{eventId, intent: interested|going, expiresAt}`, expiry capped at event end) on `discovery_cards`, or a separate caller-filtered view. Until it exists, real event companions are always `no_companions`.
-2. `alreadyConnected`: either drop linked pairs from `discovery_cards` server-side or add a flag. The DS adapter sets it to `false` for now.
-3. Confirm the coarse `areaKey` on catalogue event rows is acceptable, i.e. public feed metadata, not a user's location.
-4. Still open: a3 (opaque `signalId` validation).
+**→ Sumedh (Cyber):**
+1. Ack that DS consumes `event_companions` only and never shows another person's kind.
+2. `alreadyConnected` is half closed: CS's `4844ae6` hides accepted introductions in `discovery_cards`. Existing partner/friend/family pairs still appear, and are refused only at `send_introduction_request`. Please filter linked pairs too, or add a flag.
+3. Please export an event-ID validator from `@dor/contracts/policy`, so DS stops mirroring `EVENT_ID_RE`.
+4. a3.
 
-**→ Adam (AI): consume shortlists, no prompt text from catalogue.**
-1. Event companions arrive as `EventCompanions` (`eventId`, `viewerIntent`, ≤3 `ShortlistEntry`). Map each entry to `IntroductionShortlist` the same way as nearby, with `sharedEventId` set. Zero events means no model call.
-2. For D034 plans, `eligibility.eligible` is the DS-ordered event ID list; pass the matching `CatalogueEventRef`s.
-3. Agree the import path with CS: either move `rankAckOptions` / `rankNearby` / `rankEventCompanions` into contracts, or add a small `@dor/ranking` workspace. The worker can't import `src/evaluation` today.
+**→ Adam (AI):**
+1. `src/agents/src/introductions/coordinator.ts:116` builds `reasonCode: 'same_event'` proposals, but D038's `guardIntroductionProposalCommit` refuses anything except `shared_interest`. Run shortlist entries through `forIntroductionProposals` first, or drop `same_event` until Cyber enables it.
+2. Map `EventCompanions` entries to `IntroductionShortlist` with `publicationVersion` from `result.candidates`.
+3. Agree the import path with CS.
 
 ## Next for DS
-- Add labeled event cases to the metrics report (DS-R4 needs ≥12 new nearby/event cases with a baseline).
-- Two teammate ratings (`results/ratings-template.md`).
-- First-session recommendations on event cards (DS-R3 remainder).
+- D038/D039 cases in the metrics report (DS-R4 needs ≥12 new nearby/event cases with a baseline); human ratings; first-session recommendations.
 
 ---
-
 
 # DS handoff — R phases (DS-R0–R2)
 Status at `role/ds-context` @ `b077a1e` + docs commit, on main `4fe469a`. **Merged to main via PR #9 @ `fab86d6`.** Everything is offline and synthetic. Nothing is live, and the components are not yet composed into a real page.
@@ -62,7 +77,7 @@ Status at `role/ds-context` @ `b077a1e` + docs commit, on main `4fe469a`. **Merg
   - **Removes:** self, blocked (either direction), withdrawn, expired publication, already connected, duplicates, rows over the 50-row cap (reported as `truncated`), and in event mode anyone without a current intent for that event.
   - **Rejects as `invalid_card`:** any card with a field outside the projection, or with an unallowlisted tag.
   - **Scores:** shared published tags, plus 2 for a shared current event intent, plus 1 when the event's topic is a shared tag. Tie-break is the opaque ref.
-  - **Outputs:** `ref`, `reasons`, `sharedTags`, `sharedEventId`, `theirIntent`. Display names are never read.
+  - **Outputs:** `ref`, `reasons`, `sharedTags`, `sharedEventId` (`theirIntent` was removed in the Day 2 D039 change). Display names are never read.
   - **No-shortlist reasons:** `not_published`, `viewer_has_nothing_published` (cold start), `viewer_no_event_intent`, `empty_area`, `no_fit`.
 - **Components** (`src/features/discovery/`): `DiscoveryResults` and `EventResults` take props only and render honest empty states. Labels come from the pure `view-model.ts`; it never shows a percentage, distance or attendance claim, and intent reads "Interested" or "Planning to go".
 - **`rankActivities`:** links now go through contracts `safeCatalogueUrl`; `allowInPerson` (default false) enables local in-person events.

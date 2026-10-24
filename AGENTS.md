@@ -38,7 +38,7 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 | Role / person | Current status | Next handoff |
 |---|---|---|
 | CS — you | role/cs-app (PR #22, offline only): CS-R1 done in code (vault/voice/share review/revoke/recipient consent, bindings); CS-R2 Discover + area-indexed paged `discovery_cards` + `set_discovery_page`; not published or live-verified | CS-R3: event pages on D039 + one Apify catalogue. Cyber: review discovery_cards index/cursor/connected filter. DS: card `onReport` → `reportCard`. Adam: introduction proposal job |
-| DS — Nimisha | role/ds-context b077a1e (local, unpushed): `rankNearby` shortlist + `src/features/discovery` components + 15 nearby cases; rankActivities uses safeCatalogueUrl/allowInPerson. Offline/synthetic | CS: compose DiscoveryResults/EventResults and ship C8 candidate query matching `src/features/discovery/types.ts`; Sumedh: confirm projection; Adam: ≤3-entry shortlist; team: ratings |
+| DS — Nimisha | On main: DS-R0–R2 (PR #9), strict `discovery_cards` adapter (PR #13), first DS-R3 cut (PR #17). DS nearby ranking + `DiscoveryResults` are composed in CS's `/discover` (PR #22; offline/synthetic). On `role/ds-context` (uncommitted, awaiting owner review): D039 fix (no other person's interested/going in output or UI), event companions only from `event_companions`, 48 h freshness and Cyber's area rule, D038 `forIntroductionProposals` gate, card-level `onReport` | CS: pass `reportCard` to `onReport`; CS-R3 event mappers → `rankEventCompanions`. Sumedh: ACK, filter linked pairs (`alreadyConnected` half closed), event-ID validator export, a3. Adam: gate `same_event` proposals (D038 refuses them). Team: ratings |
 | Cyber — Sumedh | role/cyber-privacy (on main 2b8e59b): CYBER-R3 guarded catalogue ingestion, C8 event intents (mutual-only overlap), C7 activity approvals (preset-only, off by default), D034 plan finalization with current-source rechecks, `EventPrivacyControls` + exact preview copy (D039). R2 merged (#18). Offline only: contracts 116, module 137, app 193, ai 104; flag off, not published | CS: ACK D039, bindings, ingestion → `upsert_catalogue_event`, preview copy, preset toggle. Adam: `commit_plan_proposal` from `worker_plan_candidates`. Nimisha: `event_companions`. Cyber next: CYBER-R4 adversarial suite |
 | AI — Adam | PR #7 merged: routes/browser helpers, real-policy worker factory, replay ledger and cheaper Droid; isolated Droid evidence only | AI-R1: voice component + worker database adapters; R2/R3: bounded introduction/event workflow; R4: call budgets |
 
@@ -243,3 +243,47 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - CS: regenerate bindings and wire ingestion.
   - Adam: commit plans from the worker view.
   - Nimisha: companions from `event_companions` only.
+
+### 2026-10-24T17:15Z | DS → CS, AI, Cyber | D039/D038 compatibility + card report (PR #22 follow-up)
+- **Branch/commit:** `role/ds-context` on main `6093b2a` (after CS PR #22), uncommitted and awaiting owner review. Earlier DS work on main: PR #13 (`d98cc04`, strict adapter) and PR #17 (`90d789a`, first DS-R3 cut, whose event logic this replaces).
+- **Status:** implemented and offline-verified, NOT live:
+  - DS nearby ranking and `DiscoveryResults` run inside CS's `/discover` (PR #22), but the module is unpublished and cards are labelled synthetic;
+  - DS event companions are not composed (no event page yet).
+- **Evidence:**
+  - `npm run check:all` exit 0: contracts 116, module 143, app 228 + 1 todo (a3).
+  - `npm run ai:check` exit 0: agents 64, worker 21, integration 19.
+  - `next build --webpack` OK, with `/discover` prerendered.
+  - DS suite 147 pass / 0 fail / 1 todo; `tsc --noEmit` clean.
+  - Mutations: 16 on the D039 code (15 caught, 1 redundant check removed) and 2 on the report allowlist (both caught).
+  - Eval metrics are unchanged.
+- **Privacy fix (D039):**
+  - `ShortlistEntry.theirIntent` and the "(they said: planning to go)" card line are removed.
+  - `DiscoveryCandidate.eventIntents` is replaced by `sharedEventIds`, taken from `event_companions` only.
+  - `rankNearby` rejects cards that carry `eventIntents` or `theirIntent`.
+- **Interfaces:**
+  - `rankEventCompanions({viewer, viewerAreaKey, catalogue, myIntents, cards, companions, allowedTags, now})` (`src/evaluation/events.ts`) reads the 4 view rows (the generated bindings' camelCase field names). It returns events with the viewer's own `viewerIntent` and ≤3 companions, plus `candidates` and `withheld` (`invalid_companion` / `not_mutual_here` / `card_not_visible`).
+  - `eligibleEvents`: 48 h `CATALOGUE_MAX_SOURCE_AGE_MS`, Cyber's area rule, strict view keys; duplicate IDs withhold every copy.
+  - `forIntroductionProposals(entries)` (`src/features/discovery/adapters.ts`): D038 `shared_interest`-only with ≤3 tags.
+  - `DiscoveryResults` gains an optional `onReport(ref, reason: DiscoveryReportReason)`: an allowlisted picker with the D038 notice; nothing is sent before "Report and block".
+- **PR #22 asks answered:** tag allowlist confirmed (identical to the DS fixtures); `onReport` delivered.
+- **CS next:**
+  1. Pass `onReport={(ref, reason) => void runAction(() => reportCard(shared, ref, reason))}` in `src/app/discover/page.tsx`.
+  2. CS-R3: map `catalogue_events` / `my_event_intents` / `event_companions`, then call `rankEventCompanions` (`viewerAreaKey` only while `areaActive`) and render companions with `<DiscoveryResults>` in event mode.
+  3. Decide the ranker import path for the worker.
+- **Cyber (Sumedh) next:**
+  1. ACK the consumption above.
+  2. Filter linked pairs out of `discovery_cards`; accepted introductions are already hidden (`4844ae6`).
+  3. Export an event-ID validator.
+  4. a3.
+- **AI (Adam) next:**
+  1. `introductions/coordinator.ts:116` emits `same_event` proposals that D038's commit guard refuses; gate with `forIntroductionProposals`.
+  2. Take `publicationVersion` from `result.candidates`.
+- **Open gaps:**
+  - `alreadyConnected` is half closed (linked pairs are still shown).
+  - No event page or event mappers.
+  - Rankers are not worker-importable.
+  - No regional feed.
+  - The module is unpublished.
+  - D038/D039 cases are not in the metrics report yet.
+  - No human ratings.
+- **Details:** `docs/handoffs/ds.md` (integrated-vs-synthetic table), `docs/updates/ds.md`, `src/evaluation/README.md`.
