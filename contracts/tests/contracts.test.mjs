@@ -96,3 +96,30 @@ test('recipient preferences and coordination jobs reject duplicates and free tex
   assert.equal(RecipientSupportPreferencesSchema.safeParse({ ...prefs, supportModes: [] }).success, false);
   assert.equal(CoordinationJobSchema.safeParse({ ...fixtures.CoordinationJob, transcript: 'synthetic' }).success, false);
 });
+
+test('each scenario signal stays inside its explicitly owner-confirmed preset and assignment', async () => {
+  const { RelationshipPresetSchema, RecipientPresetAssignmentSchema } = await import('../dist/index.js');
+  const categoryOf = { supportMode: 'support_preference', availability: 'coarse_availability' };
+  for (const c of cases) {
+    const preset = RelationshipPresetSchema.parse(c.confirmedPreset);
+    const assignment = RecipientPresetAssignmentSchema.parse(c.presetAssignment);
+    const s = c.approvedSignal;
+    assert.ok(['matches_suggestion', 'owner_selected_beyond_suggestion'].includes(c.presetConfirmation), c.scenario);
+    assert.equal(preset.ownerId, s.senderId);
+    assert.equal(preset.policyId, s.recipientPolicyId);
+    assert.equal(preset.version, s.recipientPolicyVersion);
+    assert.deepEqual([assignment.ownerId, assignment.recipientId, assignment.pairId, assignment.presetId],
+      [s.senderId, s.recipientId, s.pairId, preset.policyId]);
+    assert.equal(assignment.assignmentVersion, s.presetAssignmentVersion);
+    for (const [field, category] of Object.entries(categoryOf)) {
+      if (s[field] !== undefined) assert.ok(preset.allowedCategories.includes(category), `${c.scenario}: ${field} not confirmed`);
+    }
+  }
+});
+
+test('relationship scenarios produce distinct preset outcomes; friend omits blocked availability', () => {
+  const byName = Object.fromEntries(cases.map(c => [c.scenario, c]));
+  assert.deepEqual(byName.friends.confirmedPreset.allowedCategories, ['support_preference']);
+  assert.equal('availability' in byName.friends.approvedSignal, false);
+  assert.notDeepEqual(byName.partners.confirmedPreset.allowedCategories, byName.friends.confirmedPreset.allowedCategories);
+});

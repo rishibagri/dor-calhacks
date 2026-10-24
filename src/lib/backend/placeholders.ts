@@ -34,6 +34,8 @@ export const placeholderVault: VaultPort = {
   deleteJournal: async () => pending(VAULT_MSG),
   saveProfile: async () => pending(VAULT_MSG),
   loadProfile: async () => pending(VAULT_MSG),
+  saveQuizExtras: async () => pending(VAULT_MSG),
+  loadQuizExtras: async () => pending(VAULT_MSG),
 };
 
 export const placeholderReflection: ReflectionPort = {

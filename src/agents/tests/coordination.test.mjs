@@ -11,10 +11,10 @@ const scenarios = await json('../../../contracts/fixtures/scenarios.json');
 const fixture = await json('../fixtures/coordination.synthetic.json');
 const signalFor = (scenario) => structuredClone(scenarios.find(s => s.scenario === scenario).approvedSignal);
 
-function setup(scenario, { state: stateOverrides = {}, preferences = {}, preferencesPort, proposer = [], onCall, lastNudgeAt,
-  ...deps } = {}) {
+function setup(scenario, { signalPatch = {}, state: stateOverrides = {}, preferences = {}, preferencesPort, proposer = [], onCall,
+  lastNudgeAt, ...deps } = {}) {
   const clock = new FakeClock('2026-10-24T00:00:00Z');
-  const signal = signalFor(scenario);
+  const signal = { ...signalFor(scenario), ...signalPatch };
   const state = {
     clock, linked: true, revoked: false, approved: structuredClone(signal),
     preset: { schemaVersion: 1, policyId: signal.recipientPolicyId, ownerId: signal.senderId, presetKind: 'partner',
@@ -119,7 +119,9 @@ test('fallback can be disabled, and timeouts consume rounds', async () => {
 
 test('a ranking hook may reorder or drop options but cannot add one', async () => {
   const added = { supportMode: 'short_call', availability: 'today' };
+  // Two windows survive the intersection, so there is something to rank.
   const { signal, proposer, coordinator } = setup('friends', {
+    signalPatch: { availability: 'this_week' },
     proposer: [{ decision: 'compatible', optionIndex: 0 }],
     rank: (options) => [added, ...options.reverse()],
   });
