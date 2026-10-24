@@ -10,7 +10,8 @@ import {
   RelationshipPresetSchema,
 } from '@dor/contracts';
 import type { DisclosureReceipt, Nudge, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
-import type { InviteView, PairView } from '@/lib/backend/ports';
+import { validRecipientDelivery, validSupportPreferences } from '@dor/contracts/policy';
+import type { InviteView, NudgeDeliveryView, PairView, SupportPreferencesView } from '@/lib/backend/ports';
 import { toCamel, type LooseRow } from './bindings';
 
 type Mapper<T> = (row: LooseRow) => T | null;
@@ -118,6 +119,40 @@ export const mapReceipt: Mapper<DisclosureReceipt> = (row) =>
     action: str(row, 'action'),
     createdAt: str(row, 'created_at'),
   });
+
+function num(row: LooseRow, key: string): number | null {
+  const v = plain(get(row, key));
+  if (v === null || v === '') return null;
+  const n = Number(v);
+  return Number.isInteger(n) ? n : null;
+}
+
+export const mapSupportPreferences: Mapper<SupportPreferencesView> = (row) => {
+  const pairId = str(row, 'pair_id');
+  const expiresAt = str(row, 'expires_at');
+  const consentVersion = num(row, 'consent_version');
+  const supportModes = get(row, 'support_modes');
+  const availability = get(row, 'availability');
+  if (!pairId || !expiresAt || consentVersion === null || !Array.isArray(supportModes) || !Array.isArray(availability)) return null;
+  if (!validSupportPreferences({ supportModes, availability })) return null;
+  return {
+    pairId, expiresAt, consentVersion, revokedAt: str(row, 'revoked_at'),
+    supportModes: supportModes as SupportPreferencesView['supportModes'],
+    availability: availability as SupportPreferencesView['availability'],
+  };
+};
+
+export const mapNudgeDelivery: Mapper<NudgeDeliveryView> = (row) => {
+  const pairId = str(row, 'pair_id');
+  const optedIn = get(row, 'opted_in');
+  const utcOffsetMinutes = num(row, 'utc_offset_minutes');
+  if (!pairId || typeof optedIn !== 'boolean' || utcOffsetMinutes === null) return null;
+  const view = {
+    pairId, optedIn, utcOffsetMinutes,
+    quietStartMinute: num(row, 'quiet_start_minute'), quietEndMinute: num(row, 'quiet_end_minute'),
+  };
+  return validRecipientDelivery(view) ? view : null;
+};
 
 export function mapRows<T>(rows: Iterable<LooseRow>, mapper: Mapper<T>): T[] {
   const out: T[] = [];

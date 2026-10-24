@@ -1,13 +1,15 @@
 import type { DisclosureReceipt, Nudge, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
-import type { InviteView, PairView } from '@/lib/backend/ports';
+import type { InviteView, NudgeDeliveryView, PairView, SupportPreferencesView } from '@/lib/backend/ports';
 import { findTable, type LooseConnection, type LooseTable } from './bindings';
 import {
-  mapAccount, mapAssignment, mapInvite, mapNudge, mapPair, mapPreset, mapReceipt, mapRows,
+  mapAccount, mapAssignment, mapInvite, mapNudge, mapNudgeDelivery, mapPair, mapPreset, mapReceipt, mapRows,
+  mapSupportPreferences,
 } from './mappers';
 
 /** Caller-filtered views (module defines them; all base tables are private). */
 export const VIEW_NAMES = [
   'my_account', 'my_pairs', 'my_invites', 'my_presets', 'my_preset_assignments', 'my_nudges', 'my_receipts',
+  'my_support_preferences', 'my_nudge_delivery',
 ] as const;
 
 export interface ViewData {
@@ -18,10 +20,12 @@ export interface ViewData {
   readonly assignments: RecipientPresetAssignment[];
   readonly nudges: Nudge[];
   readonly receipts: DisclosureReceipt[];
+  readonly supportPreferences: SupportPreferencesView[];
+  readonly nudgeDelivery: NudgeDeliveryView[];
 }
 
 export const EMPTY_VIEWS: ViewData = {
-  account: null, pairs: [], invites: [], presets: [], assignments: [], nudges: [], receipts: [],
+  account: null, pairs: [], invites: [], presets: [], assignments: [], nudges: [], receipts: [], supportPreferences: [], nudgeDelivery: [],
 };
 
 export function viewTables(conn: LooseConnection): LooseTable[] {
@@ -39,5 +43,7 @@ export function readViews(conn: LooseConnection): ViewData {
     assignments: mapRows(rows('my_preset_assignments'), mapAssignment),
     nudges: mapRows(rows('my_nudges'), mapNudge),
     receipts: mapRows(rows('my_receipts'), mapReceipt),
+    supportPreferences: mapRows(rows('my_support_preferences'), mapSupportPreferences),
+    nudgeDelivery: mapRows(rows('my_nudge_delivery'), mapNudgeDelivery),
   };
 }
