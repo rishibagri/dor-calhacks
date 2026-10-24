@@ -1,6 +1,6 @@
 # C8 proposal — discovery publication, approximate area and event intention
 
-**Status: proposed shared contract, no executable schema in this reset.** Product choices are confirmed; exact shapes/defaults need CS/DS/AI/Cyber review. Preserve C1–C6 and D028 guards unchanged. Do not import ad hoc proposed shapes into production.
+**Status: proposed shared contract, no executable schema in this reset.** Cyber's proposed implementation of the publication, area, block, report, introduction and limit transitions (D035/D038, offline only, flag off) is summarised in `src/privacy/DISCOVERY_ENFORCEMENT.md`; it needs the owner ACKs below before rollout. Product choices are confirmed; exact shapes/defaults need CS/DS/AI/Cyber review. Preserve C1–C6 and D028 guards unchanged. Do not import ad hoc proposed shapes into production.
 
 ## Producers and consumers
 CS produces publication/area/invitation UI and module integration; Cyber owns guards and consent records; DS consumes authorized projections for matching; AI consumes bounded options and returns untrusted proposals. Every reviewed shape belongs in `@dor/contracts`, with generated schemas, fixtures and versioned rejection tests.

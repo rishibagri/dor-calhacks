@@ -214,6 +214,60 @@ export const discovery_block = table(
   { block_id: t.string().primaryKey(), blocker: t.identity(), blocked: t.identity(), created_at: t.timestamp() }
 );
 
+/**
+ * C8 introduction requests (CYBER-R2). Human-triggered by the sender; only the recipient accepts or declines.
+ * Accepting is an in-app connection only: no pair, preset, signal, contact detail or message is created.
+ */
+export const introduction = table(
+  { name: 'introduction' },
+  {
+    intro_id: t.string().primaryKey(),
+    sender: t.identity(),
+    recipient: t.identity(),
+    client_request_id: t.string(), // sender-scoped idempotency key
+    sender_revision: t.u32(), // sender publication revision the request was made from
+    sender_name: t.string(), // public name snapshot the recipient was shown
+    recipient_name: t.option(t.string()), // snapshot shown to the sender only after acceptance
+    shared_tags: t.array(t.string()), // published overlap at request time (the "reason to connect")
+    status: t.string(), // pending | accepted | declined | cancelled | expired | ended
+    sender_closed: t.bool(), // lapsed for the sender's view (a decline is never shown as such)
+    created_at: t.timestamp(),
+    expires_at: t.timestamp(),
+    responded_at: t.option(t.timestamp()),
+  }
+);
+
+/** Worker-committed AI introduction suggestions (D033), visible to the viewer alone. Never sent to the candidate. */
+export const introduction_proposal = table(
+  { name: 'introduction_proposal' },
+  {
+    proposal_id: t.string().primaryKey(),
+    viewer: t.identity(),
+    candidate: t.identity(),
+    candidate_ref: t.string(),
+    viewer_revision: t.u32(),
+    candidate_revision: t.u32(),
+    reason_code: t.string(),
+    shared_tags: t.array(t.string()),
+    opener_id: t.string(),
+    decided_by: t.string(),
+    created_at: t.timestamp(),
+    expires_at: t.timestamp(),
+  }
+);
+
+/** Private moderation records. No view exposes them; the target is never told. Coarse reason code only. */
+export const discovery_report = table(
+  { name: 'discovery_report' },
+  { report_id: t.string().primaryKey(), reporter: t.identity(), target: t.identity(), reason: t.string(), created_at: t.timestamp() }
+);
+
+/** Per-caller fixed-window counters for repeat-probe and spam limits. Private; key = `<action>:<identity hex>`. */
+export const rate_window = table(
+  { name: 'rate_window' },
+  { limit_key: t.string().primaryKey(), window_start: t.timestamp(), count: t.u32() }
+);
+
 /** Allow-listed coordination worker identities (module-owner managed). Workers have no account and cannot approve. */
 export const worker_identity = table(
   { name: 'worker_identity' },
@@ -257,4 +311,8 @@ export const spacetimedb = schema({
   discovery_publication,
   area_participation,
   discovery_block,
+  introduction,
+  introduction_proposal,
+  discovery_report,
+  rate_window,
 });

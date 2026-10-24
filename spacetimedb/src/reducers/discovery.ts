@@ -6,17 +6,14 @@ import {
   AREA_MAX_LIFETIME_MS, discoveryErrorCode, guardAreaKey, guardDiscoveryVisibility, guardPublicationDraft,
 } from '@dor/contracts/policy';
 import { spacetimedb } from '../schema';
-import { fail, type Ctx } from '../errors';
+import { fail } from '../errors';
 import { requireAccount } from '../guards';
 import { newId } from '../ids';
 import {
   blockedEitherWay, discoveryEnabled, discoveryList, findPublicationRow, fromMs, loadDiscoveryParty, toMs,
 } from '../policy_state';
+import { applyBlock, closeDiscoveryLinks, consumeRate, requireDiscovery, stalePublicationDependents } from '../discovery_effects';
 
-function requireDiscovery(ctx: Ctx): void {
-  requireAccount(ctx);
-  if (!discoveryEnabled(ctx.db)) fail(discoveryErrorCode('disabled'), 'disabled');
-}
 
 /**
  * Publish (or update) the caller's own public profile from the exact preview they confirmed. expected_revision
@@ -42,6 +39,7 @@ export const publish_discovery_profile = spacetimedb.reducer(
     if (!d.ok) fail(discoveryErrorCode(d.reason), d.reason);
     const cur = findPublicationRow(ctx.db, ctx.sender);
     if ((cur?.revision ?? 0) !== args.expected_revision) fail('stale', 'stale_revision');
+    consumeRate(ctx, 'publish');
     const row = {
       owner: ctx.sender, display_name: d.draft.displayName, interest_tags: d.draft.interestTags,
       audience: d.draft.audience, notice_version: d.draft.noticeVersion, revision: (cur?.revision ?? 0) + 1,
@@ -49,6 +47,7 @@ export const publish_discovery_profile = spacetimedb.reducer(
     };
     if (cur) ctx.db.discovery_publication.publication_id.update({ ...cur, ...row });
     else ctx.db.discovery_publication.insert({ publication_id: newId(ctx), ...row });
+    if (cur) stalePublicationDependents(ctx, ctx.sender);
   }
 );
 
@@ -61,6 +60,7 @@ export const withdraw_discovery_profile = spacetimedb.reducer({}, ctx => {
   }
   const area = ctx.db.area_participation.owner.find(ctx.sender);
   if (area?.active) ctx.db.area_participation.owner.update({ ...area, active: false });
+  closeDiscoveryLinks(ctx, ctx.sender); // pending requests and AI proposals involving the caller end now
 });
 
 /**
@@ -73,6 +73,7 @@ export const set_discovery_area = spacetimedb.reducer(
     requireDiscovery(ctx);
     const g = guardAreaKey(area_key, discoveryList(ctx.db, 'areas'));
     if (!g.ok) fail(discoveryErrorCode(g.reason), g.reason);
+    consumeRate(ctx, 'area_change'); // bounds area hopping to map who is where
     const cur = ctx.db.area_participation.owner.find(ctx.sender);
     const row = {
       owner: ctx.sender, area_key: g.areaKey, revision: (cur?.revision ?? 0) + 1, active: true,
@@ -97,6 +98,7 @@ export const block_discovery_user = spacetimedb.reducer(
     const seen = guardDiscoveryVisibility(loadDiscoveryParty(ctx.db, ctx.sender), loadDiscoveryParty(ctx.db, target.owner),
       false, discoveryEnabled(ctx.db), toMs(ctx.timestamp));
     if (!seen.ok) fail('not_found', 'card');
-    ctx.db.discovery_block.insert({ block_id: newId(ctx), blocker: ctx.sender, blocked: target.owner, created_at: ctx.timestamp });
+    consumeRate(ctx, 'block');
+    applyBlock(ctx, target.owner, false); // also closes pending/accepted introductions and proposals between them
   }
 );

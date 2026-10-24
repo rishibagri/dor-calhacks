@@ -1,4 +1,46 @@
-# CYBER handoff (Sumedh): current, CYBER-R0/R1
+# CYBER handoff (Sumedh): current, CYBER-R2
+
+Status: implemented on `role/cyber-privacy` (on main `030ead2`), **uncommitted working tree; the user commits and opens the PR.** Offline-verified only; the module is unpublished and discovery stays behind the off-by-default flag.
+
+## What R2 added (D038)
+| Protection | Where | Evidence |
+|---|---|---|
+| Introduction requests: human-triggered, only to a card visible now, idempotent per sender id (a replay never revives), ≤ 72 h; recipient alone accepts/declines, sender alone cancels; accepting creates no pair or other sharing | `reducers/introductions.ts`, `guardIntroductionRequest/Response`, `introduction` table, `my_introductions` | `spacetimedb/tests/introductions.test.ts` |
+| No decline oracle: the sender sees accepted / pending / closed; a pending request and the 30-day cooldown give one message | `my_introductions`, `introductionErrorMessage`, sweep `sender_closed` | decline vs no-answer test; contracts cooldown test |
+| Block from a card or an introduction; report with a coarse reason (private, also blocks); cascades end pending and accepted introductions and proposals | `discovery_effects.ts`, `block_introduction_participant`, `report_discovery_user`, `discovery_report` | report privacy, block-from-request, block-during-pending tests |
+| Withdrawal and profile edits close dependent requests and proposals | `closeDiscoveryLinks`, `stalePublicationDependents` | withdraw/edit during pending tests |
+| Repeat-probe and spam limits per caller per day: 10 requests, 20 blocks, 10 reports, 4 area changes, 20 publishes; ≤ 5 pending | `guardRateLimit`, `consumeRate`, `rate_window` | one test per limit, per-caller isolation |
+| Worker-only commit of AI introduction proposals: visibility, both versions and current tag overlap rechecked; viewer-only view rechecks live | `commit_introduction_proposal`, `guardIntroductionProposalCommit`, `my_introduction_proposals` | withdraw/block/area/edit during generation, model-widened proposals, defence-in-depth view test |
+| Introduction safety controls component | `src/features/privacy/introduction-{model,controls}` | `introduction-model.test.ts` (5) |
+| Enforcement matrix for CS | `src/privacy/DISCOVERY_ENFORCEMENT.md` | — |
+
+## Verification
+- `npm run check:all` exit 0: contracts 105, schemas current, module 113, typecheck, app 186 + 1 known todo.
+- `npm run ai:check` exit 0: agents 64, worker 21, worker integration 19.
+- Mutation checks: 20 of 20 caught (rate limits, cascades, decline mask, worker check, authority, versions, tag overlap, view rechecks).
+- Not run: `next build` (the new component isn't imported by any page yet). Not proven: deployed isolation, real JWT mapping, the real scheduler, browser rendering, two real accounts.
+
+## Exact next actions
+- **CS:**
+  1. ACK D038 and the file claims.
+  2. Regenerate bindings (new reducers and the `my_introductions` / `my_introduction_proposals` views).
+  3. Compose `<IntroductionControls>` (`src/features/privacy/README.md`) and card-level block/report on Discover.
+  4. Send a fresh random `client_request_id` per tap, and reuse it on retry.
+  5. Never show a decline to the sender.
+  6. Enable discovery only after the ACKs.
+- **Adam:**
+  1. After generation, commit proposals through `commit_introduction_proposal` with the worker identity (args in `src/privacy/README.md`).
+  2. Treat refusals as no proposal.
+  3. `same_event` waits for R3.
+- **Nimisha:** rank only `discovery_cards`. Already-connected and pending pairs are refused at commit, so filtering them out early saves model calls. Keep the D038 rejection cases in `src/privacy/REVIEWS.md` as eval no-action cases.
+- **Cyber next:** CYBER-R3 (event intents, C7 activity approvals, plan finalization guard); R5 live replay of `DISCOVERY_ENFORCEMENT.md`.
+
+## Blockers
+None for offline work. Live proof needs a published module, the Clerk `aud` set up and two real accounts.
+
+---
+
+# CYBER handoff (Sumedh): CYBER-R0/R1 (superseded by R2 above)
 
 Status: implemented on `role/cyber-privacy` @ `0021c16` + `9b82854`, on main `fab86d6`. PR #10 to main is open. **Offline-verified only.** The module is unpublished, so nothing here is live.
 

@@ -314,3 +314,76 @@ export const discovery_cards = spacetimedb.view(
     return cards;
   }
 );
+
+// ---- C8 introductions (CYBER-R2, PROPOSED) ----
+
+const introductionRow = t.row('IntroductionRow', {
+  intro_id: t.string(), direction: t.string(), status: t.string(), counterpart_name: t.option(t.string()),
+  shared_tags: t.array(t.string()), created_at: t.timestamp(), expires_at: t.option(t.timestamp()),
+});
+
+/**
+ * The caller's own introductions. No identities or card refs. Incoming: the sender's public name snapshot and
+ * the published overlap; a pending request is shown only while the sender's profile still stands unchanged.
+ * Outgoing: accepted | pending | closed. A decline is never revealed (it reads "pending" until it lapses), and the
+ * recipient's name appears only after they accept. Anything between blocked people is hidden.
+ */
+export const my_introductions = spacetimedb.view(
+  { name: 'my_introductions', public: true }, t.array(introductionRow),
+  ctx => {
+    if (!ctx.db.account.identity.find(ctx.sender)) return [];
+    const out = [];
+    for (const r of ctx.db.introduction.iter()) {
+      const incoming = r.recipient.isEqual(ctx.sender);
+      if (!incoming && !r.sender.isEqual(ctx.sender)) continue;
+      if (blockedEitherWay(ctx.db, r.sender, r.recipient)) continue;
+      let status: string;
+      if (incoming) {
+        if (r.status === 'pending') {
+          const pub = loadDiscoveryParty(ctx.db, r.sender).publication;
+          const stands = pub && pub.withdrawnAtMs === null && !pub.expiredMarked && pub.revision === r.sender_revision;
+          if (!stands) continue;
+          status = 'pending';
+        } else status = r.status === 'accepted' || r.status === 'declined' ? r.status : 'closed';
+      } else {
+        // accepted | pending | closed only: whether the recipient declined, withdrew or let it lapse is theirs.
+        status = r.status === 'accepted' ? 'accepted'
+          : (r.status === 'pending' || r.status === 'declined') && !r.sender_closed ? 'pending' : 'closed';
+      }
+      out.push({
+        intro_id: r.intro_id, direction: incoming ? 'incoming' : 'outgoing', status,
+        counterpart_name: incoming ? r.sender_name : status === 'accepted' ? r.recipient_name : undefined,
+        shared_tags: r.shared_tags, created_at: r.created_at, expires_at: status === 'pending' ? r.expires_at : undefined,
+      });
+    }
+    return out;
+  }
+);
+
+const introductionProposalRow = t.row('IntroductionProposalRow', {
+  proposal_id: t.string(), candidate_ref: t.string(), reason_code: t.string(), shared_tags: t.array(t.string()),
+  opener_id: t.string(), decided_by: t.string(), expires_at: t.timestamp(),
+});
+
+/**
+ * The viewer's own AI introduction suggestions, rechecked live: the candidate must still be visible to the
+ * viewer (publication, area, block, sweep expiry) and both profiles unchanged since the proposal.
+ */
+export const my_introduction_proposals = spacetimedb.view(
+  { name: 'my_introduction_proposals', public: true }, t.array(introductionProposalRow),
+  ctx => {
+    const enabled = discoveryEnabled(ctx.db);
+    if (!enabled || !ctx.db.account.identity.find(ctx.sender)) return [];
+    const viewer = loadDiscoveryParty(ctx.db, ctx.sender);
+    const out = [];
+    for (const p of ctx.db.introduction_proposal.iter()) {
+      if (!p.viewer.isEqual(ctx.sender)) continue;
+      const cand = loadDiscoveryParty(ctx.db, p.candidate);
+      if (!guardDiscoveryVisibility(viewer, cand, blockedEitherWay(ctx.db, p.viewer, p.candidate), enabled, null).ok) continue;
+      if (viewer.publication!.revision !== p.viewer_revision || cand.publication!.revision !== p.candidate_revision) continue;
+      out.push({ proposal_id: p.proposal_id, candidate_ref: p.candidate_ref, reason_code: p.reason_code, shared_tags: p.shared_tags,
+        opener_id: p.opener_id, decided_by: p.decided_by, expires_at: p.expires_at });
+    }
+    return out;
+  }
+);
