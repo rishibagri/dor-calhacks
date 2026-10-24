@@ -19,7 +19,7 @@ import { LocalVault } from '../../src/vault/local-vault.ts';
 import { IndexedDbVaultStore } from '../../src/vault/store.ts';
 import { splitReflection } from '../../src/features/voice/model.ts';
 import reflectionFixtures from '../../src/agents/fixtures/reflection.synthetic.json';
-import { allSignals, approveArgs, confirmPreset, FUTURE, jwtAuth, mod, pairUp, setup, view, type World }
+import { allSignals, approveArgs, confirmPreset, grantPrefs, jwtAuth, mod, pairUp, setup, view, type World }
   from '../../spacetimedb/tests/helpers';
 
 try { process.loadEnvFile(new URL('../../.env.local', import.meta.url)); } catch { /* optional */ }
@@ -58,6 +58,7 @@ function harnessSource(w: World, who: ReturnType<typeof jwtAuth>): WorkerStateSo
   return {
     signalContext: async () => view(w, who, mod.worker_signal_context),
     delivery: async () => view(w, who, mod.worker_delivery),
+    supportPreferences: async () => view(w, who, mod.worker_support_preferences),
     commitNudge: async args => { w.call(who, ctx => mod.commit_nudge(ctx, args)); },
   };
 }
@@ -71,15 +72,10 @@ function relationshipWorld(kind: 'partner' | 'friend' | 'family', cats: string[]
   w.h.withReducerTx(w.admin, ctx => mod.set_worker_identity(ctx, { worker: workerId, enabled: true }));
   w.call(w.bob, ctx => mod.set_nudge_delivery(ctx, { pair_id: pairId, opted_in: true, quiet_start_minute: undefined,
     quiet_end_minute: undefined, utc_offset_minutes: 0 }));
+  grantPrefs(w, w.bob, pairId, ['short_call', 'encouraging_note'], ['today', 'this_week']); // Bob's own consent (D035)
   const bobHex = w.h.withReducerTx(w.bob, ctx => ctx.sender.toHexString());
   return { w, pairId, worker, bobHex };
 }
-
-/** SYNTHETIC recipient consent record: no authoritative table exists yet (CYBER-R1); live mode fails closed. */
-const syntheticPreferences = (pairId: string, recipientHex: string) => ({ current: async (p: string, r: string) =>
-  p !== pairId || r !== recipientHex ? null : { schemaVersion: 1, consentId: 'synthetic-consent', consentVersion: 1, pairId,
-    recipientId: recipientHex, purpose: 'support_nudge', supportModes: ['short_call', 'encouraging_note'],
-    availability: ['today', 'this_week'], expiresAt: FUTURE, revokedAt: null } });
 
 async function reflect(journey: string, caseId: string) {
   const fixture = reflectionFixtures.cases.find(c => c.id === caseId)!;
@@ -121,7 +117,7 @@ describe('full AI dry run', () => {
 
     const runner = scriptedRunner(['{"decision":"compatible","optionIndex":0}']);
     const live = createLiveWorker({ authToken: 'synthetic-worker-token-0123456789abcdef',
-      ...spacetimeWorkerPorts(harnessSource(w, worker), syntheticPreferences(pairId, bobHex)),
+      ...spacetimeWorkerPorts(harnessSource(w, worker)),
       clock: { now: () => w.h.clock.now().toDate() }, droid: runner.options });
     const outcomes: string[] = [];
     const watcher = new SignalWatcher(harnessSource(w, worker), { run: j => live.runJob(j), onOutcome: o => outcomes.push(...o.map(x => x.outcome)) });
@@ -149,7 +145,7 @@ describe('full AI dry run', () => {
     }, () => 'approved');
     const runner = scriptedRunner(['{"decision":"compatible","optionIndex":0}']);
     const live = createLiveWorker({ authToken: 'synthetic-worker-token-0123456789abcdef',
-      ...spacetimeWorkerPorts(harnessSource(w, worker), syntheticPreferences(pairId, bobHex)),
+      ...spacetimeWorkerPorts(harnessSource(w, worker)),
       clock: { now: () => w.h.clock.now().toDate() }, droid: runner.options });
     const outcomes: string[] = [];
     await step(J, 'worker sweep', ['real', 'module'], () => new SignalWatcher(harnessSource(w, worker),

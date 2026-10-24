@@ -14,7 +14,7 @@ Status: proposed by CS (D016–D020); Cyber ACKed with reconciliation (D026, src
 | F4′ Decline | Device | CS UI | — | **Nothing anywhere** |
 | F5 Recipient gate | Coordinator + reducer | CS reducer, Cyber guard | Recipient opted in **for this pair** via their own `set_nudge_delivery` (D017, default off: no row = off); not in quiet hours (default 22:00–08:00 recipient local); ≥24h since last nudge in this pair, counting suppressed/dismissed nudges (D018) | `nudge_delivery` (recipient-owned) |
 | F6 Coordinate | Factory worker | AI | Reads only approved envelopes + recipient's approved delivery prefs; ≤2 rounds; output is a template ID from `templateForSignal` or "no suggestion"; no free-form text | Proposed nudge (to F7) |
-| F7 Commit nudge | `commit_nudge` reducer (allow-listed worker identity, no account) | CS reducer, Cyber guard | `guardNudgeCommit`: every source passes `guardSignalUse` for this pair/recipient; template = `templateForSignal` of an approved source; F5 rechecked; `nudge_id` replay is a no-op and never resurrects | `Nudge` + sender-only `used` receipt |
+| F7 Commit nudge | `commit_nudge` reducer (allow-listed worker identity, no account) | CS reducer, Cyber guard | `guardNudgeCommit`: every source passes `guardSignalUse` for this pair/recipient; template = `templateForSignal` of an approved source; the recipient's current preference consent matches the bound `recipient_consent_id/version`, stands and covers the mode (D035); F5 rechecked; `nudge_id` replay is a no-op and never resurrects | `Nudge` + sender-only `used` receipt |
 | F8 Revoke / unlink / tighten | Reducers | CS + Cyber | Owner of signal / pair member / preset owner | Signal revoked; pending + delivered nudges suppressed; `revoked`/`suppressed` receipts |
 
 ## What each person sees
@@ -26,8 +26,8 @@ Status: proposed by CS (D016–D020); Cyber ACKed with reconciliation (D026, src
 Malformed/free-text/nested candidate (`invalid_schema`); wrong recipient; pending or unlinked pair; missing, stale, revoked or expired preset; candidate wholly outside the preset (`blocked_category`, never downgraded); decline; recipient not opted in; quiet hours; cooldown; revoke between F4 and F7; retry of a stale approval.
 
 ## Not yet decided / not implemented
-- Module wiring (role/cyber-privacy, offline harness only, not published): `approve_signal`, `set_nudge_delivery`, `set_worker_identity`, `commit_nudge` and the worker views are implemented. The module imports `@kinetic/contracts/policy`, which has no Zod; whether the `spacetime` CLI bundler resolves it is untested until publish.
-- Recipient support-preferences consent (D021 `RecipientSupportPreferences`) has no authoritative table yet; live coordination stays fail-closed (REVIEWS.md D021 #4).
+- Module wiring (role/cyber-privacy, offline harness only, not published): `approve_signal`, `set_nudge_delivery`, `set_support_preferences`/`revoke_support_preferences`, `set_worker_identity`, `commit_nudge`, `sweep_expired` and the worker views are implemented. The module imports `@kinetic/contracts/policy`, which has no Zod; whether the `spacetime` CLI bundler resolves it is untested until publish.
+- Recipient support-preferences consent (D021 `RecipientSupportPreferences`) is stored in the recipient-owned `support_preference` table and bound into `commit_nudge` (D035; offline harness only).
 - Coordination outcomes and ACKs describe the recipient and must never be shown to the sender (REVIEWS.md D021 #5).
 - DST: quiet hours use the UTC offset captured when set (D018); recipient must re-save after a DST change until IANA zones are supported.
 - User-approved addition: CS-owned Apify catalogue and mutual activity proposals are planned C7 work, gated on new shared schemas/consent and guarded state. Existing C3/F6 template-only flow is unchanged until that review. Aura and group sharing remain outside committed scope. See docs/features/ACTIVITY_DISCOVERY.md.

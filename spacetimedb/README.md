@@ -19,16 +19,19 @@ External callers must present a JWT whose `iss` is in the `auth_config` table, o
 ```
 spacetime call kinetic set_auth_issuer '"https://<your-clerk-frontend-api>"' true
 ```
-The client must send the Clerk JWT (template `spacetimeConfig.jwtTemplate`) as the connection token. With an empty allow-list no external caller is admitted. Audience is NOT checked yet (open question for Cyber).
+The client must send the Clerk JWT (template `spacetimeConfig.jwtTemplate`) as the connection token. With an empty allow-list no external caller is admitted. The token's `aud` must also be allow-listed (D035; set a fixed `aud` in the Clerk JWT template):
+```
+spacetime call kinetic set_auth_audience '"kinetic-spacetimedb"' true
+```
+Empty audience allow-list = every user reducer fails `unauthenticated`. Views can't check claims (src/privacy/README.md known gaps).
 
 ## Reducers / views
-Reducers: `register_account`, `create_pair_invite`, `accept_pair_invite`, `unlink_pair`, `set_relationship_preset`, `assign_relationship_preset`, `approve_signal`, `revoke_signal`, `dismiss_nudge`, `snooze_nudge`, `set_nudge_delivery` (recipient-owned F5 settings), worker-only `commit_nudge` (F7), plus owner-only `set_auth_issuer` and `set_worker_identity`. Errors are `SenderError('<code>: message')` with codes from `ReducerErrorCode`. Timestamps in reducer args (`expires_at`, `until`) are ISO strings. `expected_version` / `expected_assignment_version` are `0` when creating.
-Views: `my_account`, `my_pairs`, `my_invites`, `my_presets`, `my_preset_assignments` (owner only), `my_nudges` (recipient, not dismissed/suppressed, sources still standing), `my_signals` (sender only), `my_receipts` (sender only), `my_nudge_delivery` (own settings). Worker-only (empty for everyone else): `worker_signal_context`, `worker_delivery`.
+Reducers: `register_account`, `create_pair_invite`, `accept_pair_invite`, `unlink_pair`, `set_relationship_preset`, `assign_relationship_preset`, `approve_signal`, `revoke_signal`, `dismiss_nudge`, `snooze_nudge`, `set_nudge_delivery` (recipient-owned F5 settings), `set_support_preferences` / `revoke_support_preferences` (recipient-owned C4 consent, D035), worker-only `commit_nudge` (F7; binds `recipient_consent_id/version`), scheduler-only `sweep_expired`, owner-only `set_auth_issuer`, `set_auth_audience`, `set_worker_identity` and `set_discovery_config`, and proposed C8 `publish_discovery_profile`, `withdraw_discovery_profile`, `set_discovery_area`, `block_discovery_user` (disabled until the owner enables discovery). Errors are `SenderError('<code>: message')` with codes from `ReducerErrorCode`. Timestamps in reducer args (`expires_at`, `until`) are ISO strings. `expected_version` / `expected_assignment_version` are `0` when creating.
+Views: `my_account`, `my_pairs`, `my_invites`, `my_presets`, `my_preset_assignments` (owner only), `my_nudges` (recipient; not dismissed/suppressed/snoozed; sources and bound consent still standing), `my_signals` (sender only), `my_receipts` (sender only), `my_nudge_delivery` and `my_support_preferences` (own settings), `my_discovery_profile`, `discovery_cards` (proposed C8 projection). Worker-only (empty for everyone else): `worker_signal_context`, `worker_delivery`, `worker_support_preferences`.
 
 ## Placeholders (not final)
 - `approve_signal` and `commit_nudge` enforce Cyber's single policy (`@kinetic/contracts/policy`, D026; see src/privacy/README.md). Nudges are created only by `commit_nudge` from an allow-listed worker identity; some older tests still seed nudges via internal writes from guarded signals.
-- `my_receipts` and `my_signals` are sender-only (D026); `my_nudges` rechecks source-signal standing. Views cannot check expiry (no clock): a scheduled sweep is still needed.
-- Recipient support-preferences consent (D021) has no table yet; live coordination must stay fail-closed.
+- `my_receipts` and `my_signals` are sender-only (D026); `my_nudges` rechecks source-signal standing and the bound recipient consent. Views have no clock: `init` schedules `sweep_expired` every 60 s, which suppresses expired nudges, ends snoozes and writes `expired_record` markers that views honour (stale window ≤ 60 s).
 - Build contracts before the module check (`npm run check:module` does this).
 - Invite TTL (24h), snooze cap (30d) are placeholder constants in `src/constants.ts`.
 - Receipts' `categories` for suppressed/revoked signals are derived from which fields the signal carries.

@@ -1,13 +1,17 @@
 import type { Identity } from 'spacetimedb';
 import { Timestamp } from 'spacetimedb';
 import { fail, type Ctx, type AccountRow, type PairRow } from './errors';
+import { audienceAllowed } from '@kinetic/contracts/policy';
 import { CATEGORIES, PRESET_KINDS } from './constants';
 type Account = AccountRow;
 type Pair = PairRow;
 
 /**
  * Caller authentication. Internal callers (module owner / scheduled) are admitted; every
- * external caller must carry a JWT whose issuer is in auth_config (Clerk issuer).
+ * external caller must carry a JWT whose issuer is in auth_config (Clerk issuer) AND whose `aud`
+ * includes an allow-listed audience (auth_audience; empty = nobody, D035). The audience check stops a
+ * token the same Clerk instance minted for another app (same iss/sub ⇒ same Identity) from acting here.
+ * Views cannot see claims (ViewCtx has no senderAuth); see src/privacy/README.md known gaps.
  */
 export function requireAuthenticated(ctx: Ctx): void {
   const a = ctx.senderAuth;
@@ -15,6 +19,9 @@ export function requireAuthenticated(ctx: Ctx): void {
   if (!a.hasJWT || !a.jwt) fail('unauthenticated', 'JWT required');
   if (!ctx.db.auth_config.issuer.find(a.jwt.issuer)) {
     fail('unauthenticated', 'issuer not allow-listed');
+  }
+  if (!audienceAllowed(a.jwt.audience, [...ctx.db.auth_audience.iter()].map(r => r.audience))) {
+    fail('unauthenticated', 'audience not allow-listed');
   }
 }
 

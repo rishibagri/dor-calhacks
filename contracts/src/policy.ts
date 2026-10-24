@@ -16,6 +16,7 @@
  */
 import { AVAILABILITIES, DISCLOSURE_PURPOSE, SUPPORT_MODES } from './enums.js';
 export * from './enums.js';
+export * from './discovery.js';
 import type { PolicyReason } from './ports.js';
 import type { ApprovedSignal, Nudge, SharingCategory, SupportMode } from './schemas.js';
 
@@ -367,16 +368,75 @@ export function templateForSignal(signal: Pick<ApprovedSignal, 'supportMode'> | 
   return isIn(SUPPORT_MODES, signal.supportMode) ? TEMPLATE_FOR_MODE[signal.supportMode] : null;
 }
 
+// ---- C4 recipient support-preference consent (D021 #4, D035) ----
+
+/** Longest a recipient's standing preference consent may run before it must be renewed. */
+export const PREFERENCE_MAX_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * The recipient's own authoritative consent record (RecipientSupportPreferences as stored). Written only
+ * by the recipient; every change bumps `consentVersion`, so a commit bound to an older version is stale.
+ */
+export interface SupportPreferenceState {
+  consentId: string;
+  recipientId: string;
+  pairId: string;
+  supportModes: readonly string[];
+  availability: readonly string[];
+  consentVersion: number;
+  expiresAtMs: number;
+  revokedAtMs: number | null;
+}
+
+/** Strict shape check for set_support_preferences: ≥1 unique support mode, unique availability enums. */
+export function validSupportPreferences(p: { supportModes: readonly unknown[]; availability: readonly unknown[] }): boolean {
+  const unique = (a: readonly unknown[]) => new Set(a).size === a.length;
+  return Array.isArray(p.supportModes) && Array.isArray(p.availability) &&
+    p.supportModes.length >= 1 && p.supportModes.length <= SUPPORT_MODES.length && unique(p.supportModes) &&
+    p.supportModes.every(m => isIn(SUPPORT_MODES, m)) &&
+    p.availability.length <= AVAILABILITIES.length && unique(p.availability) &&
+    p.availability.every(a => isIn(AVAILABILITIES, a));
+}
+
+/**
+ * Standing of a preference record for one recipient in one pair. `nowMs` null only where no clock exists
+ * (views); there the scheduled expiry sweep is the expiry control.
+ */
+export function guardPreferenceStanding(p: SupportPreferenceState | null, recipientId: string, pairId: string,
+  nowMs: number | null): PolicyDecision {
+  if (!p) return deny('no_consent');
+  if (p.recipientId !== recipientId || p.pairId !== pairId) return deny('wrong_recipient');
+  if (!isId(p.consentId) || !isVersion(p.consentVersion) ||
+    !validSupportPreferences({ supportModes: p.supportModes, availability: p.availability })) return deny('invalid_schema');
+  if (p.revokedAtMs !== null) return deny('revoked');
+  if (nowMs !== null && p.expiresAtMs <= nowMs) return deny('expired');
+  return ALLOW;
+}
+
+const modeForTemplate = (templateId: string): string =>
+  (Object.keys(TEMPLATE_FOR_MODE) as SupportMode[]).find(m => TEMPLATE_FOR_MODE[m] === templateId) ?? '';
+
 export interface NudgeCommitRequest {
   pairId: string;
   recipientId: string;
   templateId: string;
   sourceSignalIds: readonly string[];
   sourceConsentVersions: readonly number[];
+  /** The recipient preference consent the coordinator read (AgentAck.recipientConsentId/Version). */
+  recipientConsentId: string;
+  recipientConsentVersion: number;
 }
 export interface NudgeSource { signal: StoredSignal; snapshot: PolicySnapshot }
-/** Recipient's current delivery row (null = never set = DEFAULT, i.e. not opted in) and last nudge in the pair. */
-export interface DeliveryGate { pref: RecipientDelivery | null; lastNudgeAtMs: number | null; nowMs: number }
+/**
+ * Recipient-side state at commit: delivery row (null = never set = DEFAULT, i.e. not opted in), last nudge
+ * in the pair, and the recipient's CURRENT preference consent (null = none = deny).
+ */
+export interface DeliveryGate {
+  pref: RecipientDelivery | null;
+  lastNudgeAtMs: number | null;
+  nowMs: number;
+  preferences: SupportPreferenceState | null;
+}
 export type NudgeDecision =
   | (Allow & { expiresAtMs: number })
   | { allowed: false; reason: DenyReason | DeliveryDenyReason };
@@ -409,6 +469,14 @@ export function guardNudgeCommit(req: NudgeCommitRequest, sources: ReadonlyMap<s
     expiresAtMs = Math.min(expiresAtMs, signal.expiresAtMs);
   }
   if (!templateApproved) return deny('blocked_category');
+  // Recipient consent: the exact current version the coordinator used, still standing, covering this mode.
+  if (!isId(req.recipientConsentId) || !isVersion(req.recipientConsentVersion)) return deny('invalid_schema');
+  const prefs = gate.preferences;
+  const p = guardPreferenceStanding(prefs, req.recipientId, req.pairId, gate.nowMs);
+  if (!p.allowed) return p;
+  if (prefs!.consentId !== req.recipientConsentId || prefs!.consentVersion !== req.recipientConsentVersion) return deny('stale_policy');
+  if (!prefs!.supportModes.includes(modeForTemplate(req.templateId))) return deny('blocked_category');
+  expiresAtMs = Math.min(expiresAtMs, prefs!.expiresAtMs);
   const delivery = nudgeDelivery(gate.pref ?? DEFAULT_RECIPIENT_DELIVERY,
     gate.lastNudgeAtMs === null ? null : new Date(gate.lastNudgeAtMs), new Date(gate.nowMs));
   if (!delivery.deliver) return { allowed: false, reason: delivery.reason };
@@ -431,4 +499,15 @@ export function policyErrorCode(reason: DenyReason | DeliveryDenyReason): Policy
     case 'quiet_hours':
     case 'cooldown': return 'rate_limited';
   }
+}
+
+// ---- Caller authentication helper (JWT audience) ----
+
+/**
+ * JWT `aud` check: at least one token audience must be on the module's allowlist. An empty allowlist
+ * admits nobody (fail closed). Issuer checks stay separate (auth_config).
+ */
+export function audienceAllowed(tokenAudience: readonly string[] | undefined, allowed: readonly string[]): boolean {
+  if (!tokenAudience || allowed.length === 0) return false;
+  return tokenAudience.some(a => typeof a === 'string' && a.length > 0 && allowed.includes(a));
 }

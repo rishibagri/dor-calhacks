@@ -2,7 +2,7 @@
 // malicious client holding a valid JWT can do. Synthetic identities only.
 import { describe, expect, it } from 'vitest';
 import { Timestamp } from 'spacetimedb';
-import { allSignals, approveArgs, confirmPreset, FUTURE, jwtAuth, mod, pairUp, setup, view } from './helpers';
+import { allSignals, approveArgs, confirmPreset, FUTURE, grantPrefs, jwtAuth, mod, pairUp, setup, view } from './helpers';
 
 const HOUR_US = 3_600_000_000n;
 type W = ReturnType<typeof setup>;
@@ -224,13 +224,15 @@ describe('revocation, retries and stale permissions', () => {
   });
 });
 
-/** Internal insert stands in for the future guarded nudge-commit reducer (worker milestone). */
+/** Internal insert stands in for the guarded commit_nudge (coordination.test.ts) to test view-level rechecks. */
 function seedNudgeFor(w: W, pairId: string, s: any, recipient = s.recipient_id) {
+  const pref = grantPrefs(w, w.bob, pairId);
   w.h.withReducerTx(w.admin, ctx => {
     ctx.db.nudge.insert({
       id: 'n1', pair_id: pairId, recipient_id: recipient, source_signal_ids: [s.signal_id],
       source_consent_versions: [s.consent_version], template_id: 'offer_short_call', created_at: ctx.timestamp,
       expires_at: s.expires_at, dismissed: false, snoozed_until: undefined, suppressed: false,
+      recipient_consent_id: pref.consent_id, recipient_consent_version: pref.consent_version,
     });
   });
 }

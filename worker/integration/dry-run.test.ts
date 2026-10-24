@@ -1,13 +1,14 @@
 // AI dry run: the built worker (dist) against the REAL SpacetimeDB module running in-process — Cyber's
 // reducers, worker-only views and guards, not fakes. What is synthetic is labeled: the accounts, the Droid
-// subprocess (scripted unless KINETIC_DRYRUN_LIVE_DROID=1) and recipient support preferences, which have no
-// authoritative table yet (CYBER-R1). This is offline evidence, not a published module or a deployed worker.
+// subprocess (scripted unless KINETIC_DRYRUN_LIVE_DROID=1). Recipient consent is recorded through the real
+// set_support_preferences reducer and read via worker_support_preferences (D035). This is offline evidence, not a
+// published module or a deployed worker.
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Timestamp } from 'spacetimedb';
 import { createLiveWorker, SignalWatcher, spacetimeWorkerPorts, type WorkerStateSource } from '../dist/index.js';
-import { allSignals, approveArgs, confirmPreset, FUTURE, jwtAuth, mod, pairUp, setup, view, type World }
+import { allSignals, approveArgs, confirmPreset, grantPrefs, jwtAuth, mod, pairUp, setup, view, type World }
   from '../../spacetimedb/tests/helpers';
 
 const BOTH = { support_mode: 'short_call', availability: 'this_week' };
@@ -19,6 +20,7 @@ function harnessSource(w: World, who: Auth, hooks: { beforeCommit?: () => void }
   return {
     signalContext: async () => view(w, who, mod.worker_signal_context),
     delivery: async () => view(w, who, mod.worker_delivery),
+    supportPreferences: async () => view(w, who, mod.worker_support_preferences),
     commitNudge: async args => {
       hooks.beforeCommit?.();
       w.call(who, ctx => mod.commit_nudge(ctx, args));
@@ -43,18 +45,14 @@ function scriptedDroid(reply = '{"decision":"compatible","optionIndex":0}', duri
   return { spawn, calls: () => calls };
 }
 
-/** SYNTHETIC recipient consent record (no authoritative source exists yet; live mode fails closed instead). */
-function syntheticPreferences(pairId: string, recipientHex: string) {
-  return { current: async (p: string, r: string) => p !== pairId || r !== recipientHex ? null : {
-    schemaVersion: 1, consentId: 'synthetic-consent-bob', consentVersion: 1, pairId, recipientId: recipientHex,
-    purpose: 'support_nudge', supportModes: ['short_call', 'encouraging_note'], availability: ['today', 'this_week'],
-    expiresAt: FUTURE, revokedAt: null } };
-}
+/** Bob's own consent, recorded through the real reducer (D035). */
+const BOB_MODES = ['short_call', 'encouraging_note'];
 
-function world(cats = ['support_preference', 'coarse_availability']) {
+function world(cats = ['support_preference', 'coarse_availability'], { consent = true } = {}) {
   const w = setup();
   const { pairId } = pairUp(w);
   confirmPreset(w, w.alice, pairId, 'partner', cats);
+  if (consent) grantPrefs(w, w.bob, pairId, BOB_MODES, ['today', 'this_week']);
   const worker = jwtAuth('kinetic-worker', 50n, 'https://worker.spacetimedb.example');
   const workerId = w.h.withReducerTx(worker, ctx => ctx.sender);
   w.h.withReducerTx(w.admin, ctx => mod.set_worker_identity(ctx, { worker: workerId, enabled: true }));
@@ -76,9 +74,8 @@ const job = (pairId: string, signalId: string, requestId = signalId) => ({ schem
 const closers: (() => Promise<void>)[] = [];
 afterEach(async () => { while (closers.length) await closers.pop()!(); });
 
-function liveWorker(w: World, source: WorkerStateSource, droid: ReturnType<typeof scriptedDroid>,
-  preferences?: ReturnType<typeof syntheticPreferences>) {
-  const ports = spacetimeWorkerPorts(source, preferences);
+function liveWorker(w: World, source: WorkerStateSource, droid: ReturnType<typeof scriptedDroid>) {
+  const ports = spacetimeWorkerPorts(source); // default: worker_support_preferences
   const worker = createLiveWorker({
     authToken: 'synthetic-worker-token-0123456789abcdef', ...ports,
     clock: { now: () => w.h.clock.now().toDate() },
@@ -94,7 +91,7 @@ describe('typed approval → worker → commit_nudge, over the real module', () 
     optIn(w, pairId);
     const sig = approve(w, BOTH);
     const droid = scriptedDroid();
-    const live = liveWorker(w, harnessSource(w, worker), droid, syntheticPreferences(pairId, bobHex));
+    const live = liveWorker(w, harnessSource(w, worker), droid);
 
     const outcomes = await live.runJob(job(pairId, sig.signal_id));
     expect(outcomes.map(o => o.outcome)).toEqual(['nudge_proposed']);
@@ -107,12 +104,12 @@ describe('typed approval → worker → commit_nudge, over the real module', () 
     expect(view<any>(w, w.alice, mod.my_receipts).map(r => r.action)).toEqual(['approved', 'used']);
   });
 
-  it('live default has no recipient consent source: no nudge and zero model calls (fail closed)', async () => {
-    const { w, pairId, worker } = world();
+  it('recipient recorded no consent: no nudge and zero model calls (fail closed)', async () => {
+    const { w, pairId, worker } = world(undefined, { consent: false });
     optIn(w, pairId);
     const sig = approve(w, BOTH);
     const droid = scriptedDroid();
-    const live = liveWorker(w, harnessSource(w, worker), droid); // UnavailableRecipientPreferences
+    const live = liveWorker(w, harnessSource(w, worker), droid);
     expect((await live.runJob(job(pairId, sig.signal_id))).map(o => o.outcome)).toEqual(['preferences_unavailable']);
     expect(droid.calls()).toBe(0);
     expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
@@ -122,7 +119,7 @@ describe('typed approval → worker → commit_nudge, over the real module', () 
     const { w, pairId, worker, bobHex } = world();
     const sig = approve(w, BOTH);
     const droid = scriptedDroid();
-    const live = liveWorker(w, harnessSource(w, worker), droid, syntheticPreferences(pairId, bobHex));
+    const live = liveWorker(w, harnessSource(w, worker), droid);
     expect((await live.runJob(job(pairId, sig.signal_id))).map(o => o.outcome)).toEqual(['not_opted_in']);
     expect(droid.calls()).toBe(0);
   });
@@ -132,7 +129,7 @@ describe('typed approval → worker → commit_nudge, over the real module', () 
     optIn(w, pairId);
     const sig = approve(w, BOTH);
     const droid = scriptedDroid(undefined, () => w.call(w.alice, ctx => mod.revoke_signal(ctx, { signal_id: sig.signal_id })));
-    const live = liveWorker(w, harnessSource(w, worker), droid, syntheticPreferences(pairId, bobHex));
+    const live = liveWorker(w, harnessSource(w, worker), droid);
     expect((await live.runJob(job(pairId, sig.signal_id))).map(o => o.outcome)).toEqual(['policy_denied']);
     expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
   });
@@ -143,7 +140,7 @@ describe('typed approval → worker → commit_nudge, over the real module', () 
     const sig = approve(w, BOTH);
     const source = harnessSource(w, worker, {
       beforeCommit: () => w.call(w.alice, ctx => mod.revoke_signal(ctx, { signal_id: sig.signal_id })) });
-    const live = liveWorker(w, source, scriptedDroid(), syntheticPreferences(pairId, bobHex));
+    const live = liveWorker(w, source, scriptedDroid());
     const [outcome] = await live.runJob(job(pairId, sig.signal_id));
     expect(outcome!.outcome).toBe('policy_denied');
     expect(outcome!.nudgeId).toBeUndefined();
@@ -157,9 +154,31 @@ describe('typed approval → worker → commit_nudge, over the real module', () 
     const now = w.h.clock.now().toDate();
     const minute = now.getUTCHours() * 60 + now.getUTCMinutes();
     const source = harnessSource(w, worker, { beforeCommit: () => optIn(w, pairId, [minute, (minute + 30) % 1440]) });
-    const live = liveWorker(w, source, scriptedDroid(), syntheticPreferences(pairId, bobHex));
+    const live = liveWorker(w, source, scriptedDroid());
     expect((await live.runJob(job(pairId, sig.signal_id))).map(o => o.outcome)).toEqual(['quiet_hours']);
     expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
+  });
+
+  it('recipient revokes consent while the model runs: commit_nudge refuses the bound consent (D035)', async () => {
+    const { w, pairId, worker } = world();
+    optIn(w, pairId);
+    const sig = approve(w, BOTH);
+    const source = harnessSource(w, worker, {
+      beforeCommit: () => w.call(w.bob, ctx => mod.revoke_support_preferences(ctx, { pair_id: pairId })) });
+    const live = liveWorker(w, source, scriptedDroid());
+    expect((await live.runJob(job(pairId, sig.signal_id))).map(o => o.outcome)).toEqual(['policy_denied']);
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
+  });
+
+  it('the committed nudge is bound to the consent version the ACK used', async () => {
+    const { w, pairId, worker } = world();
+    optIn(w, pairId);
+    const sig = approve(w, BOTH);
+    const [pref] = view<any>(w, w.bob, mod.my_support_preferences);
+    const live = liveWorker(w, harnessSource(w, worker), scriptedDroid());
+    expect((await live.runJob(job(pairId, sig.signal_id))).map(o => o.outcome)).toEqual(['nudge_proposed']);
+    const n = w.h.withReducerTx(w.admin, ctx => [...ctx.db.nudge.iter()])[0]!;
+    expect([n.recipient_consent_id, n.recipient_consent_version]).toEqual([pref.consent_id, pref.consent_version]);
   });
 
   it('a non-worker identity sees no signals and cannot commit', async () => {
@@ -167,11 +186,12 @@ describe('typed approval → worker → commit_nudge, over the real module', () 
     optIn(w, pairId);
     const sig = approve(w, BOTH);
     const droid = scriptedDroid();
-    const live = liveWorker(w, harnessSource(w, w.carol), droid, syntheticPreferences(pairId, bobHex));
+    const live = liveWorker(w, harnessSource(w, w.carol), droid);
     expect((await live.runJob(job(pairId, sig.signal_id))).map(o => o.outcome)).toEqual(['policy_denied']);
     expect(droid.calls()).toBe(0);
     await expect(harnessSource(w, w.carol).commitNudge({ nudge_id: 'n-x', pair_id: pairId, template_id: 'offer_short_call',
-      source_signal_ids: [sig.signal_id], source_consent_versions: [sig.consent_version] })).rejects.toThrow('worker only');
+      source_signal_ids: [sig.signal_id], source_consent_versions: [sig.consent_version],
+      recipient_consent_id: 'any', recipient_consent_version: 1 })).rejects.toThrow('worker only');
   });
 
   it('availability-only approval: no nudge and zero model calls', async () => {
@@ -179,7 +199,7 @@ describe('typed approval → worker → commit_nudge, over the real module', () 
     optIn(w, pairId);
     const sig = approve(w, { availability: 'today' });
     const droid = scriptedDroid();
-    const live = liveWorker(w, harnessSource(w, worker), droid, syntheticPreferences(pairId, bobHex));
+    const live = liveWorker(w, harnessSource(w, worker), droid);
     const outcomes = await live.runJob(job(pairId, sig.signal_id));
     expect(outcomes[0]!.outcome).not.toBe('nudge_proposed');
     expect(droid.calls()).toBe(0);
@@ -194,7 +214,7 @@ describe('watcher: approved signals become jobs exactly once', () => {
     approve(w, BOTH);
     const source = harnessSource(w, worker);
     const droid = scriptedDroid();
-    const first = liveWorker(w, source, droid, syntheticPreferences(pairId, bobHex));
+    const first = liveWorker(w, source, droid);
     const seen: string[] = [];
     const watcher = new SignalWatcher(source, { run: j => first.runJob(j), onOutcome: o => seen.push(...o.map(x => x.outcome)) });
     expect(await watcher.sweep()).toBe(1);
@@ -203,7 +223,7 @@ describe('watcher: approved signals become jobs exactly once', () => {
 
     // Restart: fresh process, fresh ledger. The pair is inside its cooldown, so the pre-check stops it.
     const droid2 = scriptedDroid();
-    const second = liveWorker(w, source, droid2, syntheticPreferences(pairId, bobHex));
+    const second = liveWorker(w, source, droid2);
     const again: string[] = [];
     await new SignalWatcher(source, { run: j => second.runJob(j), onOutcome: o => again.push(...o.map(x => x.outcome)) }).sweep();
     expect(again).toEqual(['cooldown']);
@@ -216,7 +236,7 @@ describe('watcher: approved signals become jobs exactly once', () => {
     optIn(w, pairId);
     approve(w, BOTH, 'a');
     const source = harnessSource(w, worker);
-    const live = liveWorker(w, source, scriptedDroid(), syntheticPreferences(pairId, bobHex));
+    const live = liveWorker(w, source, scriptedDroid());
     const seen: string[] = [];
     const watcher = new SignalWatcher(source, { run: j => live.runJob(j), onOutcome: o => seen.push(...o.map(x => x.outcome)) });
     await watcher.sweep();

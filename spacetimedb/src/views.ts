@@ -1,8 +1,14 @@
 import { t } from 'spacetimedb/server';
 import type { Identity } from 'spacetimedb';
-import { guardSignalStanding } from '@kinetic/contracts/policy';
-import { spacetimedb, account, approved_signal, nudge, disclosure_receipt, nudge_delivery } from './schema';
-import { hex, loadStanding, toStoredSignal, type ReadDb } from './policy_state';
+import {
+  DISCOVERY_CARD_LIMIT, guardDiscoveryVisibility, guardPreferenceStanding, guardSignalStanding, projectDiscoveryCard,
+  templateForSignal,
+} from '@kinetic/contracts/policy';
+import { spacetimedb, account, approved_signal, nudge, disclosure_receipt, nudge_delivery, support_preference } from './schema';
+import {
+  blockedEitherWay, discoveryEnabled, hex, loadDiscoveryParty, loadPreference, loadStanding, signalExpiredMarked,
+  toStoredSignal, type ReadDb,
+} from './policy_state';
 
 // Every view filters strictly by ctx.sender. Tables stay private; only these are public.
 // Views project minimal client-facing rows (column names are the CS client seam,
@@ -107,23 +113,33 @@ export const my_preset_assignments = spacetimedb.view(
 
 /**
  * Defence in depth (C6): even if a suppression write was missed, a nudge is shown only while
- * every source signal still has standing for this recipient (not revoked, pair accepted, same
- * preset/assignment versions, categories still allowed). Views have no clock, so EXPIRY is
- * not enforced here; it needs a scheduled sweep reducer (open Cyber/CS item).
+ * every source signal still has standing for this recipient (not revoked, not sweep-expired, pair
+ * accepted, same preset/assignment versions, categories still allowed). Views have no clock: expiry
+ * reaches views through sweep_expired markers/suppression (stale window ≤ one sweep interval).
  */
 function nudgeSourcesStand(db: ReadDb, n: { pair_id: string; source_signal_ids: string[]; source_consent_versions: number[] }, viewer: Identity): boolean {
   if (n.source_signal_ids.length === 0 || n.source_signal_ids.length !== n.source_consent_versions.length) return false;
   return n.source_signal_ids.every((id, i) => {
     const s = db.approved_signal.signal_id.find(id);
     if (!s || s.pair_id !== n.pair_id || s.consent_version !== n.source_consent_versions[i]) return false;
+    if (signalExpiredMarked(db, id)) return false;
     return guardSignalStanding(toStoredSignal(s), loadStanding(db, s.sender_id, s.pair_id), hex(viewer)).allowed;
   });
 }
 
+/** The recipient's consent the nudge was bound to is still the same record, standing, and still covers its mode. */
+function nudgeConsentStands(db: ReadDb, n: { pair_id: string; template_id: string; recipient_consent_id: string }, viewer: Identity): boolean {
+  const p = loadPreference(db, viewer, n.pair_id);
+  if (!p || p.consentId !== n.recipient_consent_id) return false;
+  if (!guardPreferenceStanding(p, hex(viewer), n.pair_id, null).allowed || p.expiresAtMs === 0) return false;
+  return p.supportModes.some(m => templateForSignal({ supportMode: m }) === n.template_id);
+}
+
+/** Recipient only. Hidden while snoozed (sweep_expired clears snoozed_until when due), dismissed or suppressed. */
 export const my_nudges = spacetimedb.view(
   { name: 'my_nudges', public: true }, t.array(nudge.rowType),
   ctx => [...ctx.db.nudge.iter()].filter(n => n.recipient_id.isEqual(ctx.sender) && !n.suppressed && !n.dismissed &&
-    nudgeSourcesStand(ctx.db, n, ctx.sender))
+    n.snoozed_until === undefined && nudgeSourcesStand(ctx.db, n, ctx.sender) && nudgeConsentStands(ctx.db, n, ctx.sender))
 );
 
 /** Sender-only: the owner's own approved signals (privacy center: recipient, expiry, revoke). */
@@ -139,6 +155,12 @@ export const my_signals = spacetimedb.view(
 export const my_receipts = spacetimedb.view(
   { name: 'my_receipts', public: true }, t.array(disclosure_receipt.rowType),
   ctx => [...ctx.db.disclosure_receipt.iter()].filter(r => r.sender_id.isEqual(ctx.sender))
+);
+
+/** Recipient only: the caller's own support-preference consents (D035). Never visible to the sender. */
+export const my_support_preferences = spacetimedb.view(
+  { name: 'my_support_preferences', public: true }, t.array(support_preference.rowType),
+  ctx => [...ctx.db.support_preference.iter()].filter(p => p.recipient.isEqual(ctx.sender))
 );
 
 /** The caller's own recipient delivery settings (D017/D018). */
@@ -170,7 +192,7 @@ export const worker_signal_context = spacetimedb.view(
   ctx => {
     if (!isWorker(ctx.db, ctx.sender)) return [];
     return [...ctx.db.approved_signal.iter()]
-      .filter(s => !s.revoked_at && guardSignalStanding(toStoredSignal(s), loadStanding(ctx.db, s.sender_id, s.pair_id)).allowed)
+      .filter(s => !s.revoked_at && !signalExpiredMarked(ctx.db, s.signal_id) && guardSignalStanding(toStoredSignal(s), loadStanding(ctx.db, s.sender_id, s.pair_id)).allowed)
       .flatMap(s => {
         const p = ctx.db.pair.pair_id.find(s.pair_id);
         if (!p) return [];
@@ -209,5 +231,86 @@ export const worker_delivery = spacetimedb.view(
         quiet_end_minute: d.quiet_end_minute, utc_offset_minutes: d.utc_offset_minutes, last_nudge_at: last,
       };
     });
+  }
+);
+
+const workerPreferenceRow = t.row('WorkerPreferenceRow', {
+  consent_id: t.string(), pair_id: t.string(), recipient: t.identity(), support_modes: t.array(t.string()),
+  availability: t.array(t.string()), consent_version: t.u32(), expires_at: t.timestamp(),
+});
+
+/**
+ * Standing recipient consents in accepted pairs, backing the worker's RecipientPreferencesPort (D021 #4).
+ * Map to RecipientSupportPreferences with purpose 'support_nudge' and revokedAt null. Advisory: commit_nudge
+ * re-checks the bound consent id/version against the live row.
+ */
+export const worker_support_preferences = spacetimedb.view(
+  { name: 'worker_support_preferences', public: true }, t.array(workerPreferenceRow),
+  ctx => {
+    if (!isWorker(ctx.db, ctx.sender)) return [];
+    return [...ctx.db.support_preference.iter()].flatMap(p => {
+      const pref = loadPreference(ctx.db, p.recipient, p.pair_id);
+      if (!pref || pref.expiresAtMs === 0 || !guardPreferenceStanding(pref, hex(p.recipient), p.pair_id, null).allowed) return [];
+      if (ctx.db.pair.pair_id.find(p.pair_id)?.status !== 'accepted') return [];
+      return [{
+        consent_id: p.consent_id, pair_id: p.pair_id, recipient: p.recipient, support_modes: p.support_modes,
+        availability: p.availability, consent_version: p.consent_version, expires_at: p.expires_at,
+      }];
+    });
+  }
+);
+
+// ---- C8 discovery views (PROPOSED; empty while discovery is disabled) ----
+
+const myDiscoveryRow = t.row('MyDiscoveryRow', {
+  publication_id: t.option(t.string()), display_name: t.option(t.string()), interest_tags: t.array(t.string()),
+  revision: t.u32(), expires_at: t.option(t.timestamp()), withdrawn: t.bool(), expired: t.bool(),
+  area_key: t.option(t.string()), area_expires_at: t.option(t.timestamp()), area_active: t.bool(), discovery_enabled: t.bool(),
+});
+
+/** The caller's own publication and area status (privacy controls: what is published, until when, withdraw). */
+export const my_discovery_profile = spacetimedb.view(
+  { name: 'my_discovery_profile', public: true }, t.array(myDiscoveryRow),
+  ctx => {
+    const me = loadDiscoveryParty(ctx.db, ctx.sender);
+    const p = me.publication, a = ctx.db.area_participation.owner.find(ctx.sender);
+    const pubRow = [...ctx.db.discovery_publication.iter()].find(r => r.owner.isEqual(ctx.sender));
+    return [{
+      publication_id: p?.publicationId, display_name: p?.displayName, interest_tags: p ? [...p.interestTags] : [],
+      revision: p?.revision ?? 0, expires_at: pubRow?.expires_at, withdrawn: p?.withdrawnAtMs != null,
+      expired: Boolean(p?.expiredMarked || me.area?.expiredMarked), area_key: a?.area_key, area_expires_at: a?.expires_at,
+      area_active: Boolean(a?.active), discovery_enabled: discoveryEnabled(ctx.db),
+    }];
+  }
+);
+
+const discoveryCardRow = t.row('DiscoveryCardRow', {
+  card_ref: t.string(), display_name: t.string(), interest_tags: t.array(t.string()),
+  shared_tags: t.array(t.string()), revision: t.u32(),
+});
+
+/**
+ * C8 caller-filtered projection: only for a currently published viewer with active area participation; only
+ * other published participants in the same configured area with no block either way. Opaque card refs and
+ * approved public fields only: no identity, area key, expiry, pair, preset, preference, quiz or journal data.
+ * Bounded to DISCOVERY_CARD_LIMIT; never a user directory.
+ */
+export const discovery_cards = spacetimedb.view(
+  { name: 'discovery_cards', public: true }, t.array(discoveryCardRow),
+  ctx => {
+    const enabled = discoveryEnabled(ctx.db);
+    if (!enabled || !ctx.db.account.identity.find(ctx.sender)) return [];
+    const viewer = loadDiscoveryParty(ctx.db, ctx.sender);
+    if (!viewer.publication || !viewer.area) return [];
+    const cards = [];
+    for (const r of ctx.db.discovery_publication.iter()) {
+      if (cards.length >= DISCOVERY_CARD_LIMIT) break;
+      if (r.owner.isEqual(ctx.sender)) continue;
+      const target = loadDiscoveryParty(ctx.db, r.owner);
+      if (!guardDiscoveryVisibility(viewer, target, blockedEitherWay(ctx.db, ctx.sender, r.owner), enabled, null).ok) continue;
+      const c = projectDiscoveryCard(target.publication!, viewer.publication.interestTags);
+      cards.push({ card_ref: c.cardRef, display_name: c.displayName, interest_tags: c.interestTags, shared_tags: c.sharedTags, revision: c.revision });
+    }
+    return cards;
   }
 );

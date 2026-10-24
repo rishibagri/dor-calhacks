@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Timestamp } from 'spacetimedb';
-import { approveArgs, confirmPreset, FUTURE, jwtAuth, mod, pairUp, setup, view } from './helpers';
+import { approveArgs, confirmPreset, FUTURE, grantPrefs, jwtAuth, mod, pairUp, setup, view } from './helpers';
 
 describe('auth gating', () => {
   it('rejects callers whose issuer is not allow-listed', () => {
@@ -104,12 +104,14 @@ function seedNudge(w: ReturnType<typeof setup>, pairId: string) {
   const args = approveArgs(w, w.alice, pairId, { support_mode: 'short_call' }, 'seed'); // views: outside the tx
   w.call(w.alice, ctx => mod.approve_signal(ctx, args));
   const sig = view<any>(w, w.alice, mod.my_signals)[0];
-  // No nudge-producing reducer exists yet (worker commit is a later milestone); insert as internal.
+  const pref = grantPrefs(w, w.bob, pairId);
+  // Internal insert stands in for the guarded commit_nudge (covered in coordination.test.ts).
   w.h.withReducerTx(w.admin, ctx => {
     ctx.db.nudge.insert({
       id: 'n1', pair_id: pairId, recipient_id: sig.recipient_id, source_signal_ids: [sig.signal_id],
       source_consent_versions: [sig.consent_version], template_id: 'offer_short_call', created_at: ctx.timestamp,
       expires_at: sig.expires_at, dismissed: false, snoozed_until: undefined, suppressed: false,
+      recipient_consent_id: pref.consent_id, recipient_consent_version: pref.consent_version,
     });
   });
 }

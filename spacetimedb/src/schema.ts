@@ -14,6 +14,12 @@ export const auth_config = table(
   { issuer: t.string().primaryKey() }
 );
 
+/** Allow-listed JWT `aud` values (Cyber, D035). Empty = no external caller admitted (fail closed). */
+export const auth_audience = table(
+  { name: 'auth_audience' },
+  { audience: t.string().primaryKey() }
+);
+
 export const account = table(
   { name: 'account' },
   {
@@ -105,8 +111,10 @@ export const nudge = table(
     created_at: t.timestamp(),
     expires_at: t.timestamp(),
     dismissed: t.bool(),
-    snoozed_until: t.option(t.timestamp()),
-    suppressed: t.bool(), // set by unlink / reassignment / preset tightening
+    snoozed_until: t.option(t.timestamp()), // hidden from my_nudges while set; the expiry sweep clears it when due
+    suppressed: t.bool(), // set by unlink / reassignment / preset tightening / opt-out / consent revoke / expiry sweep
+    recipient_consent_id: t.string(), // support_preference consent the commit was bound to (D035)
+    recipient_consent_version: t.u32(),
   }
 );
 
@@ -126,6 +134,84 @@ export const nudge_delivery = table(
     utc_offset_minutes: t.i16(),
     updated_at: t.timestamp(),
   }
+);
+
+/**
+ * C4 RecipientSupportPreferences as stored (D021 #4, D035). Recipient-owned, one row per recipient+pair,
+ * written only by set_support_preferences / revoke_support_preferences. Every change bumps consent_version.
+ * Never visible to the sender; only the recipient (my_support_preferences) and the worker (worker_support_preferences).
+ */
+export const support_preference = table(
+  { name: 'support_preference' },
+  {
+    consent_id: t.string().primaryKey(),
+    recipient: t.identity(),
+    pair_id: t.string(),
+    support_modes: t.array(t.string()),
+    availability: t.array(t.string()),
+    consent_version: t.u32(),
+    expires_at: t.timestamp(),
+    revoked_at: t.option(t.timestamp()),
+    updated_at: t.timestamp(),
+  }
+);
+
+/**
+ * Expiry markers written by the scheduled sweep (views have no clock). A marked record is treated as gone by
+ * every view. record_key = `<kind>:<id>:<version>` so a renewed record (new version) is not affected.
+ */
+export const expired_record = table(
+  { name: 'expired_record' },
+  { record_key: t.string().primaryKey(), kind: t.string(), expired_at: t.timestamp() }
+);
+
+/** Schedule for sweep_expired (interval row inserted by init). */
+export const expiry_sweep = table(
+  { name: 'expiry_sweep' },
+  { scheduled_id: t.u64().primaryKey().autoInc(), scheduled_at: t.scheduleAt() }
+);
+
+// ---- C8 discovery (PROPOSED, D031/D035; disabled until the owner sets discovery_config 'enabled') ----
+
+/** Owner-managed discovery configuration: 'enabled' flag, interest-tag and coarse-area allowlists. */
+export const discovery_config = table(
+  { name: 'discovery_config' },
+  { key: t.string().primaryKey(), values: t.array(t.string()) }
+);
+
+/** Owner's explicit public-profile publication. Peers only ever see the discovery_cards projection. */
+export const discovery_publication = table(
+  { name: 'discovery_publication' },
+  {
+    publication_id: t.string().primaryKey(), // opaque card reference; never an identity
+    owner: t.identity(),
+    display_name: t.string(),
+    interest_tags: t.array(t.string()),
+    audience: t.string(),
+    notice_version: t.u32(),
+    revision: t.u32(),
+    expires_at: t.timestamp(),
+    withdrawn_at: t.option(t.timestamp()),
+    updated_at: t.timestamp(),
+  }
+);
+
+/** Private coarse-area participation. Only a configured area key; never coordinates or distance. */
+export const area_participation = table(
+  { name: 'area_participation' },
+  {
+    owner: t.identity().primaryKey(),
+    area_key: t.string(),
+    revision: t.u32(),
+    expires_at: t.timestamp(),
+    active: t.bool(),
+  }
+);
+
+/** Private blocks. Matching in either direction hides both people from each other. Never shown to the target. */
+export const discovery_block = table(
+  { name: 'discovery_block' },
+  { block_id: t.string().primaryKey(), blocker: t.identity(), blocked: t.identity(), created_at: t.timestamp() }
 );
 
 /** Allow-listed coordination worker identities (module-owner managed). Workers have no account and cannot approve. */
@@ -163,4 +249,12 @@ export const spacetimedb = schema({
   disclosure_receipt,
   nudge_delivery,
   worker_identity,
+  auth_audience,
+  support_preference,
+  expired_record,
+  expiry_sweep,
+  discovery_config,
+  discovery_publication,
+  area_participation,
+  discovery_block,
 });

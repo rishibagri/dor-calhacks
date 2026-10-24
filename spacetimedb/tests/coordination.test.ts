@@ -2,17 +2,22 @@
 // set_nudge_delivery, as a compromised worker or client could make them. Synthetic identities only.
 import { describe, expect, it } from 'vitest';
 import { Timestamp } from 'spacetimedb';
-import { allSignals, approveArgs, confirmPreset, FUTURE, jwtAuth, mod, pairUp, setup, view } from './helpers';
+import { allSignals, approveArgs, confirmPreset, FUTURE, grantPrefs, jwtAuth, mod, pairUp, setup, view } from './helpers';
 
 const HOUR_US = 3_600_000_000n;
 type W = ReturnType<typeof setup>;
 const BOTH = { support_mode: 'short_call', availability: 'this_week' };
 
-/** alice→bob pair, alice partner preset (both categories) assigned, worker allow-listed. */
+/** Recipient consent the "coordinator" read for the current world; commitArgs binds it by default. */
+let bound = { recipient_consent_id: '', recipient_consent_version: 0 };
+
+/** alice→bob pair, alice partner preset (both categories) assigned, bob's preference consent, worker allow-listed. */
 function world(cats = ['support_preference', 'coarse_availability']) {
   const w = setup();
   const { pairId } = pairUp(w);
   confirmPreset(w, w.alice, pairId, 'partner', cats);
+  const pref = grantPrefs(w, w.bob, pairId);
+  bound = { recipient_consent_id: pref.consent_id, recipient_consent_version: pref.consent_version };
   const worker = jwtAuth('kinetic-worker', 50n, 'https://worker.spacetimedb.example');
   const workerId = w.h.withReducerTx(worker, ctx => ctx.sender);
   w.h.withReducerTx(w.admin, ctx => mod.set_worker_identity(ctx, { worker: workerId, enabled: true }));
@@ -30,7 +35,7 @@ const optIn = (w: W, who: W['bob'], pairId: string, opted = true, quiet: [number
   }));
 const commitArgs = (pairId: string, sig: any, over: Record<string, unknown> = {}) => ({
   nudge_id: 'n-' + sig.signal_id, pair_id: pairId, template_id: 'offer_short_call',
-  source_signal_ids: [sig.signal_id], source_consent_versions: [sig.consent_version], ...over,
+  source_signal_ids: [sig.signal_id], source_consent_versions: [sig.consent_version], ...bound, ...over,
 }) as Parameters<typeof mod.commit_nudge>[1];
 const commit = (w: W, who: any, args: Parameters<typeof mod.commit_nudge>[1]) => w.call(who, ctx => mod.commit_nudge(ctx, args));
 const nudges = (w: W) => w.h.withReducerTx(w.admin, ctx => [...ctx.db.nudge.iter()]);
