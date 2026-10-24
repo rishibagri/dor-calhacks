@@ -81,4 +81,4 @@ Why each case was chosen:
 - Every case is synthetic. Labels come from one DS annotator, written before the Core 1–3 runs; teammate ratings have **not** been collected.
 - AI's reflection outputs are hand-written fixtures, not recorded Claude responses, so this measures the loop given an assessment, not Claude's accuracy.
 - "Approval" for decision-loop previews is simulated (fixed consent, no quiet hours, no cooldown); support cases use the C6 fake policy. No reducer, worker, Droid, Clerk session or SpacetimeDB host ran, so nothing here is live or deployed evidence.
-- Not covered here: timing and batching of live delivery (the recipient-row timing todo; D043 narrowed the real `my_nudges` row, and DS has not yet mirrored it in `matching.ts`), browser UI copy, microphone/provider failures.
+- Not covered here: timing and batching of live delivery (DS mirrors the D043 `my_nudges` row in `matching.ts` `recipientNudgeRow`, offline only; it reveals the approval hour, an accepted D043 residual reported by the DS owner, and hides the exact approval minute), browser UI copy, microphone/provider failures.

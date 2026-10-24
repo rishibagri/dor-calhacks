@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { NUDGE_TEMPLATE_COPY } from '@dor/contracts';
 import { SIGNAL_LIFETIME_MS } from '@dor/contracts/policy';
-import { buildNudge, matchSignal } from '../matching.ts';
+import { buildNudge, matchSignal, recipientNudgeRow } from '../matching.ts';
+import type { RecipientNudgeView } from '../../lib/backend/ports.ts';
 import { NO_ACTION_COPY, QUESTION_COPY, QUESTION_NOTE } from '../../components/feature/decision-loop-model.ts';
 import {
   FORBIDDEN_LABELS, leaksOf, observable, replay, resolveCases, scoreCase, surfacesOf, type DecisionCase,
@@ -167,12 +168,84 @@ test('timing (sender_approval_timing): recipient-visible copy does not depend on
   assert.equal(NUDGE_TEMPLATE_COPY[nudgeAt(5)!.templateId], NUDGE_TEMPLATE_COPY[nudgeAt(600)!.templateId]);
 });
 
-test('timing (sender_approval_timing): the nudge row the recipient can subscribe to does not encode approval time',
-  { todo: "core3-audit.md HIGH: today's row carries expires_at = approval + lifetime, so approval time is recoverable. Owner: Cyber (narrow my_nudges row with a coarsened visible_until). DS models the same row shape in matching.ts buildNudge." }, () => {
-    const { id: _a, ...early } = nudgeAt(5)!;
-    const { id: _b, ...late } = nudgeAt(600)!;
-    assert.deepEqual(early, late);
-  });
+// D043 (Cyber, spacetimedb/src/views.ts + tests/audit_leaks.test.ts): the recipient's row is narrowed. DS mirrors it.
+const rowAt = (approvedMinutesBeforeCommit: number) => recipientNudgeRow(nudgeAt(approvedMinutesBeforeCommit)!);
+const HOUR_MS = 3_600_000;
+
+test('timing (D043 mirror): the recipient row is exactly {id, pairId, templateId, visibleUntil}, with no ids or times', () => {
+  const internal = nudgeAt(37)!;
+  const row = recipientNudgeRow(internal);
+  assert.deepEqual(Object.keys(row).sort(), ['id', 'pairId', 'templateId', 'visibleUntil']);
+  const wire = JSON.stringify(row);
+  for (const hidden of [...internal.sourceSignalIds, internal.createdAt, internal.expiresAt]) assert.ok(!wire.includes(hidden), hidden);
+});
+
+test('timing (D043 mirror): visibleUntil is the expiry rounded up to a whole hour, never earlier and less than an hour later', () => {
+  const internal = nudgeAt(37)!;
+  const exact = Date.parse(internal.expiresAt), shown = Date.parse(recipientNudgeRow(internal).visibleUntil);
+  assert.notEqual(exact % HOUR_MS, 0); // the exact value was not aligned, so rounding hid something
+  assert.equal(shown % HOUR_MS, 0);
+  assert.ok(shown >= exact && shown - exact < HOUR_MS);
+});
+
+test('timing (D043 mirror): approvals within the same hour give the recipient identical rows', () => {
+  const { id: _a, ...early } = rowAt(5);
+  const { id: _b, ...late } = rowAt(30);
+  assert.deepEqual(early, late);
+});
+
+test('timing (D043 mirror): the DS row has the shape CS consumes (RecipientNudgeView; checked by npm run typecheck)', () => {
+  const row = rowAt(5) satisfies RecipientNudgeView;
+  const cs: Record<keyof RecipientNudgeView, true> = { id: true, pairId: true, templateId: true, visibleUntil: true };
+  assert.deepEqual(Object.keys(row).sort(), Object.keys(cs).sort());
+});
+
+// sender_approval_timing, relabeled: D043 sets visible_until = ceil_hour(approval + 24 h), so the approval hour is
+// recoverable. Cyber accepted that as a D043 residual (Sumedh, Option A, as reported by the DS owner on 2026-10-24; not
+// recorded in the repository). The earlier label "the row does not encode approval time" was a todo; the label is now
+// "at most the approval hour": exact minute/second approval time and any extra identifying field stay hidden.
+const APPROVAL_OFFSETS = Array.from({ length: 1439 }, (_, i) => i + 1); // every minute of the signal lifetime
+const approvedAtFor = (m: number) => Date.parse(file.clock) - m * 60_000;
+function approvalTimingFindings(rowFor: (approvedMinutesBeforeCommit: number) => object): string[] {
+  const findings = new Set<string>();
+  const byHour = new Map<number, string>();
+  for (const m of APPROVAL_OFFSETS) {
+    const internal = nudgeAt(m)!, approvedAt = approvedAtFor(m);
+    const { id: _id, ...row } = rowFor(m) as Record<string, unknown>;
+    if (Object.keys(row).sort().join() !== 'pairId,templateId,visibleUntil') findings.add('extra or missing field');
+    const shown = Date.parse(String(row.visibleUntil));
+    if (!Number.isFinite(shown) || shown % HOUR_MS !== 0) findings.add('visibleUntil finer than an hour');
+    const wire = JSON.stringify(row);
+    // An approval exactly on the hour has an hour-aligned expiry that rounding leaves unchanged; the same-hour check
+    // below covers it, so exact values are only searched when they carry sub-hour detail.
+    const exactTimes = approvedAt % HOUR_MS === 0 ? [] : [new Date(approvedAt).toISOString(), internal.expiresAt, String(approvedAt), String(Date.parse(internal.expiresAt))];
+    for (const exact of [...exactTimes, internal.createdAt, ...internal.sourceSignalIds]) if (wire.includes(exact)) findings.add('exact time or id on the wire');
+    const hour = Math.ceil(approvedAt / HOUR_MS); // approvals in the same clock hour must be indistinguishable
+    if ((byHour.get(hour) ?? wire) !== wire) findings.add('approvals in the same hour are distinguishable');
+    byHour.set(hour, wire);
+  }
+  return [...findings];
+}
+
+test('timing (sender_approval_timing): the recipient row reveals at most the approval hour (D043 accepted residual)', () => {
+  assert.deepEqual(approvalTimingFindings(rowAt), []);
+  // The accepted residual, stated rather than hidden: different approval hours can show different hours.
+  const { id: _a, ...early } = rowAt(5);
+  const { id: _b, ...late } = rowAt(600);
+  assert.notDeepEqual(early, late);
+  assert.equal((Date.parse(early.visibleUntil) - Date.parse(late.visibleUntil)) % HOUR_MS, 0);
+});
+
+test('timing (sender_approval_timing): negative controls, so a finer-grained or wider row fails the check', () => {
+  const unrounded = (m: number) => ({ ...rowAt(m), visibleUntil: nudgeAt(m)!.expiresAt });
+  const toTheMinute = (m: number) => ({ ...rowAt(m), visibleUntil: new Date(Math.ceil(Date.parse(nudgeAt(m)!.expiresAt) / 60_000) * 60_000).toISOString() });
+  const approvedAtField = (m: number) => ({ ...rowAt(m), approvedAt: new Date(approvedAtFor(m)).toISOString() });
+  assert.ok(approvalTimingFindings(unrounded).includes('exact time or id on the wire'));
+  assert.ok(approvalTimingFindings(toTheMinute).includes('visibleUntil finer than an hour'));
+  assert.ok(approvalTimingFindings(toTheMinute).includes('approvals in the same hour are distinguishable'));
+  assert.ok(approvalTimingFindings(approvedAtField).includes('extra or missing field'));
+  assert.ok(approvalTimingFindings(approvedAtField).includes('exact time or id on the wire'));
+});
 
 
 test('per-entry space still ends in no_action (unaffected by the f4 quiz relabel)', () => {

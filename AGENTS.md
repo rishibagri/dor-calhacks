@@ -38,7 +38,7 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 | Role / person | Current status | Next handoff |
 |---|---|---|
 | CS — you | **CS core work complete on role/cs-app** (offline-verified unless noted): decision loop + D040 narrowing + D041 pause controls; fail closed on missing assessment (r4m), malformed candidate (i2), unnamed connections under exclusions; installable PWA (static-only service worker, no push); README status + RUNBOOK demo/reset + hosted-deploy checklist. Live: local smoke 26/26, sweep 30/30. Not verified: worker nudge delivery, browser/phone, hosted deploy | Owner: hosted deploy decision (maincloud + Vercel?). Sumedh: narrow `my_nudges`, sender-only receipts, reason code. Adam: required assessment with candidate, worker reconnect, nicknames, paid Stage C. Nimisha: eval replay + r4m fixtures (docs/team-messages/core3-audit.md) |
-| DS — Nimisha | On main: Core 1–3 decision-loop evaluation (PR #36 @ 44fbc8c): 55 labeled cases 55/55, silence 23/23, missed 0/9, unsafe 0, forbidden 0; baselines + blinded two-rater workflow (114 items, ratings NOT collected). role/ds-context (uncommitted, awaiting owner review): **Core 4** summary `src/evaluation/results/core4.md`: 19 existing synthetic cases by reference (14 decision-loop, 5 support-signal; partners 6, friends 10, family 3; incl. the private-party no-action case), 19/19 expected, 56/56 privacy checks, each check with a negative control; offline only | Team: 2 raters (not DS) fill `src/evaluation/results/ratings/rater-{a,b}.md`. Sumedh: a3; confirm the D043 `my_nudges` row DS mirrors. DS next: mirror D043 in `matching.ts` `buildNudge` (timing todo), score ratings |
+| DS — Nimisha | On main: Core 1–3 decision-loop evaluation (PR #36 @ 44fbc8c): 55 labeled cases 55/55, silence 23/23, missed 0/9, unsafe 0, forbidden 0; baselines + blinded two-rater workflow (114 items, ratings NOT collected). PR #41 (open): **Core 4** summary `src/evaluation/results/core4.md`: 19 existing synthetic cases by reference (14 decision-loop, 5 support-signal; partners 6, friends 10, family 3; incl. the private-party no-action case), 19/19 expected, 56/56 privacy checks, each check with a negative control; plus a D043 `my_nudges` row mirror (`recipientNudgeRow`): it reveals the approval hour at most (Option A residual, approval reported by the DS owner), never the minute or second; timing todo closed; offline only | Team: 2 raters (not DS) fill `src/evaluation/results/ratings/rater-{a,b}.md`. Sumedh: a3 (the only DS todo left); optionally record the Option A timing residual in D043. DS next: score ratings |
 | Cyber — Sumedh | On main: D041 durable recipient pause (#34), live scheduler-auth fix `isDatabaseInternal` (#34), D043 Core 3 audit leaks closed (#39: narrow `my_nudges` `{id, pair_id, template_id, visible_until}`, sender-own-only `my_receipts`); reviews: #30 ACK, D040 ACK-with-conditions, #40 reason code ACK. Offline-verified; live only via CS's local smoke | Sumedh next: a3 (opaque signal IDs; heads-up to DS/AI first), DS forbidden-disclosure labels vs D041, Core 3 live attacks once Stage C runs, Core 4 privacy copy/controls + account-switch review |
 | AI — Adam | On main: Droid SDK worker default (#27), D040 private assessment (#31). role/ai-voice (PR pending): worker **auto-reconnect + event-driven sweeps, fail closed while disconnected**, exit-for-restart, `/healthz` 503 (audit HIGH); 5 D041 pause + 2 mid-job disconnect integration cases; nickname exclusions + `unmatchedExclusions` (audit MEDIUM). Stage A live: Claude 10/10 safety on Opus 5.5 (~$0.01/call), Cartesia token/TTS/STT pass. Offline otherwise | CS: optional `unmatchedExclusions` note/question. D042 (r4m) done: contract requires assessment with a candidate. Adam next: Stage B browser voice; Stage C paid nudge delivery with the published DB |
 
@@ -529,4 +529,40 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - `npm run ai:check` exit 0: agents 69, worker 49, integration 43.
 - **Limitations:** a small, hand-picked synthetic sample with a single DS annotator; AI outputs are hand-written; decision-loop approval is simulated; no live run; teammate ratings not collected.
 - **Next:** Team: ratings. Sumedh: a3, confirm the D043 row. DS: mirror D043 in `buildNudge` (timing todo).
+
+### 2026-10-24T20:32Z | DS → Cyber | Approval-timing todo vs D043: the DS mirror is ready; one question for Sumedh
+- **Branch/commit:** Core 4 is in PR #41 (`87e4209`, open, CI green). This follow-up is uncommitted on `role/ds-context`, awaiting owner review.
+- **Finding:** D043's `my_nudges` row is `{id, pair_id, template_id, visible_until = ceil_hour(expires_at)}`. `commit_nudge` sets `expires_at = min(commit + NUDGE_COOLDOWN_MS, signal expires_at)`, and `signal expires_at = approval + SIGNAL_LIFETIME_MS`. Both constants are 24 h and approval precedes commit, so `visible_until = ceil_hour(approval + 24 h)`. D043 hides the approval *minute*, but the *hour* is recoverable: approvals 5 min vs 600 min before the commit show 18:00 vs 08:00 the next day. Sumedh's test asserts only sub-hour rounding, so it is consistent with this. Sumedh's 03:30Z confirmation in `docs/updates/cyber.md` (main `71d1320`) matches the row shape DS mirrors and states the rounding (≥ exact expiry, < exact + 1 h). It does not say whether the approval hour may stay recoverable.
+- **DS change (DS files only):** `matching.ts` `recipientNudgeRow()` mirrors the D043 projection exactly. Four regression tests check:
+  - the exact keys, with no ids or times;
+  - rounding up to the hour, never earlier and less than an hour later;
+  - approvals within the same hour give identical rows;
+  - the shape satisfies CS's `RecipientNudgeView` (typecheck; a mutation fails it).
+  - The `sender_approval_timing` todo now tests the narrow row; it is still a todo and was not weakened or relabeled.
+- **@Sumedh, question:** Is hour-level approval timing an accepted D043 residual (then record it in D043 and DS relabels the todo to hour granularity), or should `visible_until` not depend on approval time (e.g. derived from commit time)?
+- **Evidence:** DS suites 267 = 265 pass / 0 fail / 2 todo (a3, timing). `check:all` exit 0 (contracts 124, module 184, app 412 pass / 0 fail / 2 todo). `ai:check` exit 0 (69/49/43).
+
+### 2026-10-24T21:04Z | DS → Cyber, Team | Timing todo closed under Option A (hour-level approval timing accepted); PR #41 update
+- **Branch/commit:** `role/ds-context`, pushed to the open PR #41 (not merged). Main `71d1320` (Cyber #42) is merged in (`267cbb3`); the only conflict was the dashboard, with the Cyber row taken from main and the DS row from the branch.
+- **Decision (as reported):** Sumedh approved Option A, as reported to DS by the DS owner (Nimisha) on 2026-10-24. This was not independently verified from the repository: neither `docs/DECISIONS.md` nor `docs/updates/cyber.md` on main `71d1320` records it yet. Option A: the approval *hour* the recipient can work out from `visible_until` is an accepted D043 privacy tradeoff. The exact minute or second of approval must stay hidden.
+- **Relabel (DS, test label only):** `sender_approval_timing` changes from "the recipient row does not encode approval time" (todo) to "the recipient row reveals at most the approval hour". The earlier label and the reason are kept in the test comment. No fixture label changed.
+- **Tests (DS files only; no Cyber, CS or AI file changed):**
+  - The 4 D043 row-shape tests are kept.
+  - A new test sweeps every approval minute across the 24 h signal lifetime (1,439 approvals) and checks:
+    - the row has exactly `{id, pairId, templateId, visibleUntil}`;
+    - `visibleUntil` falls on a whole hour;
+    - no exact approval or expiry time, `createdAt` or signal id appears;
+    - approvals in the same clock hour give identical rows;
+    - the accepted residual itself: different approval hours can differ, by whole hours only.
+  - Negative controls: an unrounded row, a row rounded to the minute, and an extra `approvedAt` field each fail the check. Mutating `recipientNudgeRow` to drop the rounding or round to the minute fails the test (2/2 caught).
+  - The `core4.md` limitations line is updated.
+- **Evidence:**
+  - DS suites 249 = 248 pass / 0 fail / 1 todo (a3).
+  - `npm run check:all` exit 0: contracts 124, module 184, app 415 = 414 pass / 0 fail / 1 todo (a3).
+  - `npm run ai:check` exit 0: 69/49/43.
+  - `core4 --check` is current.
+- **Remaining:**
+  - a3 (Sumedh): opaque signal IDs; DS fixtures use readable IDs such as `sig-fa3`, so DS wants a heads-up first.
+  - Team: ratings.
+  - Optional (Cyber): record the Option A residual in D043.
 
