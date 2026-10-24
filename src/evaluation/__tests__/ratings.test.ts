@@ -140,9 +140,12 @@ test('baselines: metrics stay separate (an unsafe suggestion is not a leak and v
   const r4m = scoreCase(file, file.cases.find((c) => c.id === 'r4m-refusal-in-entry-assessment-missing')!);
   assert.equal(r4m.unsafe, false);
   assert.ok(r4m.leaks.length > 0);
-  const i2 = scoreCase(file, file.cases.find((c) => c.id === 'i2-injected-candidate-fields')!);
-  assert.equal(i2.unsafe, true);
-  assert.deepEqual(i2.leaks, []);
+  // And an unsafe suggestion with no forbidden term: the strawman previews for Riley although the owner skipped.
+  const t2 = scoreCase(file, file.cases.find((c) => c.id === 't3-clear-timing-partner')!, previewOnCandidate);
+  const skip = scoreCase(file, file.cases.find((c) => c.id === 'a8-unsure-skip-is-silence')!, previewOnCandidate);
+  assert.equal(t2.unsafe, false);
+  assert.equal(skip.unsafe, true);
+  assert.deepEqual(skip.leaks.filter((l) => l.label !== 'unapproved_recipient'), []);
 });
 
 test('concern codes include all six forbidden-disclosure labels', () => {

@@ -1,5 +1,5 @@
 {
-  "fixtureHash": "377b1bec8a1d48a1",
+  "fixtureHash": "409b2b7063e38627",
   "systems": [
     "d040_loop",
     "loop_without_assessment",
@@ -8,33 +8,23 @@
   "items": [
     {
       "itemId": "item-001",
-      "caseId": "s2-no-one-not-sure",
-      "kind": "no_action",
+      "caseId": "pz2-paused-only-candidate",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-002",
+      "caseId": "pp1-private-party-no-hint",
+      "kind": "needs_clarification",
       "systems": [
         "d040_loop",
         "loop_without_assessment"
       ]
     },
     {
-      "itemId": "item-002",
-      "caseId": "a10-private-party-with-candidate-no-avoidance-inferred",
-      "kind": "ready_for_preview",
-      "systems": [
-        "preview_on_candidate"
-      ]
-    },
-    {
       "itemId": "item-003",
-      "caseId": "pp2-private-party-exclude-jordan",
-      "kind": "ready_for_preview",
-      "systems": [
-        "d040_loop",
-        "loop_without_assessment",
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-004",
       "caseId": "c3-chosen-then-excluded",
       "kind": "needs_clarification",
       "systems": [
@@ -43,34 +33,42 @@
       ]
     },
     {
-      "itemId": "item-005",
-      "caseId": "pp3-private-party-owner-chooses-jordan",
-      "kind": "ready_for_preview",
+      "itemId": "item-004",
+      "caseId": "pz2-paused-only-candidate",
+      "kind": "no_action",
       "systems": [
         "d040_loop",
-        "loop_without_assessment",
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-006",
-      "caseId": "s2-no-one-not-sure",
-      "kind": "ready_for_preview",
-      "systems": [
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-007",
-      "caseId": "a3-not-alex-left-out",
-      "kind": "needs_clarification",
-      "systems": [
         "loop_without_assessment"
       ]
     },
     {
+      "itemId": "item-005",
+      "caseId": "a5-not-alex-every-alex",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop"
+      ]
+    },
+    {
+      "itemId": "item-006",
+      "caseId": "pz3-paused-picked-anyway",
+      "kind": "no_action",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-007",
+      "caseId": "u3-unnamed-offered-without-exclusion",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop"
+      ]
+    },
+    {
       "itemId": "item-008",
-      "caseId": "a1-positive-sam-listed-first",
+      "caseId": "a3-not-alex-left-out",
       "kind": "needs_clarification",
       "systems": [
         "d040_loop"
@@ -78,26 +76,23 @@
     },
     {
       "itemId": "item-009",
-      "caseId": "a8-unsure-skip-is-silence",
-      "kind": "no_action",
+      "caseId": "a18-friends-disconnected-seed",
+      "kind": "needs_clarification",
       "systems": [
-        "d040_loop",
         "loop_without_assessment"
       ]
     },
     {
       "itemId": "item-010",
-      "caseId": "a9-private-party-no-candidate",
-      "kind": "no_action",
+      "caseId": "r1-not-alex-tonight-button",
+      "kind": "ready_for_preview",
       "systems": [
-        "d040_loop",
-        "loop_without_assessment",
         "preview_on_candidate"
       ]
     },
     {
       "itemId": "item-011",
-      "caseId": "i2-injected-candidate-fields",
+      "caseId": "r4-refusal-stated-only-in-entry",
       "kind": "ready_for_preview",
       "systems": [
         "preview_on_candidate"
@@ -105,75 +100,30 @@
     },
     {
       "itemId": "item-012",
-      "caseId": "s3-family-note-chosen",
-      "kind": "ready_for_preview",
+      "caseId": "u2-exclusion-only-unnamed-left",
+      "kind": "needs_clarification",
       "systems": [
-        "d040_loop",
-        "loop_without_assessment",
-        "preview_on_candidate"
+        "loop_without_assessment"
       ]
     },
     {
       "itemId": "item-013",
-      "caseId": "r4m-refusal-in-entry-assessment-missing",
-      "kind": "ready_for_preview",
+      "caseId": "a19-family-tiring-week-seed",
+      "kind": "needs_clarification",
       "systems": [
-        "preview_on_candidate"
+        "loop_without_assessment"
       ]
     },
     {
       "itemId": "item-014",
-      "caseId": "a15-injected-invalid-assessment",
+      "caseId": "u3-unnamed-offered-without-exclusion",
       "kind": "ready_for_preview",
       "systems": [
-        "loop_without_assessment",
         "preview_on_candidate"
       ]
     },
     {
       "itemId": "item-015",
-      "caseId": "a19-family-tiring-week-seed",
-      "kind": "ready_for_preview",
-      "systems": [
-        "d040_loop",
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-016",
-      "caseId": "r4-refusal-stated-only-in-entry",
-      "kind": "needs_clarification",
-      "systems": [
-        "loop_without_assessment"
-      ]
-    },
-    {
-      "itemId": "item-017",
-      "caseId": "a12-wants-space-overrides-a-candidate",
-      "kind": "no_action",
-      "systems": [
-        "d040_loop"
-      ]
-    },
-    {
-      "itemId": "item-018",
-      "caseId": "r2-refused-person-cannot-be-chosen-or-fallen-through",
-      "kind": "ready_for_preview",
-      "systems": [
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-019",
-      "caseId": "a10-private-party-with-candidate-no-avoidance-inferred",
-      "kind": "needs_clarification",
-      "systems": [
-        "d040_loop",
-        "loop_without_assessment"
-      ]
-    },
-    {
-      "itemId": "item-020",
       "caseId": "a13-crisis-suggests-no-one",
       "kind": "no_action",
       "systems": [
@@ -183,7 +133,7 @@
       ]
     },
     {
-      "itemId": "item-021",
+      "itemId": "item-016",
       "caseId": "a7-unsure-asks-company",
       "kind": "ready_for_preview",
       "systems": [
@@ -191,8 +141,52 @@
       ]
     },
     {
+      "itemId": "item-017",
+      "caseId": "a11-wants-space",
+      "kind": "no_action",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment",
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-018",
+      "caseId": "g2-company-but-not-this-friend",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-019",
+      "caseId": "s2-no-one-not-sure",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-020",
+      "caseId": "s1-skip-first-question",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-021",
+      "caseId": "pp2-private-party-exclude-jordan",
+      "kind": "ready_for_preview",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment",
+        "preview_on_candidate"
+      ]
+    },
+    {
       "itemId": "item-022",
-      "caseId": "t1-ambiguous-timing-asks-first",
+      "caseId": "i2-injected-candidate-fields",
       "kind": "ready_for_preview",
       "systems": [
         "preview_on_candidate"
@@ -200,23 +194,7 @@
     },
     {
       "itemId": "item-023",
-      "caseId": "a5-not-alex-every-alex",
-      "kind": "needs_clarification",
-      "systems": [
-        "loop_without_assessment"
-      ]
-    },
-    {
-      "itemId": "item-024",
-      "caseId": "r3-refusal-survives-changed-company-answer",
-      "kind": "ready_for_preview",
-      "systems": [
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-025",
-      "caseId": "i3-injected-recipient-not-a-connection",
+      "caseId": "i2-injected-candidate-fields",
       "kind": "no_action",
       "systems": [
         "d040_loop",
@@ -224,8 +202,24 @@
       ]
     },
     {
+      "itemId": "item-024",
+      "caseId": "nn2-nickname-alex-excludes-alexander",
+      "kind": "needs_clarification",
+      "systems": [
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-025",
+      "caseId": "a2-positive-sam-owner-picks",
+      "kind": "needs_clarification",
+      "systems": [
+        "loop_without_assessment"
+      ]
+    },
+    {
       "itemId": "item-026",
-      "caseId": "g3-company-generally-never-auto-picks",
+      "caseId": "t1-ambiguous-timing-asks-first",
       "kind": "ready_for_preview",
       "systems": [
         "preview_on_candidate"
@@ -233,75 +227,14 @@
     },
     {
       "itemId": "item-027",
-      "caseId": "a1-positive-sam-listed-first",
-      "kind": "needs_clarification",
+      "caseId": "c2-changed-back-must-choose-again",
+      "kind": "ready_for_preview",
       "systems": [
-        "loop_without_assessment"
+        "preview_on_candidate"
       ]
     },
     {
       "itemId": "item-028",
-      "caseId": "i3-injected-recipient-not-a-connection",
-      "kind": "ready_for_preview",
-      "systems": [
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-029",
-      "caseId": "t2-ambiguous-timing-skip-is-silence",
-      "kind": "no_action",
-      "systems": [
-        "d040_loop",
-        "loop_without_assessment"
-      ]
-    },
-    {
-      "itemId": "item-030",
-      "caseId": "r3-refusal-survives-changed-company-answer",
-      "kind": "needs_clarification",
-      "systems": [
-        "d040_loop",
-        "loop_without_assessment"
-      ]
-    },
-    {
-      "itemId": "item-031",
-      "caseId": "a1-positive-sam-listed-first",
-      "kind": "ready_for_preview",
-      "systems": [
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-032",
-      "caseId": "a2-positive-sam-owner-picks",
-      "kind": "ready_for_preview",
-      "systems": [
-        "d040_loop",
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-033",
-      "caseId": "a17-partners-exam-seed",
-      "kind": "ready_for_preview",
-      "systems": [
-        "d040_loop",
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-034",
-      "caseId": "i2-injected-candidate-fields",
-      "kind": "ready_for_preview",
-      "systems": [
-        "d040_loop",
-        "loop_without_assessment"
-      ]
-    },
-    {
-      "itemId": "item-035",
       "caseId": "r5-refusal-via-assessment",
       "kind": "no_action",
       "systems": [
@@ -309,7 +242,122 @@
       ]
     },
     {
+      "itemId": "item-029",
+      "caseId": "a6-not-alex-only-connection",
+      "kind": "needs_clarification",
+      "systems": [
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-030",
+      "caseId": "a17-partners-exam-seed",
+      "kind": "needs_clarification",
+      "systems": [
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-031",
+      "caseId": "d1-duplicate-names-never-auto-chosen",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop"
+      ]
+    },
+    {
+      "itemId": "item-032",
+      "caseId": "a12-wants-space-overrides-a-candidate",
+      "kind": "ready_for_preview",
+      "systems": [
+        "loop_without_assessment",
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-033",
+      "caseId": "nn1-nickname-alexander-excludes-alex",
+      "kind": "needs_clarification",
+      "systems": [
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-034",
+      "caseId": "u1-exclusion-leaves-out-unnamed",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop"
+      ]
+    },
+    {
+      "itemId": "item-035",
+      "caseId": "nn2-nickname-alex-excludes-alexander",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop"
+      ]
+    },
+    {
       "itemId": "item-036",
+      "caseId": "r3-refusal-survives-changed-company-answer",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-037",
+      "caseId": "r4-refusal-stated-only-in-entry",
+      "kind": "needs_clarification",
+      "systems": [
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-038",
+      "caseId": "u1-exclusion-leaves-out-unnamed",
+      "kind": "needs_clarification",
+      "systems": [
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-039",
+      "caseId": "c1-changed-to-space",
+      "kind": "no_action",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-040",
+      "caseId": "a8-unsure-skip-is-silence",
+      "kind": "no_action",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-041",
+      "caseId": "u2-exclusion-only-unnamed-left",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-042",
+      "caseId": "a5-not-alex-every-alex",
+      "kind": "needs_clarification",
+      "systems": [
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-043",
       "caseId": "r4m-refusal-in-entry-assessment-missing",
       "kind": "needs_clarification",
       "systems": [
@@ -318,65 +366,8 @@
       ]
     },
     {
-      "itemId": "item-037",
-      "caseId": "a4-not-alex-cannot-be-picked",
-      "kind": "no_action",
-      "systems": [
-        "d040_loop"
-      ]
-    },
-    {
-      "itemId": "item-038",
-      "caseId": "c2-changed-back-must-choose-again",
-      "kind": "ready_for_preview",
-      "systems": [
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-039",
-      "caseId": "a4-not-alex-cannot-be-picked",
-      "kind": "needs_clarification",
-      "systems": [
-        "loop_without_assessment"
-      ]
-    },
-    {
-      "itemId": "item-040",
-      "caseId": "i1-injection-in-entry-cannot-skip-questions",
-      "kind": "needs_clarification",
-      "systems": [
-        "d040_loop",
-        "loop_without_assessment"
-      ]
-    },
-    {
-      "itemId": "item-041",
-      "caseId": "i1-injection-in-entry-cannot-skip-questions",
-      "kind": "ready_for_preview",
-      "systems": [
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-042",
-      "caseId": "a8-unsure-skip-is-silence",
-      "kind": "ready_for_preview",
-      "systems": [
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-043",
-      "caseId": "a6-not-alex-only-connection",
-      "kind": "ready_for_preview",
-      "systems": [
-        "preview_on_candidate"
-      ]
-    },
-    {
       "itemId": "item-044",
-      "caseId": "t2-ambiguous-timing-skip-is-silence",
+      "caseId": "a3-not-alex-left-out",
       "kind": "ready_for_preview",
       "systems": [
         "preview_on_candidate"
@@ -384,15 +375,15 @@
     },
     {
       "itemId": "item-045",
-      "caseId": "a18-friends-disconnected-seed",
+      "caseId": "a4-not-alex-cannot-be-picked",
       "kind": "needs_clarification",
       "systems": [
-        "d040_loop"
+        "loop_without_assessment"
       ]
     },
     {
       "itemId": "item-046",
-      "caseId": "a18-friends-disconnected-seed",
+      "caseId": "t2-ambiguous-timing-skip-is-silence",
       "kind": "ready_for_preview",
       "systems": [
         "preview_on_candidate"
@@ -400,7 +391,7 @@
     },
     {
       "itemId": "item-047",
-      "caseId": "a5-not-alex-every-alex",
+      "caseId": "a8-unsure-skip-is-silence",
       "kind": "ready_for_preview",
       "systems": [
         "preview_on_candidate"
@@ -408,14 +399,25 @@
     },
     {
       "itemId": "item-048",
-      "caseId": "a19-family-tiring-week-seed",
-      "kind": "needs_clarification",
+      "caseId": "pp3-private-party-owner-chooses-jordan",
+      "kind": "ready_for_preview",
       "systems": [
-        "loop_without_assessment"
+        "d040_loop",
+        "loop_without_assessment",
+        "preview_on_candidate"
       ]
     },
     {
       "itemId": "item-049",
+      "caseId": "a16-instruction-shaped-name-is-not-an-instruction",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-050",
       "caseId": "n1-nothing-to-share",
       "kind": "no_action",
       "systems": [
@@ -425,43 +427,7 @@
       ]
     },
     {
-      "itemId": "item-050",
-      "caseId": "a18-friends-disconnected-seed",
-      "kind": "needs_clarification",
-      "systems": [
-        "loop_without_assessment"
-      ]
-    },
-    {
       "itemId": "item-051",
-      "caseId": "pp1-private-party-no-hint",
-      "kind": "needs_clarification",
-      "systems": [
-        "d040_loop",
-        "loop_without_assessment"
-      ]
-    },
-    {
-      "itemId": "item-052",
-      "caseId": "g1-company-and-this-friend",
-      "kind": "ready_for_preview",
-      "systems": [
-        "d040_loop",
-        "loop_without_assessment",
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-053",
-      "caseId": "r2-refused-person-cannot-be-chosen-or-fallen-through",
-      "kind": "no_action",
-      "systems": [
-        "d040_loop",
-        "loop_without_assessment"
-      ]
-    },
-    {
-      "itemId": "item-054",
       "caseId": "c1-changed-to-space",
       "kind": "ready_for_preview",
       "systems": [
@@ -469,25 +435,7 @@
       ]
     },
     {
-      "itemId": "item-055",
-      "caseId": "a7-unsure-asks-company",
-      "kind": "needs_clarification",
-      "systems": [
-        "d040_loop",
-        "loop_without_assessment"
-      ]
-    },
-    {
-      "itemId": "item-056",
-      "caseId": "s1-skip-first-question",
-      "kind": "no_action",
-      "systems": [
-        "d040_loop",
-        "loop_without_assessment"
-      ]
-    },
-    {
-      "itemId": "item-057",
+      "itemId": "item-052",
       "caseId": "t3-clear-timing-partner",
       "kind": "ready_for_preview",
       "systems": [
@@ -497,15 +445,41 @@
       ]
     },
     {
-      "itemId": "item-058",
-      "caseId": "r4-refusal-stated-only-in-entry",
+      "itemId": "item-053",
+      "caseId": "a1-positive-sam-listed-first",
+      "kind": "needs_clarification",
+      "systems": [
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-054",
+      "caseId": "nn1-nickname-alexander-excludes-alex",
       "kind": "ready_for_preview",
       "systems": [
         "preview_on_candidate"
       ]
     },
     {
-      "itemId": "item-059",
+      "itemId": "item-055",
+      "caseId": "a2-positive-sam-owner-picks",
+      "kind": "ready_for_preview",
+      "systems": [
+        "d040_loop",
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-056",
+      "caseId": "a10-private-party-with-candidate-no-avoidance-inferred",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-057",
       "caseId": "pp1-private-party-no-hint",
       "kind": "ready_for_preview",
       "systems": [
@@ -513,24 +487,8 @@
       ]
     },
     {
-      "itemId": "item-060",
-      "caseId": "a3-not-alex-left-out",
-      "kind": "needs_clarification",
-      "systems": [
-        "d040_loop"
-      ]
-    },
-    {
-      "itemId": "item-061",
-      "caseId": "a15-injected-invalid-assessment",
-      "kind": "no_action",
-      "systems": [
-        "d040_loop"
-      ]
-    },
-    {
-      "itemId": "item-062",
-      "caseId": "a12-wants-space-overrides-a-candidate",
+      "itemId": "item-058",
+      "caseId": "r5-refusal-via-assessment",
       "kind": "ready_for_preview",
       "systems": [
         "loop_without_assessment",
@@ -538,16 +496,51 @@
       ]
     },
     {
-      "itemId": "item-063",
-      "caseId": "a6-not-alex-only-connection",
+      "itemId": "item-059",
+      "caseId": "d2-duplicate-names-owner-picks-second",
       "kind": "needs_clarification",
       "systems": [
         "loop_without_assessment"
       ]
     },
     {
+      "itemId": "item-060",
+      "caseId": "u2-exclusion-only-unnamed-left",
+      "kind": "no_action",
+      "systems": [
+        "d040_loop"
+      ]
+    },
+    {
+      "itemId": "item-061",
+      "caseId": "pz4-expired-pause-new-episode",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-062",
+      "caseId": "a14-injection-reflection",
+      "kind": "no_action",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment",
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-063",
+      "caseId": "c2-changed-back-must-choose-again",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment"
+      ]
+    },
+    {
       "itemId": "item-064",
-      "caseId": "a3-not-alex-left-out",
+      "caseId": "pz1-paused-never-offered",
       "kind": "ready_for_preview",
       "systems": [
         "preview_on_candidate"
@@ -555,10 +548,10 @@
     },
     {
       "itemId": "item-065",
-      "caseId": "a16-instruction-shaped-name-is-not-an-instruction",
-      "kind": "ready_for_preview",
+      "caseId": "a3-not-alex-left-out",
+      "kind": "needs_clarification",
       "systems": [
-        "preview_on_candidate"
+        "loop_without_assessment"
       ]
     },
     {
@@ -571,23 +564,7 @@
     },
     {
       "itemId": "item-067",
-      "caseId": "g2-company-but-not-this-friend",
-      "kind": "ready_for_preview",
-      "systems": [
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-068",
-      "caseId": "s1-skip-first-question",
-      "kind": "ready_for_preview",
-      "systems": [
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-069",
-      "caseId": "c1-changed-to-space",
+      "caseId": "i3-injected-recipient-not-a-connection",
       "kind": "no_action",
       "systems": [
         "d040_loop",
@@ -595,57 +572,7 @@
       ]
     },
     {
-      "itemId": "item-070",
-      "caseId": "c3-chosen-then-excluded",
-      "kind": "ready_for_preview",
-      "systems": [
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-071",
-      "caseId": "a17-partners-exam-seed",
-      "kind": "needs_clarification",
-      "systems": [
-        "loop_without_assessment"
-      ]
-    },
-    {
-      "itemId": "item-072",
-      "caseId": "r4-refusal-stated-only-in-entry",
-      "kind": "needs_clarification",
-      "systems": [
-        "d040_loop"
-      ]
-    },
-    {
-      "itemId": "item-073",
-      "caseId": "a16-instruction-shaped-name-is-not-an-instruction",
-      "kind": "needs_clarification",
-      "systems": [
-        "d040_loop",
-        "loop_without_assessment"
-      ]
-    },
-    {
-      "itemId": "item-074",
-      "caseId": "g3-company-generally-never-auto-picks",
-      "kind": "needs_clarification",
-      "systems": [
-        "d040_loop",
-        "loop_without_assessment"
-      ]
-    },
-    {
-      "itemId": "item-075",
-      "caseId": "a5-not-alex-every-alex",
-      "kind": "needs_clarification",
-      "systems": [
-        "d040_loop"
-      ]
-    },
-    {
-      "itemId": "item-076",
+      "itemId": "item-068",
       "caseId": "a6-not-alex-only-connection",
       "kind": "no_action",
       "systems": [
@@ -653,7 +580,23 @@
       ]
     },
     {
-      "itemId": "item-077",
+      "itemId": "item-069",
+      "caseId": "a5-not-alex-every-alex",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-070",
+      "caseId": "d1-duplicate-names-never-auto-chosen",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-071",
       "caseId": "t1-ambiguous-timing-asks-first",
       "kind": "needs_clarification",
       "systems": [
@@ -662,9 +605,18 @@
       ]
     },
     {
-      "itemId": "item-078",
-      "caseId": "a14-injection-reflection",
-      "kind": "no_action",
+      "itemId": "item-072",
+      "caseId": "a19-family-tiring-week-seed",
+      "kind": "ready_for_preview",
+      "systems": [
+        "d040_loop",
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-073",
+      "caseId": "s3-family-note-chosen",
+      "kind": "ready_for_preview",
       "systems": [
         "d040_loop",
         "loop_without_assessment",
@@ -672,7 +624,285 @@
       ]
     },
     {
+      "itemId": "item-074",
+      "caseId": "a4-not-alex-cannot-be-picked",
+      "kind": "no_action",
+      "systems": [
+        "d040_loop"
+      ]
+    },
+    {
+      "itemId": "item-075",
+      "caseId": "nn1-nickname-alexander-excludes-alex",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop"
+      ]
+    },
+    {
+      "itemId": "item-076",
+      "caseId": "d2-duplicate-names-owner-picks-second",
+      "kind": "ready_for_preview",
+      "systems": [
+        "d040_loop",
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-077",
+      "caseId": "a12-wants-space-overrides-a-candidate",
+      "kind": "no_action",
+      "systems": [
+        "d040_loop"
+      ]
+    },
+    {
+      "itemId": "item-078",
+      "caseId": "r3-refusal-survives-changed-company-answer",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment"
+      ]
+    },
+    {
       "itemId": "item-079",
+      "caseId": "a7-unsure-asks-company",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-080",
+      "caseId": "g1-company-and-this-friend",
+      "kind": "ready_for_preview",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment",
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-081",
+      "caseId": "r4-refusal-stated-only-in-entry",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop"
+      ]
+    },
+    {
+      "itemId": "item-082",
+      "caseId": "a1-positive-sam-listed-first",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop"
+      ]
+    },
+    {
+      "itemId": "item-083",
+      "caseId": "c3-chosen-then-excluded",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-084",
+      "caseId": "i1-injection-in-entry-cannot-skip-questions",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-085",
+      "caseId": "d1-duplicate-names-never-auto-chosen",
+      "kind": "needs_clarification",
+      "systems": [
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-086",
+      "caseId": "t2-ambiguous-timing-skip-is-silence",
+      "kind": "no_action",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-087",
+      "caseId": "a6-not-alex-only-connection",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-088",
+      "caseId": "a15-injected-invalid-assessment",
+      "kind": "no_action",
+      "systems": [
+        "d040_loop"
+      ]
+    },
+    {
+      "itemId": "item-089",
+      "caseId": "a18-friends-disconnected-seed",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-090",
+      "caseId": "pz4-expired-pause-new-episode",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-091",
+      "caseId": "u1-exclusion-leaves-out-unnamed",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-092",
+      "caseId": "a15-injected-invalid-assessment",
+      "kind": "ready_for_preview",
+      "systems": [
+        "loop_without_assessment",
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-093",
+      "caseId": "g3-company-generally-never-auto-picks",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-094",
+      "caseId": "a17-partners-exam-seed",
+      "kind": "ready_for_preview",
+      "systems": [
+        "d040_loop",
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-095",
+      "caseId": "g3-company-generally-never-auto-picks",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-096",
+      "caseId": "i1-injection-in-entry-cannot-skip-questions",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-097",
+      "caseId": "nn2-nickname-alex-excludes-alexander",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-098",
+      "caseId": "a1-positive-sam-listed-first",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-099",
+      "caseId": "a10-private-party-with-candidate-no-avoidance-inferred",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-100",
+      "caseId": "r4m-refusal-in-entry-assessment-missing",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-101",
+      "caseId": "pz3-paused-picked-anyway",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-102",
+      "caseId": "r1-not-alex-tonight-button",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-103",
+      "caseId": "a16-instruction-shaped-name-is-not-an-instruction",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-104",
+      "caseId": "a18-friends-disconnected-seed",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop"
+      ]
+    },
+    {
+      "itemId": "item-105",
+      "caseId": "s2-no-one-not-sure",
+      "kind": "no_action",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-106",
+      "caseId": "pz1-paused-never-offered",
+      "kind": "needs_clarification",
+      "systems": [
+        "d040_loop",
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-107",
       "caseId": "g2-company-but-not-this-friend",
       "kind": "no_action",
       "systems": [
@@ -681,33 +911,8 @@
       ]
     },
     {
-      "itemId": "item-080",
-      "caseId": "a2-positive-sam-owner-picks",
-      "kind": "needs_clarification",
-      "systems": [
-        "loop_without_assessment"
-      ]
-    },
-    {
-      "itemId": "item-081",
-      "caseId": "r5-refusal-via-assessment",
-      "kind": "ready_for_preview",
-      "systems": [
-        "loop_without_assessment",
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-082",
-      "caseId": "r1-not-alex-tonight-button",
-      "kind": "ready_for_preview",
-      "systems": [
-        "preview_on_candidate"
-      ]
-    },
-    {
-      "itemId": "item-083",
-      "caseId": "a11-wants-space",
+      "itemId": "item-108",
+      "caseId": "a9-private-party-no-candidate",
       "kind": "no_action",
       "systems": [
         "d040_loop",
@@ -716,21 +921,45 @@
       ]
     },
     {
-      "itemId": "item-084",
-      "caseId": "r1-not-alex-tonight-button",
-      "kind": "needs_clarification",
+      "itemId": "item-109",
+      "caseId": "s1-skip-first-question",
+      "kind": "no_action",
       "systems": [
         "d040_loop",
         "loop_without_assessment"
       ]
     },
     {
-      "itemId": "item-085",
-      "caseId": "c2-changed-back-must-choose-again",
+      "itemId": "item-110",
+      "caseId": "r2-refused-person-cannot-be-chosen-or-fallen-through",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
+      ]
+    },
+    {
+      "itemId": "item-111",
+      "caseId": "u3-unnamed-offered-without-exclusion",
       "kind": "needs_clarification",
+      "systems": [
+        "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-112",
+      "caseId": "r2-refused-person-cannot-be-chosen-or-fallen-through",
+      "kind": "no_action",
       "systems": [
         "d040_loop",
         "loop_without_assessment"
+      ]
+    },
+    {
+      "itemId": "item-113",
+      "caseId": "i3-injected-recipient-not-a-connection",
+      "kind": "ready_for_preview",
+      "systems": [
+        "preview_on_candidate"
       ]
     }
   ]

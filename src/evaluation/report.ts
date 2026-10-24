@@ -73,6 +73,8 @@ const systemRows = Object.entries(DECISION_SYSTEMS).map(([name, sys]) => {
   const r = decisions.cases.map(c => scoreCase(decisions, c, sys));
   return `| ${name} | ${pct(r.filter(x => x.matches).length, r.length)} | ${pct(r.filter(x => x.silence).length, expectedNoAction.length)} | ${pct(r.filter(x => x.missed).length, expectedPreview)} | ${r.filter(x => x.unsafe).length} | ${r.filter(x => x.excludedSurfaced.length).length} | ${r.filter(x => x.leaks.length).length} / ${r.reduce((n, x) => n + x.leaks.length, 0)} |`;
 });
+const replayArtifacts = decisions.cases.filter(c => scoreCase(decisions, c, DECISION_SYSTEMS.loop_without_assessment!).missed
+  && !c.steps.some(st => 'company' in st)).map(c => c.id);
 const ratingsDir = new URL('./results/ratings/', import.meta.url);
 let ratingsText = 'Status: **not collected (0 of 2 raters)**. Generate sheets with `node src/evaluation/rate.ts --sheets`.\n';
 try {
@@ -139,7 +141,7 @@ ${nearbyCases.cases.map((c, i) => `| ${c.id} | ${nearby.map(s => {
 }).join(' | ')} |`).join('\n')}
 
 ## Core 1/2 decision loop (D040 assessment → CS decide()), ${scored.length} labeled cases (${scored.filter(x => (x.c as { reflectionRef?: string }).reflectionRef).length} from AI's reflection fixture)
-Pipeline: \`initialLoopState(candidate, assessment)\` → owner steps → \`decide(state, assessedRecipients(recipients, assessment))\`. AI fixture outputs are hand-written, not recorded Claude responses, so this measures the loop given an assessment, not Claude's accuracy.
+Pipeline (as CS's \`DecisionLoop\` composes it): \`initialLoopState(candidate, assessment)\` → owner steps; recipients → \`withoutPaused\` (D041) → \`applyUnnamedExclusionGuard\` → \`assessedRecipients\` → \`decide\`. AI fixture outputs are hand-written, not recorded Claude responses, so this measures the loop given an assessment, not Claude's accuracy.
 
 | Metric | Actual |
 |---|---|
@@ -155,7 +157,7 @@ Pipeline: \`initialLoopState(candidate, assessment)\` → owner steps → \`deci
 ${scored.map(({ c, s }) => `| ${c.id} | ${c.pair} | ${c.expected.kind}${c.expected.reason ? `: ${c.expected.reason}` : ''} | ${outcomeOf(s.outcome)}${s.leaks.length ? ` (**leak:** ${s.leaks.map(l => `${l.label}/${l.surface}`).join(', ')})` : ''} | ${s.matches ? '' : c.knownGap ? 'known gap' : '**mismatch**'}${(c as { labelHistory?: unknown[] }).labelHistory ? ' relabeled by DS owner (v1 label in labelHistory)' : ''} |`).join('\n')}
 
 ## Core 3: deterministic baselines vs the D040 loop (same ${decisions.cases.length} cases and DS labels)
-\`loop_without_assessment\` is CS's loop with the assessment dropped (the pre-D040 path); \`preview_on_candidate\` is DS's \`matching.ts\` \`buildPreview\` used as a "support match is enough" rule (previews for the picked or first connection, ignores space, skip, exclusions and the assessment). Excluded people are judged against the D040 episode for every system. Every system replays the same recorded owner taps; where D040 skipped the company question (\`wants_connection\`), the no-assessment loop stops at that question, so its 3 missed suggestions (a2, a17, a19) partly reflect the replayed taps rather than a design choice. Metrics stay separate: a forbidden disclosure is not counted as an unsafe suggestion or vice versa.
+\`loop_without_assessment\` is CS's loop with the assessment dropped (the pre-D040 path); \`preview_on_candidate\` is DS's \`matching.ts\` \`buildPreview\` used as a "support match is enough" rule (previews for the picked or first connection, ignores space, skip, exclusions and the assessment). Excluded people are judged against the D040 episode for every system. Every system replays the same recorded owner taps; where D040 skipped the company question (\`wants_connection\`), the no-assessment loop stops at that question, so its missed suggestions in ${replayArtifacts.join(', ') || 'no case'} reflect the replayed taps rather than a design choice. Metrics stay separate: a forbidden disclosure is not counted as an unsafe suggestion or vice versa.
 
 | System | Expected outcome | Appropriate silence | Missed suggestions | Unsafe suggestions | Excluded person surfaced (cases) | Forbidden disclosures (cases / terms) |
 |---|---|---|---|---|---|---|

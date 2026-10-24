@@ -4,6 +4,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { NUDGE_TEMPLATE_COPY } from '@dor/contracts';
+import { SIGNAL_LIFETIME_MS } from '@dor/contracts/policy';
+import { buildNudge, matchSignal } from '../matching.ts';
 import { NO_ACTION_COPY, QUESTION_COPY, QUESTION_NOTE } from '../../components/feature/decision-loop-model.ts';
 import {
   FORBIDDEN_LABELS, leaksOf, observable, replay, resolveCases, scoreCase, surfacesOf, type DecisionCase,
@@ -50,7 +52,8 @@ for (const c of file.cases) {
 
 test('known gaps still fail as labeled (remove knownGap when this test breaks)', () => {
   const gaps = file.cases.filter((c) => c.knownGap);
-  assert.deepEqual(gaps.map((c) => c.id).sort(), ['r4m-refusal-in-entry-assessment-missing']);
+  assert.deepEqual(gaps.map((c) => c.id).sort(), ['nn1-nickname-alexander-excludes-alex', 'nn2-nickname-alex-excludes-alexander',
+    'r4m-refusal-in-entry-assessment-missing']);
   for (const c of gaps) assert.equal(scoreCase(file, c).matches, false, c.id);
 });
 
@@ -93,7 +96,7 @@ test('injected candidate: even where decide() passes it through, the exact previ
 
 /** Every prefix of a case's steps, i.e. every screen the owner could see on the way. */
 const prefixes = (c: DecisionCase) => Array.from({ length: c.steps.length + 1 }, (_, i) => replay(file, c.story, c.candidate,
-  c.recipients, c.steps.slice(0, i), c.assessment));
+  c.recipients, c.steps.slice(0, i), c.assessment, c.pauses));
 
 test('excluded stays excluded: no screen of any case offers or previews a person the episode left out', () => {
   for (const c of file.cases.filter((c) => !c.knownGap)) for (const [i, r] of prefixes(c).entries()) {
@@ -133,3 +136,40 @@ test('fixed copy: no question, note, no-action or template text carries a story 
   // The README's unacceptable question is not reachable.
   for (const text of fixed) assert.doesNotMatch(text, /ask (them )?about|friday|night/i);
 });
+
+test('pause noninterference (D041): pausing a third person changes nothing about the chosen person\'s preview', () => {
+  const steps = [{ company: 'company' as const }, { who: 'p-sam' }];
+  const pause = { pairId: 'p-alex', version: 1, expiresAt: '2026-10-25T06:00:00Z', active: true, createdAt: '2026-10-24T17:00:00Z' };
+  const run = (pauses: typeof pause[]) => {
+    const { outcome } = replay(file, 'SYNTHETIC: a short call with Sam would help.', { supportMode: 'short_call' }, ['p-sam', 'p-alex'], steps, null, pauses);
+    return JSON.stringify({ outcome, surfaces: surfacesOf(file, outcome) });
+  };
+  assert.equal(run([pause]), run([]));
+  assert.match(run([]), /ready_for_preview/);
+});
+
+// core3-audit.md: timing counts as disclosure. Hold everything fixed except when the sender approved.
+const nudgeAt = (approvedMinutesBeforeCommit: number) => {
+  const now = new Date(file.clock);
+  const approvedAt = now.getTime() - approvedMinutesBeforeCommit * 60_000;
+  const signal = { schemaVersion: 2, signalId: 'sig-timing', pairId: 'p-sam', senderId: file.ownerId, recipientId: 'friend-sam',
+    purpose: 'support_nudge', supportMode: 'short_call', consentVersion: 1, recipientPolicyId: 'decision-eval-policy',
+    recipientPolicyVersion: 1, presetAssignmentVersion: 1, expiresAt: new Date(approvedAt + SIGNAL_LIFETIME_MS).toISOString() };
+  const ack = { schemaVersion: 1, signalId: 'sig-timing', recipientConsentId: 'consent-1', recipientConsentVersion: 1,
+    decision: 'compatible', supportMode: 'short_call' };
+  const m = matchSignal({ signal, policy: { allowed: true, reason: 'ok' }, ack, now, inQuietHours: false, lastNudgeAt: null });
+  assert.equal(m.outcome, 'nudge');
+  return m.outcome === 'nudge' ? buildNudge(signal as never, ack as never, m, { id: 'nudge-timing', now }) : null;
+};
+
+test('timing (sender_approval_timing): recipient-visible copy does not depend on when the sender approved', () => {
+  assert.equal(NUDGE_TEMPLATE_COPY[nudgeAt(5)!.templateId], NUDGE_TEMPLATE_COPY[nudgeAt(600)!.templateId]);
+});
+
+test('timing (sender_approval_timing): the nudge row the recipient can subscribe to does not encode approval time',
+  { todo: "core3-audit.md HIGH: today's row carries expires_at = approval + lifetime, so approval time is recoverable. Owner: Cyber (narrow my_nudges row with a coarsened visible_until). DS models the same row shape in matching.ts buildNudge." }, () => {
+    const { id: _a, ...early } = nudgeAt(5)!;
+    const { id: _b, ...late } = nudgeAt(600)!;
+    assert.deepEqual(early, late);
+  });
+

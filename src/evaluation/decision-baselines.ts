@@ -2,10 +2,11 @@
  * DS Core 3: deterministic comparison systems for the decision loop. Evaluation only; nothing here ships.
  *
  * - `d040_loop`: the current pipeline (decision-loop.ts `d040Loop`).
- * - `loop_without_assessment`: CS's existing loop with the assessment dropped (the pre-D040 path). Same owner taps.
+ * - `loop_without_assessment`: CS's existing loop with the assessment dropped (the pre-D040 path; pauses still apply).
+ *   Same owner taps.
  * - `preview_on_candidate`: DS's existing support baseline (`matching.ts` `buildPreview`) used as a generic
  *   "support match is enough" rule: whenever a candidate is shareable it previews for the person the owner picked,
- *   else the first connection. It ignores space, skip, exclusions and the assessment. README calls this insufficient;
+ *   else the first connection. It ignores space, skip, exclusions, pauses and the assessment. README calls this insufficient;
  *   it is the strawman that shows what the loop prevents, never a candidate design.
  */
 import { RecipientPresetAssignmentSchema, RelationshipPresetSchema } from '@dor/contracts';
@@ -14,7 +15,7 @@ import { d040Loop, recipientsOf, replay, type DecisionSystem } from './decision-
 import { buildPreview } from './matching.ts';
 
 export const loopWithoutAssessment: DecisionSystem = (file, c) =>
-  replay(file, c.story, c.candidate, c.recipients, c.steps, null).outcome;
+  replay(file, c.story, c.candidate, c.recipients, c.steps, null, c.pauses).outcome;
 
 export const previewOnCandidate: DecisionSystem = (file, c): Outcome => {
   const people = recipientsOf(file, c.recipients);

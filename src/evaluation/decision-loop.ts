@@ -1,8 +1,9 @@
 /**
  * DS Core 1/2 evaluator for the owner-only decision loop (README "Reasoning layer", PRIVATE_DECISION_LOOP.md).
  *
- * Replays a case through the D040 path the journal uses: `initialLoopState(candidate, assessment)` (AI), the owner's
- * taps (CS step functions), then `decide(state, assessedRecipients(recipients, assessment))`. It collects every
+ * Replays a case through the composition CS's `DecisionLoop` renders: `initialLoopState(candidate, assessment)` (AI),
+ * the owner's taps (CS step functions), and on the recipient side `withoutPaused` (CS, D041) →
+ * `applyUnnamedExclusionGuard` (CS) → `assessedRecipients` (AI) → `decide`. It collects every
  * surface the case can produce: owner-facing system copy (question, note, no-action copy, preview sentence),
  * recipient-visible copy (preview recipientCopy, nudge template) and the offered/previewed people. Scores the
  * result against labels written before any run (fixtures/decision-cases.json); never relabels to match.
@@ -17,9 +18,11 @@ import {
   previewDisclosure, type DisclosurePreview, type RelationshipPreset, type SignalCandidate,
 } from '@dor/contracts';
 import {
-  NO_ACTION_COPY, QUESTION_COPY, QUESTION_NOTE, answerCompany, answerWho, decide, excludeForNow,
+  NO_ACTION_COPY, QUESTION_COPY, QUESTION_NOTE, answerCompany, answerWho, applyUnnamedExclusionGuard, decide, excludeForNow,
   type CompanyAnswer, type LoopState, type Outcome, type Recipient,
 } from '../components/feature/decision-loop-model.ts';
+import { withoutPaused } from '../components/feature/pause-model.ts';
+import type { RecipientPause } from '../lib/backend/ports.ts';
 import { assessedRecipients, initialLoopState, leftOutByAssessment } from '../features/voice/assessment.ts';
 import { buildNudge, matchSignal } from './matching.ts';
 
@@ -29,7 +32,8 @@ export const FORBIDDEN_LABELS = [
 export type ForbiddenLabel = typeof FORBIDDEN_LABELS[number];
 
 export type Step = { company: CompanyAnswer } | { who: string } | { exclude: string };
-export interface Person { name: string; recipientId: string; relationship: string }
+/** `unnamed`: `name` is CS's generated label for a connection without a display name ("Connection 1"). */
+export interface Person { name: string; recipientId: string; relationship: string; unnamed?: boolean }
 export interface DecisionCase {
   id: string; pair: string; group: 'support' | 'avoid' | 'uncertain'; relationship: string;
   story: string;
@@ -38,6 +42,8 @@ export interface DecisionCase {
   /** D040 PrivateAssessment handed to the loop (may be deliberately invalid); null = missing. */
   assessment: unknown;
   steps: Step[];
+  /** The owner's own D041 pause rows (`my_recipient_pauses`), judged in force at the fixture clock. */
+  pauses?: RecipientPause[];
   expected: { kind: Outcome['kind']; reason?: string; recipient?: string; question?: string; options?: string[] };
   forbidden: Partial<Record<ForbiddenLabel, string[]>>;
   knownGap?: string;
@@ -96,7 +102,7 @@ const SYNTHETIC_PRESET = (ownerId: string, now: Date): RelationshipPreset => Rel
 });
 
 export function recipientsOf(file: DecisionFile, ids: readonly string[]): Recipient[] {
-  return ids.map((pairId) => ({ pairId, name: file.people[pairId]!.name }));
+  return ids.map((pairId) => ({ pairId, name: file.people[pairId]!.name, ...(file.people[pairId]!.unnamed ? { unnamed: true } : {}) }));
 }
 
 /**
@@ -104,7 +110,8 @@ export function recipientsOf(file: DecisionFile, ids: readonly string[]): Recipi
  * contract rejects are passed through raw, so what is measured is the loop's own handling of them.
  */
 export function replay(file: DecisionFile, story: string, candidate: unknown, recipientIds: readonly string[],
-  steps: readonly Step[], assessment: unknown = null): { state: LoopState; outcome: Outcome; excluded: string[] } {
+  steps: readonly Step[], assessment: unknown = null, pauses: readonly RecipientPause[] = [],
+): { state: LoopState; outcome: Outcome; excluded: string[] } {
   const reflection = PrivateReflectionSchema.safeParse({ schemaVersion: 1, reflection: story, candidate,
     ...(assessment === null ? {} : { assessment }) });
   const c = reflection.success ? reflection.data.candidate : (candidate as SignalCandidate | null);
@@ -115,9 +122,14 @@ export function replay(file: DecisionFile, story: string, candidate: unknown, re
     else if ('who' in step) s = answerWho(s, step.who);
     else s = excludeForNow(s, step.exclude);
   }
-  const recipients = recipientsOf(file, recipientIds);
-  const excluded = [...new Set([...s.excluded, ...leftOutByAssessment(recipients, a).map((r) => r.pairId)])];
-  return { state: s, outcome: decide(s, assessedRecipients(recipients, a)), excluded };
+  const all = recipientsOf(file, recipientIds);
+  const { eligible: unpaused } = withoutPaused(all, pauses, new Date(file.clock));
+  const named = (a as { excludedNames?: unknown } | undefined)?.excludedNames;
+  const { kept, leftOutUnnamed } = applyUnnamedExclusionGuard(unpaused, Array.isArray(named) && named.length > 0);
+  const paused = all.filter((r) => !unpaused.includes(r));
+  const excluded = [...new Set([...s.excluded, ...paused.map((r) => r.pairId), ...leftOutUnnamed.map((r) => r.pairId),
+    ...leftOutByAssessment(kept, a).map((r) => r.pairId)])];
+  return { state: s, outcome: decide(s, assessedRecipients(kept, a)), excluded };
 }
 
 export function surfacesOf(file: DecisionFile, outcome: Outcome): Surfaces {
@@ -173,14 +185,14 @@ function matchesExpected(c: DecisionCase, o: Outcome): boolean {
 export type DecisionSystem = (file: DecisionFile, c: DecisionCase) => Outcome;
 
 /** The current pipeline: D040 assessment → owner taps → CS decide(). */
-export const d040Loop: DecisionSystem = (file, c) => replay(file, c.story, c.candidate, c.recipients, c.steps, c.assessment).outcome;
+export const d040Loop: DecisionSystem = (file, c) => replay(file, c.story, c.candidate, c.recipients, c.steps, c.assessment, c.pauses).outcome;
 
 /**
  * Scores one system on one case. Who the episode excluded (owner taps + entry assessment) is taken from the D040
  * replay for every system, so a baseline that ignores an exclusion is charged for surfacing that person.
  */
 export function scoreCase(file: DecisionFile, c: DecisionCase, system: DecisionSystem = d040Loop): DecisionScore {
-  const { excluded } = replay(file, c.story, c.candidate, c.recipients, c.steps, c.assessment);
+  const { excluded } = replay(file, c.story, c.candidate, c.recipients, c.steps, c.assessment, c.pauses);
   const outcome = system(file, c);
   const surfaces = surfacesOf(file, outcome);
   const leaks = leaksOf(file, c, surfaces);

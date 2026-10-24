@@ -97,6 +97,18 @@ Status: PR #25 (open), `role/ds-context` merged with main `71c3b6a` (README core
 - **Team ask:** two teammates who didn't write the labels each fill one sheet in `src/evaluation/results/ratings/`, independently. DS then runs `node src/evaluation/rate.ts --score` and the report.
 - **Unchanged:** r4m stays a todo pending D042; i2 stays a todo pending CS's candidate validation.
 
+## Core 1–3 status (2026-10-25T00:30Z, PR pending)
+- **Pipeline:** the evaluator replays CS's current `DecisionLoop` composition: pauses (D041) → unnamed-exclusion guard → assessment → `decide`. i2 was closed by CS (`1c452b9`).
+- **Cases:** 55 (+11 audit cases: unnamed, duplicate names, pause, nickname).
+- **Results:** 55 cases: 52/55, appropriate silence 22/22, missed 0/9, unsafe suggestions 0 (i2 closed by CS 1c452b9), excluded surfaced 0, forbidden-disclosure findings 3 cases (r4m, nn1, nn2).
+- **Baselines:** `loop_without_assessment` 34/55, unsafe 3, excluded surfaced 8; `preview_on_candidate` 14/55, unsafe 41, excluded surfaced 12. Ratings are not collected (113 blinded items).
+- **Open:**
+  - **r4m:** pending D042.
+  - **nn1/nn2:** nickname exclusions fail open (AI).
+  - **Approval-timing row:** todo pending Cyber's `my_nudges` fix.
+  - **f4 quiz "space":** the old global promise; needs a DS owner decision.
+  - **a3:** Cyber.
+
 ## Next for DS: core-first (README "Current direction", Core 1–4)
 Discovery/event ranking work is paused. Don't expand it until the core passes live verification. The earlier "D038/D039 metrics cases" and "first-session recommendations" items are dropped.
 1. **Core 1:** before any model evaluation, define the expected owner-side outcome (`no_action` / `needs_clarification` / `ready_for_preview`, still a proposed vocabulary) for support, avoid and uncertain recipient intent, plus the forbidden-disclosure labels (unapproved party, activity, location, excuse, tension, timing). Co-define them with Adam (assessment output) and Sumedh (recipient restriction).
