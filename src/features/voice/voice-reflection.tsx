@@ -58,6 +58,8 @@ export function VoiceReflection({ vault, reflect, getVoiceSession, onCandidate, 
   const [speaking, setSpeaking] = useState<{ stop(): void } | null>(null);
   const [, setVaultVersion] = useState(() => vault.getVersion());
   const entry = useRef<HTMLTextAreaElement>(null);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   useEffect(() => vault.subscribe(() => setVaultVersion(vault.getVersion())), [vault]);
   // Leaving the page stops playback and abandons any in-flight reflection.
@@ -130,6 +132,7 @@ export function VoiceReflection({ vault, reflect, getVoiceSession, onCandidate, 
     if (speaking) { speaking.stop(); setSpeaking(null); return; }
     try {
       const session = await sessionFn();
+      if (!mounted.current || vault.locked) return;
       const playback = speak(session, speakableText(text));
       setSpeaking(playback);
       await playback.done.catch(() => undefined);

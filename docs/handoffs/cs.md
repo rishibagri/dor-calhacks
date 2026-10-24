@@ -1,3 +1,20 @@
+# CS handoff — 2026-10-24T20:30Z, role/cs-app (CS-R3)
+
+Status: CS-R3 implemented in code, **offline-verified only**. No Apify run, no published module.
+
+## Interfaces
+- `SharedStatePort`: `publishEventIntent`, `revokeEventIntent`, `revokeActivityInterest`, `respondPlan`, `cancelPlan`; views `catalogueEvents`, `myEventIntents`, `eventCompanions`, `myActivityApprovals`, `myPlans`.
+- `/events`: DS `eligibleEvents` over the viewer's area, Cyber `intentPreviewCopy` before marking, `sourceAgeLabel`, safe links, mutual companions with "Introduce yourself", `PlansList` with `PLAN_STATUS_COPY` / `planAcceptCopy`.
+- Privacy: Cyber `EventPrivacyControls` composed (`src/components/feature/event-privacy.tsx`).
+- Ingestion: `src/lib/catalogue/ingest.ts` (pure; `guardPublicCatalogueQuery` per topic, `guardCatalogueEvent` per record, stable IDs, dedupe, instruction-title filter); `scripts/ingest-catalogue.ts --fixture|--fetch [--commit db] [--force]` with lock file and 6 h refresh window. Regional source lives in an Apify *task* (APIFY_TASK_ID); requests carry only guarded generic fields.
+
+## Blockers / next consumer
+- C7 activity approval UI for existing pairs is not built: `SHARING_CATEGORIES` lacks `activity_interest`, so no preset can allow it (Cyber/contract change first).
+- Apify task/Actor not selected; `FIELD_MAP` and `SOURCE_HOSTS` are proposals for Cyber review before a paid run.
+- AI: worker must call `commit_plan_proposal` from `worker_plan_candidates`; until then `my_plans` is empty.
+
+---
+
 # CS handoff — 2026-10-24T19:00Z, role/cs-app (PR #22)
 
 Status: CS-R1 complete in code, CS-R2 complete in code. **Offline-verified only**: the module has not been published, no two-account run, no browser geolocation or network trace.
@@ -81,3 +98,13 @@ npm ci
 npm run check:all      # contracts + module harness + app typecheck
 npm run dev            # http://localhost:3000, unconfigured mode without env
 ```
+
+## CS integration PR — 2026-10-24
+- Branch: codex/cs-app-integration. Imported Desktop generated bindings/build fixes are included; Desktop and its stash remain untouched.
+- Implemented: hashed account vault namespace, canceled initialization guard, pagehide/sign-out lock, reactive vault hooks; composed journal/voice/privacy controls and saved-entry access. Shared contract types unchanged. AI voice copy corrected to disclose audio transmission when recording.
+- @Cyber: review account lifecycle composition and relationship-safety regression; no authorization semantics changed. @AI: review VoiceReflection composition; sharing callback remains unwired intentionally until explicit recipient preview exists. @DS: discovery UI still awaits CS state composition.
+- Verification: 20 focused tests (vault controls, voice model, isolation/lifecycle and private-event leakage), typecheck, production webpack build; baseline offline checks previously 441 pass + 1 TODO. No live provider/database claim.
+- Remaining: approval/preference UI, discovery/event/catalogue integration, deployed auth and worker credentials, browser microphone/account-switch E2E. Personal assessment remains outside Git.
+
+## PR #23 merge reconciliation
+Merged main 6093b2a into this branch, retaining both chronological CS update logs. Main already includes recipient settings, ShareReview/revocation, Discover and newer generated bindings; those implementations are preserved. Earlier missing-feature notes above are historical. Remaining branch changes are saved-entry refresh, relationship-safety regression/docs and voice lifecycle follow-ups. Adam retains SDK ownership; no SDK implementation changed. Core-first planning remains in PR #26.
