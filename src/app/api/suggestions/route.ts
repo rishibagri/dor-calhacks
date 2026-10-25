@@ -4,6 +4,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { auth } from '@clerk/nextjs/server';
+import { tracked } from '@/server/activity';
 import { z } from 'zod';
 import { RateLimiter } from '@dor/agents';
 import { MAX_CANDIDATES, SUGGESTIONS_SYSTEM_PROMPT, validatePicks, type SuggestionItem } from '@/reasoning/runtime/suggestions';
@@ -28,7 +29,7 @@ const PicksSchema = z.object({ picks: z.array(z.object({ id: z.string(), why: z.
 
 const json = (status: number, body: unknown) => Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
 
-export async function POST(request: Request): Promise<Response> {
+async function handle(request: Request): Promise<Response> {
   if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) return json(503, { error: 'not_configured' });
   const { userId } = await auth();
   if (!userId) return json(401, { error: 'unauthenticated' });
@@ -58,4 +59,10 @@ export async function POST(request: Request): Promise<Response> {
     console.log(JSON.stringify({ at: new Date().toISOString(), event: 'suggestions_call', model: MODEL, durationMs: Date.now() - started, outcome: code }));
     return json(502, { error: code });
   }
+}
+
+/** D060 backstage activity (metadata only): start, finish and outcome of this call. */
+export async function POST(request: Request): Promise<Response> {
+  const userId = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (await auth()).userId : null;
+  return tracked('claude', 'for-you suggestions', userId, () => handle(request));
 }

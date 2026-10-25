@@ -1,6 +1,7 @@
 // AI-owned route (claimed in docs/updates/ai.md; CS owns session middleware and app wiring).
 // Transient Claude reflection over owner-selected text. Never log or persist request bodies.
 import { auth } from '@clerk/nextjs/server';
+import { tracked } from '@/server/activity';
 import { ClaudeReflectionAdapter, InFlightRequests, RateLimiter, handleReflectionRequest, type RouteSession } from '@dor/agents';
 import type { PrivateReflection } from '@dor/contracts';
 
@@ -19,5 +20,7 @@ async function session(): Promise<RouteSession> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  return handleReflectionRequest(request, { session: await session(), reflection, limiter, inFlight });
+  const s = await session();
+  // D060 backstage activity (metadata only).
+  return tracked('claude', 'journal reflection', s.userId, () => handleReflectionRequest(request, { session: s, reflection, limiter, inFlight }));
 }

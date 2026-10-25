@@ -14,6 +14,7 @@ import {
   type DetailArgs, type PlaceArgs,
 } from '@/server/discovery/google';
 import { PLACE_KINDS } from '@dor/contracts/policy';
+import { begin } from '@/server/activity';
 
 export interface RefreshState {
   id: string;
@@ -115,7 +116,7 @@ async function save(conn: DbConnection, reducer: string, rows: Record<string, un
 }
 
 /** Starts a refresh unless one is running or finished within the last minute; returns the current state. */
-export function startRefresh(env: Record<string, string | undefined>): RefreshState {
+export function startRefresh(env: Record<string, string | undefined>, userId: string | null = null): RefreshState {
   if (current?.status === 'running') return structuredClone(current);
   if (current?.finishedAt && Date.now() - Date.parse(current.finishedAt) < COOLDOWN_MS) return structuredClone(current);
   const token = env.APIFY_API_TOKEN?.trim();
@@ -125,6 +126,7 @@ export function startRefresh(env: Record<string, string | undefined>): RefreshSt
     rejected: 0, errors: [],
   };
   current = state;
+  const end = begin('apify', 'live catalogue refresh', userId);
   void (async () => {
     try {
       if (!token) throw new Error('apify_not_configured');
@@ -153,6 +155,7 @@ export function startRefresh(env: Record<string, string | undefined>): RefreshSt
     } finally {
       state.phase = 'finished';
       state.finishedAt = new Date().toISOString();
+      end(state.status === 'done' ? 'ok' : 'error');
     }
   })();
   return structuredClone(state);

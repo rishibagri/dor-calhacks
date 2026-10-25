@@ -1,5 +1,6 @@
 // Drafts a friend-of-friend first message with Claude. The owner edits and sends it themselves.
 import { auth } from '@clerk/nextjs/server';
+import { tracked } from '@/server/activity';
 import { ClaudeOpenerAdapter, RateLimiter, handleOpenerRequest, type RouteSession } from '@dor/agents';
 
 // Usage lines are metadata only (model, timing, cache hits, outcome): never message text or user IDs.
@@ -14,5 +15,7 @@ async function session(): Promise<RouteSession> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  return handleOpenerRequest(request, { session: await session(), opener, limiter });
+  const s = await session();
+  // D060 backstage activity (metadata only).
+  return tracked('claude', 'friend-of-friend opener', s.userId, () => handleOpenerRequest(request, { session: s, opener, limiter }));
 }
