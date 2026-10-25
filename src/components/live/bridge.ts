@@ -536,7 +536,7 @@ export class LiveBridge {
       const host = e.sourceUrl ? new URL(e.sourceUrl).hostname.replace(/^www\./, '') : 'source';
       return { id: e.eventId, title: e.title, day: at.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
         time: at.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }), area: areaLabel(e.areaKey) ?? 'Nearby',
-        src: /lu\.?ma/.test(host) ? 'Luma' : host, why: e.topics.length ? e.topics.map(tagLabel).join(' · ') : 'nearby', ...pos, sample: false };
+        src: /lu\.?ma/.test(host) ? 'Luma' : host === 'source' ? 'Google' : host, why: e.topics.length ? e.topics.map(tagLabel).join(' · ') : 'nearby', ...pos, sample: false };
     });
     const sharedEvents = Object.fromEntries(shared.myEventIntents().filter((x) => isIntentActive(x, now.getTime())).map((x) => [x.eventId, true]));
     Object.assign(i, { PEOPLE, BOXSLOT, SINCE, HIST: {}, PHOTOS: {}, HOME: [], CARDS, FLY, PLANS: [] });
