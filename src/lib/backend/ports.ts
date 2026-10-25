@@ -124,6 +124,17 @@ export interface IntroductionView {
   expiresAt: string | null;
 }
 
+/**
+ * The viewer's own latest "Suggest someone" request (`my_introduction_suggestion_request`, D048): `open` while the
+ * worker may still answer (before expiresAt), `done` once it ran. Status only: never why, or who was considered.
+ */
+export interface IntroductionSuggestionRequestView {
+  requestId: string;
+  status: 'open' | 'done';
+  createdAt: string;
+  expiresAt: string;
+}
+
 /** The viewer's own AI introduction suggestion (`my_introduction_proposals`). A suggestion, never a request. */
 export interface IntroductionProposalView {
   proposalId: string;
@@ -368,6 +379,7 @@ export interface SharedStatePort {
   discoveryCards(): DiscoveryCardRow[]; // discovery_cards (≤ DISCOVERY_CARD_LIMIT, caller-filtered)
   myIntroductions(): IntroductionView[]; // my_introductions
   myIntroductionProposals(): IntroductionProposalView[]; // my_introduction_proposals
+  myIntroductionSuggestionRequest(): IntroductionSuggestionRequestView | null; // my_introduction_suggestion_request
   catalogueEvents(): CatalogueEventView[]; // catalogue_events
   catalogueStatus(): CatalogueStatusView[]; // catalogue_status
   myEventIntents(): EventIntentRow[]; // my_event_intents

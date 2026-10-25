@@ -1,13 +1,13 @@
 import type { DisclosureReceipt, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
 import type {
-  Unreadable, ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView, StandingConsentView,
+  Unreadable, IntroductionSuggestionRequestView, ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView, StandingConsentView,
 } from '@/lib/backend/ports';
 import type { LooseConnection, LooseRow, LooseTable } from './bindings';
 import { findTable } from './names.ts';
 import {
   mapAccount, mapAssignment, mapInvite, mapNudge, mapNudgeDelivery, mapPair, mapRecipientPause, mapPreset, mapReceipt, mapRows,
   mapActivityApproval, mapCatalogueEvent, mapCatalogueStatus, mapCompanion, mapDiscoveryCard, mapEventIntent, mapIntroduction,
-  mapIntroductionProposal, mapPlan, unreadableRow, mapMyDiscovery, mapSignal, mapSupportPreferences, mapStandingConsent,
+  mapIntroductionProposal, mapSuggestionRequest, mapPlan, unreadableRow, mapMyDiscovery, mapSignal, mapSupportPreferences, mapStandingConsent,
 } from './mappers.ts';
 
 /** Caller-filtered views (module defines them; all base tables are private). */
@@ -15,6 +15,7 @@ export const VIEW_NAMES = [
   'my_account', 'my_pairs', 'my_invites', 'my_presets', 'my_preset_assignments', 'my_nudges', 'my_receipts',
   'my_signals', 'my_support_preferences', 'my_nudge_delivery', 'my_recipient_pauses', 'my_standing_consents',
   'my_discovery_profile', 'discovery_cards', 'my_introductions', 'my_introduction_proposals',
+  'my_introduction_suggestion_request',
   'catalogue_events', 'catalogue_status', 'my_event_intents', 'event_companions', 'my_activity_approvals', 'my_plans',
 ] as const;
 
@@ -37,6 +38,7 @@ export interface ViewData {
   readonly discoveryCards: DiscoveryCardRow[];
   readonly introductions: IntroductionView[];
   readonly proposals: IntroductionProposalView[];
+  readonly suggestionRequest: IntroductionSuggestionRequestView | null;
   readonly catalogue: CatalogueEventView[];
   readonly catalogueStatus: CatalogueStatusView[];
   readonly eventIntents: EventIntentRow[];
@@ -48,7 +50,7 @@ export interface ViewData {
 
 export const EMPTY_VIEWS: ViewData = {
   account: null, pairs: [], invites: [], presets: [], assignments: [], nudges: [], receipts: [], signals: [], supportPreferences: [], nudgeDelivery: [], pauses: [], standingConsents: [],
-  discoveryProfile: null, discoveryCards: [], introductions: [], proposals: [],
+  discoveryProfile: null, discoveryCards: [], introductions: [], proposals: [], suggestionRequest: null,
   catalogue: [], catalogueStatus: [], eventIntents: [], companions: [], activityApprovals: [], plans: [],
   unreadable: { signals: [], supportPreferences: [], nudgeDelivery: [], presets: [], counts: {} },
 };
@@ -86,6 +88,7 @@ export function readViews(conn: LooseConnection): ViewData {
     receipts: take('my_receipts', mapReceipt),
     signals: take('my_signals', mapSignal),
     proposals: take('my_introduction_proposals', mapIntroductionProposal),
+    suggestionRequest: take('my_introduction_suggestion_request', mapSuggestionRequest)[0] ?? null,
     catalogue: take('catalogue_events', mapCatalogueEvent),
     catalogueStatus: take('catalogue_status', mapCatalogueStatus),
     eventIntents: take('my_event_intents', mapEventIntent),
