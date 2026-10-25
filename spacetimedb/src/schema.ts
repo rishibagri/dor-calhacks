@@ -342,6 +342,27 @@ export const catalogue_event = table(
   }
 );
 
+/**
+ * Public catalogue place (D051 proposal): a well-reviewed place near a launch area (food, coffee, ...) from the
+ * developer-configured Google Maps source. Written only by the ingester; never joined to a person; no reviews,
+ * reviewer names, contacts, hours or coordinates.
+ */
+export const catalogue_place = table(
+  { name: 'catalogue_place' },
+  {
+    place_id: t.string().primaryKey(),
+    name: t.string(), // sanitized display text, never fed to a model
+    kind: t.string(), // PLACE_KINDS
+    label: t.string(), // the source's category text, display only
+    rating_tenths: t.u32(),
+    review_count: t.u32(),
+    area_key: t.string(),
+    source_url: t.option(t.string()), // safeCatalogueUrl output only
+    fetched_at: t.timestamp(),
+    updated_at: t.timestamp(),
+  }
+);
+
 /** One person's explicit event intent (C8). Ends with the event; never inferred from scraping or calendars. */
 export const event_intent = table(
   { name: 'event_intent' },
@@ -549,6 +570,7 @@ export const spacetimedb = schema({
   rate_window,
   catalogue_source,
   catalogue_event,
+  catalogue_place,
   event_intent,
   activity_approval,
   shared_plan,

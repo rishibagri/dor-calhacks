@@ -13,7 +13,7 @@ import type { ApprovedSignal, DisclosureReceipt, RecipientPresetAssignment, Rela
 import { ACTIVITY_CATEGORY, NUDGE_TEMPLATE_IDS } from '@dor/contracts/policy';
 import { MAX_EVENT_TITLE, MAX_EVENT_TOPICS, MAX_INTEREST_TAGS, MAX_PUBLIC_NAME, validRecipientDelivery, validSupportPreferences } from '@dor/contracts/policy';
 import type {
-  IntroductionSuggestionRequestView, ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView, StandingConsentView,
+  IntroductionSuggestionRequestView, ActivityApprovalRow, CatalogueEventView, CataloguePlaceView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView, StandingConsentView,
 } from '@/lib/backend/ports';
 import { SHARING_CATEGORIES } from '@dor/contracts';
 import type { LooseRow } from './bindings';
@@ -284,6 +284,15 @@ export const mapCatalogueEvent: Mapper<CatalogueEventView> = (row) => {
   const topics = strings(row, 'topics', MAX_EVENT_TOPICS);
   if (!eventId || !title || title.length > MAX_EVENT_TITLE || !startsAt || !fetchedAt || !format || !topics) return null;
   return { eventId, title, startsAt, endsAt: str(row, 'ends_at'), topics, format, areaKey: str(row, 'area_key'), sourceUrl: str(row, 'source_url'), fetchedAt };
+};
+
+const PLACE_KINDS: readonly CataloguePlaceView['kind'][] = ['food', 'coffee', 'dessert', 'study'];
+export const mapCataloguePlace: Mapper<CataloguePlaceView> = (row) => {
+  const placeId = str(row, 'place_id'), name = str(row, 'name'), label = str(row, 'label') ?? '', areaKey = str(row, 'area_key');
+  const fetchedAt = str(row, 'fetched_at'), tenths = num(row, 'rating_tenths'), reviewCount = num(row, 'review_count');
+  const kind = PLACE_KINDS.find((k) => k === str(row, 'kind'));
+  if (!placeId || !name || name.length > 80 || !areaKey || !fetchedAt || !kind || tenths === null || tenths > 50 || reviewCount === null) return null;
+  return { placeId, name, kind, label, rating: tenths / 10, reviewCount, areaKey, sourceUrl: str(row, 'source_url'), fetchedAt };
 };
 
 export const mapCatalogueStatus: Mapper<CatalogueStatusView> = (row) => {

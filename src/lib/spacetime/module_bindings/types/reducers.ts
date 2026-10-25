@@ -56,6 +56,7 @@ import SetWorkerIdentityReducer from "../set_worker_identity_reducer";
 import SnoozeNudgeReducer from "../snooze_nudge_reducer";
 import UnlinkPairReducer from "../unlink_pair_reducer";
 import UpsertCatalogueEventReducer from "../upsert_catalogue_event_reducer";
+import UpsertCataloguePlaceReducer from "../upsert_catalogue_place_reducer";
 import WithdrawDiscoveryProfileReducer from "../withdraw_discovery_profile_reducer";
 
 export type AcceptPairInviteParams = __Infer<typeof AcceptPairInviteReducer>;
@@ -108,5 +109,6 @@ export type SetWorkerIdentityParams = __Infer<typeof SetWorkerIdentityReducer>;
 export type SnoozeNudgeParams = __Infer<typeof SnoozeNudgeReducer>;
 export type UnlinkPairParams = __Infer<typeof UnlinkPairReducer>;
 export type UpsertCatalogueEventParams = __Infer<typeof UpsertCatalogueEventReducer>;
+export type UpsertCataloguePlaceParams = __Infer<typeof UpsertCataloguePlaceReducer>;
 export type WithdrawDiscoveryProfileParams = __Infer<typeof WithdrawDiscoveryProfileReducer>;
 

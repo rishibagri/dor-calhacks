@@ -20,7 +20,7 @@ import { areaLabel, DISCOVERY_TAGS, LAUNCH_AREAS } from '@/lib/discovery/config'
 import { captureAreaOnce } from '@/lib/discovery/area';
 import { checkProfileDraft, discoverStage, newIntroductionRequestId, publicationExpiry } from '@/components/feature/discover-model';
 import { knownThrough, type FofCard } from '@/lib/network/types';
-import type { CatalogueEventView, DiscoveryCardRow } from '@/lib/backend/ports';
+import type { CatalogueEventView, CataloguePlaceView, DiscoveryCardRow } from '@/lib/backend/ports';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Inst = any;
@@ -63,6 +63,7 @@ const listTags = (tags: readonly string[]) => tags.map(tagLabel).join(', ');
 // The quiz's interest question offers only tags the server publishes (the design's "studying" is not one).
 const QUIZ_TAGS = ['board-games', 'hiking', 'coffee', 'live-music', 'cooking', 'running', 'books', 'climbing'].filter((t) => DISCOVERY_TAGS.includes(t));
 const SENT_KEY = 'dor-live-sent';
+const PLACE_WHY: Record<CataloguePlaceView['kind'], string> = { food: 'well reviewed · food', coffee: 'well reviewed · coffee', dessert: 'well reviewed · dessert', study: 'good for studying' };
 const FLYER_SLOTS = [{ l: 14, t: 118, rot: -5, pin: '#F2A7B8' }, { l: 246, t: 196, rot: 4, pin: '#A8DCC4' },
   { l: 26, t: 356, rot: -2, pin: '#C3B1E1' }, { l: 236, t: 392, rot: 3, pin: '#F6D77A' }];
 
@@ -207,6 +208,7 @@ export class LiveBridge {
     };
     i.shareInterest = async () => {
       const id = i.state.flyerOpen;
+      if (String(id).startsWith('p:')) return toast('Places are suggestions only. Showing interest works for events.');
       if (!i.state.shared[id]) return i.setState({ flyerStep: 'share' });
       const r = await this.shared.revokeEventIntent(id);
       toast(r.ok ? 'Withdrawn. It’s gone from your postcard everywhere.' : `Couldn’t withdraw: ${failText(r)}`);
@@ -371,6 +373,7 @@ export class LiveBridge {
   private setArea: ((key: string) => Promise<void>) | null = null;
   private cards: SillCard[] = [];
   private events: CatalogueEventView[] = [];
+  private places: CataloguePlaceView[] = [];
   private env: Envelope | null = null;
   private seenEnv = new Set<string>();
   private pinsSeeded = false;
@@ -529,15 +532,25 @@ export class LiveBridge {
       : req ? { key: `r:${req.requestId}`, kind: 'fof', id: req.requestId, name: req.counterpartName || 'Someone nearby', tags: req.sharedTags, via: req.viaName } : null;
     // Window: upcoming public events (Apify-ingested, D039) in this person's area first; the design pins four flyers.
     const myArea = me?.areaActive ? me.areaKey : null;
-    this.events = shared.catalogueEvents().filter((e) => Date.parse(e.startsAt) > now.getTime())
-      .sort((a, b) => Number(b.areaKey === myArea) - Number(a.areaKey === myArea) || a.startsAt.localeCompare(b.startsAt)).slice(0, 4);
-    const FLY = this.events.map((e, n) => {
+    const allEvents = shared.catalogueEvents().filter((e) => Date.parse(e.startsAt) > now.getTime())
+      .sort((a, b) => Number(b.areaKey === myArea) - Number(a.areaKey === myArea) || a.startsAt.localeCompare(b.startsAt));
+    // Places (D051 proposal): the viewer's area first, then rating weighted by how many people reviewed it. No model.
+    const score = (p: CataloguePlaceView) => p.rating * Math.log10(10 + p.reviewCount);
+    const allPlaces = shared.cataloguePlaces().filter((p) => !myArea || p.areaKey === myArea).sort((a, b) => score(b) - score(a));
+    // Four flyers: two events and two places when both exist, otherwise whichever there is.
+    const nPlaces = Math.min(allPlaces.length, Math.max(2, 4 - allEvents.length));
+    this.places = allPlaces.slice(0, nPlaces);
+    this.events = allEvents.slice(0, 4 - this.places.length);
+    const placeFly = this.places.map((p, n) => ({ id: `p:${p.placeId}`, title: p.name, day: `★ ${p.rating.toFixed(1)} · ${p.reviewCount.toLocaleString()} reviews`,
+      time: p.label || tagLabel(p.kind), area: areaLabel(p.areaKey) ?? 'Nearby', src: 'Google Maps', why: PLACE_WHY[p.kind],
+      ...FLYER_SLOTS[this.events.length + n], sample: false }));
+    const FLY = [...this.events.map((e, n) => {
       const at = new Date(e.startsAt), pos = FLYER_SLOTS[n];
       const host = e.sourceUrl ? new URL(e.sourceUrl).hostname.replace(/^www\./, '') : 'source';
       return { id: e.eventId, title: e.title, day: at.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
         time: at.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }), area: areaLabel(e.areaKey) ?? 'Nearby',
-        src: /lu\.?ma/.test(host) ? 'Luma' : host, why: e.topics.length ? e.topics.map(tagLabel).join(' · ') : 'nearby', ...pos, sample: false };
-    });
+        src: /lu\.?ma/.test(host) ? 'Luma' : host === 'source' ? 'Google' : host, why: e.topics.length ? e.topics.map(tagLabel).join(' · ') : 'nearby', ...pos, sample: false };
+    }), ...placeFly];
     const sharedEvents = Object.fromEntries(shared.myEventIntents().filter((x) => isIntentActive(x, now.getTime())).map((x) => [x.eventId, true]));
     Object.assign(i, { PEOPLE, BOXSLOT, SINCE, HIST: {}, PHOTOS: {}, HOME: [], CARDS, FLY, PLANS: [] });
 
@@ -565,7 +578,8 @@ export class LiveBridge {
       feedAge: this.feedAge(),
       // The event's own public page (host-allowlisted at ingest, D039); opened in a new tab, nothing is sent.
       openListing: () => {
-        const url = this.events.find((e) => e.eventId === i.state.flyerOpen)?.sourceUrl;
+        const id = i.state.flyerOpen;
+        const url = this.events.find((e) => e.eventId === id)?.sourceUrl ?? this.places.find((p) => `p:${p.placeId}` === id)?.sourceUrl;
         if (url) window.open(url, '_blank', 'noopener'); else i.toast('This listing has no public link.');
       },
       envName: this.env?.name ?? '',
@@ -602,8 +616,8 @@ export class LiveBridge {
     return h < 1 ? 'checked within the hour' : `checked ${h} h ago`;
   }
 
-  private age(eventId: string): string {
-    const e = this.events.find((x) => x.eventId === eventId);
+  private age(flyerId: string): string {
+    const e = this.events.find((x) => x.eventId === flyerId) ?? this.places.find((p) => `p:${p.placeId}` === flyerId);
     if (!e) return 'recently';
     const h = Math.max(0, Math.round((Date.now() - Date.parse(e.fetchedAt)) / 3_600_000));
     return h < 1 ? 'under 1 h' : `${h} h`;
@@ -642,7 +656,7 @@ export class LiveBridge {
         ruleOn: false, ruleLabel: on ? 'Turn off notes from them' : 'Turn notes from them back on' } : v.bo,
       nb: { ...v.nb, marginQ: this.pending ? `${this.pending.name.toLowerCase()} came up. want a gentle check-in idea?` : '',
         jmNote: v.nb.jmNote, stateLabel: this.live.thinking ? 'claude is reading · privately' : v.nb.stateLabel },
-      feedLabel: i.FLY.length ? `from luma · ${i.FLY.length} upcoming` : 'from luma',
+      feedLabel: i.FLY.length ? `events & places · ${i.FLY.length} nearby` : 'events & places',
       flyers: v.flyers.map((f: any) => ({ ...f, stamp: `${f.src} · ${this.age(f.id)}` })),
       fo: v.flyerOpen ? { ...v.fo, stampLong: `from ${v.fo.src} · checked ${this.age(s.flyerOpen)} ago` } : v.fo,
       planeName: this.live.planeName,

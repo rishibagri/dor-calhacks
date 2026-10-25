@@ -454,6 +454,26 @@ export const catalogue_events = spacetimedb.view(
   }
 );
 
+const placeRow = t.row('CataloguePlaceRow', {
+  place_id: t.string(), name: t.string(), kind: t.string(), label: t.string(), rating_tenths: t.u32(), review_count: t.u32(),
+  area_key: t.string(), source_url: t.option(t.string()), fetched_at: t.timestamp(),
+});
+
+/** Public places (D051 proposal) for registered accounts while discovery is on; bounded; the client filters by its area. */
+export const catalogue_places = spacetimedb.view(
+  { name: 'catalogue_places', public: true }, t.array(placeRow),
+  ctx => {
+    if (!discoveryEnabled(ctx.db) || !ctx.db.account.identity.find(ctx.sender)) return [];
+    const out = [];
+    for (const p of ctx.db.catalogue_place.iter()) {
+      if (out.length >= CATALOGUE_VIEW_LIMIT) break;
+      out.push({ place_id: p.place_id, name: p.name, kind: p.kind, label: p.label, rating_tenths: p.rating_tenths,
+        review_count: p.review_count, area_key: p.area_key, source_url: p.source_url, fetched_at: p.fetched_at });
+    }
+    return out;
+  }
+);
+
 const catalogueStatusRow = t.row('CatalogueStatusRow', {
   feed_key: t.string(), last_attempt_at: t.timestamp(), last_success_at: t.option(t.timestamp()), last_status: t.string(),
   record_count: t.u32(),
