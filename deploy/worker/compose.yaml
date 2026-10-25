@@ -1,0 +1,24 @@
+# Minimal long-running worker. From the repo root:
+#   cp deploy/worker/worker.env.example deploy/worker/worker.env   # fill in; never commit worker.env
+#   docker compose -f deploy/worker/compose.yaml up -d --build
+services:
+  worker:
+    build:
+      context: ../..
+      dockerfile: deploy/worker/Dockerfile
+    env_file: worker.env
+    # The worker exits on a fatal error or after DOR_WORKER_MAX_OFFLINE_MS without a database connection;
+    # the restart policy brings it back. (Plain Docker does not restart on "unhealthy"; the self-exit covers that.)
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    # POST /jobs and /healthz; bind to loopback unless a trusted proxy fronts it.
+    ports:
+      - "127.0.0.1:8787:8787"
+    stop_grace_period: 15s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
