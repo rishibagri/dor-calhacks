@@ -10,8 +10,6 @@ import { ArrowLeft } from 'lucide-react';
 import { useLiveShared } from '@/components/shell/use-live';
 import { ConnectionPill } from '@/components/shell/connection-pill';
 import { AccountArea } from '@/components/shell/account-area';
-import { useConnectionState } from '@/lib/backend';
-import { isClerkConfigured } from '@/lib/config';
 import { BackWall, daylightAt } from './art/back-wall';
 import { Furniture } from './art/furniture';
 import { Floor } from './art/floor';
@@ -23,6 +21,7 @@ import { placeBadges, roomSignals } from './room-signals';
 import { onRoomNavigate } from './room-nav';
 import { useCamera } from './use-camera';
 import { useParallax } from './use-parallax';
+import { useSignedIn } from './use-signed-in';
 
 const GLOW_KEY = 'dor:room-glowed';
 const SWIPE_CLOSE_PX = 70;
@@ -80,7 +79,7 @@ export function RoomStage() {
   const [glow, setGlow] = useState(false);
   const pending = useRef<PlaceId | null>(null);
   const isOnline = useOnline();
-  const conn = useConnectionState();
+  const isSignedIn = useSignedIn();
 
   const shared = useLiveShared();
   const nowMs = Date.now();
@@ -162,10 +161,10 @@ export function RoomStage() {
     return () => window.removeEventListener('keydown', onKey);
   }, [back, isInside]);
 
-  // Signed out mid-session: pull back to the door.
+  // Signed out mid-session (real Clerk sign-out, never a backend hiccup): pull back to the door.
   useEffect(() => {
-    if (isClerkConfigured && conn.phase === 'signed_out' && isInside) { go(null, 'replace'); setIsInside(false); }
-  }, [conn.phase, isInside, go]);
+    if (isSignedIn === false && isInside) { go(null, 'replace'); setIsInside(false); }
+  }, [isSignedIn, isInside, go]);
 
   // The sheet's resting state belongs to GSAP alone, so CSS never fights the tween.
   useLayoutEffect(() => { if (sheet.current) gsap.set(sheet.current, { yPercent: 105, y: 0, autoAlpha: 0 }); }, []);

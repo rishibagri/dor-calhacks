@@ -7,10 +7,10 @@
  */
 import { useLayoutEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
-import { Show, SignInButton } from '@clerk/nextjs';
+import { SignInButton } from '@clerk/nextjs';
 import { TRANSITIONS, readPref, sessionStore, writePref, type TransitionId } from '@/components/feature/transition-model';
-import { isClerkConfigured } from '@/lib/config';
 import { DUR, EASE, prefersReducedMotion, registerMotion } from './motion';
+import { useSignedIn } from './use-signed-in';
 
 const SEEN_KEY = 'dor:door-seen';
 
@@ -56,11 +56,16 @@ function SignInTag() {
 
 export function Door({ onOpened }: { onOpened: () => void }) {
   const scene = useRef<HTMLDivElement>(null);
-  const [isQuick] = useState(hasSeenDoor);
+  const isSignedIn = useSignedIn();
+  const [hasSeen] = useState(hasSeenDoor);
+  const isOpening = useRef(false);
+  // The quick push only ever applies to someone already signed in; signed out always gets a tag to act on.
+  const isQuick = hasSeen && isSignedIn === true;
 
   const open = (quick: boolean) => {
     const root = scene.current;
-    if (!root) return;
+    if (!root || isOpening.current) return;
+    isOpening.current = true;
     try { sessionStorage.setItem(SEEN_KEY, '1'); } catch { /* storage blocked: the door just plays again */ }
     const panel = root.querySelector('.door-panel');
     const frame = root.querySelector('.door-frame');
@@ -70,34 +75,32 @@ export function Door({ onOpened }: { onOpened: () => void }) {
       return;
     }
     const d = quick ? DUR.doorRepeat : DUR.door;
-    gsap.timeline({ onComplete: onOpened })
-      .to(root.querySelector('.door-tag'), { opacity: 0, y: -10, duration: d * 0.2, ease: EASE.leave }, 0)
-      .to(panel, { rotateY: -108, duration: d * 0.7, ease: EASE.glide }, 0)
+    const tl = gsap.timeline({ onComplete: onOpened });
+    const tag = root.querySelector('.door-tag');
+    if (tag) tl.to(tag, { opacity: 0, y: -10, duration: d * 0.2, ease: EASE.leave }, 0);
+    tl.to(panel, { rotateY: -108, duration: d * 0.7, ease: EASE.glide }, 0)
       .to(light, { opacity: 1, duration: d * 0.5, ease: EASE.settle }, d * 0.1)
       .to(frame, { scale: 2.6, duration: d * 0.75, ease: EASE.glide }, d * 0.25)
       .to(root, { opacity: 0, duration: d * 0.3, ease: 'none' }, d * 0.7);
   };
 
+  useLayoutEffect(() => { registerMotion(); }, []);
+
   useLayoutEffect(() => {
-    registerMotion();
-    if (!isQuick || !scene.current) return;
-    // Repeat visit: a short push, no tag.
+    if (!isQuick) return;
     const id = requestAnimationFrame(() => open(true));
     return () => cancelAnimationFrame(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per mount
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires when the quick push becomes possible
+  }, [isQuick]);
 
-  const tag = <ChapterTag onEnter={() => open(false)} />;
   return (
     <div ref={scene} className="door-scene" role="dialog" aria-label="Front door">
       <div className="door-light" aria-hidden />
       <div className="door-frame">
         <div className="door-panel"><span className="door-knob" aria-hidden /></div>
-        {!isQuick && (
+        {!isQuick && isSignedIn !== null && (
           <div className="door-tag">
-            {isClerkConfigured
-              ? <><Show when="signed-out"><SignInTag /></Show><Show when="signed-in">{tag}</Show></>
-              : tag}
+            {isSignedIn ? <ChapterTag onEnter={() => open(false)} /> : <SignInTag />}
           </div>
         )}
       </div>
