@@ -3,7 +3,10 @@
  *
  *   node scripts/ingest-catalogue.ts --fixture <file.json>   # offline: normalize a saved dataset, print report
  *   node scripts/ingest-catalogue.ts --fetch                  # call Apify (costs credits), print report
- *   ... [--commit <database>] [--force]                       # also upsert via `spacetime call` as the ingester
+ *   ... [--commit <database> [--server local|maincloud|<url>]] [--force]   # also upsert via `spacetime call` as the ingester
+ *
+ * --server defaults to `local`, like bootstrap-module.ts and mint-worker-identity.ts. It is always passed as `-s`, so a
+ * commit never falls through to the CLI's default server (often maincloud) by accident; name maincloud explicitly.
  *
  * Env for --fetch: APIFY_API_TOKEN, APIFY_ACTOR_ID, APIFY_ACTOR_BUILD (required pinned build), APIFY_SOURCE=luma|meetup,
  * APIFY_MAX_ITEMS<=50, APIFY_TOPICS, APIFY_WINDOW_DAYS, APIFY_TIMEOUT_MS). Region, caps and the request body come from
@@ -25,6 +28,7 @@ const args = process.argv.slice(2);
 const flag = (name: string) => args.includes(name);
 const value = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
 const allow = { tags: DISCOVERY_TAGS, areas: AREA_KEYS, hosts: SOURCE_HOSTS };
+const SERVER = value('--server') ?? 'local';
 
 /** --fetch: server-only adapter (src/server/discovery): fixed config, capped, cached 6 h, one in-flight request. */
 async function fetchViaAdapter(): Promise<void> {
@@ -56,12 +60,12 @@ async function fetchViaAdapter(): Promise<void> {
 const opt = (v: string | null) => (v === null ? { none: [] } : { some: v });
 function commit(db: string, u: UpsertArgs): void {
   const positional = [u.event_id, u.title, u.starts_at, opt(u.ends_at), u.status, u.fetched_at, u.topics, u.format, opt(u.area_key), opt(u.source_url)];
-  execFileSync('spacetime', ['call', db, 'upsert_catalogue_event', ...positional.map((p) => JSON.stringify(p))], { stdio: ['ignore', 'ignore', 'inherit'] });
+  execFileSync('spacetime', ['call', '-s', SERVER, db, 'upsert_catalogue_event', ...positional.map((p) => JSON.stringify(p))], { stdio: ['ignore', 'ignore', 'inherit'] });
 }
 
 /** Health row for the Events page: ok with the count, or failed (the module keeps the last success). */
 function recordRun(db: string, feedKey: string, ok: boolean, count: number): void {
-  execFileSync('spacetime', ['call', db, 'record_catalogue_run', JSON.stringify(feedKey), JSON.stringify(ok), JSON.stringify(count)],
+  execFileSync('spacetime', ['call', '-s', SERVER, db, 'record_catalogue_run', JSON.stringify(feedKey), JSON.stringify(ok), JSON.stringify(count)],
     { stdio: ['ignore', 'ignore', 'inherit'] });
 }
 
