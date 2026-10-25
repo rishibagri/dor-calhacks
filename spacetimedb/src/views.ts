@@ -212,6 +212,8 @@ const workerSignalRow = t.row('WorkerSignalRow', {
   assignment_recipient: t.option(t.identity()), assignment_preset_id: t.option(t.string()),
   assignment_version: t.option(t.u32()), preset_allowed_categories: t.array(t.string()),
   preset_version: t.option(t.u32()), preset_expires_at: t.option(t.timestamp()), preset_revoked: t.bool(),
+  // D059: no earlier than this (reasoning-timed nudge); absent = as soon as possible. commit_nudge enforces it.
+  deliver_after: t.option(t.timestamp()),
 });
 
 const isWorker = (db: ReadDb, who: Identity): boolean => Boolean(db.worker_identity.identity.find(who)); // find() returns null, not undefined
@@ -224,7 +226,10 @@ export const worker_signal_context = spacetimedb.view(
       .filter(s => !s.revoked_at && !signalExpiredMarked(ctx.db, s.signal_id) &&
         !pauseInForce(ctx.db, s.sender_id, s.pair_id, null) && // D041: paused pairs' signals are not presented
         standingApprovalStands(ctx.db, s.signal_id, null) && // D044: automatic approvals only while their rule stands
-        guardSignalStanding(toStoredSignal(s), loadStanding(ctx.db, s.sender_id, s.pair_id)).allowed)
+        guardSignalStanding(toStoredSignal(s), loadStanding(ctx.db, s.sender_id, s.pair_id)).allowed &&
+        // D059: a signal produces at most one nudge. With no cooldown this is what stops a restarted worker from
+        // re-running (and re-spending model calls on) a signal it already delivered.
+        ![...ctx.db.nudge.pair_id.filter(s.pair_id)].some(n => n.source_signal_ids.includes(s.signal_id)))
       .flatMap(s => {
         const p = ctx.db.pair.pair_id.find(s.pair_id);
         if (!p) return [];
@@ -239,6 +244,7 @@ export const worker_signal_context = spacetimedb.view(
           assignment_recipient: a?.recipient, assignment_preset_id: pr?.preset_id, assignment_version: a?.assignment_version,
           preset_allowed_categories: pr?.allowed_categories ?? [], preset_version: pr?.version,
           preset_expires_at: pr?.expires_at, preset_revoked: pr?.revoked_at !== undefined,
+          deliver_after: ctx.db.signal_schedule.signal_id.find(s.signal_id)?.deliver_after ?? undefined,
         }];
       });
   }

@@ -87,13 +87,13 @@ test('F5: accepted-pair default is on; recipient opt-out remains authoritative',
   assert.deepEqual(nudgeDelivery({ ...DEFAULT_RECIPIENT_DELIVERY, optedIn: false }, null, NOW), { deliver: false, reason: 'not_opted_in' });
 });
 
-test('F5: configured quiet hours wrap midnight in recipient local time; cooldown is 24h per pair', () => {
+test('F5: configured quiet hours wrap midnight in recipient local time; no per-pair cooldown (D059)', () => {
   const pst = { ...DEFAULT_RECIPIENT_DELIVERY, optedIn: true, quietStartMinute: 22 * 60, quietEndMinute: 8 * 60, utcOffsetMinutes: -7 * 60 };
   assert.equal(nudgeDelivery(pst, null, new Date('2026-10-24T06:00:00Z')).reason, 'quiet_hours'); // 23:00 local
   assert.equal(nudgeDelivery(pst, null, new Date('2026-10-24T14:30:00Z')).reason, 'quiet_hours'); // 07:30 local
   assert.equal(nudgeDelivery(pst, null, new Date('2026-10-24T15:00:00Z')).deliver, true);       // 08:00 local
-  const last = new Date('2026-10-23T20:00:00Z');
-  assert.equal(nudgeDelivery(pst, last, new Date('2026-10-24T19:59:00Z')).reason, 'cooldown');
+  // D059: a nudge a minute ago never blocks the next one.
+  const last = new Date('2026-10-24T19:59:00Z');
   assert.equal(nudgeDelivery(pst, last, new Date('2026-10-24T20:00:00Z')).deliver, true);
   assert.equal(nudgeDelivery({ ...pst, quietStartMinute: null }, null, new Date('2026-10-24T06:00:00Z')).deliver, true);
 });

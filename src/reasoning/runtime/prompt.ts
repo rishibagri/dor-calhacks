@@ -16,7 +16,8 @@ Deciding:
 - You may nudge several people (at most three) when each has a clear reason. Rank the best first.
 - You may choose people the writer did not mention, when the entry or memory gives a specific reason that person would help (for example, the person a remembered fact is about). Never pick someone just because they are on the list.
 - Conflict, distress about a specific person, or a topic that is clearly sensitive with someone means not nudging that person. Report such topics in people[].sensitiveTopics.
-- If timing is wrong but it may matter later, propose DEFER with reassessMinutes and a reassessCondition; DEFER never carries a person.
+- When to send (you decide this; dor holds the nudge on the server, so the writer doesn't need to keep the app open). By default a nudge goes out right away: good news, a busy stretch, a wish to reconnect. When the news is bad (a failed exam, a rejection, a breakup, a loss, a hard day) the writer needs time to process before a friend reaches out, even if they say they want to talk about it. Then still act (requestedMode "act") with timing "after_delay" and delayMinutes for how long they likely need: about 2 to 4 hours after a bad exam or a rough day, until the next morning after a rejection or breakup, up to 12 hours for anything heavier. Never under 120 or over 720.
+- If the writer doesn't want contact now but may later, propose DEFER with reassessMinutes and a reassessCondition; DEFER never carries a person.
 
 Candidate actions: CELEBRATE (good news; supportMode "encouraging_note" or "short_call"), DIRECT_CHECK_IN (supportMode "short_call" or "encouraging_note"), RECONNECT (someone they have drifted from), PRACTICAL_HELP, CASUAL_INVITE and SHARED_ACTIVITY (supportMode "shared_activity"), HELP_USER_REACH_OUT (only for something the writer must say personally, such as an apology), DEFER, ABSTAIN. Always include an ABSTAIN proposal.
 
@@ -30,5 +31,6 @@ Output rules:
 - rank: 1 is preferred. requestedMode: "act", "defer", or "abstain" (only with ABSTAIN).
 - evidence: cite only "entry:text", "assessment:intent", "assessment:names", "candidate:mode", "memory:<id>" for remembered facts you used, and "person:<ref>" for the person involved. Every act needs at least one.
 - rationale: short codes from this list only: pattern_prefers_alone, pattern_prefers_company, not_receptive, unavailable, saturated_vs_baseline, above_baseline, already_with_people, recovered, no_relational_value, explained_silence, mutual_opening, preserve_personal_delivery, distress_still_relevant, high_reveal_value, sensitive_topic, low_confidence.
+- situation.valence: how the news lands for the writer: "good", "bad" or "neutral". Bad means something went wrong for them (it decides the delay above), not that they feel like talking.
 - situation.windowMinutes: how long this stays a useful reason to act (good news: a day or two; a bad exam: a few hours). situation.topic: one or two plain words, or null.
 - Outside memory text, never include names, quotes, places or journal text in any field. talkingPoint is only an id from the list.`;

@@ -325,7 +325,9 @@ export interface SharedStatePort {
     presetAssignmentVersion: number;
     consentVersion: number;
     clientRequestId: string;
-  }): Promise<ReducerResult>; // approve_signal
+    /** D059: deliver no earlier than this many minutes from now (1–720); omitted = as soon as possible. */
+    delayMinutes?: number;
+  }): Promise<ReducerResult>; // approve_signal, or approve_signal_delayed with delayMinutes
   revokeSignal(signalId: string): Promise<ReducerResult>; // revoke_signal
   dismissNudge(nudgeId: string): Promise<ReducerResult>; // dismiss_nudge
   snoozeNudge(nudgeId: string, until: string): Promise<ReducerResult>; // snooze_nudge

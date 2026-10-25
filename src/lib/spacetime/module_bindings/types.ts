@@ -927,6 +927,12 @@ export const SignalHook = __t.object("SignalHook", {
 });
 export type SignalHook = __Infer<typeof SignalHook>;
 
+export const SignalSchedule = __t.object("SignalSchedule", {
+  signalId: __t.string(),
+  deliverAfter: __t.timestamp(),
+});
+export type SignalSchedule = __Infer<typeof SignalSchedule>;
+
 export const StandingApproval = __t.object("StandingApproval", {
   signalId: __t.string(),
   ruleId: __t.string(),
@@ -1051,6 +1057,7 @@ export const WorkerSignalRow = __t.object("WorkerSignalRow", {
   presetVersion: __t.option(__t.u32()),
   presetExpiresAt: __t.option(__t.timestamp()),
   presetRevoked: __t.bool(),
+  deliverAfter: __t.option(__t.timestamp()),
 });
 export type WorkerSignalRow = __Infer<typeof WorkerSignalRow>;
 

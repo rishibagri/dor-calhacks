@@ -4,7 +4,7 @@ import { mapRows, toSignalContext } from './spacetime/rows.js';
 import { isDisconnected } from './spacetime/connection.js';
 
 /**
- * Outcomes that depend only on the recipient's current settings (opt-in, quiet hours, cooldown, preference consent and
+ * Outcomes that depend only on the recipient's current settings (opt-in, quiet hours, preference consent and
  * its modes). They mean "not now", not "never": the signal is retried on later sweeps while worker_signal_context
  * still lists it, so a recipient who opts in or consents after the approval still gets the nudge without a worker
  * restart. Each is decided by the coordinator's pre-checks before any model call, so a retry costs no model calls.
@@ -50,8 +50,10 @@ export class SignalWatcher {
   private async runSweep(): Promise<number> {
     const contexts = mapRows(await this.source.signalContext(), toSignalContext);
     const max = this.options.maxAttempts ?? 3;
-    const pending = contexts.map(c => c.signal).filter(s => !this.done.has(s.signalId) &&
-      (this.attempts.get(s.signalId) ?? 0) < max);
+    const now = Date.now();
+    // D059: a reasoning-timed signal waits, untouched and with no model call, until a sweep after its time.
+    const pending = contexts.filter(c => c.deliverAfterMs === null || c.deliverAfterMs <= now).map(c => c.signal)
+      .filter(s => !this.done.has(s.signalId) && (this.attempts.get(s.signalId) ?? 0) < max);
     for (const signal of pending) {
       // requestId stays the signal ID (stable nudge ID); only the jobId changes between deferred retries.
       const deferred = this.deferrals.get(signal.signalId) ?? 0;

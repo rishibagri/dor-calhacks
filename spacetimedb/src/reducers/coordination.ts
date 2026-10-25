@@ -15,7 +15,7 @@ function requireWorker(ctx: Ctx): void {
  * CURRENT authoritative state (revocation during generation, stale preset/assignment, expiry, recipient),
  * requires the template to be templateForSignal of an approved source (availability-only ⇒ nothing),
  * then the recipient's CURRENT preference consent (bound id + version, unrevoked, unexpired, covering the
- * template's mode; D035), then the F5 gate (opt-in, cooldown, quiet hours). Idempotent on nudge_id: a replay is a no-op and never
+ * template's mode; D035), then the F5 gate (opt-in, quiet hours; no cooldown since D059), and never before a D059 schedule. Idempotent on nudge_id: a replay is a no-op and never
  * resurrects a suppressed nudge; a different payload under the same id is rejected.
  */
 export const commit_nudge = spacetimedb.reducer(
@@ -53,6 +53,9 @@ export const commit_nudge = spacetimedb.reducer(
       if (s && pauseInForce(ctx.db, s.sender_id, s.pair_id, toMs(ctx.timestamp))) fail(policyErrorCode('revoked'), 'revoked');
       // D044: an automatic approval is usable only while the exact rule version that approved it still stands.
       if (s && !standingApprovalStands(ctx.db, s.signal_id, toMs(ctx.timestamp))) fail(policyErrorCode('revoked'), 'revoked');
+      // D059: a reasoning-timed nudge is never delivered before its time.
+      const due = s ? ctx.db.signal_schedule.signal_id.find(s.signal_id) : null;
+      if (due && toMs(due.deliver_after) > toMs(ctx.timestamp)) fail('stale', 'not_due');
       if (s) sources.set(id, { signal: toStoredSignal(s), snapshot: { nowMs: toMs(ctx.timestamp), ...loadStanding(ctx.db, s.sender_id, s.pair_id) } });
     }
     const d = guardNudgeCommit({

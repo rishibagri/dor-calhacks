@@ -6,7 +6,7 @@
  * The core always has the last word; any model failure falls back, and the fallback itself never widens anything.
  */
 import type { PrivateAssessment, SignalCandidate, SupportMode } from '@dor/contracts';
-import { isTalkingPointId, type TalkingPointId } from '@dor/contracts/policy';
+import { MAX_NUDGE_DELAY_MINUTES, isTalkingPointId, type TalkingPointId } from '@dor/contracts/policy';
 import { finalize } from '../core/finalize.ts';
 import {
   ACTION_SUPPORT_MODES, CANDIDATE_ACTIONS, LEVELS, REASON_CODES, REASONING_MODES, REASSESS_CONDITIONS,
@@ -38,6 +38,22 @@ export interface LiveContext {
 export const EVENT_KINDS = ['academic_setback', 'work_stress', 'busy_period', 'major_good_news', 'milestone', 'homesick',
   'silence', 'contact_spike', 'conflict', 'social_moment', 'everyday', 'other'] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
+export const VALENCES = ['good', 'bad', 'neutral'] as const;
+export type Valence = (typeof VALENCES)[number];
+
+/**
+ * D059 send timing, decided by the reasoning: a nudge goes out now by default. When the news is bad (a failed exam, a
+ * rejection, a loss), even if the writer wants to share it, it is held so they have time to process: the model picks
+ * the delay, never under BAD_NEWS_MIN_DELAY_MINUTES and never over MAX_NUDGE_DELAY_MINUTES (default
+ * BAD_NEWS_DEFAULT_DELAY_MINUTES). The server holds it (approve_signal_delayed), so closing the app changes nothing.
+ */
+export const BAD_NEWS_MIN_DELAY_MINUTES = 120;
+export const BAD_NEWS_DEFAULT_DELAY_MINUTES = 180;
+export function nudgeTiming(valence: Valence | undefined, modelDelayMinutes: number | null | undefined): CandidateProposal['timing'] {
+  if (valence !== 'bad') return { kind: 'now' };
+  const wanted = Number.isFinite(modelDelayMinutes) && (modelDelayMinutes as number) > 0 ? Math.round(modelDelayMinutes as number) : BAD_NEWS_DEFAULT_DELAY_MINUTES;
+  return { kind: 'after_delay', delayMinutes: Math.min(Math.max(wanted, BAD_NEWS_MIN_DELAY_MINUTES), MAX_NUDGE_DELAY_MINUTES) };
+}
 
 /** What the model returns (validated server-side by the route, re-validated here). Refs only, never names. */
 export interface ModelReasoning {
@@ -47,6 +63,8 @@ export interface ModelReasoning {
     windowMinutes: number;
     windowConfidence: Level;
     doesNotWantToTalk: boolean;
+    /** D059: how the news lands for the writer. Bad news is held to let them process it; anything else sends now. */
+    valence?: Valence;
   };
   people: { ref: string; sensitiveTopics: string[] }[];
   proposals: {
@@ -133,7 +151,10 @@ export function proposalsFromModel(model: ModelReasoning, ctx: LiveContext): Can
       revealValue: isIn(LEVELS, m.revealValue) ? m.revealValue : 'unknown',
       ...(m.supportMode && modes.includes(m.supportMode) ? { supportMode: m.supportMode } : {}),
       ...(topic ? { topic } : {}),
-      timing: { kind: m.timing, ...(m.timing === 'after_delay' && m.delayMinutes ? { delayMinutes: Math.min(m.delayMinutes, 720) } : {}) },
+      // D059: people-directed actions are timed by the news itself (bad = held, else now); DEFER/ABSTAIN keep their own timing.
+      timing: m.action === 'DEFER' || m.action === 'ABSTAIN'
+        ? { kind: m.timing, ...(m.timing === 'after_delay' && m.delayMinutes ? { delayMinutes: Math.min(m.delayMinutes, MAX_NUDGE_DELAY_MINUTES) } : {}) }
+        : nudgeTiming(isIn(VALENCES, model.situation.valence) ? model.situation.valence : undefined, m.delayMinutes),
       ...(m.action === 'DEFER' && m.reassessMinutes && m.reassessCondition
         ? { reassess: { afterMinutes: Math.max(15, Math.min(m.reassessMinutes, 720)), condition: m.reassessCondition } } : {}),
       confidence: isIn(LEVELS, m.confidence) ? m.confidence : 'unknown',

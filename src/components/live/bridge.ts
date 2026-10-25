@@ -592,9 +592,14 @@ export class LiveBridge {
     if (decision.mode === 'act' && actions.length > 0) {
       const results: string[] = [];
       for (const a of actions) results.push(await this.applyDecision(a.decision, named(a.decision.targetRef), reassessing, a.talkingPoint));
-      const sent = actions.filter((_, n) => results[n] === 'sent').map((a) => named(a.decision.targetRef)).filter(Boolean) as string[];
-      if (sent.length > 1) this.inst?.toast(`dor nudged ${sent.slice(0, -1).join(', ')} and ${sent.at(-1)} to reach out. They'll know what to ask about.`);
-      outcome = results.includes('sent') ? 'sent' : results[0] ?? 'failed';
+      const who = (code: string) => actions.filter((_, n) => results[n] === code).map((a) => named(a.decision.targetRef)).filter(Boolean) as string[];
+      const list = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}` : xs[0]);
+      const sent = who('sent'), held = who('scheduled');
+      if (sent.length + held.length > 1) {
+        this.inst?.toast([sent.length ? `dor nudged ${list(sent)} to reach out` : '', held.length ? `${sent.length ? 'and will nudge' : 'dor will nudge'} ${list(held)} once you've had some time` : '']
+          .filter(Boolean).join(', ') + '.');
+      }
+      outcome = results.includes('sent') ? 'sent' : results.includes('scheduled') ? 'scheduled' : results[0] ?? 'failed';
     } else {
       outcome = await this.applyDecision(decision, named(decision.targetRef), reassessing, null);
     }
@@ -646,17 +651,20 @@ export class LiveBridge {
       copy: prepared.preview.recipientCopy ?? NUDGE_TEMPLATE_COPY.offer_note,
       question: `want dor to send ${name.toLowerCase()} ${ACTION_WORDS[d.action] ?? 'a note'}?${why ? ` ${why}.` : ''}` };
     // D056: autonomous. An `ask` that still reaches here (older core options) sends too; every gate already passed.
-    return (await this.send(true)) ? 'sent' : 'failed';
+    // D059: the reasoning timed it: bad news is held on the server for `timingDelayMinutes`, anything else goes now.
+    const delay = d.timing === 'after_delay' && d.timingDelayMinutes ? d.timingDelayMinutes : 0;
+    if (!(await this.send(true, delay))) return 'failed';
+    return delay ? 'scheduled' : 'sent';
   }
 
   /** Approve and hand to dor's agents. `auto` = Reasoning decided on its own (no tap). */
-  private async send(auto: boolean): Promise<boolean> {
+  private async send(auto: boolean, delayMinutes = 0): Promise<boolean> {
     const i = this.inst; const p = this.pending;
     if (!i || !p || p.kind !== 'send' || !p.approval) { i?.setState({ nudge: null }); return false; }
     i.setState({ margin: 'done', nudge: 'stamped', holding: false });
     navigator.vibrate?.(14);
     const requestId = requestIdFor(p.approval, null).id;
-    const r = await this.shared.approveSignal({ ...p.approval, clientRequestId: requestId });
+    const r = await this.shared.approveSignal({ ...p.approval, clientRequestId: requestId, ...(delayMinutes ? { delayMinutes } : {}) });
     // D056: the friend's nudge says what to bring up. A failed hook never blocks the nudge itself.
     if (r.ok && p.hook) await this.shared.attachSignalHook(requestId, p.hook).catch(() => undefined);
     this.pending = null;
@@ -664,9 +672,10 @@ export class LiveBridge {
     await i.anim('nudgeEnv', [{ transform: 'none', opacity: 1 }, { transform: 'translate(0,-16px) rotate(2deg)', opacity: 1, offset: .2 }, { transform: 'translate(90px,-620px) rotate(-16deg) scale(.4)', opacity: 0 }], { duration: 900, easing: i.EZ.exit, fill: 'forwards' });
     i.setState({ nudge: null });
     if (!r.ok) { i.toast(`No nudge was started: ${failText(r)}`); return false; }
-    i.log(p.pairId, { k: 'nudge', t: auto ? `dor nudged ${p.name} to reach out` : `A note for ${p.name} went to dor’s agents`, q: p.copy,
-      note: talkingPointText(p.hook) ? `their nudge suggests: “${talkingPointText(p.hook)}”` : 'their agent still checks it fits' });
-    i.toast(`dor nudged ${p.name} to reach out.`);
+    const when = delayMinutes ? `in about ${delayMinutes >= 90 ? `${Math.round(delayMinutes / 60)} h` : `${delayMinutes} min`}` : '';
+    i.log(p.pairId, { k: 'nudge', t: delayMinutes ? `dor will nudge ${p.name} ${when}` : auto ? `dor nudged ${p.name} to reach out` : `A note for ${p.name} went to dor’s agents`, q: p.copy,
+      note: delayMinutes ? 'held so you have time to process first' : talkingPointText(p.hook) ? `their nudge suggests: “${talkingPointText(p.hook)}”` : 'their agent still checks it fits' });
+    i.toast(delayMinutes ? `dor will nudge ${p.name} ${when}, once you've had some time.` : `dor nudged ${p.name} to reach out.`);
     return true;
   }
 

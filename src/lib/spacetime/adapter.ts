@@ -177,7 +177,9 @@ export class SpacetimeSharedState implements SharedStateController {
       ?? this.views.presets.find((p) => p.presetKind === i.presetKind)?.activityInterestAllowed ?? false }));
   assignRelationshipPreset: SharedStatePort['assignRelationshipPreset'] = (i) =>
     this.call('assign_relationship_preset', () => A.assignRelationshipPreset(i));
-  approveSignal: SharedStatePort['approveSignal'] = (i) => this.call('approve_signal', () => A.approveSignal(i));
+  approveSignal: SharedStatePort['approveSignal'] = ({ delayMinutes, ...i }) => delayMinutes
+    ? this.call('approve_signal_delayed', () => ({ ...A.approveSignal(i), delayMinutes }))
+    : this.call('approve_signal', () => A.approveSignal(i));
   revokeSignal = (id: string) => this.call('revoke_signal', () => A.revokeSignal(id));
   dismissNudge = (id: string) => this.call('dismiss_nudge', () => A.dismissNudge(id));
   snoozeNudge = (id: string, until: string) => this.call('snooze_nudge', () => A.snoozeNudge(id, until));

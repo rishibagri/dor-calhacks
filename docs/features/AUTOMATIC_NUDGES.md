@@ -1,6 +1,6 @@
 # Automatic connection nudges (D050; supersedes D044 product behavior)
 
-**Current product rule:** nudges for accepted connections are automatic by default. There is no standing-consent setup and no sender approval for each nudge. The recipient can turn nudges off per connection. Current relationship presets, account/pair checks, server validation, pause, quiet-hour and cooldown controls remain enforced. Delivery stays inside dor; the app never sends a personal message as the user.
+**Current product rule:** nudges for accepted connections are automatic by default. There is no standing-consent setup and no sender approval for each nudge. The recipient can turn nudges off per connection. Current relationship presets, account/pair checks, server validation, pause and quiet-hour controls remain enforced. **D059:** there is no per-pair cooldown, and the reasoning times each nudge: right away by default, held on the server for 2–12 hours (`approve_signal_delayed`) when the news is bad. Delivery stays inside dor; the app never sends a personal message as the user.
 
 The D044 reducers and views remain in the module for compatibility and history, but this product flow does not call `approve_signal_standing` or require a D044 rule. D050 supersedes D044's opt-in and manual-review product requirements; it does not erase the old implementation record.
 
@@ -20,11 +20,11 @@ The owner-only assessment adds `risk: none | interpersonal_conflict | urgent_sup
 ## Recipient controls and server gates
 
 - Accepted pairs use dor's standard in-app nudge types by default. Missing support-style settings mean the standard types; those settings personalize the offer, they do not authorize journal disclosure.
-- Each recipient can disable in-app nudges for an individual connection. A persisted `opted_in: false` is authoritative; missing delivery rows use `DEFAULT_RECIPIENT_DELIVERY` (on). Quiet hours and 24-hour per-pair cooldown apply when configured.
+- Each recipient can disable in-app nudges for an individual connection. A persisted `opted_in: false` is authoritative; missing delivery rows use `DEFAULT_RECIPIENT_DELIVERY` (on). Quiet hours apply when configured. The per-pair cooldown was removed in D059; a signal still produces at most one nudge.
 - `pause_recipient` remains a durable sender-side no-contact boundary; an active pause suppresses pending work. Explicit exclusions and risk flags also stop the current reflection. No pause/exclusion reason is sent to the other person.
-- `approve_signal` checks accepted-pair membership, current preset/assignment, category, payload and idempotency. `commit_nudge` rechecks current source validity, recipient opt-out, recipient support styles, pause, quiet hours and cooldown. A failure means no nudge; never fall back to manual sender approval.
+- `approve_signal` checks accepted-pair membership, current preset/assignment, category, payload and idempotency. `commit_nudge` rechecks current source validity, recipient opt-out, recipient support styles, pause, quiet hours and any D059 delivery time (`stale: not_due` before it). A failure means no nudge; never fall back to manual sender approval.
 - Recipient controls include clear per-connection off/on and pause/resume actions. Turning nudges off hides pending work; unlinking revokes pair work.
 
 ## Required validation
 
-Test the unique-name automatic path, ambiguous/multiple names, recipient opt-out, current-preset denial, conflict risk, serious-distress resource card, provider failure, pause/revoke races, quiet hours, cooldown, and that journal text/reason never appears in peer-visible rows or agent state. Keep deployment/live verification distinct from offline tests. No paid provider calls or Maincloud changes are implied by this specification.
+Test the unique-name automatic path, ambiguous/multiple names, recipient opt-out, current-preset denial, conflict risk, serious-distress resource card, provider failure, pause/revoke races, quiet hours, D059 timing (good news now, bad news held), and that journal text/reason never appears in peer-visible rows or agent state. Keep deployment/live verification distinct from offline tests. No paid provider calls or Maincloud changes are implied by this specification.
