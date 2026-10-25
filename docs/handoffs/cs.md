@@ -181,7 +181,7 @@ Status: **partial live verification** against real Clerk dev + local SpacetimeDB
 
 ## D050 default-on automatic nudges handoff — 2026-10-25T05:45Z
 
-- **Branch:** `role/cs-automatic-nudges`; commit pending at handoff-log time. Separate from books PR #63.
+- **Branch:** `role/cs-automatic-nudges` @ `deb3f25`; PR [#68](https://github.com/rishibagri/dor-calhacks/pull/68) is open against `main`. Separate from books PR #63.
 - **Behavior:** accepted pairs use default-on in-app nudges under the explicitly assigned preset. No per-nudge sender approval or D044 standing-consent setup. One unique on-device name match submits the enum-only candidate automatically; ambiguous identity asks the owner. Paired agents can decline to nudge. Recipient per-pair opt-out, sender pause, preset/category, signal validity, configured quiet-hours, cooldown and commit-time checks remain authoritative.
 - **Private safety:** risk and names stay on the writer's device. Interpersonal conflict suppresses the whole reflection flow. Serious distress clears candidate/names and shows a U.S. 988 phone/text/chat card immediately; no friends/family are contacted. A local high-recall keyword fallback is not a diagnosis and can show the card for quoted/negated words. Country localization remains open.
 - **Contracts/interfaces:** D050 updates C1 `PrivateAssessment` (`risk`, `mentionedNames`), generated schema, C3/F3/worker default behavior and D050 flow specs. D044 backend stays for compatibility. `worker_support_preferences` synthesizes standard support styles for accepted pairs; explicit preferences still personalize, recipient opt-out is stored separately.
