@@ -1,0 +1,45 @@
+<!-- dor demo banner: injected by scripts/deploy-demo.sh into the hosted copy only (frontend/ is untouched).
+     Always visible: this site is sample data with no backend. Probes the live app and links to it when it is up. -->
+<style>
+  #dor-demo-banner { position: fixed; z-index: 2147483647; left: 50%; transform: translateX(-50%);
+    top: max(8px, env(safe-area-inset-top)); max-width: calc(100vw - 24px);
+    font: 500 13px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1b1a17; }
+  #dor-demo-banner button { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 999px; background: rgba(251, 244, 228, 0.94); border: 1px solid #d9cfb8;
+    box-shadow: 0 2px 10px rgba(27, 26, 23, 0.12); white-space: nowrap; }
+  #dor-demo-banner button:focus-visible { outline: 2px solid #2f5c91; outline-offset: 2px; }
+  #dor-demo-banner .dot { width: 7px; height: 7px; border-radius: 50%; background: #8a5a00; }
+  #dor-demo-banner .more { display: none; margin-top: 6px; padding: 10px 12px; border-radius: 12px; white-space: normal;
+    background: rgba(251, 244, 228, 0.97); border: 1px solid #d9cfb8; box-shadow: 0 4px 16px rgba(27, 26, 23, 0.14); }
+  #dor-demo-banner.open .more { display: block; }
+  #dor-demo-banner a { color: #2f5c91; font-weight: 600; }
+  #dor-demo-banner .live { display: none; margin-top: 6px; }
+  #dor-demo-banner.is-live .live { display: block; }
+  #dor-demo-banner.is-live .dot { background: #2e7d4f; }
+</style>
+<div id="dor-demo-banner" role="region" aria-label="Demo notice">
+  <button type="button" aria-expanded="false" aria-controls="dor-demo-more"
+    onclick="var b=document.getElementById('dor-demo-banner');var o=b.classList.toggle('open');this.setAttribute('aria-expanded',o)">
+    <span class="dot" aria-hidden="true"></span><span>DEMO · sample data · not live</span>
+  </button>
+  <div class="more" id="dor-demo-more">
+    This is a demo of dor with sample data. Nothing you do here is saved or sent, no real people are shown, and
+    no account is needed. The live app runs only during scheduled sessions.
+    <div class="live">A live session is running now: <a href="https://live.doratcalhacks.site">open the live app</a>.</div>
+  </div>
+</div>
+<script>
+  // Is the live app up? An image from the live origin loads only while the laptop tunnel serves it
+  // (otherwise Cloudflare answers with an error page, which fails as an image). No credentials, no CORS needed.
+  (function () {
+    var banner = document.getElementById('dor-demo-banner');
+    function probe() {
+      var img = new Image();
+      img.onload = function () { banner.classList.add('is-live'); };
+      img.onerror = function () { banner.classList.remove('is-live'); };
+      img.src = 'https://live.doratcalhacks.site/pwa-icon/icon-192.png?probe=' + Date.now();
+    }
+    probe();
+    setInterval(probe, 60000);
+  })();
+</script>
