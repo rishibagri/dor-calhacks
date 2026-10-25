@@ -23,7 +23,7 @@ import {
 } from '../components/feature/decision-loop-model.ts';
 import { withoutPaused } from '../components/feature/pause-model.ts';
 import type { RecipientPause } from '../lib/backend/ports.ts';
-import { assessedRecipients, initialLoopState, leftOutByAssessment } from '../features/voice/assessment.ts';
+import { assessedRecipients, initialLoopState, leftOutByAssessment, uniquelyPreferredRecipient } from '../features/voice/assessment.ts';
 import { buildNudge, matchSignal } from './matching.ts';
 
 export const FORBIDDEN_LABELS = [
@@ -120,11 +120,6 @@ export function replay(file: DecisionFile, story: string, candidate: unknown, re
   const a = reflection.success ? reflection.data.assessment : assessment;
   let s = initialLoopState(c, a);
   if (failClosed) s = failClosedWithoutAssessment(s, a);
-  for (const step of steps) {
-    if ('company' in step) s = answerCompany(s, step.company);
-    else if ('who' in step) s = answerWho(s, step.who);
-    else s = excludeForNow(s, step.exclude);
-  }
   const all = recipientsOf(file, recipientIds);
   const { eligible: unpaused } = withoutPaused(all, pauses, new Date(file.clock));
   const named = (a as { excludedNames?: unknown } | undefined)?.excludedNames;
@@ -132,7 +127,18 @@ export function replay(file: DecisionFile, story: string, candidate: unknown, re
   const paused = all.filter((r) => !unpaused.includes(r));
   const excluded = [...new Set([...s.excluded, ...paused.map((r) => r.pairId), ...leftOutUnnamed.map((r) => r.pairId),
     ...leftOutByAssessment(kept, a).map((r) => r.pairId)])];
-  return { state: s, outcome: decide(s, assessedRecipients(kept, a)), excluded };
+  const eligible = assessedRecipients(kept, a);
+  const direct = uniquelyPreferredRecipient(eligible, a);
+  if (direct) {
+    const automatic = { ...s, company: 'company' as const, chosen: direct.pairId };
+    return { state: automatic, outcome: decide(automatic, eligible), excluded };
+  }
+  for (const step of steps) {
+    if ('company' in step) s = answerCompany(s, step.company);
+    else if ('who' in step) s = answerWho(s, step.who);
+    else s = excludeForNow(s, step.exclude);
+  }
+  return { state: s, outcome: decide(s, eligible), excluded };
 }
 
 export function surfacesOf(file: DecisionFile, outcome: Outcome): Surfaces {

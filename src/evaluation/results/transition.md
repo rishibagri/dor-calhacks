@@ -23,7 +23,7 @@ Publications refused by guardPublicationDraft: mal (tag_not_allowlisted), ben (i
 
 ## New connection vs reconnect (paired)
 
-Useful next step: new 5/7 (introduce), reconnect 3/7 (owner preview), reconnect pending an owner answer 1; both paths silent 1. Expected 7/7; reconnect labels from decision-cases.json met 7/7.
+Useful next step: new 5/7 (introduce), reconnect 3/7 (owner preview), reconnect pending an owner answer 0; both paths silent 1. Expected 7/7; reconnect labels from decision-cases.json met 7/7.
 A "none" is a correct, honest result when labeled so; reconnecting is never offered as a fallback for an empty discovery result, and nothing here measures loneliness or AI use.
 
 | Pair | Discovery | Reconnect case | New | Reconnect | OK |
@@ -31,7 +31,7 @@ A "none" is a correct, honest result when labeled so; reconnecting is never offe
 | tp1-maya-new-and-reconnect | b1-maya-nearby | a2-positive-sam-owner-picks | introduce | preview | yes |
 | tp2-maya-refusal-does-not-touch-discovery | b1-maya-nearby | r2-refused-person-cannot-be-chosen-or-fallen-through | introduce | none | yes |
 | tp3-maya-no-journal | b1-maya-nearby | n1-nothing-to-share | introduce | none | yes |
-| tp4-maya-private-party | b2-maya-events | pp1-private-party-no-hint | introduce | clarify | yes |
+| tp4-maya-private-party | b2-maya-events | pp1-private-party-no-hint | introduce | none | yes |
 | tp5-cold-start-reconnect-available | b4-ben-cold-start | g1-company-and-this-friend | none | preview | yes |
 | tp6-sparse-both-silent | b6-nadia-sparse | t2-ambiguous-timing-skip-is-silence | none | none | yes |
 | tp7-downtown-both-useful | b3-tomas-nearby | a19-family-tiring-week-seed | introduce | preview | yes |

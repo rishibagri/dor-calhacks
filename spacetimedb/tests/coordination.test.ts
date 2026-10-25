@@ -80,15 +80,21 @@ describe('worker identity boundary', () => {
   });
 });
 
-describe('F5 recipient gate (D017 opt-in default off, D018 quiet hours/cooldown)', () => {
-  it('no nudge until the recipient opts in; the sender cannot opt the recipient in', () => {
+describe('F5 recipient gate (accepted-pair default on with recipient opt-out; D018 quiet hours/cooldown)', () => {
+  it('an accepted pair uses the standard default; the sender cannot change the recipient setting', () => {
     const { w, pairId, worker } = world();
     const sig = approve(w, BOTH);
-    expect(() => commit(w, worker, commitArgs(pairId, sig))).toThrow('unauthorized: not_opted_in');
-    optIn(w, w.alice, pairId); // alice opts HERSELF in as a recipient; bob is still off
-    expect(() => commit(w, worker, commitArgs(pairId, sig))).toThrow('unauthorized: not_opted_in');
+    commit(w, worker, commitArgs(pairId, sig));
+    expect(nudges(w)).toHaveLength(1);
+    optIn(w, w.alice, pairId, false); // alice may only opt herself out; bob's accepted-pair default remains on
     expect(() => optIn(w, w.carol, pairId)).toThrow('not_found:');
-    expect(view(w, w.bob, mod.my_nudge_delivery)).toHaveLength(0);
+  });
+
+  it('an explicit recipient opt-out blocks delivery', () => {
+    const { w, pairId, worker } = world();
+    optIn(w, w.bob, pairId, false);
+    const sig = approve(w, BOTH);
+    expect(() => commit(w, worker, commitArgs(pairId, sig))).toThrow('unauthorized: not_opted_in');
     expect(nudges(w)).toHaveLength(0);
   });
 

@@ -1,12 +1,9 @@
 /**
  * D040: Claude's owner-only private assessment → CS's private decision loop (docs/features/PRIVATE_ASSESSMENT.md).
  *
- * Pure and in memory. The assessment may only narrow what the loop does:
- * - stop: wants_space or an invalid assessment → no action;
- * - skip the company question: wants_connection;
- * - leave people out: explicit excluded names, matched on this device against the owner's own connections;
- * - order people first: preferred names.
- * It never sets the chosen recipient, approves a preview or sends anything. These helpers treat a missing
+ * Pure and in memory. A unique literal mention can route directly to one accepted connection; risk, wants_space,
+ * exclusions or invalid data can only stop/narrow the loop. Ambiguous names ask the owner. It never approves or sends
+ * anything itself. These helpers treat a missing
  * assessment as "none" (pure building blocks); the product fails closed on it (D042): the contract requires an
  * assessment whenever there is a candidate, and CS's DecisionLoop wraps the start in `failClosedWithoutAssessment`.
  */
@@ -50,7 +47,7 @@ function parse(assessment: unknown): { ok: true; value: PrivateAssessment | null
 export function suggestsNothing(candidate: SignalCandidate | null, assessment: unknown): boolean {
   if (candidate === null) return true;
   const a = parse(assessment);
-  return !a.ok || a.value?.intent === 'wants_space';
+  return !a.ok || a.value?.intent === 'wants_space' || (a.value !== null && a.value.risk !== 'none');
 }
 
 /** The loop's starting state for this reflection episode. Never sets `chosen`. */
@@ -58,8 +55,9 @@ export function initialLoopState(candidate: SignalCandidate | null, assessment: 
   if (suggestsNothing(candidate, assessment)) return startLoop(null);
   const a = parse(assessment);
   const start = startLoop(candidate);
-  // The owner already said they would welcome contact: skip only "would company feel good?"; "who" is still theirs.
-  return a.ok && a.value?.intent === 'wants_connection' ? answerCompany(start, 'company') : start;
+  // A mentioned person is the trigger; if names are ambiguous, clarify which person rather than whether connection matters.
+  return a.ok && a.value && (a.value.intent === 'wants_connection' || a.value.mentionedNames.length > 0)
+    ? answerCompany(start, 'company') : start;
 }
 
 /**
@@ -78,6 +76,26 @@ export function assessedRecipients(recipients: readonly Recipient[], assessment:
     return i === -1 ? preferredNames.length : i;
   };
   return kept.map((r, i) => ({ r, i })).sort((x, y) => rank(x.r) - rank(y.r) || x.i - y.i).map(({ r }) => r);
+}
+
+/** One uniquely mentioned accepted connection can proceed automatically; ambiguous or inferred names cannot. */
+export function uniquelyPreferredRecipient(recipients: readonly Recipient[], assessment: unknown): Recipient | null {
+  const a = parse(assessment);
+  if (!a.ok || !a.value || a.value.intent === 'wants_space' || a.value.risk !== 'none') return null;
+  const names = a.value.mentionedNames.length > 0 ? a.value.mentionedNames : a.value.preferredNames;
+  if (names.length !== 1) return null;
+  const matches = recipients.filter(r => nameMatches(names[0]!, r.name));
+  return matches.length === 1 ? matches[0]! : null;
+}
+
+/**
+ * High-recall local safety fallback. This is not a diagnosis or a risk score: recognizable serious-distress terms
+ * show the resource card and suppress this reflection's relationship flow even if Claude misses the signal.
+ * It never sends the matched text or term anywhere.
+ */
+export function requiresImmediateSupport(text: string): boolean {
+  return /\b(?:depress(?:ion|ed)?|suicid(?:e|al)|self[- ]harm|hurt(?:ing)? myself|kill myself|end my life|don['’]t want to live|do not want to live|can['’]t go on|cannot go on|in immediate danger|feel unsafe)\b/i
+    .test(text.normalize('NFKC'));
 }
 
 /** Connections left out because of the entry, for the owner-only note "Leaving out X for now, based on your entry." */

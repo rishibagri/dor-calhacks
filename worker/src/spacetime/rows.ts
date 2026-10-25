@@ -134,7 +134,7 @@ export interface DeliveryContext {
   lastNudgeAt: Date | null;
 }
 
-/** One worker_delivery row (only opted-in rows are listed by the view). */
+/** One explicit worker_delivery setting; absent rows use the accepted-pair default. */
 export function toDeliveryContext(row: Row): DeliveryContext {
   const quietStart = optional(row, 'quiet_start_minute');
   const quietEnd = optional(row, 'quiet_end_minute');
@@ -243,8 +243,8 @@ export function toIntroductionRequestRow(row: Row): IntroductionRequestRow {
   };
 }
 
-/** No row means the recipient never opted in (D017 default off). */
-export const NOT_OPTED_IN: RecipientDelivery = { ...DEFAULT_RECIPIENT_DELIVERY, optedIn: false };
+/** Compatibility fallback name: accepted-pair default is on; persisted false rows still opt out. */
+export const DEFAULT_DELIVERY: RecipientDelivery = DEFAULT_RECIPIENT_DELIVERY;
 
 /** Maps rows, dropping any that fail to map (fail closed on drift). */
 export function mapRows<T>(rows: Iterable<unknown>, map: (row: Row) => T): T[] {

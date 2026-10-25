@@ -1,8 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
-import { AvailabilitySchema, MAX_EXCLUDED_NAMES, MAX_PREFERRED_NAMES, PrivateAssessmentSchema, PrivateReflectionSchema,
-  RECIPIENT_INTENTS, SupportModeSchema, type PrivateAssessment, type PrivateReflection, type PrivateReflectionPort,
+import { AvailabilitySchema, MAX_EXCLUDED_NAMES, MAX_MENTIONED_NAMES, MAX_PREFERRED_NAMES, PrivateAssessmentSchema, PrivateReflectionSchema,
+  RECIPIENT_INTENTS, REFLECTION_RISKS, SupportModeSchema, type PrivateAssessment, type PrivateReflection, type PrivateReflectionPort,
   type SignalCandidate } from '@dor/contracts';
 import { ProviderError, toProviderError } from '../errors.js';
 import { REFLECTION_SYSTEM_PROMPT } from './prompt.js';
@@ -14,7 +14,8 @@ export const MAX_SELECTED_TEXT_CHARS = 8000;
 const ModelReflectionSchema = z.object({
   reflection: z.string(),
   candidate: z.object({ supportMode: SupportModeSchema.nullable(), availability: AvailabilitySchema.nullable() }).nullable(),
-  assessment: z.object({ intent: z.enum(RECIPIENT_INTENTS), excludedNames: z.array(z.string()), preferredNames: z.array(z.string()) }),
+  assessment: z.object({ intent: z.enum(RECIPIENT_INTENTS), risk: z.enum(REFLECTION_RISKS),
+    mentionedNames: z.array(z.string()).default([]), excludedNames: z.array(z.string()), preferredNames: z.array(z.string()) }),
 });
 type ModelReflection = z.infer<typeof ModelReflectionSchema>;
 
@@ -105,7 +106,7 @@ export class ClaudeReflectionAdapter implements PrivateReflectionPort {
 }
 
 /** Whatever cannot be represented safely means "suggest nothing" (D040): never drop a veto and carry on. */
-const SUGGEST_NOTHING: PrivateAssessment = { intent: 'wants_space', excludedNames: [], preferredNames: [] };
+const SUGGEST_NOTHING: PrivateAssessment = { intent: 'wants_space', risk: 'interpersonal_conflict', mentionedNames: [], excludedNames: [], preferredNames: [] };
 
 const cleanNames = (names: string[]) => {
   const out: string[] = [];
@@ -121,21 +122,24 @@ export function toPrivateAssessment(output: ModelReflection['assessment'] | unde
   if (!output) return SUGGEST_NOTHING;
   const excludedNames = cleanNames(output.excludedNames);
   if (excludedNames.length > MAX_EXCLUDED_NAMES) return SUGGEST_NOTHING;
+  const mentionedNames = cleanNames(output.mentionedNames ?? []);
+  if (mentionedNames.length > MAX_MENTIONED_NAMES) return SUGGEST_NOTHING;
   const excluded = new Set(excludedNames.map(n => n.toLowerCase()));
   const preferredNames = cleanNames(output.preferredNames).filter(n => !excluded.has(n.toLowerCase())).slice(0, MAX_PREFERRED_NAMES);
-  const parsed = PrivateAssessmentSchema.safeParse({ intent: output.intent, excludedNames, preferredNames });
+  const parsed = PrivateAssessmentSchema.safeParse({ intent: output.intent, risk: output.risk ?? 'none', mentionedNames, excludedNames, preferredNames });
   return parsed.success ? parsed.data : SUGGEST_NOTHING;
 }
 
 export function toPrivateReflection(output: ModelReflection): PrivateReflection {
+  const assessment = toPrivateAssessment(output.assessment);
   let candidate: SignalCandidate | null = null;
-  if (output.candidate && (output.candidate.supportMode || output.candidate.availability)) {
+  if (assessment.risk === 'none' && output.candidate && (output.candidate.supportMode || output.candidate.availability)) {
     candidate = {};
     if (output.candidate.supportMode) candidate.supportMode = output.candidate.supportMode;
     if (output.candidate.availability) candidate.availability = output.candidate.availability;
   }
   const parsed = PrivateReflectionSchema.safeParse({ schemaVersion: 1, reflection: output.reflection.trim(), candidate,
-    assessment: toPrivateAssessment(output.assessment) });
+    assessment });
   if (!parsed.success) throw new ProviderError('anthropic', 'invalid_output');
   return parsed.data;
 }

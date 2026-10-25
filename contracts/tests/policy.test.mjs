@@ -287,16 +287,16 @@ function commitFixture() {
     nudge: { pairId: 'pair-1', recipientId: B, templateId: 'offer_short_call', sourceSignalIds: ['sig-1'], sourceConsentVersions: [1], ...BOUND } };
 }
 
-test('commit: recipient never opted in (no delivery row) means no nudge; default is off', () => {
+test('commit: accepted-pair delivery defaults on; a persisted opt-out still blocks', () => {
   const { sources, nudge } = commitFixture();
-  assert.equal(guardNudgeCommit(nudge, sources, { pref: null, lastNudgeAtMs: null, nowMs: NOW, preferences: PREFS }).reason, 'not_opted_in');
+  assert.equal(guardNudgeCommit(nudge, sources, { pref: null, lastNudgeAtMs: null, nowMs: NOW, preferences: PREFS }).allowed, true);
   assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, pref: { ...OPEN.pref, optedIn: false } }).reason, 'not_opted_in');
-  assert.equal(DEFAULT_RECIPIENT_DELIVERY.optedIn, false);
+  assert.equal(DEFAULT_RECIPIENT_DELIVERY.optedIn, true);
 });
 
 test('commit: quiet hours in recipient local time and 24h per-pair cooldown are rechecked at commit', () => {
   const { sources, nudge } = commitFixture();
-  const quiet = { ...OPEN, pref: { ...DEFAULT_RECIPIENT_DELIVERY, optedIn: true } }; // 22:00-08:00 UTC
+  const quiet = { ...OPEN, pref: { ...DEFAULT_RECIPIENT_DELIVERY, quietStartMinute: 22 * 60, quietEndMinute: 8 * 60 } }; // 22:00-08:00 UTC
   assert.equal(guardNudgeCommit(nudge, sources, quiet).reason, 'quiet_hours'); // NOW is 00:00Z
   assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, lastNudgeAtMs: NOW - NUDGE_COOLDOWN_MS + 1 }).reason, 'cooldown');
   assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, lastNudgeAtMs: NOW - NUDGE_COOLDOWN_MS }).allowed, true);
@@ -315,9 +315,10 @@ test('commit: stale approval (preset changed after approval) cannot produce a nu
 });
 
 // ---- C4 recipient preference consent at commit (D021 #4, D035) ----
-test('commit: no recipient preference consent means no nudge, even when opted in', () => {
+test('commit: no custom support preferences uses standard styles for the accepted pair', () => {
   const { sources, nudge } = commitFixture();
-  assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, preferences: null }).reason, 'no_consent');
+  const defaultNudge = { ...nudge, recipientConsentId: 'default:pair-1:bob-id', recipientConsentVersion: 1 };
+  assert.equal(guardNudgeCommit(defaultNudge, sources, { ...OPEN, preferences: null }).allowed, true);
 });
 
 test('commit: preference revoked or edited during generation is caught at commit', () => {

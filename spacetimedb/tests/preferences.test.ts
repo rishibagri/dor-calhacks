@@ -8,7 +8,7 @@ import { allSignals, approveArgs, AUDIENCE, confirmPreset, grantPrefs, inDays, I
 const HOUR_US = 3_600_000_000n;
 type W = ReturnType<typeof setup>;
 
-/** alice→bob accepted pair, alice's partner preset assigned, bob opted in (no quiet hours), worker allow-listed. No preferences yet. */
+/** alice→bob accepted pair, alice's partner preset assigned, bob uses default-on delivery and standard support styles. */
 function world() {
   const w = setup();
   const { pairId } = pairUp(w);
@@ -73,15 +73,18 @@ describe('recipient support-preference consent (D021 #4, D035)', () => {
       expect(view(w, u, mod.my_support_preferences)).toHaveLength(0);
       expect(view(w, u, mod.worker_support_preferences)).toHaveLength(0);
     }
-    expect(view(w, worker, mod.worker_support_preferences)).toHaveLength(1);
+    expect(view(w, worker, mod.worker_support_preferences)).toHaveLength(2);
     w.call(w.bob, ctx => mod.revoke_support_preferences(ctx, { pair_id: pairId }));
-    expect(view(w, worker, mod.worker_support_preferences)).toHaveLength(0);
+    expect(view(w, worker, mod.worker_support_preferences)).toHaveLength(2);
   });
 
-  it('commit without any recipient consent is refused even though the recipient opted in to delivery', () => {
+  it('accepted pairs get standard support styles without first configuring preferences', () => {
     const { w, pairId, worker, sig } = world();
-    expect(() => commit(w, worker, commitArgs(pairId, sig, null))).toThrow('unauthorized: no_consent');
-    expect(nudgeRow(w)).toBeFalsy();
+    const bobIdentity = view<any>(w, w.alice, mod.my_pairs)[0].counterpart_identity;
+    const standard = view<any>(w, worker, mod.worker_support_preferences).find(p => p.recipient.isEqual(bobIdentity));
+    expect(standard).toBeTruthy();
+    commit(w, worker, commitArgs(pairId, sig, standard));
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(1);
   });
 
   it('commit binds the exact consent the coordinator read; the nudge records it', () => {
@@ -97,9 +100,10 @@ describe('recipient support-preference consent (D021 #4, D035)', () => {
   it('preference revoked during generation: the commit bound to the read version fails', () => {
     const { w, pairId, worker, sig } = world();
     grantPrefs(w, w.bob, pairId);
-    const read = view<any>(w, worker, mod.worker_support_preferences)[0]; // coordinator reads v1
+    const bobIdentity = view<any>(w, w.alice, mod.my_pairs)[0].counterpart_identity;
+    const read = view<any>(w, worker, mod.worker_support_preferences).find(p => p.recipient.isEqual(bobIdentity))!; // coordinator reads v1
     w.call(w.bob, ctx => mod.revoke_support_preferences(ctx, { pair_id: pairId })); // recipient revokes mid-generation
-    expect(() => commit(w, worker, commitArgs(pairId, sig, read))).toThrow('stale: revoked');
+    expect(() => commit(w, worker, commitArgs(pairId, sig, read))).toThrow('stale: stale_policy');
     expect(nudgeRow(w)).toBeFalsy();
   });
 
@@ -120,7 +124,7 @@ describe('recipient support-preference consent (D021 #4, D035)', () => {
   it('the sender cannot record preferences for the recipient (wrong caller)', () => {
     const { w, pairId, worker, sig } = world();
     const forged = grantPrefs(w, w.alice, pairId); // alice records HER OWN consent as a recipient, not bob's
-    expect(() => commit(w, worker, commitArgs(pairId, sig, forged))).toThrow('unauthorized: no_consent');
+    expect(() => commit(w, worker, commitArgs(pairId, sig, forged))).toThrow('stale: stale_policy');
     expect(view(w, w.bob, mod.my_support_preferences)).toHaveLength(0);
   });
 
@@ -194,11 +198,11 @@ describe('scheduled expiry/snooze sweep (views have no clock)', () => {
     w.h.withReducerTx(w.admin, ctx => { const n = ctx.db.nudge.id.find('n-2')!; ctx.db.nudge.id.update({ ...n, expires_at: new Timestamp(n.expires_at.microsSinceUnixEpoch + 48n * HOUR_US) }); }); // isolate the consent expiry
     advance(w, 12n * HOUR_US);
     sweep(w);
-    expect(view(w, worker, mod.worker_support_preferences)).toHaveLength(0);
+    expect(view(w, worker, mod.worker_support_preferences)).toHaveLength(2);
     expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
     // Renewing is a new version: the old nudge stays hidden (bound consent expired), new consent is visible to the worker.
     grantPrefs(w, w.bob, pairId);
-    expect(view(w, worker, mod.worker_support_preferences)).toHaveLength(1);
+    expect(view(w, worker, mod.worker_support_preferences)).toHaveLength(2);
   });
 
   it('a snoozed nudge is hidden until the snooze ends, then reappears after the sweep', () => {

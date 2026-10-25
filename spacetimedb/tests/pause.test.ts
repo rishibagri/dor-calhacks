@@ -12,7 +12,7 @@ const BOTH = { support_mode: 'short_call', availability: 'this_week' };
 const advance = (w: W, ms: number) => w.h.clock.set(new Timestamp(w.h.clock.now().microsSinceUnixEpoch + BigInt(ms) * 1000n));
 const json = (v: unknown) => JSON.stringify(v, (_, x) => typeof x === 'bigint' ? String(x) : x);
 
-/** alice ↔ bob accepted pair; alice's partner preset; bob opted in with support consent; worker allow-listed. */
+/** alice ↔ bob accepted pair; alice's partner preset; bob uses standard support styles; worker allow-listed. */
 function world() {
   const w = setup();
   const { pairId } = pairUp(w);

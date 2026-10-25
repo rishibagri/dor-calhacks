@@ -51,6 +51,25 @@
             "wants_space"
           ]
         },
+        "risk": {
+          "default": "none",
+          "type": "string",
+          "enum": [
+            "none",
+            "interpersonal_conflict",
+            "urgent_support"
+          ]
+        },
+        "mentionedNames": {
+          "default": [],
+          "maxItems": 5,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          }
+        },
         "excludedNames": {
           "maxItems": 5,
           "type": "array",
@@ -72,6 +91,8 @@
       },
       "required": [
         "intent",
+        "risk",
+        "mentionedNames",
         "excludedNames",
         "preferredNames"
       ],

@@ -68,6 +68,8 @@ const approve = (w: World, payload: Record<string, string>, req = 'r1') => {
 const optIn = (w: World, pairId: string, quiet: [number, number] | null = null) =>
   w.call(w.bob, ctx => mod.set_nudge_delivery(ctx, { pair_id: pairId, opted_in: true,
     quiet_start_minute: quiet?.[0], quiet_end_minute: quiet?.[1], utc_offset_minutes: 0 }));
+const optOut = (w: World, pairId: string) =>
+  w.call(w.bob, ctx => mod.set_nudge_delivery(ctx, { pair_id: pairId, opted_in: false, utc_offset_minutes: 0 }));
 const job = (pairId: string, signalId: string, requestId = signalId) => ({ schemaVersion: 1, jobId: `job_${requestId}`,
   pairId, requestId, signalIds: [signalId], createdAt: new Date().toISOString() });
 
@@ -105,19 +107,19 @@ describe('typed approval → worker → commit_nudge, over the real module', () 
     expect(view<any>(w, w.alice, mod.my_receipts).map(r => r.action)).toEqual(['approved']);
   });
 
-  it('recipient recorded no consent: no nudge and zero model calls (fail closed)', async () => {
+  it('missing recipient preferences use standard defaults; accepted pair nudges without setup', async () => {
     const { w, pairId, worker } = world(undefined, { consent: false });
-    optIn(w, pairId);
     const sig = approve(w, BOTH);
     const droid = scriptedDroid();
     const live = liveWorker(w, harnessSource(w, worker), droid);
-    expect((await live.runJob(job(pairId, sig.signal_id))).map(o => o.outcome)).toEqual(['preferences_unavailable']);
-    expect(droid.calls()).toBe(0);
-    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
+    expect((await live.runJob(job(pairId, sig.signal_id))).map(o => o.outcome)).toEqual(['nudge_proposed']);
+    expect(droid.calls()).toBe(1);
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(1);
   });
 
-  it('recipient never opted in: not_opted_in before any model call', async () => {
+  it('an explicit recipient opt-out blocks before any model call', async () => {
     const { w, pairId, worker, bobHex } = world();
+    optOut(w, pairId);
     const sig = approve(w, BOTH);
     const droid = scriptedDroid();
     const live = liveWorker(w, harnessSource(w, worker), droid);

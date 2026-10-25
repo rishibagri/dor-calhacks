@@ -128,7 +128,7 @@ export const nudge = table(
 );
 
 /**
- * Recipient-owned F5 delivery settings per pair (D017 opt-in default off, D018 quiet hours).
+ * Recipient-owned F5 delivery settings per pair (D050 accepted-pair default on; persisted opt-out wins; D018 quiet hours).
  * No row = never opted in. Written only by the recipient via set_nudge_delivery.
  */
 export const nudge_delivery = table(

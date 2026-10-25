@@ -302,11 +302,11 @@
       "group": "uncertain",
       "relationship": "friends",
       "story": "SYNTHETIC: told Jordan I was sick so I skipped their dinner, then went to Maya's party Friday at the warehouse. Feel guilty.",
-      "candidate": { "supportMode": "short_call" },
+      "candidate": null,
       "recipients": ["p-jordan", "p-sam"],
-      "assessment": { "intent": "unclear", "excludedNames": [], "preferredNames": [] },
+      "assessment": { "intent": "wants_space", "risk": "interpersonal_conflict", "mentionedNames": [], "excludedNames": [], "preferredNames": [] },
       "steps": [],
-      "expected": { "kind": "needs_clarification", "question": "company", "options": ["p-jordan", "p-sam"] },
+      "expected": { "kind": "no_action", "reason": "nothing_to_share" },
       "forbidden": { "excuse": ["sick"], "private_activity": ["party", "dinner"], "location": ["warehouse"], "timing_detail": ["Friday"], "relationship_tension": ["guilty", "Maya"] }
     },
     {
@@ -315,11 +315,11 @@
       "group": "avoid",
       "relationship": "friends",
       "story": "SYNTHETIC: told Jordan I was sick so I skipped their dinner, then went to Maya's party Friday at the warehouse. Feel guilty.",
-      "candidate": { "supportMode": "short_call" },
+      "candidate": null,
       "recipients": ["p-jordan", "p-sam"],
-      "assessment": { "intent": "unclear", "excludedNames": [], "preferredNames": [] },
+      "assessment": { "intent": "wants_space", "risk": "interpersonal_conflict", "mentionedNames": [], "excludedNames": [], "preferredNames": [] },
       "steps": [{ "company": "company" }, { "exclude": "p-jordan" }, { "who": "p-sam" }],
-      "expected": { "kind": "ready_for_preview", "recipient": "p-sam" },
+      "expected": { "kind": "no_action", "reason": "nothing_to_share" },
       "forbidden": { "unapproved_recipient": ["Jordan"], "excuse": ["sick"], "private_activity": ["party", "dinner"], "location": ["warehouse"], "timing_detail": ["Friday"], "relationship_tension": ["guilty", "Maya"] }
     },
     {
@@ -328,11 +328,11 @@
       "group": "support",
       "relationship": "friends",
       "story": "SYNTHETIC: told Jordan I was sick so I skipped their dinner, then went to Maya's party Friday at the warehouse. Still want to talk to Jordan.",
-      "candidate": { "supportMode": "short_call" },
+      "candidate": null,
       "recipients": ["p-jordan", "p-sam"],
-      "assessment": { "intent": "unclear", "excludedNames": [], "preferredNames": [] },
+      "assessment": { "intent": "wants_space", "risk": "interpersonal_conflict", "mentionedNames": [], "excludedNames": [], "preferredNames": [] },
       "steps": [{ "company": "company" }, { "who": "p-jordan" }],
-      "expected": { "kind": "ready_for_preview", "recipient": "p-jordan" },
+      "expected": { "kind": "no_action", "reason": "nothing_to_share" },
       "forbidden": { "unapproved_recipient": ["Sam"], "excuse": ["sick"], "private_activity": ["party", "dinner"], "location": ["warehouse"], "timing_detail": ["Friday"], "relationship_tension": ["Maya"] }
     },
     {
@@ -355,7 +355,7 @@
       "reflectionRef": "positive-sam",
       "recipients": ["p-alex", "p-sam", "p-jordan"],
       "steps": [],
-      "expected": { "kind": "needs_clarification", "question": "who", "options": ["p-sam", "p-alex", "p-jordan"] },
+      "expected": { "kind": "ready_for_preview", "recipient": "p-sam" },
       "forbidden": { "timing_detail": ["this evening", "long day"] },
       "relationship": "friends"
     },
@@ -455,7 +455,7 @@
       "candidateOverride": { "supportMode": "short_call" },
       "recipients": ["p-jordan", "p-sam"],
       "steps": [],
-      "expected": { "kind": "needs_clarification", "question": "company", "options": ["p-jordan", "p-sam"] },
+      "expected": { "kind": "no_action", "reason": "nothing_to_share" },
       "forbidden": { "excuse": ["sick"], "private_activity": ["party", "dinner"], "timing_detail": ["Friday"], "relationship_tension": ["weird"] },
       "relationship": "friends"
     },

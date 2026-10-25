@@ -7,7 +7,6 @@ import { introductionActions, toControlRows } from '@/components/feature/introdu
 import { useLiveShared } from '@/components/shell/use-live';
 import { IntroductionControls } from '@/features/privacy/introduction-controls';
 import { IntegrationStatus } from '@/components/shell/integration-status';
-import { StandingConsentSettings } from '@/components/feature/standing-consent';
 
 const STEPS = [
   'One of you creates an invite and sends the token.',
@@ -25,7 +24,8 @@ export default function ConnectionsPage() {
         <h1 className="text-2xl font-semibold tracking-tight text-balance">Connections</h1>
         <p className="max-w-[65ch] text-sm text-muted-foreground">
           Presets are per relationship type, not per person. You assign a confirmed preset to each named connection;
-          assigning never shares anything automatically.
+          presets limit which gentle in-app nudges dor may offer automatically. Your journal stays private, and each
+          person can turn nudges off for a connection at any time.
         </p>
         <ol className="max-w-[65ch] list-decimal space-y-1 pl-5 text-sm text-foreground/80 marker:text-muted-foreground">
           {STEPS.map((s) => <li key={s}>{s}</li>)}
@@ -36,7 +36,6 @@ export default function ConnectionsPage() {
       <AccountInvites />
       <PairsList />
       <PresetEditor />
-      <StandingConsentSettings />
     </div>
   );
 }

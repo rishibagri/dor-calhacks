@@ -54,7 +54,8 @@ export default function JournalPage() {
           ? <JournalWorkspace key={userId} vault={vault} />
           : <p>Unlock your vault to write or record. Locking clears the open draft and stops recording.</p>}
         <p className="text-sm text-muted-foreground">
-          AI suggestions stay on this screen. Sharing still requires a separate explicit approval.
+          Your journal stays private. When you mention a connection, dor's agents decide whether an in-app nudge fits;
+          you can pause or turn nudges off in Connections.
           Manage shared permissions in <Link className="underline" href="/privacy">Privacy</Link>.
         </p>
       </>}
