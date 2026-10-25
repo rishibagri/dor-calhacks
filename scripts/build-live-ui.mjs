@@ -67,6 +67,7 @@ edit('mat from', `<div style="position:absolute;left:24px;top:150px;font:600 28p
 edit('mat body', 'Noor is new in Berkeley too. You were both open to coffee.', '{{ live.envBody }}');
 edit('postcard name', `<span style="position:relative;font:600 38px/1 'Caveat'">Maya</span>`, `<span style="position:relative;font:600 38px/1 'Caveat'">{{ live.myName }}</span>`);
 edit('interest share', '>Maya is interested in<br>', '>{{ live.myName }} is interested in<br>');
+edit('intro preview name', 'line1:`Maya · ${this.chapterLine()}`', "line1:`${this.pinText('name')} · ${this.chapterLine()}`");
 edit('feed age', '">checked 2 h ago</span>', '">{{ live.feedAge }}</span>');
 edit('open listing', `<button style="border:none;background:none;padding:12px 2px;font:400 15px 'Spectral',serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer;white-space:nowrap">Open listing ↗</button>`,
   `<button sc-camel-on-click="{{ live.openListing }}" style="border:none;background:none;padding:12px 2px;font:400 15px 'Spectral',serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer;white-space:nowrap">Open listing ↗</button>`);
