@@ -14,6 +14,22 @@
 
 ---
 
+# Relationship books handoff — CS + Cyber (D049)
+
+**Status:** implemented and offline-verified; pending PR review. Not browser- or live-verified. No provider, Apify, Maincloud or deployment calls.
+
+**CS UI and local ports:** accepted connections show an expandable relationship book. The user may select a local JPEG/PNG/WebP image (≤1.5 MB), optionally caption it, manually log calls, link one of their own introductions, and record local feedback on received nudges. `VaultPort` additions are local-only: `save/list/deleteRelationshipPhoto` and `save/list/deleteBookInteraction`. Existing caller-filtered `my_nudges` rows are reflected into the local book; the book does not add server fields or publish entries.
+
+**Cyber vault API:** `src/vault/book-types.ts`, `LocalVault`, and `VaultStore` use pair-scoped encrypted records with strict field/MIME/size validation; IndexedDB v1 migrates by adding the two stores. `nudge_received` upserts by pair/source/kind and preserves first-seen id/time while allowing a local outcome. Vault lock drops decrypted component state. D049 documents the boundary.
+
+**D044 behavior:** unchanged. No standing rule is enabled automatically. No per-nudge sender review is skipped unless the owner explicitly enabled a current, expiring named-pair rule covering the candidate; recipient opt-in/preferences, pauses, expiry, quiet hours, cooldown and server rechecks remain required. Journal text is never automatically shared.
+
+**Evidence:** merged latest main `fb5dfa4`; `npm run typecheck` passed; `node --test src/vault/__tests__/vault.test.ts` passed 20/20; `npm run check` passed (contracts 131/131); `npm run build:app` passed; `git diff --check` passed. These are offline checks only.
+
+**Next:** Sumedh: review D049 encrypted record bounds and pair scoping. CS: complete app build and open PR. Team: browser test add/remove photo, lock/unlock and account switch; confirm photos never appear in network requests. No raw private content in shared state or logs.
+
+---
+
 README core-first direction applied. Discover/Events preserved but hidden by default (`NEXT_PUBLIC_DOR_EXTENSIONS`). Journal now runs a private decision loop before any preview: see `docs/features/PRIVATE_DECISION_LOOP.md` for the journey, rules, tests and seams (AI assessment mapping, Cyber durable pause, DS paired scenarios). Offline only. Next CS: Core 3 live configuration (module publish, auth issuer/audience, worker identity, two-account + denied third account), then pause controls once the Cyber contract lands.
 
 ---

@@ -24,6 +24,7 @@ import type {
   Availability,
   PrivateReflection,
 } from '@dor/contracts';
+import type { BookInteraction, NewBookInteraction, NewRelationshipBookPhoto, RelationshipBookPhoto } from '@/vault/book-types';
 
 export type { AgentAck, ApprovedSignal, DisclosureReceipt, LocalConnectionProfile, Nudge };
 
@@ -382,6 +383,7 @@ export interface JournalEntrySummary {
   localId: string;
   createdAt: string;
 }
+
 /** 'unknown' until refresh() has read local metadata; 'absent' = no vault on this device yet. */
 export type VaultState = 'unknown' | 'absent' | 'locked' | 'unlocked';
 /** Constant, content-free error codes (Error.message === code). `wrong_secret` covers passphrase AND recovery code. */
@@ -419,6 +421,12 @@ export interface VaultPort {
   loadProfile(): Promise<LocalConnectionProfile | null>;
   saveQuizExtras(extras: LocalQuizExtras): Promise<void>;
   loadQuizExtras(): Promise<LocalQuizExtras | null>;
+  saveRelationshipPhoto(photo: NewRelationshipBookPhoto): Promise<void>;
+  listRelationshipPhotos(pairId: string): Promise<RelationshipBookPhoto[]>;
+  deleteRelationshipPhoto(pairId: string, photoId: string): Promise<void>;
+  saveBookInteraction(interaction: NewBookInteraction): Promise<void>;
+  listBookInteractions(pairId: string): Promise<BookInteraction[]>;
+  deleteBookInteraction(pairId: string, interactionId: string): Promise<void>;
 }
 
 /** Transient provider reflection via authenticated Next.js route (AI owns). */

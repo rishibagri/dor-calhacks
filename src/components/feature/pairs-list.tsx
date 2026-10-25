@@ -11,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PRESET_KINDS } from './preset-editor';
 import { PauseControls } from './pause-controls';
 import { RecipientSettings } from './recipient-settings';
+import { RelationshipBook } from './relationship-book';
 
 function PairRow({ pair }: { pair: PairView }) {
   const shared = useLiveShared();
@@ -44,6 +45,7 @@ function PairRow({ pair }: { pair: PairView }) {
       <ResultNotice result={result} />
       {pair.status === 'accepted' && <PauseControls pairId={pair.pairId} name={name} />}
       {pair.status === 'accepted' && <RecipientSettings pairId={pair.pairId} name={name} />}
+      <RelationshipBook pair={pair} />
       {pair.status !== 'unlinked' && (
         <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => shared.unlinkPair(pair.pairId).then(setResult)}>Unlink</Button>
       )}
