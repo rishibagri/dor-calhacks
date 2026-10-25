@@ -1,0 +1,7 @@
+# Cloudflare Worker in front of https://live.doratcalhacks.site (the laptop-only live app behind the dor-demo
+# tunnel). Passes traffic through while a live session runs; otherwise serves a friendly "not live right now" page.
+name = "dor-live-gate"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = false
+routes = [{ pattern = "live.doratcalhacks.site/*", zone_name = "doratcalhacks.site" }]
