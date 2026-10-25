@@ -129,12 +129,24 @@ export class DroidRunner {
       this.options.onUsage?.({ model: this.model, durationMs: Date.now() - started, ...outcome.usage, outcome: 'ok' });
       return outcome.reply;
     }
-    const stdout = await this.exec(cwd, prompt, timeoutMs);
+    // A call that never produced an envelope (missing binary, timeout, crash, unparseable output) is still reported,
+    // as on the transport path, so a broken droid shows up in droid_call logs rather than only as fallback outcomes.
+    const failed = (error: ProviderError) => {
+      this.options.onUsage?.({ model: this.model, durationMs: Date.now() - started, factoryCredits: null,
+        cacheReadTokens: null, cacheCreationTokens: null, outcome: error.code });
+      return error;
+    };
+    let stdout: string;
+    try {
+      stdout = await this.exec(cwd, prompt, timeoutMs);
+    } catch (error) {
+      throw failed(error instanceof ProviderError ? error : new ProviderError('factory', 'unavailable'));
+    }
     let envelope;
     try {
       envelope = DroidExecResultSchema.parse(JSON.parse(stdout));
     } catch {
-      throw new ProviderError('factory', 'invalid_output');
+      throw failed(new ProviderError('factory', 'invalid_output'));
     }
     const usage = envelope.usage;
     this.options.onUsage?.({ model: this.model, durationMs: Date.now() - started,

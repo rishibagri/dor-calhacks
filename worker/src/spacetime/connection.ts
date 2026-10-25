@@ -77,8 +77,12 @@ export interface SpacetimeWorkerOptions {
   autoReconnect?: boolean;
 }
 
-/** Views whose new rows can mean new work; a callback on them triggers an immediate sweep. */
-const TRIGGER_VIEWS = ['worker_signal_context', 'worker_plan_candidates', 'worker_introduction_requests'] as const;
+/**
+ * Views whose new rows can mean new work; a callback on them triggers an immediate sweep. Delivery and preference rows
+ * are included so a recipient's later opt-in or consent retries a deferred signal at once (SignalWatcher).
+ */
+const TRIGGER_VIEWS = ['worker_signal_context', 'worker_delivery', 'worker_support_preferences', 'worker_plan_candidates',
+  'worker_introduction_requests'] as const;
 
 /**
  * Live WorkerStateSource: one connection subscribed to the worker-only views. Reads come from the
