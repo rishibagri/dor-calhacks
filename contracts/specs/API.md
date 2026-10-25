@@ -5,6 +5,7 @@ Next.js provider-facing routes use JSON and authenticated sessions. Shared-state
 |---|---|---|
 | POST /api/pairs/invites | {} | opaque expiring invite; no contact upload |
 | POST /api/pairs/accept | {inviteToken} | accepted pair; both identities verified |
+| POST /api/journal/followup | {entry ≤ 8000, asked: string[] ≤ 8} | `{question, distress}` (D055): one short open follow-up question about the writer's own entry, read aloud on the device; `distress` means show support resources instead. Transient Claude call, strict body, Clerk session, 20/min per user, no body logging or persistence; nothing reaches another person or the database |
 | POST /api/voice/session | {} | `VoiceSession` (C1): 60 s Cartesia access token with stt+tts grants, model/voice/version settings; never the master key |
 | Local vault: saveJournal | {text, localId} | encrypted owner-only IndexedDB entry; no server persistence |
 | Local vault: listJournals | local cursor | decrypted only within the unlocked owner session |
