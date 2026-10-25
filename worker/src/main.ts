@@ -7,7 +7,7 @@ import { SignalWatcher } from './watcher.js';
 import { PlanWatcher, runPlanJob } from './plans.js';
 import { IntroductionRequestWatcher, runIntroductionRequest } from './introductions.js';
 import { WorkerLoop } from './loop.js';
-import { droidEnv, type DroidTransport } from './droid-proposer.js';
+import { droidEnv, noModelTransport, type DroidTransport } from './droid-proposer.js';
 import { DroidSdkTransport, type CreateSdkSession } from './droid-sdk.js';
 import { errorCode, fatalFields } from './log-fields.js';
 
@@ -21,8 +21,8 @@ import { errorCode, fatalFields } from './log-fields.js';
  * DOR_SPACETIME_WORKER_TOKEN, PORT (default 8787), DOR_WORKER_SWEEP_MS (fallback sweep, default 15000),
  * DOR_WORKER_MAX_OFFLINE_MS (default 120000), DOR_WORKER_INTRODUCTIONS (D048 suggestion requests: deterministic
  * default, zero model calls; agent lets Droid pick among 2–3 candidates; off),
- * DOR_DROID_MODEL / _PATH / _TIMEOUT_MS / _CONCURRENCY / _TRANSPORT (sdk default, cli). FACTORY_API_KEY for the
- * SDK transport and for droid on a deployed host.
+ * DOR_DROID_MODEL / _PATH / _TIMEOUT_MS / _CONCURRENCY / _TRANSPORT (sdk default, cli, off = no model calls at all:
+ * fixed templates and deterministic choices only). FACTORY_API_KEY for the SDK transport and for droid on a deployed host.
  */
 function required(name: string): string {
   const value = process.env[name];
@@ -42,6 +42,7 @@ const log = (event: string, data: Record<string, string | number> = {}) =>
  * start rather than silently changing transport, cost and latency.
  */
 async function droidTransport(): Promise<DroidTransport | undefined> {
+  if (process.env.DOR_DROID_TRANSPORT === 'off') return noModelTransport;
   if (process.env.DOR_DROID_TRANSPORT === 'cli') return undefined;
   if (!process.env.FACTORY_API_KEY) throw new Error('not_configured: FACTORY_API_KEY (or set DOR_DROID_TRANSPORT=cli)');
   const specifier = '@factory/droid-sdk/node';
@@ -76,7 +77,7 @@ async function main(): Promise<void> {
   log('connected', { identityPrefix: connection.identityHex.slice(0, 8) });
 
   const transport = await droidTransport();
-  log('droid_transport', { kind: transport ? 'sdk' : 'cli' });
+  log('droid_transport', { kind: transport === noModelTransport ? 'off' : transport ? 'sdk' : 'cli' });
   const worker = createLiveWorker({
     authToken: required('DOR_WORKER_AUTH_TOKEN'), ...spacetimeWorkerPorts(connection),
     droid: {
