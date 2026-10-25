@@ -563,6 +563,11 @@ export class LiveBridge {
       nudgeHelp: this.pending ? `This is the kind of note ${this.pending.name} may get. Hold the stamp and dor’s agents decide whether it fits.` : '',
       supportClose: () => { this.live = { ...this.live, support: false }; i.forceUpdate(); },
       feedAge: this.feedAge(),
+      // The event's own public page (host-allowlisted at ingest, D039); opened in a new tab, nothing is sent.
+      openListing: () => {
+        const url = this.events.find((e) => e.eventId === i.state.flyerOpen)?.sourceUrl;
+        if (url) window.open(url, '_blank', 'noopener'); else i.toast('This listing has no public link.');
+      },
       envName: this.env?.name ?? '',
       envLine: this.env ? (this.env.via ? `Through ${this.env.via}` : 'Nearby · new here too') : '',
       envAsk: this.env ? (this.env.kind === 'fof' ? 'would like to meet' : 'would like to say hello') : '',
