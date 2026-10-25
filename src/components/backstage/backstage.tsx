@@ -307,7 +307,6 @@ function SignedInBackstage() {
           ))}
         </div>
       )}
-      {observer && <Playbook rows={rows} blockers={blockerMap} tools={activity?.tools ?? null} />}
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <section>
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-stone-500">Live activity</h2>
@@ -346,6 +345,7 @@ function SignedInBackstage() {
           </section>
         )}
       </div>
+      {observer && <Playbook rows={rows} blockers={blockerMap} tools={activity?.tools ?? null} />}
     </Shell>
   );
 }
