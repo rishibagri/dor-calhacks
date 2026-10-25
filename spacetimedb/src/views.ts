@@ -1,4 +1,4 @@
-import { connectedCounterparts, findAssignment, findPreset, findPublicationRow, pairsOf, pauseInForce, standingApprovalStands, toStandingState } from './policy_state';
+import { connectedCounterparts, findAssignment, findPreset, findPublicationRow, pairsOf, pauseInForce, standingApprovalStands, standingRuleActive } from './policy_state';
 import { t } from 'spacetimedb/server';
 import { Timestamp, type Identity } from 'spacetimedb';
 import {
@@ -645,11 +645,11 @@ const myStandingRow = t.row('MyStandingConsentRow', {
  */
 export const my_standing_consents = spacetimedb.view(
   { name: 'my_standing_consents', public: true }, t.array(myStandingRow),
-  ctx => [...ctx.db.standing_consent.owner.filter(ctx.sender)].map(r => {
-    const st = toStandingState(ctx.db, r);
-    return { pair_id: r.pair_id, categories: r.categories, version: r.version, expires_at: r.expires_at, created_at: r.created_at,
-      active: st.revokedAtMs === null && !st.expiredMarked };
-  })
+  ctx => [...ctx.db.standing_consent.owner.filter(ctx.sender)].map(r => ({
+    pair_id: r.pair_id, categories: r.categories, version: r.version, expires_at: r.expires_at, created_at: r.created_at,
+    // Same check the reducers use (standingRuleStands), so a rule made stale by a preset/assignment change reads inactive.
+    active: standingRuleActive(ctx.db, r),
+  }))
 );
 
 // ---- D048 viewer-initiated AI introduction suggestions (PROPOSED, AI; Cyber review requested) ----

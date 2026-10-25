@@ -210,6 +210,22 @@ export function loadStandingPreset(db: ReadDb, owner: Identity, pairId: string):
 }
 
 /**
+ * Whether a rule would still authorize an automatic approval for its own categories, by the same `standingRuleStands`
+ * check the reducers use: unrevoked, not sweep-expired, current notice, the pair still accepted with the same
+ * recipient, and the preset/assignment versions the owner was shown. Views are clockless (`nowMs` null), so an expiry
+ * that the sweep hasn't marked yet still reads as active here; reducers check the clock themselves.
+ */
+export function standingRuleActive(db: ReadDb, r: StandingRow): boolean {
+  const p = db.pair.pair_id.find(r.pair_id);
+  if (!p || p.status !== 'accepted' || !p.member_b) return false;
+  const counterpart = p.member_a.isEqual(r.owner) ? p.member_b : p.member_b.isEqual(r.owner) ? p.member_a : undefined;
+  if (!counterpart) return false;
+  return standingRuleStands(toStandingState(db, r), loadStandingPreset(db, r.owner, r.pair_id), {
+    ownerId: hex(r.owner), recipientId: hex(counterpart), pairId: r.pair_id, categories: r.categories,
+  }, null) === null;
+}
+
+/**
  * For a signal approved under a standing rule: does that exact rule version still authorize it? Signals approved
  * manually (no standing_approval row) return true here; their own guards apply. Fail closed on a missing rule.
  */

@@ -183,6 +183,59 @@ describe('revocation, expiry and pause kill queued work and never resurrect it',
   });
 });
 
+describe('my_standing_consents.active matches what the reducers accept', () => {
+  const active = (x: X) => rules(x.w, x.w.alice).find(r => r.pair_id === x.pairId)?.active;
+
+  it('a valid rule reads active and approves automatically', () => {
+    const x = world();
+    enable(x);
+    expect(active(x)).toBe(true);
+    expect(autoApprove(x, 'auto-act-01')).toBeDefined();
+  });
+
+  it('re-saving the preset (same categories, later expiry) makes the rule read inactive, and approval is refused', () => {
+    const x = world();
+    enable(x);
+    const cur = view<any>(x.w, x.w.alice, mod.my_presets).find(p => p.preset_kind === 'partner');
+    x.w.call(x.w.alice, ctx => mod.set_relationship_preset(ctx, { preset_kind: 'partner',
+      allowed_categories: ['support_preference', 'coarse_availability'], expected_version: cur.version, expires_at: inDays(x.w, 60) }));
+    expect(active(x)).toBe(false);
+    expect(() => autoApprove(x, 'auto-act-02')).toThrow('stale: stale_policy');
+    enable(x); // a new rule bound to the new preset version stands again
+    expect(active(x)).toBe(true);
+    expect(autoApprove(x, 'auto-act-03')).toBeDefined();
+  });
+
+  it('reassigning the pair to another preset makes the rule read inactive, and approval is refused', () => {
+    const x = world();
+    enable(x);
+    confirmPreset(x.w, x.w.alice, x.pairId, 'friend', ['support_preference']);
+    expect(active(x)).toBe(false);
+    expect(() => autoApprove(x, 'auto-act-04')).toThrow(/^stale:/);
+  });
+
+  it('revoked and paused rules read inactive', () => {
+    const x = world();
+    enable(x);
+    x.w.call(x.w.alice, ctx => mod.revoke_standing_consent(ctx, { pair_id: x.pairId }));
+    expect(active(x)).toBe(false);
+    enable(x);
+    expect(active(x)).toBe(true);
+    x.w.call(x.w.alice, ctx => mod.pause_recipient(ctx, { pair_id: x.pairId, expires_at: inDays(x.w, 0.5), expected_version: 0 }));
+    expect(active(x)).toBe(false);
+  });
+
+  it('views are clockless: a just-expired rule reads active until the sweep, while the reducer already refuses', () => {
+    const x = world();
+    enable(x, { expires_at: inDays(x.w, 2 / 24) });
+    advance(x.w, 2 * HOUR_MS + 1);
+    expect(active(x)).toBe(true); // the client compares expires_at with its own clock (standingRuleCovers, settings list)
+    expect(() => autoApprove(x, 'auto-act-05')).toThrow('stale: expired');
+    sweep(x.w);
+    expect(active(x)).toBe(false);
+  });
+});
+
 describe('defence in depth: each recheck holds even if a future writer skips the main path', () => {
   it('rule revoked in the table without killing its signals: worker view, commit and my_nudges still refuse', () => {
     const x = world();
