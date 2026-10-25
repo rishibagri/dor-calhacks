@@ -13,7 +13,7 @@ import type { ApprovedSignal, DisclosureReceipt, RecipientPresetAssignment, Rela
 import { ACTIVITY_CATEGORY, NUDGE_TEMPLATE_IDS } from '@dor/contracts/policy';
 import { MAX_EVENT_TITLE, MAX_EVENT_TOPICS, MAX_INTEREST_TAGS, MAX_PUBLIC_NAME, validRecipientDelivery, validSupportPreferences } from '@dor/contracts/policy';
 import type {
-  ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView, StandingConsentView,
+  IntroductionSuggestionRequestView, ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView, StandingConsentView,
 } from '@/lib/backend/ports';
 import { SHARING_CATEGORIES } from '@dor/contracts';
 import type { LooseRow } from './bindings';
@@ -266,6 +266,14 @@ export const mapIntroductionProposal: Mapper<IntroductionProposalView> = (row) =
   const expiresAt = str(row, 'expires_at');
   if (!proposalId || !candidateRef || !reasonCode || !openerId || !sharedTags || !expiresAt) return null;
   return { proposalId, candidateRef, reasonCode, openerId, sharedTags, expiresAt };
+};
+
+const SUGGESTION_STATUS: readonly IntroductionSuggestionRequestView['status'][] = ['open', 'done'];
+
+export const mapSuggestionRequest: Mapper<IntroductionSuggestionRequestView> = (row) => {
+  const requestId = str(row, 'request_id'), createdAt = str(row, 'created_at'), expiresAt = str(row, 'expires_at');
+  const status = SUGGESTION_STATUS.find((s) => s === str(row, 'status'));
+  return requestId && status && createdAt && expiresAt ? { requestId, status, createdAt, expiresAt } : null;
 };
 
 const FORMATS: readonly CatalogueEventView['format'][] = ['in_person', 'online'];
