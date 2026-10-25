@@ -344,7 +344,7 @@ describe('C7 activity approvals for existing pairs', () => {
     expect(view(w, w.alice, mod.my_signals)).toHaveLength(0); // never a C3 signal
   });
 
-  it('a pair plan needs both people\'s current approvals; revoking one after the first acceptance refuses the second', () => {
+  it('bound approvals are carried when both exist; revoking one after the first acceptance refuses the second', () => {
     const { w, pairId } = pairWorld();
     approve(w, w.alice, pairId); approve(w, w.bob, pairId);
     intend(w, w.alice); intend(w, w.bob);
@@ -360,14 +360,13 @@ describe('C7 activity approvals for existing pairs', () => {
     expect(plans(w, w.bob)[0]).toMatchObject({ status: 'stale', counterpart_name: 'Alice' });
   });
 
-  it('tightening the preset (removing the category) invalidates approvals and plans', () => {
+  it('tightening a preset after the plan does not cancel it; both intents still carry it', () => {
     const { w, pairId } = pairWorld();
     approve(w, w.alice, pairId); approve(w, w.bob, pairId);
     intend(w, w.alice); intend(w, w.bob);
     commit(w, commitArgs(w));
     confirmPreset(w, w.bob, pairId, 'friend', ['support_preference']);
-    expect(() => respond(w, w.alice)).toThrow('stale: stale_source');
-    expect(candidates(w)).toHaveLength(0);
+    respond(w, w.alice);
   });
 
   it('a revoked approval or a discovery block during generation refuses a pair plan commit', () => {
@@ -390,10 +389,10 @@ describe('C7 activity approvals for existing pairs', () => {
     }
   });
 
-  it('one person\'s approval alone never produces a pair plan candidate', () => {
+  it('with one approval only, the candidate carries no approvals; intents alone are enough', () => {
     const { w, pairId } = pairWorld();
     approve(w, w.alice, pairId);
     intend(w, w.alice); intend(w, w.bob);
-    expect(candidates(w)).toHaveLength(0);
+    expect(candidates(w).map((r: any) => r.approval_ids)).toEqual([[]]);
   });
 });

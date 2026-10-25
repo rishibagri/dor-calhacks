@@ -207,19 +207,20 @@ describe('worker_plan_candidates → PlanCoordinator → commit_plan_proposal, o
 
   it('discovery switched off: the view is empty, so the worker spends nothing', async () => {
     const w = introduced();
-    w.h.withReducerTx(w.admin, ctx => mod.set_discovery_config(ctx, { key: 'enabled', values: [] }));
+    w.h.withReducerTx(w.admin, ctx => mod.set_discovery_config(ctx, { key: 'enabled', values: ['false'] }));
     const droid = scriptedRunner('{}');
     expect(await watcher(w, source(w), droid.runner).pw.sweep()).toBe(0);
     expect(droid.calls()).toBe(0);
   });
 
-  it('existing pair without C7 activity approvals is not a plan basis', async () => {
+  it('an existing pair with both intents is a plan basis without C7 activity approvals', async () => {
     const w = world();
     w.call(w.alice, ctx => mod.create_pair_invite(ctx, {}));
     const invite = view<any>(w, w.alice, mod.my_invites)[0];
     w.call(w.bob, ctx => mod.accept_pair_invite(ctx, { invite_token: invite.invite_token }));
     participate(w, w.alice, 'Alice S'); participate(w, w.bob, 'Bob S');
     upsert(w, 'evt-hike-1', 72); intend(w, w.alice, 'evt-hike-1'); intend(w, w.bob, 'evt-hike-1');
-    expect(view(w, w.worker, mod.worker_plan_candidates)).toHaveLength(0);
+    const rows = view<any>(w, w.worker, mod.worker_plan_candidates);
+    expect(rows.map(r => [r.basis_kind, r.approval_ids])).toEqual([['existing_connection', []]]);
   });
 });

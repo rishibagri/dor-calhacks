@@ -38,7 +38,7 @@ test('shareable preview yields exactly the payload and versions approve_signal w
   assert.equal(d.allowed, true);
 });
 
-test('the full candidate (with blocked availability) would be refused, so the omission matters', () => {
+test('the full candidate (with blocked availability) is accepted with availability dropped', () => {
   const r = prepareShare({ ...base, candidate: { supportMode: 'short_call' } }, 'Sam');
   assert.equal(r.kind, 'ready');
   if (r.kind !== 'ready') return;
@@ -48,7 +48,8 @@ test('the full candidate (with blocked availability) would be refused, so the om
     preset: { policyId: 'pol-1', ownerId: OWNER, allowedCategories: ['support_preference'], version: 3, expiresAtMs: Date.parse('2026-12-01T00:00:00Z'), revokedAtMs: null },
     assignment,
   });
-  assert.equal(d.allowed, false);
+  assert.equal(d.allowed, true);
+  if (d.allowed) assert.deepEqual(d.payload, { supportMode: 'short_call' });
 });
 
 test('no assignment to this person means no approval and a clear reason', () => {
@@ -65,10 +66,11 @@ test('an assignment for a different recipient or by a different owner is ignored
   }
 });
 
-test('revoked or expired preset, null or malformed candidate never yields an approval', () => {
+test('revoked preset, null or malformed candidate never yields an approval; an expired preset uses the default', () => {
+  const expired = { ...base, presets: [preset({ expiresAt: '2026-10-24T11:00:00Z' })], candidate: { supportMode: 'short_call' as const } };
+  assert.equal(prepareShare(expired, 'Sam').kind, 'ready');
   const cases = [
     { ...base, presets: [preset({ revokedAt: '2026-10-23T00:00:00Z' })], candidate: { supportMode: 'short_call' as const } },
-    { ...base, presets: [preset({ expiresAt: '2026-10-24T11:00:00Z' })], candidate: { supportMode: 'short_call' as const } },
     { ...base, candidate: null },
     { ...base, candidate: { supportMode: 'short_call', note: 'synthetic' } as never },
   ];

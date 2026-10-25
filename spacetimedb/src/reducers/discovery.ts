@@ -1,5 +1,5 @@
-// PROPOSED C8 discovery transitions (Cyber guards, D031/D035). Disabled unless the module owner sets
-// discovery_config 'enabled' = ['true'] after the C8 review. CS owns the UI and may rename once reviewed.
+// C8 discovery transitions (Cyber guards, D031/D035). On by default; the module owner can switch it off with
+// discovery_config 'enabled' = ['false']. CS owns the UI and may rename once reviewed.
 import { t } from 'spacetimedb/server';
 import { Timestamp } from 'spacetimedb';
 import {
