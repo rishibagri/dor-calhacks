@@ -9,14 +9,24 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import type { ReducerResult } from '@/lib/backend/ports';
+import type { ReducerResult, StandingConsentView } from '@/lib/backend/ports';
 import { STANDING_CONSENT_VERSION, STANDING_RULE_MAX_LIFETIME_MS, STANDING_RULE_MIN_LIFETIME_MS } from '@dor/contracts/policy';
-import { shareRecipients } from './share-review-model';
+import { shareRecipients, standingRuleStatus, type StandingRuleStatus } from './share-review-model';
 
 const CATEGORY_LABEL: Record<SharingCategory, string> = {
   support_preference: 'Support preference',
   coarse_availability: 'Coarse availability',
 };
+
+/** Why a rule for a current connection no longer applies. Only states the client can actually see are named. */
+function endedCopy(status: Exclude<StandingRuleStatus, 'active'>, name: string, expiresAt: string): string {
+  switch (status) {
+    case 'expired': return `Ended ${new Date(expiresAt).toLocaleString()}: the time limit you chose has passed.`;
+    case 'paused': return `Not active while ${name} is paused. Resuming does not turn it back on.`;
+    case 'preset_expired': return `Not active: your preset for ${name} has expired. Renew it in Relationship presets first.`;
+    case 'inactive': return 'No longer active. A permission ends when it is turned off, the person is paused or unlinked, or their preset or assignment changes.';
+  }
+}
 
 function localInputValue(date: Date): string {
   const d = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
@@ -49,6 +59,22 @@ export function StandingConsentSettings() {
   const canSave = Boolean(selected && pair && preset && assignment && presetUsable && !pause && categories.length > 0 &&
     Number.isFinite(expiresMs) && expiresMs >= minMs && expiresMs <= effectiveMaxMs);
 
+  // One row per current connection's rule: active ones can be turned off; ended ones explain why and offer a fresh setup.
+  const nowMs = Date.now();
+  const statusOf = (rule: StandingConsentView) => {
+    const p = shared.myPairs().find((x) => x.pairId === rule.pairId && x.status === 'accepted');
+    const a = shared.myPresetAssignments().find((x) =>
+      x.pairId === rule.pairId && x.ownerId === ownerId && x.recipientId === p?.counterpartIdentityHex);
+    const pr = a ? shared.myPresets().find((x) => x.policyId === a.presetId) : undefined;
+    const paused = shared.myRecipientPauses().some((x) => x.pairId === rule.pairId && x.active && Date.parse(x.expiresAt) > nowMs);
+    return standingRuleStatus(rule, { paused, presetExpiresAt: pr?.expiresAt ?? null }, nowMs);
+  };
+  const listed = shared.myStandingConsents()
+    .filter((rule) => recipients.some((r) => r.pairId === rule.pairId))
+    .map((rule) => ({ rule, status: statusOf(rule), name: recipients.find((r) => r.pairId === rule.pairId)?.name ?? 'this person' }));
+  const activeRules = listed.filter((x) => x.status === 'active');
+  const endedRules = listed.filter((x): x is typeof x & { status: Exclude<StandingRuleStatus, 'active'> } => x.status !== 'active');
+
   const save = async () => {
     if (!canSave || !preset || !assignment) return;
     setBusy(true);
@@ -79,20 +105,33 @@ export function StandingConsentSettings() {
       <CardContent className="space-y-5">
         <section className="space-y-3" aria-labelledby="active-standing-rules">
           <h3 id="active-standing-rules" className="text-sm font-semibold">Active permissions</h3>
-          {shared.myStandingConsents().filter((r) => r.active && Date.parse(r.expiresAt) > Date.now()).length === 0 ? (
+          {activeRules.length === 0 ? (
             <p className="text-sm text-muted-foreground">No active automatic-nudge permissions.</p>
           ) : (
             <ul className="space-y-2">
-              {shared.myStandingConsents().filter((r) => r.active && Date.parse(r.expiresAt) > Date.now()).map((rule) => {
-                const recipient = recipients.find((r) => r.pairId === rule.pairId);
-                return <li key={rule.pairId} className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3">
+              {activeRules.map(({ rule, name }) => (
+                <li key={rule.pairId} className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium">{recipient?.name ?? 'Connection'} · until {new Date(rule.expiresAt).toLocaleString()}</p>
+                    <p className="text-sm font-medium">{name} · until {new Date(rule.expiresAt).toLocaleString()}</p>
                     <p className="text-xs text-muted-foreground">{rule.categories.map((c) => CATEGORY_LABEL[c]).join(', ')}</p>
                   </div>
                   <Button size="sm" variant="outline" disabled={busy} onClick={() => void revoke(rule.pairId)}>Turn off</Button>
-                </li>;
-              })}
+                </li>
+              ))}
+            </ul>
+          )}
+          {endedRules.length > 0 && (
+            <ul className="space-y-2" aria-label="Permissions that are no longer active">
+              {endedRules.map(({ rule, status, name }) => (
+                <li key={rule.pairId} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-dashed p-3">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">{name} · not active</p>
+                    <p className="text-xs text-muted-foreground">{endedCopy(status, name, rule.expiresAt)}</p>
+                  </div>
+                  <Button size="sm" variant="ghost" disabled={busy}
+                    onClick={() => { setPairId(rule.pairId); setCategories([]); setResult(null); }}>Set up again</Button>
+                </li>
+              ))}
             </ul>
           )}
         </section>

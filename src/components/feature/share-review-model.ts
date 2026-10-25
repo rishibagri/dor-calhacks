@@ -117,6 +117,21 @@ export function standingRuleCovers(
   return required.length > 0 && required.every((category) => rule.categories.includes(category));
 }
 
+export type StandingRuleStatus = 'active' | 'expired' | 'paused' | 'preset_expired' | 'inactive';
+
+/**
+ * What the owner should be told about a rule. `active` comes from the server (D044 checks incl. preset/assignment
+ * versions); the view has no clock, so time-based states are judged here against this device's clock. Display only:
+ * the reducers re-check everything. `inactive` is the neutral case where the reason isn't visible to the client.
+ */
+export function standingRuleStatus(rule: StandingConsentView,
+  ctx: { paused: boolean; presetExpiresAt: string | null }, nowMs: number): StandingRuleStatus {
+  if (Date.parse(rule.expiresAt) <= nowMs) return 'expired';
+  if (ctx.paused) return 'paused';
+  if (ctx.presetExpiresAt !== null && Date.parse(ctx.presetExpiresAt) <= nowMs) return 'preset_expired';
+  return rule.active ? 'active' : 'inactive';
+}
+
 const DENIAL_COPY: Record<string, string> = {
   no_consent: 'No preset is assigned to this person yet, so nothing can be shared. Assign one in Connections.',
   blocked_category: 'Your preset for this person does not allow these details.',
