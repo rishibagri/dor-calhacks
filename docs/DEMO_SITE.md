@@ -6,7 +6,7 @@
 
 | | Before | After |
 |---|---|---|
-| What's hosted | The Claude Design prototype (`frontend/`) exactly as committed, plus a small "DEMO · sample data · not live" pill | The same prototype, plus an injected **guide** |
+| What's hosted | The Claude Design prototype (`frontend/`) exactly as committed, plus a small "DEMO · sample data · not live" pill at the top over the phone, and the "Made with Claude Design" badge | The same prototype, plus an injected **guide**. The demo pill sits in the bottom-left corner and opens upward; the "Made with Claude Design" badge is hidden in the hosted copy (CSS in `demo-banner.html`). |
 | Layout (computer) | The phone, with the design's own reviewer column **beside it** ("dor · the room": jump to a place, simulate the other side, reset). Phone off-centre, no explanation of what dor is. | Styled like the design's own column: 300px columns 40px from the phone, vertically centred, no card backgrounds, Cormorant Garamond headings, Reenie Beanie pencil lines, small-caps labels, Spectral body, pill buttons. **Left:** a fixed blurb of what dor is (the README's opening). **Middle:** the phone, centred. **Right:** "Take the tour" or "Skip", then "jump to a place" plus "simulate the other side" (the design's buttons, proxied) plus Restart tour / Reset demo. Below that, "You're looking at", which describes whichever place is open. The design's reviewer column is hidden. |
 | Tour | None | 12 steps. Each step dims the phone except one place, shows "Tap here: …", and offers "Open it for me". The dimming is clipped to the phone. |
 | Narrow screens (when two 300px columns don't fit beside the phone) | The reviewer column wrapped below the phone | A **Guide** button opens a sheet with the same content. Tour steps show a card with their own Back / Next / End buttons; inside an open place the card moves to the top. |
@@ -17,7 +17,7 @@
 | File | What it is |
 |---|---|
 | `scripts/demo-guide.html` | **The guide.** CSS, markup and script for the side panels, tour, jump list and mobile sheet. All the copy is here. |
-| `scripts/demo-banner.html` | The "DEMO · sample data · not live" pill. While a live session runs, it links to `live.doratcalhacks.site`. |
+| `scripts/demo-banner.html` | The "DEMO · sample data · not live" pill (bottom-left). While a live session runs, it links to `live.doratcalhacks.site`. It also hides the design tool's badge (`#__claude_design_branding`). |
 | `scripts/deploy-demo.sh` | Builds and deploys: copies `frontend/` to a temp folder, inserts both HTML files before `</body>` of `index.html`, then uploads to Cloudflare Pages. |
 | `frontend/` | The design itself (Claude Design). Never modified by the above. |
 
