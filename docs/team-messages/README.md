@@ -5,6 +5,7 @@ These are drafts for the user to forward; no messages were sent to teammates or 
 - [Nimisha — DS](ds.md)
 - [Adam — AI](ai.md)
 - [Sumedh — Cyber](cyber.md)
+- [Sumedh — Reasoning](reasoning.md)
 
 ## Latest topic updates
 - [Shared SpacetimeDB on Maincloud: owner steps, per-person env, smoke, worker](maincloud.md) (Adam, 2026-10-24)
