@@ -68,11 +68,19 @@ export function guardPublicCatalogueQuery(input: unknown, allowedTopics: readonl
  */
 export function safeCatalogueUrl(raw: unknown, allowedHosts: readonly string[]): string | null {
   if (typeof raw !== 'string' || raw.length > 2048) return null;
-  let u: URL;
-  try { u = new URL(raw); } catch { return null; }
-  if (u.protocol !== 'https:' || u.username || u.password || u.port !== '') return null;
-  const host = u.hostname.toLowerCase();
+  // Parsed by hand: the SpacetimeDB module runtime has no WHATWG `URL` global (measured: `typeof URL === 'undefined'`),
+  // so `new URL` there threw and every source link was refused as unsafe. Anything URL would silently rewrite
+  // (backslashes, dot segments, non-ASCII, bad escapes) is refused instead.
+  const m = SAFE_URL.exec(raw);
+  if (!m) return null;
+  const host = m[1]!.toLowerCase();
   if (!allowedHosts.some(h => host === h || host.endsWith('.' + h))) return null;
-  u.hash = '';
-  return u.toString();
+  let rest = m[2] ?? '';
+  const path = rest.split('?')[0]!;
+  if (/(^|\/)\.\.?(\/|$)/.test(path) || /%(?![0-9A-Fa-f]{2})/.test(rest)) return null;
+  if (!rest.startsWith('/')) rest = '/' + rest; // "https://host?q" serializes as "https://host/?q", as URL does
+  return `https://${host}${rest}`;
 }
+
+/** https://, DNS host (ASCII labels, no userinfo, no port), optional path/query of RFC 3986 characters, optional fragment. */
+const SAFE_URL = /^https:\/\/([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+)([/?][A-Za-z0-9\-._~!$&'()*+,;=:@%/?]*)?(?:#.*)?$/i;
