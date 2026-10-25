@@ -8,7 +8,7 @@
 import { safeCatalogueUrl } from './catalogue.js';
 
 /** Fixed place kinds; each ingest query is for exactly one kind, so the kind comes from the query, never the text. */
-export const PLACE_KINDS = ['food', 'coffee', 'dessert', 'study'] as const;
+export const PLACE_KINDS = ['food', 'coffee', 'dessert', 'study', 'bar', 'park', 'books', 'museum', 'fitness', 'music', 'art', 'games'] as const;
 export type PlaceKind = (typeof PLACE_KINDS)[number];
 export const MAX_PLACE_NAME = 80;
 export const MAX_PLACE_LABEL = 40;
@@ -60,4 +60,48 @@ export function guardCataloguePlace(input: unknown, allow: { areas: readonly str
   }
   return { ok: true, place: { placeId: p.placeId, name, kind: p.kind as PlaceKind, label, ratingTenths: p.ratingTenths as number,
     reviewCount: p.reviewCount as number, areaKey: p.areaKey, sourceUrl, fetchedAtMs: p.fetchedAtMs as number } };
+}
+
+/**
+ * Catalogue detail (D057): public, display-and-matching text for one catalogue event or place, written only by the
+ * ingester from the same scrape. A short summary, keyword slugs, a price label and the public venue name. Never a person,
+ * contact, review text, address or coordinate. Untrusted source data: matching may read it; it never grants anything.
+ */
+export const MAX_DETAIL_SUMMARY = 280;
+export const MAX_DETAIL_KEYWORDS = 12;
+export const MAX_DETAIL_KEYWORD = 30;
+export const MAX_DETAIL_LABEL = 60;
+export interface CatalogueDetailInput {
+  itemId: string;
+  itemKind: 'event' | 'place';
+  summary: string;
+  keywords: string[];
+  priceLabel: string;
+  venue: string;
+  fetchedAtMs: number;
+}
+const DETAIL_KEYS = ['itemId', 'itemKind', 'summary', 'keywords', 'priceLabel', 'venue', 'fetchedAtMs'];
+const ITEM_ID_RE = /^[a-z0-9][a-z0-9:_-]{2,127}$/;
+const URLISH = /(https?:\/\/|www\.)\S*/gi;
+const EMAILISH = /\S+@\S+\.\S+/g;
+const PHONEISH = /\+?\d[\d\s().-]{7,}\d/g;
+/** Lowercase slug: letters, digits and single hyphens. */
+export const keywordSlug = (s: string) => s.normalize('NFKC').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, MAX_DETAIL_KEYWORD);
+const cleanDetail = (s: string, max: number) => clean(s.replace(URLISH, ' ').replace(EMAILISH, ' ').replace(PHONEISH, ' '), max);
+
+/** Default deny: unknown keys rejected; text cleaned of markup, links, emails and phone numbers; keywords slugged. */
+export function guardCatalogueDetail(input: unknown, nowMs: number):
+  { ok: true; detail: CatalogueDetailInput } | { ok: false; reason: 'invalid_schema' } {
+  const no = { ok: false as const, reason: 'invalid_schema' as const };
+  if (!input || typeof input !== 'object' || Array.isArray(input) || !Number.isFinite(nowMs)) return no;
+  const d = input as Record<string, unknown>;
+  if (Object.keys(d).some((k) => !DETAIL_KEYS.includes(k))) return no;
+  if (typeof d.itemId !== 'string' || !ITEM_ID_RE.test(d.itemId)) return no;
+  if (d.itemKind !== 'event' && d.itemKind !== 'place') return no;
+  if (typeof d.summary !== 'string' || typeof d.priceLabel !== 'string' || typeof d.venue !== 'string') return no;
+  if (!Array.isArray(d.keywords) || d.keywords.length > 40 || !d.keywords.every((k) => typeof k === 'string')) return no;
+  if (!Number.isSafeInteger(d.fetchedAtMs) || (d.fetchedAtMs as number) > nowMs + MAX_CLOCK_SKEW_MS) return no;
+  const keywords = [...new Set((d.keywords as string[]).map(keywordSlug).filter((k) => k.length >= 2))].slice(0, MAX_DETAIL_KEYWORDS);
+  return { ok: true, detail: { itemId: d.itemId, itemKind: d.itemKind, summary: cleanDetail(d.summary, MAX_DETAIL_SUMMARY), keywords,
+    priceLabel: cleanDetail(d.priceLabel, 20), venue: cleanDetail(d.venue, MAX_DETAIL_LABEL), fetchedAtMs: d.fetchedAtMs as number } };
 }

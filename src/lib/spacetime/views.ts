@@ -1,6 +1,6 @@
 import type { DisclosureReceipt, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
 import type {
-  Unreadable, IntroductionSuggestionRequestView, ActivityApprovalRow, CatalogueEventView, CataloguePlaceView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView, StandingConsentView,
+  Unreadable, IntroductionSuggestionRequestView, ActivityApprovalRow, CatalogueDetailView, CatalogueEventView, CataloguePlaceView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView, StandingConsentView,
 } from '@/lib/backend/ports';
 import type { NetworkData } from '../network/types.ts';
 import { EMPTY_NETWORK } from '../network/types.ts';
@@ -9,7 +9,7 @@ import type { LooseConnection, LooseRow, LooseTable } from './bindings';
 import { findTable } from './names.ts';
 import {
   mapAccount, mapAssignment, mapInvite, mapNudge, mapNudgeDelivery, mapPair, mapRecipientPause, mapPreset, mapReceipt, mapRows,
-  mapActivityApproval, mapCatalogueEvent, mapCataloguePlace, mapCatalogueStatus, mapCompanion, mapDiscoveryCard, mapEventIntent, mapIntroduction,
+  mapActivityApproval, mapCatalogueDetail, mapCatalogueEvent, mapCataloguePlace, mapCatalogueStatus, mapCompanion, mapDiscoveryCard, mapEventIntent, mapIntroduction,
   mapIntroductionProposal, mapSuggestionRequest, mapPlan, unreadableRow, mapMyDiscovery, mapSignal, mapSupportPreferences, mapStandingConsent,
 } from './mappers.ts';
 
@@ -19,7 +19,7 @@ export const VIEW_NAMES = [
   'my_signals', 'my_support_preferences', 'my_nudge_delivery', 'my_recipient_pauses', 'my_standing_consents',
   'my_discovery_profile', 'discovery_cards', 'my_introductions', 'my_introduction_proposals',
   'my_introduction_suggestion_request',
-  'catalogue_events', 'catalogue_places', 'catalogue_status', 'my_event_intents', 'event_companions', 'my_activity_approvals', 'my_plans',
+  'catalogue_events', 'catalogue_places', 'catalogue_details', 'catalogue_status', 'my_event_intents', 'event_companions', 'my_activity_approvals', 'my_plans',
   'my_profile_detail', 'fof_cards', 'my_nudge_requests', 'my_connection_profiles',
 ] as const;
 
@@ -45,6 +45,7 @@ export interface ViewData {
   readonly suggestionRequest: IntroductionSuggestionRequestView | null;
   readonly catalogue: CatalogueEventView[];
   readonly places: CataloguePlaceView[];
+  readonly details: CatalogueDetailView[];
   readonly catalogueStatus: CatalogueStatusView[];
   readonly eventIntents: EventIntentRow[];
   readonly companions: EventCompanionRow[];
@@ -57,7 +58,7 @@ export interface ViewData {
 export const EMPTY_VIEWS: ViewData = {
   account: null, pairs: [], invites: [], presets: [], assignments: [], nudges: [], receipts: [], signals: [], supportPreferences: [], nudgeDelivery: [], pauses: [], standingConsents: [],
   discoveryProfile: null, discoveryCards: [], introductions: [], proposals: [], suggestionRequest: null,
-  catalogue: [], places: [], catalogueStatus: [], eventIntents: [], companions: [], activityApprovals: [], plans: [], network: EMPTY_NETWORK,
+  catalogue: [], places: [], details: [], catalogueStatus: [], eventIntents: [], companions: [], activityApprovals: [], plans: [], network: EMPTY_NETWORK,
   unreadable: { signals: [], supportPreferences: [], nudgeDelivery: [], presets: [], counts: {} },
 };
 
@@ -97,6 +98,7 @@ export function readViews(conn: LooseConnection): ViewData {
     suggestionRequest: take('my_introduction_suggestion_request', mapSuggestionRequest)[0] ?? null,
     catalogue: take('catalogue_events', mapCatalogueEvent),
     places: take('catalogue_places', mapCataloguePlace),
+    details: take('catalogue_details', mapCatalogueDetail),
     catalogueStatus: take('catalogue_status', mapCatalogueStatus),
     eventIntents: take('my_event_intents', mapEventIntent),
     companions: take('event_companions', mapCompanion),

@@ -28,6 +28,8 @@ export const LAUNCH_AREAS: readonly LaunchArea[] = [
 /** Interest tags offered in the profile form (same slugs as DS's ranker fixtures). */
 export const DISCOVERY_TAGS: readonly string[] = [
   'board-games', 'hiking', 'coffee', 'live-music', 'cooking', 'running', 'film', 'books', 'photography', 'climbing',
+  // D057: wider net for the live Apify refresh (each tag is also a Google Events query per city).
+  'art', 'tech', 'startups', 'dance', 'yoga', 'comedy', 'gaming', 'volunteering', 'food', 'outdoors', 'study-groups', 'wellness',
 ];
 
 export const AREA_KEYS: readonly string[] = LAUNCH_AREAS.map((a) => a.key);

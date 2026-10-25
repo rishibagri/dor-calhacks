@@ -7,6 +7,7 @@ import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
 import AcceptPairInviteReducer from "../accept_pair_invite_reducer";
+import AdminPurgeAccountReducer from "../admin_purge_account_reducer";
 import ApproveActivityInterestReducer from "../approve_activity_interest_reducer";
 import ApproveSignalReducer from "../approve_signal_reducer";
 import ApproveSignalStandingReducer from "../approve_signal_standing_reducer";
@@ -58,11 +59,13 @@ import SetSupportPreferencesReducer from "../set_support_preferences_reducer";
 import SetWorkerIdentityReducer from "../set_worker_identity_reducer";
 import SnoozeNudgeReducer from "../snooze_nudge_reducer";
 import UnlinkPairReducer from "../unlink_pair_reducer";
+import UpsertCatalogueDetailReducer from "../upsert_catalogue_detail_reducer";
 import UpsertCatalogueEventReducer from "../upsert_catalogue_event_reducer";
 import UpsertCataloguePlaceReducer from "../upsert_catalogue_place_reducer";
 import WithdrawDiscoveryProfileReducer from "../withdraw_discovery_profile_reducer";
 
 export type AcceptPairInviteParams = __Infer<typeof AcceptPairInviteReducer>;
+export type AdminPurgeAccountParams = __Infer<typeof AdminPurgeAccountReducer>;
 export type ApproveActivityInterestParams = __Infer<typeof ApproveActivityInterestReducer>;
 export type ApproveSignalParams = __Infer<typeof ApproveSignalReducer>;
 export type ApproveSignalStandingParams = __Infer<typeof ApproveSignalStandingReducer>;
@@ -114,6 +117,7 @@ export type SetSupportPreferencesParams = __Infer<typeof SetSupportPreferencesRe
 export type SetWorkerIdentityParams = __Infer<typeof SetWorkerIdentityReducer>;
 export type SnoozeNudgeParams = __Infer<typeof SnoozeNudgeReducer>;
 export type UnlinkPairParams = __Infer<typeof UnlinkPairReducer>;
+export type UpsertCatalogueDetailParams = __Infer<typeof UpsertCatalogueDetailReducer>;
 export type UpsertCatalogueEventParams = __Infer<typeof UpsertCatalogueEventReducer>;
 export type UpsertCataloguePlaceParams = __Infer<typeof UpsertCataloguePlaceReducer>;
 export type WithdrawDiscoveryProfileParams = __Infer<typeof WithdrawDiscoveryProfileReducer>;

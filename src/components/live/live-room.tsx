@@ -7,6 +7,7 @@ import { useReflection, useSharedState } from '@/lib/backend';
 import { isClerkConfigured } from '@/lib/config';
 import { useDictation } from '@/features/voice/use-dictation';
 import { LiveBridge } from './bridge';
+import { RefreshButton } from '@/components/backstage/refresh-button';
 
 declare global {
   interface Window { __dorLive?: { attach(inst: unknown): void } }
@@ -92,6 +93,11 @@ function LiveRoomFrame({ auth }: { auth: LiveAuth }) {
           background: 'rgba(28,25,23,.78)', color: '#FAF7F0', textDecoration: 'none', fontFamily: 'system-ui, sans-serif' }}>
         backstage ↗
       </a>
+      {/* D057: live Apify refresh; new events and places flow into the window as they save. */}
+      {auth.signedIn && (
+        <RefreshButton style={{ position: 'fixed', right: 104, bottom: 12, zIndex: 10, padding: '4px 10px', borderRadius: 999, fontSize: 12,
+          border: 0, background: 'rgba(28,25,23,.78)', color: '#FAF7F0', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }} />
+      )}
     </>
   );
 }

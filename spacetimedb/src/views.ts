@@ -16,7 +16,8 @@ import {
   type PlanRow,
 } from './event_state';
 
-const CATALOGUE_VIEW_LIMIT = 200;
+const CATALOGUE_VIEW_LIMIT = 1000; // D057: live refresh brings far more items
+const DETAIL_VIEW_LIMIT = 2000;
 const WORKER_PLAN_LIMIT = 200;
 
 // Every view filters strictly by ctx.sender. Tables stay private; only these are public.
@@ -468,6 +469,24 @@ export const catalogue_places = spacetimedb.view(
       if (out.length >= CATALOGUE_VIEW_LIMIT) break;
       out.push({ place_id: p.place_id, name: p.name, kind: p.kind, label: p.label, rating_tenths: p.rating_tenths,
         review_count: p.review_count, area_key: p.area_key, source_url: p.source_url, fetched_at: p.fetched_at });
+    }
+    return out;
+  }
+);
+
+const detailRow = t.row('CatalogueDetailRow', {
+  item_id: t.string(), item_kind: t.string(), summary: t.string(), keywords: t.array(t.string()), price_label: t.string(), venue: t.string(),
+});
+
+/** D057 matching text for catalogue items (registered accounts, discovery enabled); bounded. Public source data. */
+export const catalogue_details = spacetimedb.view(
+  { name: 'catalogue_details', public: true }, t.array(detailRow),
+  ctx => {
+    if (!discoveryEnabled(ctx.db) || !ctx.db.account.identity.find(ctx.sender)) return [];
+    const out = [];
+    for (const d of ctx.db.catalogue_detail.iter()) {
+      if (out.length >= DETAIL_VIEW_LIMIT) break;
+      out.push({ item_id: d.item_id, item_kind: d.item_kind, summary: d.summary, keywords: d.keywords, price_label: d.price_label, venue: d.venue });
     }
     return out;
   }

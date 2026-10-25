@@ -363,6 +363,23 @@ export const catalogue_place = table(
   }
 );
 
+/**
+ * Catalogue detail (D057): matching text for one catalogue event or place from the same scrape (summary, keyword slugs,
+ * price label, public venue name). Ingester-written, public, untrusted; never a person, review, contact or coordinate.
+ */
+export const catalogue_detail = table(
+  { name: 'catalogue_detail' },
+  {
+    item_id: t.string().primaryKey(),
+    item_kind: t.string(), // event | place
+    summary: t.string(),
+    keywords: t.array(t.string()),
+    price_label: t.string(),
+    venue: t.string(),
+    fetched_at: t.timestamp(),
+  }
+);
+
 /** One person's explicit event intent (C8). Ends with the event; never inferred from scraping or calendars. */
 export const event_intent = table(
   { name: 'event_intent' },
@@ -628,4 +645,5 @@ export const spacetimedb = schema({
   signal_hook,
   observer_identity,
   reasoning_decision,
+  catalogue_detail,
 });

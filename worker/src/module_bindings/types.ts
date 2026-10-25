@@ -82,6 +82,30 @@ export const AuthConfig = __t.object("AuthConfig", {
 });
 export type AuthConfig = __Infer<typeof AuthConfig>;
 
+export const CatalogueDetail = __t.object("CatalogueDetail", {
+  itemId: __t.string(),
+  itemKind: __t.string(),
+  summary: __t.string(),
+  keywords: __t.array(__t.string()),
+  priceLabel: __t.string(),
+  venue: __t.string(),
+  fetchedAt: __t.timestamp(),
+});
+export type CatalogueDetail = __Infer<typeof CatalogueDetail>;
+
+export const CatalogueDetailRow = __t.object("CatalogueDetailRow", {
+  itemId: __t.string(),
+  itemKind: __t.string(),
+  summary: __t.string(),
+  keywords: __t.array(__t.string()),
+  priceLabel: __t.string(),
+  venue: __t.string(),
+});
+export type CatalogueDetailRow = __Infer<typeof CatalogueDetailRow>;
+
+export const CatalogueDetails = __t.object("CatalogueDetails", {});
+export type CatalogueDetails = __Infer<typeof CatalogueDetails>;
+
 export const CatalogueEvent = __t.object("CatalogueEvent", {
   eventId: __t.string(),
   title: __t.string(),

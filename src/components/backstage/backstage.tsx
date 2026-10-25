@@ -11,6 +11,7 @@ import { useAuth } from '@clerk/nextjs';
 import { NUDGE_TEMPLATE_COPY } from '@dor/contracts';
 import { newBuilder } from '@/lib/spacetime/bindings';
 import { spacetimeConfig, isClerkConfigured } from '@/lib/config';
+import { RefreshButton } from './refresh-button';
 
 const VIEWS = ['observer_status', 'observer_accounts', 'observer_pairs', 'observer_assignments', 'observer_signals', 'observer_nudges',
   'observer_delivery', 'observer_support_preferences', 'observer_pauses', 'observer_introductions', 'observer_nudge_requests',
@@ -179,6 +180,7 @@ function SignedInBackstage() {
         <Pill tone={state === 'connected' ? 'emerald' : state === 'error' ? 'rose' : 'stone'}>database: {state}</Pill>
         <Pill tone={worker === 'up' ? 'emerald' : worker === 'checking' ? 'stone' : 'rose'}>agents worker: {worker.replace('_', ' ')}</Pill>
         <Pill tone={observer ? 'emerald' : 'amber'}>{observer ? 'observer access' : 'not an observer yet'}</Pill>
+        <RefreshButton className="rounded-full bg-stone-900 px-3 py-1 text-xs font-medium text-white disabled:opacity-60" />
       </div>
       {state === 'error' && <p className="mt-3 text-sm text-rose-700">{error}</p>}
       {state === 'connected' && !observer && (
