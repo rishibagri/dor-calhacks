@@ -5,9 +5,9 @@
  */
 import {
   DISCLOSURE_CONSENT_VERSION, payloadRevision, previewDisclosure,
-  type DisclosurePreview, type RecipientPresetAssignment, type RelationshipPreset, type SignalCandidate,
+  type DisclosurePreview, type RecipientPresetAssignment, type RelationshipPreset, type SignalCandidate, type SharingCategory,
 } from '@dor/contracts';
-import type { PairView, SharedStatePort } from '@/lib/backend/ports';
+import type { PairView, SharedStatePort, StandingConsentView } from '@/lib/backend/ports';
 
 export type ApprovalInput = Parameters<SharedStatePort['approveSignal']>[0];
 /** Everything approve_signal needs except the request ID, which is bound to the payload at tap time. */
@@ -101,6 +101,20 @@ export function prepareShare(input: PrepareShareInput, recipientName: string): P
     }),
   };
   return { kind: 'ready', preview, approval };
+}
+
+/** D044 eligibility: one already chosen pair, one current rule, and every enum category in this payload covered. */
+export function standingRuleCovers(
+  rule: StandingConsentView | null,
+  pairId: string,
+  payload: Pick<ApprovalDraft, 'supportMode' | 'availability'>,
+  nowMs: number,
+): boolean {
+  if (!rule || !rule.active || rule.pairId !== pairId || Date.parse(rule.expiresAt) <= nowMs) return false;
+  const required: SharingCategory[] = [];
+  if (payload.supportMode !== undefined) required.push('support_preference');
+  if (payload.availability !== undefined) required.push('coarse_availability');
+  return required.length > 0 && required.every((category) => rule.categories.includes(category));
 }
 
 const DENIAL_COPY: Record<string, string> = {

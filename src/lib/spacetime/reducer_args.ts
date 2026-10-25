@@ -8,7 +8,7 @@
 import { DISCOVERY_AUDIENCES, DISCOVERY_NOTICE_VERSION } from '@dor/contracts/policy';
 import type { SharedStatePort } from '@/lib/backend/ports';
 
-type Input<K extends 'setRelationshipPreset' | 'assignRelationshipPreset' | 'approveSignal' | 'setSupportPreferences' | 'setNudgeDelivery' | 'publishDiscoveryProfile'> = Parameters<
+type Input<K extends 'setRelationshipPreset' | 'assignRelationshipPreset' | 'approveSignal' | 'setSupportPreferences' | 'setNudgeDelivery' | 'publishDiscoveryProfile' | 'setStandingConsent' | 'approveSignalStanding'> = Parameters<
   SharedStatePort[K]
 >[0];
 
@@ -61,6 +61,12 @@ export const reducerArgs = {
   }),
   pauseRecipient: (pairId: string, expiresAt: string, expectedVersion: number) => ({ pairId, expiresAt, expectedVersion }),
   resumeRecipient: (pairId: string, expectedVersion: number) => ({ pairId, expectedVersion }),
+  setStandingConsent: (i: Input<'setStandingConsent'>) => ({ ...i, categories: [...i.categories], expiresAt: iso(i.expiresAt) }),
+  revokeStandingConsent: (pairId: string) => ({ pairId }),
+  approveSignalStanding: (i: Input<'approveSignalStanding'>) => ({
+    pairId: i.pairId, supportMode: i.supportMode ?? undefined, availability: i.availability ?? undefined,
+    clientRequestId: i.clientRequestId, ruleVersion: i.ruleVersion,
+  }),
   // C8: audience and notice version are fixed by the contract, never user-chosen.
   publishDiscoveryProfile: (i: Input<'publishDiscoveryProfile'>) => ({
     displayName: i.displayName,

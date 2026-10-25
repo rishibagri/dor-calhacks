@@ -213,6 +213,16 @@ export interface RecipientPause {
   createdAt: string;
 }
 
+/** Caller-owned D044 rule. The view exposes no recipient identity beyond its accepted pair. */
+export interface StandingConsentView {
+  pairId: string;
+  categories: SharingCategory[];
+  version: number;
+  expiresAt: string;
+  active: boolean;
+  createdAt: string;
+}
+
 export type ReducerResult = { ok: true } | { ok: false; code: ReducerErrorCode; message: string };
 
 /** Mirrors API.md error codes; reducers throw SenderError with one of these prefixes. */
@@ -279,6 +289,15 @@ export interface SharedStatePort {
   /** Owner-only, reason-free pause of one counterpart; expectedVersion 0 = first pause (D041). */
   pauseRecipient(pairId: string, expiresAt: string, expectedVersion: number): Promise<ReducerResult>; // pause_recipient
   resumeRecipient(pairId: string, expectedVersion: number): Promise<ReducerResult>; // resume_recipient
+  /** D044: owner explicitly authorizes future enum-only signals for one accepted pair. */
+  setStandingConsent(input: {
+    pairId: string; categories: SharingCategory[]; expiresAt: string; expectedVersion: number;
+    expectedPolicyVersion: number; expectedAssignmentVersion: number; noticeVersion: number;
+  }): Promise<ReducerResult>; // set_standing_consent
+  revokeStandingConsent(pairId: string): Promise<ReducerResult>; // revoke_standing_consent
+  approveSignalStanding(input: {
+    pairId: string; supportMode?: SupportMode; availability?: Availability; clientRequestId: string; ruleVersion: number;
+  }): Promise<ReducerResult>; // approve_signal_standing
   /** C8 (flag-gated server-side). The exact preview the owner confirmed; expectedRevision 0 = first publish. */
   publishDiscoveryProfile(input: {
     displayName: string;
@@ -321,6 +340,7 @@ export interface SharedStatePort {
   mySupportPreferences(): SupportPreferencesView[]; // my_support_preferences
   myNudgeDelivery(): NudgeDeliveryView[]; // my_nudge_delivery
   myRecipientPauses(): RecipientPause[]; // my_recipient_pauses (owner-only)
+  myStandingConsents(): StandingConsentView[]; // my_standing_consents (owner-only)
   myDiscoveryProfile(): MyDiscoveryView | null; // my_discovery_profile
   discoveryCards(): DiscoveryCardRow[]; // discovery_cards (≤ DISCOVERY_CARD_LIMIT, caller-filtered)
   myIntroductions(): IntroductionView[]; // my_introductions

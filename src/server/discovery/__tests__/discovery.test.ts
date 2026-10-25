@@ -10,7 +10,7 @@ import { loadCatalogue } from '../index.ts';
 import { AREA_KEYS, DISCOVERY_TAGS } from '../../../lib/discovery/config.ts';
 
 const NOW = Date.parse('2026-10-24T12:00:00Z');
-const env = { APIFY_API_TOKEN: 'tok_secret', APIFY_ACTOR_ID: 'tortuga/luma-scraper', APIFY_TOPICS: 'board-games', APIFY_MAX_ITEMS: '10' };
+const env = { APIFY_API_TOKEN: 'tok_secret', APIFY_ACTOR_ID: 'tortuga/luma-scraper', APIFY_ACTOR_BUILD: '1.0.0', APIFY_TOPICS: 'board-games', APIFY_MAX_ITEMS: '10' };
 const cfg = (e: Record<string, string> = {}): { config: DiscoveryConfig; token: string } => {
   const r = loadDiscoveryConfig({ ...env, ...e });
   if (!r.ok) throw new Error(r.reason);
@@ -27,6 +27,8 @@ const norm = (raw: Record<string, unknown[]>, c = cfg().config) => normalizeCata
 test('config fails closed when token or actor is missing, and caps are enforced', () => {
   assert.equal(loadDiscoveryConfig({ ...env, APIFY_API_TOKEN: '' }).ok, false);
   assert.equal(loadDiscoveryConfig({ ...env, APIFY_ACTOR_ID: '' }).ok, false);
+  assert.equal(loadDiscoveryConfig({ ...env, APIFY_ACTOR_BUILD: '' }).ok, false);
+  assert.equal(loadDiscoveryConfig({ ...env, APIFY_ACTOR_ID: 'unreviewed/scraper' }).ok, false);
   assert.equal(loadDiscoveryConfig({ ...env, APIFY_MAX_ITEMS: '51' }).ok, false);
   assert.equal(loadDiscoveryConfig({ ...env, APIFY_TOPICS: 'skydiving' }).ok, false);
   assert.equal(loadDiscoveryConfig({ ...env, APIFY_TIMEOUT_MS: '999999' }).ok, false);
@@ -109,7 +111,7 @@ test('the fetch body contains only the fixed config keys and the item cap is enf
   assert.ok(calls[0]!.url.includes('limit=10') && !calls[0]!.url.includes('tok_secret'));
   assert.equal(calls[0]!.auth, 'Bearer tok_secret');
   assert.equal(raw['board-games']!.length, 10);
-  const m = cfg({ APIFY_SOURCE: 'meetup' }).config;
+  const m = cfg({ APIFY_SOURCE: 'meetup', APIFY_ACTOR_ID: 'filip_cicvarek/meetup-scraper' }).config;
   assert.deepEqual(Object.keys(actorInput('meetup', m, 'board-games', 5, NOW)).sort(),
     ['city', 'country', 'endDateRange', 'eventType', 'maxResults', 'mode', 'radius', 'searchKeyword', 'sortBy', 'startDateRange', 'state']);
 });
@@ -146,6 +148,15 @@ test('the cache coalesces concurrent calls and respects the TTL', async () => {
   assert.equal(loads, 2);
 });
 
+test('the cache separates pinned Actor builds', async () => {
+  let loads = 0;
+  const cache = new CatalogueCache(() => NOW);
+  const config = cfg().config;
+  await cache.get(config, async () => { loads += 1; return 'old-build'; });
+  await cache.get({ ...config, build: '1.0.1' }, async () => { loads += 1; return 'new-build'; });
+  assert.equal(loads, 2);
+});
+
 test('loadCatalogue fetches once, serves repeat calls from cache, and refuses without configuration', async () => {
   let calls = 0;
   const fetchImpl: FetchLike = async () => { calls++; return { ok: true, status: 200, json: async () => [lumaItem()] }; };
@@ -157,5 +168,6 @@ test('loadCatalogue fetches once, serves repeat calls from cache, and refuses wi
   assert.equal(b.fromCache, true);
   assert.equal(a.upserts.length, 1);
   assert.equal(a.provenance.sourceHost, 'lu.ma');
+  assert.equal(a.provenance.build, '1.0.0');
   await assert.rejects(loadCatalogue({}, { fetchImpl }), /not configured/);
 });

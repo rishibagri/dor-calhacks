@@ -15,9 +15,9 @@ import { shareRecipients } from './share-review-model';
 import { ShareReview } from './share-review';
 
 /**
- * Owner-only private decision step between a reflection and any sharing preview (Core 2). Neutral questions about
- * the owner's own wishes; skip and "space" are first-class and end in silence. Choosing a person only opens the
- * existing exact-recipient preview, which still needs its own approval. Nothing here is stored or sent; the parent
+ * Owner-only private decision step between a reflection and any sharing review (Core 2). Neutral questions about
+ * the owner's own wishes; skip and "space" are first-class and end in silence. Choosing a person opens an exact-pair
+ * review; a current D044 rule may skip per-item approval. Nothing here is stored or sent; the parent
  * unmounts it on lock, pagehide, sign-out and account switch.
  *
  * Claude's optional private assessment (AI, D040, docs/features/PRIVATE_ASSESSMENT.md) can only narrow this loop:
@@ -29,6 +29,7 @@ export function DecisionLoop({ candidate, assessment, onDone }: {
 }) {
   const shared = useLiveShared();
   const [s, setS] = useState<LoopState>(() => failClosedWithoutAssessment(initialLoopState(candidate, assessment), assessment));
+  const [automaticPending, setAutomaticPending] = useState(false);
   const { eligible: unpaused, pausedCount } = withoutPaused(
     shareRecipients(shared.myPairs()).map(({ pairId, name, unnamed }) => ({ pairId, name, unnamed })),
     shared.myRecipientPauses(), new Date());
@@ -40,10 +41,10 @@ export function DecisionLoop({ candidate, assessment, onDone }: {
   if (outcome.kind === 'ready_for_preview') {
     return (
       <div className="space-y-3">
-        <ShareReview candidate={outcome.candidate} recipientPairId={outcome.recipient.pairId} onClose={onDone} />
+        <ShareReview candidate={outcome.candidate} recipientPairId={outcome.recipient.pairId} onClose={onDone} onAutomaticPendingChange={setAutomaticPending} />
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="ghost" onClick={() => setS(answerWho(s, 'none'))}>Actually, no one right now</Button>
-          <Button size="sm" variant="ghost" onClick={() => setS(excludeForNow(s, outcome.recipient.pairId))}>
+          <Button size="sm" variant="ghost" disabled={automaticPending} onClick={() => setS(answerWho(s, 'none'))}>Actually, no one right now</Button>
+          <Button size="sm" variant="ghost" disabled={automaticPending} onClick={() => setS(excludeForNow(s, outcome.recipient.pairId))}>
             Not {outcome.recipient.name} this time
           </Button>
         </div>

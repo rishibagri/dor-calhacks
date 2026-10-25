@@ -49,6 +49,14 @@ test('a complete core env has no errors; findings never contain values', () => {
   assert.doesNotMatch(all, /secretvalue|pk_test_a|sk_test_x/);
 });
 
+test('Apify setup checks name the Actor env consumed by the server adapter', () => {
+  const findings = checkEnv(goodEnv, { worker: false, extensions: true });
+  assert.ok(findings.some((f) => f.key === 'APIFY_API_TOKEN' && f.level === 'warn'));
+  assert.ok(findings.some((f) => f.key === 'APIFY_ACTOR_ID' && f.level === 'warn'));
+  assert.ok(findings.some((f) => f.key === 'APIFY_ACTOR_BUILD' && f.level === 'warn'));
+  assert.ok(!findings.some((f) => f.key === 'APIFY_TASK_ID'));
+});
+
 test('secrets in NEXT_PUBLIC_* and insecure remote ws are errors; publishable key is not a secret', () => {
   assert.deepEqual(errors({ ...goodEnv, NEXT_PUBLIC_LEAK: 'sk-ant-abc' }), ['NEXT_PUBLIC_LEAK']);
   assert.deepEqual(errors({ ...goodEnv, NEXT_PUBLIC_SPACETIMEDB_URI: 'ws://db.example.com' }), ['NEXT_PUBLIC_SPACETIMEDB_URI']);
