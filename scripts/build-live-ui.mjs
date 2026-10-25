@@ -40,9 +40,8 @@ edit('reviewer column',
   '<div style="width:300px;max-width:100%;display:flex;flex-direction:column;gap:18px">',
   '<div style="display:none">');
 edit('frame size', 'frameW:Math.round(410*s.zoom), frameH:Math.round(864*s.zoom)', 'frameW:Math.round(390*s.zoom), frameH:Math.round(844*s.zoom)');
-// Fill the phone: the design's top 50px (hidden status bar) and bottom ~30px (home-indicator padding) hold nothing,
-// so up to 60 design px of height may be cropped (centred) before the sides show any background.
-edit('fit', 'Math.min(1, (window.innerHeight-48)/864, (window.innerWidth-32)/410)', 'Math.min(window.innerHeight/784, window.innerWidth/390)');
+// Fit the whole 390×844 screen (nothing cropped: the door mat and bottom sheets sit at the very bottom).
+edit('fit', 'Math.min(1, (window.innerHeight-48)/864, (window.innerWidth-32)/410)', 'Math.min(window.innerHeight/844, window.innerWidth/390)');
 // Any side margin left on a short viewport (browser toolbars) is painted the drawing's wall colour, so it reads as wall.
 html = html.replace('</head>', '<style>#__claude_design_branding{display:none!important}html,body{margin:0;overscroll-behavior:none;background:#F2F0EA!important}</style>\n</head>');
 
