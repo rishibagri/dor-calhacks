@@ -96,3 +96,9 @@
   - Proactive toward unnamed connections is allowed when the model cites evidence and every gate passes (owner decision, REASONING.md §9 C1b). Hard stops, explicit exclusions, pauses, conflict and caps are unchanged; server checks at approve/commit remain authoritative.
   - Each decision is logged content-free with `record_reasoning_decision` (codes only, ≤100 per owner) for `my_reasoning_decisions` and the observer view.
   - The client `prepareShare` now mirrors the server default preset (`7b3b695`).
+- D055 (product owner Rishi, 2026-10-25; amends D054; offline-verified, not live): **autonomous reasoning with cross-entry memory and talking points.**
+  - No `ask` outcome in the live room. `finalize(..., { autonomous: true })`: high-reveal news acts (a friend reaches out; the owner still shares the news), low confidence or a sensitive topic drops that person instead of asking. Hard stops, explicit wishes, exclusions, pauses, conflict, preset/opt-out/cooldown/quiet-hours mirrors and server rechecks are unchanged.
+  - One entry may nudge up to 3 friends (`MAX_AUTO_TARGETS`), each finalized separately. CELEBRATE, RECONNECT and PRACTICAL_HELP now map to the existing note/call templates.
+  - Memory: the model returns short facts with a lifetime (`memory.add`/`expire`); they live on the owner's device only (localStorage per account, ≤40, ≤60 days) and are sent back to `/api/reasoning` with the next entry. Never written to SpacetimeDB.
+  - Talking point: each nudged friend gets a ≤140-char line ("Ask how the exam went"). `attach_signal_hook` stores it against the sender's own approved signal; `my_nudges` gains `hook`. Links are rejected server-side. This is a recipient-visible field derived from the entry, a deliberate D043/D028 widening the owner chose.
+  - "Tell them yourself" moments are logged on the person's book with nothing sent, never asked.

@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { RateLimiter } from '@dor/agents';
 import { REASONING_SYSTEM_PROMPT } from '@/reasoning/runtime/prompt';
 import { EVENT_KINDS } from '@/reasoning/runtime/live';
+import { MEMORY_KINDS } from '@/reasoning/runtime/memory';
 import { CANDIDATE_ACTIONS, LEVELS, REASON_CODES, REASONING_MODES, REASSESS_CONDITIONS } from '@/reasoning/core/vocabulary';
 
 const MODEL = process.env.DOR_REASONING_MODEL || 'claude-opus-5-5';
@@ -25,6 +26,14 @@ const RequestSchema = z.object({
     excluded: z.boolean(),
     paused: z.boolean(),
   }).strict()).max(30),
+  // D055: facts the writer's own device remembered from earlier entries.
+  memory: z.array(z.object({
+    id: z.string().regex(/^[A-Za-z0-9_-]{1,40}$/),
+    kind: z.enum(MEMORY_KINDS),
+    ref: z.string().regex(/^[A-Za-z0-9:_-]{1,80}$/).nullable(),
+    daysAgo: z.number().int().min(0).max(400),
+    text: z.string().max(160),
+  }).strict()).max(40).default([]),
 }).strict();
 
 const ModelSchema = z.object({
@@ -39,7 +48,12 @@ const ModelSchema = z.object({
     revealValue: z.enum(LEVELS), confidence: z.enum(LEVELS), timing: z.enum(['now', 'after_delay', 'not_now']),
     delayMinutes: z.number().int().nullable(), reassessMinutes: z.number().int().nullable(),
     reassessCondition: z.enum(REASSESS_CONDITIONS).nullable(), rationale: z.array(z.enum(REASON_CODES)), evidence: z.array(z.string()),
+    talkingPoint: z.string().nullable(),
   })),
+  memory: z.object({
+    add: z.array(z.object({ kind: z.enum(MEMORY_KINDS), text: z.string(), ref: z.string().nullable(), ttlDays: z.number().int() })),
+    expire: z.array(z.string()),
+  }),
 });
 
 const json = (status: number, body: unknown) => Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
@@ -57,19 +71,23 @@ export async function POST(request: Request): Promise<Response> {
   client ??= new Anthropic({ apiKey, timeout: 12_000, maxRetries: 1, logLevel: 'off' });
   const started = Date.now();
   const people = body.people.map(p => `- ref ${p.ref}: mentionedAs ${p.mentionedAs === null ? 'null' : JSON.stringify(p.mentionedAs)}${p.excluded ? ', EXCLUDED by the writer' : ''}${p.paused ? ', PAUSED by the writer' : ''}`).join('\n');
+  const memory = body.memory.map(m => `- id ${m.id} (${m.kind}, ${m.daysAgo === 0 ? 'today' : `${m.daysAgo}d ago`}${m.ref ? `, about ref ${m.ref}` : ''}): ${m.text}`).join('\n');
   try {
     const response = await client.beta.messages.parse({
       model: MODEL,
       max_tokens: 16000,
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
-      output_config: { effort: 'low', format: betaZodOutputFormat(ModelSchema) },
-      system: REASONING_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: `Writer's local time: ${body.localTime}\nAccepted connections:\n${people || '(none)'}\n\nJournal entry:\n${body.text}` }],
+      output_config: { effort: 'medium', format: betaZodOutputFormat(ModelSchema) },
+      // Frozen prompt, cached across calls; everything that varies goes in the user turn.
+      system: [{ type: 'text', text: REASONING_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+      messages: [{ role: 'user', content: `Writer's local time: ${body.localTime}\nAccepted connections:\n${people || '(none)'}\n\n` +
+        `Remembered from earlier entries:\n${memory || '(nothing yet)'}\n\nNew journal entry:\n${body.text}` }],
     });
     // Metadata only: never text, refs or user ids.
     console.log(JSON.stringify({ at: new Date().toISOString(), event: 'reasoning_call', model: MODEL, durationMs: Date.now() - started,
-      outcome: response.stop_reason, inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens }));
+      outcome: response.stop_reason, inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens,
+      cacheReadTokens: response.usage.cache_read_input_tokens ?? null }));
     if (response.stop_reason === 'refusal' || !response.parsed_output) return json(502, { error: 'invalid_output' });
     return json(200, response.parsed_output);
   } catch (error) {

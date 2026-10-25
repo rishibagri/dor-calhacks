@@ -115,7 +115,8 @@ export const mapNudge: Mapper<RecipientNudgeView> = (row) => {
   const templateId = NUDGE_TEMPLATE_IDS.find((t) => t === str(row, 'template_id'));
   const visibleUntil = str(row, 'visible_until');
   if (!id || !pairId || !templateId || !visibleUntil) return null;
-  return { id, pairId, templateId, visibleUntil };
+  const hook = str(row, 'hook');
+  return { id, pairId, templateId, visibleUntil, hook: hook && hook.length <= 140 ? hook : null };
 };
 
 export const mapReceipt: Mapper<DisclosureReceipt> = (row) =>

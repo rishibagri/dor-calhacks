@@ -37,7 +37,7 @@ test('only pending incoming introductions become envelopes; outgoing never do', 
 test('expired nudges and past events leave the room', () => {
   const s = roomSignals({
     ...base,
-    nudges: [{ id: 'n1', pairId: 'p', templateId: 'check_in_this_week' as never, visibleUntil: earlier }, { id: 'n2', pairId: 'p', templateId: 'check_in_this_week' as never, visibleUntil: later }],
+    nudges: [{ id: 'n1', pairId: 'p', templateId: 'check_in_this_week' as never, visibleUntil: earlier, hook: null }, { id: 'n2', pairId: 'p', templateId: 'check_in_this_week' as never, visibleUntil: later, hook: null }],
     events: [
       { eventId: 'e1', title: 'Past', startsAt: earlier, endsAt: earlier, topics: [], format: 'in_person', areaKey: null, sourceUrl: null, fetchedAt: earlier },
       { eventId: 'e2', title: 'Soon', startsAt: later, endsAt: null, topics: [], format: 'in_person', areaKey: null, sourceUrl: null, fetchedAt: earlier },

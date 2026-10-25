@@ -58,14 +58,13 @@ test('a clean, named, open, evidenced invite becomes act with the existing deliv
   assert.ok(validateDecision(d));
 });
 
-test('caps lower act to ask and record why: reveal value, sensitive topic, low confidence, unnamed, no template', () => {
+test('caps lower act to ask and record why: reveal value, sensitive topic, low confidence, unnamed', () => {
   const cases: [Partial<CandidateProposal>, ReasoningEpisodeInput, string][] = [
     [{ revealValue: 'high' }, input(), 'high_reveal_value'],
     [{ topic: 'interviews' }, input({ relationships: [{ ref: 'p-a', gates: OPEN_GATES, conflict: 'none', sensitiveTopics: ['interviews'] }] }), 'sensitive_topic'],
     [{ confidence: 'low' }, input(), 'low_confidence'],
     [{ confidence: 'unknown' }, input(), 'low_confidence'],
     [{}, input({ explicitIntent: { wantsSpace: false, doesNotWantToTalk: false, excludedRefs: [], namedRefs: [] } }), 'unnamed_target'],
-    [{ action: 'CELEBRATE' }, input(), 'no_delivery_path'],
   ];
   for (const [over, inp, by] of cases) {
     const d = finalize(inp, [invite(over), abstainP]);
@@ -79,6 +78,28 @@ test('even a proposer that ranks an automated celebration first cannot automate 
   const d = finalize(input(), [invite({ action: 'CELEBRATE', revealValue: 'high', rank: 0 }), abstainP]);
   assert.equal(d.mode, 'ask');
   assert.equal(d.capped?.by, 'high_reveal_value');
+});
+
+test('every recipient action now has a delivery path (D055): a plain celebration acts', () => {
+  const d = finalize(input(), [invite({ action: 'CELEBRATE', supportMode: 'encouraging_note' }), abstainP]);
+  assert.equal(d.mode, 'act');
+  assert.deepEqual(d.deliveryMapping, { supportMode: 'encouraging_note', intendedTemplate: 'offer_note' });
+});
+
+test('autonomous mode (D055) never asks: high reveal acts, low confidence and sensitive topics are dropped, gates hold', () => {
+  const auto = { autonomous: true };
+  const reveal = finalize(input(), [invite({ revealValue: 'high' }), abstainP], auto);
+  assert.equal(reveal.mode, 'act');
+  const low = finalize(input(), [invite({ confidence: 'low' }), abstainP], auto);
+  assert.equal(low.mode, 'abstain');
+  assert.ok(low.rejected.some(r => r.reason === 'low_confidence'));
+  const sensitive = finalize(input({ relationships: [{ ref: 'p-a', gates: OPEN_GATES, conflict: 'none', sensitiveTopics: ['interviews'] }] }),
+    [invite({ topic: 'interviews' }), abstainP], auto);
+  assert.equal(sensitive.mode, 'abstain');
+  const paused = finalize(input({ relationships: [{ ref: 'p-a', gates: { ...OPEN_GATES, paused: true }, conflict: 'none', sensitiveTopics: [] }] }),
+    [invite(), abstainP], auto);
+  assert.equal(paused.mode, 'abstain');
+  for (const d of [reveal, low, sensitive, paused]) assert.notEqual(d.mode, 'ask');
 });
 
 test('server-gate mirrors reject recipient actions: pause, opt-out, preset, cooldown, quiet hours', () => {

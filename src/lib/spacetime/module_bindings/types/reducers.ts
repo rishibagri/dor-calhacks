@@ -11,6 +11,7 @@ import ApproveActivityInterestReducer from "../approve_activity_interest_reducer
 import ApproveSignalReducer from "../approve_signal_reducer";
 import ApproveSignalStandingReducer from "../approve_signal_standing_reducer";
 import AssignRelationshipPresetReducer from "../assign_relationship_preset_reducer";
+import AttachSignalHookReducer from "../attach_signal_hook_reducer";
 import BlockDiscoveryUserReducer from "../block_discovery_user_reducer";
 import BlockIntroductionParticipantReducer from "../block_introduction_participant_reducer";
 import CancelIntroductionRequestReducer from "../cancel_introduction_request_reducer";
@@ -66,6 +67,7 @@ export type ApproveActivityInterestParams = __Infer<typeof ApproveActivityIntere
 export type ApproveSignalParams = __Infer<typeof ApproveSignalReducer>;
 export type ApproveSignalStandingParams = __Infer<typeof ApproveSignalStandingReducer>;
 export type AssignRelationshipPresetParams = __Infer<typeof AssignRelationshipPresetReducer>;
+export type AttachSignalHookParams = __Infer<typeof AttachSignalHookReducer>;
 export type BlockDiscoveryUserParams = __Infer<typeof BlockDiscoveryUserReducer>;
 export type BlockIntroductionParticipantParams = __Infer<typeof BlockIntroductionParticipantReducer>;
 export type CancelIntroductionRequestParams = __Infer<typeof CancelIntroductionRequestReducer>;

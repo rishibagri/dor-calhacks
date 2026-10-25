@@ -147,6 +147,7 @@ const ceilToHour = (ts: Timestamp): Timestamp =>
 
 const myNudgeRow = t.row('MyNudgeRow', {
   id: t.string(), pair_id: t.string(), template_id: t.string(), visible_until: t.timestamp(),
+  hook: t.option(t.string()), // D055: the sender's talking point, from the nudge's source signal
 });
 
 /**
@@ -160,7 +161,8 @@ export const my_nudges = spacetimedb.view(
   { name: 'my_nudges', public: true }, t.array(myNudgeRow),
   ctx => [...ctx.db.nudge.recipient_id.filter(ctx.sender)].filter(n => !n.suppressed && !n.dismissed &&
     n.snoozed_until === undefined && nudgeSourcesStand(ctx.db, n, ctx.sender) && nudgeConsentStands(ctx.db, n, ctx.sender))
-    .map(n => ({ id: n.id, pair_id: n.pair_id, template_id: n.template_id, visible_until: ceilToHour(n.expires_at) }))
+    .map(n => ({ id: n.id, pair_id: n.pair_id, template_id: n.template_id, visible_until: ceilToHour(n.expires_at),
+      hook: n.source_signal_ids.map(id => ctx.db.signal_hook.signal_id.find(id)?.hook).find(Boolean) ?? undefined }))
 );
 
 /** Sender-only: the owner's own approved signals (privacy center: recipient, expiry, revoke). */

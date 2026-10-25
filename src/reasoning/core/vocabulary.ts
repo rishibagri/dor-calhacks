@@ -41,6 +41,10 @@ export const DELIVERY_MAPPING: Partial<Record<CandidateAction, { supportMode: Su
   DIRECT_CHECK_IN: { supportMode: 'short_call', intendedTemplate: 'offer_short_call' },
   CASUAL_INVITE: { supportMode: 'shared_activity', intendedTemplate: 'offer_shared_activity' },
   SHARED_ACTIVITY: { supportMode: 'shared_activity', intendedTemplate: 'offer_shared_activity' },
+  // D055: the remaining recipient actions now reuse the existing templates (a note or a call), so they can act.
+  CELEBRATE: { supportMode: 'encouraging_note', intendedTemplate: 'offer_note' },
+  RECONNECT: { supportMode: 'short_call', intendedTemplate: 'offer_short_call' },
+  PRACTICAL_HELP: { supportMode: 'encouraging_note', intendedTemplate: 'offer_note' },
 };
 
 /** Which existing support modes each deliverable action may carry; the first is the default. */
@@ -48,6 +52,9 @@ export const ACTION_SUPPORT_MODES: Partial<Record<CandidateAction, readonly Supp
   DIRECT_CHECK_IN: ['short_call', 'encouraging_note'],
   CASUAL_INVITE: ['shared_activity'],
   SHARED_ACTIVITY: ['shared_activity'],
+  CELEBRATE: ['encouraging_note', 'short_call'],
+  RECONNECT: ['short_call', 'encouraging_note'],
+  PRACTICAL_HELP: ['encouraging_note', 'short_call'],
 };
 export const TEMPLATE_FOR_MODE: Record<SupportMode, Nudge['templateId']> = {
   short_call: 'offer_short_call', encouraging_note: 'offer_note', shared_activity: 'offer_shared_activity',

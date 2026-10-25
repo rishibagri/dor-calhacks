@@ -81,6 +81,8 @@ export interface RecipientNudgeView {
   pairId: string;
   templateId: Nudge['templateId'];
   visibleUntil: string;
+  /** D055: what the sender's device suggested talking about, or null. */
+  hook: string | null;
 }
 
 /** One of the caller's own approved signals (`my_signals`), with its revocation time if revoked. */
@@ -332,6 +334,8 @@ export interface SharedStatePort {
   pauseRecipient(pairId: string, expiresAt: string, expectedVersion: number): Promise<ReducerResult>; // pause_recipient
   resumeRecipient(pairId: string, expectedVersion: number): Promise<ReducerResult>; // resume_recipient
   /** D052/D053: content-free record of the owner's own Reasoning decision (codes only); authorizes nothing. */
+  /** D055: attach a talking point to the caller's own just-approved signal (shown on the recipient's nudge). */
+  attachSignalHook(clientRequestId: string, hook: string): Promise<ReducerResult>; // attach_signal_hook
   recordReasoningDecision(input: {
     episodeId: string; pairId: string | null; mode: string; action: string | null; surface: string | null;
     reasons: string[]; rejected: string[]; reassessAfterMinutes: number | null; source: string; outcome: string;

@@ -572,6 +572,20 @@ export const nudge_request = table(
   }
 );
 
+/**
+ * D055: what the recipient's nudge suggests talking about ("ask how the exam went"). Written by the sender's device
+ * right after approve_signal; shown to the recipient in my_nudges with the nudge built from that signal.
+ */
+export const signal_hook = table(
+  { name: 'signal_hook' },
+  {
+    signal_id: t.string().primaryKey(),
+    sender_id: t.identity().index('btree'),
+    hook: t.string(),
+    created_at: t.timestamp(),
+  }
+);
+
 export const spacetimedb = schema({
   module_owner,
   auth_config,
@@ -611,6 +625,7 @@ export const spacetimedb = schema({
   standing_approval,
   profile_detail,
   nudge_request,
+  signal_hook,
   observer_identity,
   reasoning_decision,
 });

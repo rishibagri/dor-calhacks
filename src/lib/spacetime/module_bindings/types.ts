@@ -459,6 +459,7 @@ export const MyNudgeRow = __t.object("MyNudgeRow", {
   pairId: __t.string(),
   templateId: __t.string(),
   visibleUntil: __t.timestamp(),
+  hook: __t.option(__t.string()),
 });
 export type MyNudgeRow = __Infer<typeof MyNudgeRow>;
 
@@ -893,6 +894,14 @@ export const SharedPlanRow = __t.object("SharedPlanRow", {
   expiresAt: __t.timestamp(),
 });
 export type SharedPlanRow = __Infer<typeof SharedPlanRow>;
+
+export const SignalHook = __t.object("SignalHook", {
+  signalId: __t.string(),
+  senderId: __t.identity(),
+  hook: __t.string(),
+  createdAt: __t.timestamp(),
+});
+export type SignalHook = __Infer<typeof SignalHook>;
 
 export const StandingApproval = __t.object("StandingApproval", {
   signalId: __t.string(),

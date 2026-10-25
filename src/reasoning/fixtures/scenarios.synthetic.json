@@ -80,7 +80,7 @@
         "patterns": [],
         "people": [{ "ref": "p-maya", "closeness": "medium", "involvement": "some", "goodAt": ["CELEBRATE"], "calendar": "free_soon", "receptive": true }]
       },
-      "expected": { "mode": "ask", "action": "CELEBRATE", "targetRef": "p-maya", "cappedBy": "no_delivery_path" }
+      "expected": { "mode": "act", "action": "CELEBRATE", "targetRef": "p-maya" }
     },
     {
       "id": "s05-busy-week-recharges-alone",

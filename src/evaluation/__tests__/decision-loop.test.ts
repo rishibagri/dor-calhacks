@@ -178,10 +178,10 @@ test('timing (sender_approval_timing): recipient-visible copy does not depend on
 const rowAt = (approvedMinutesBeforeCommit: number) => recipientNudgeRow(nudgeAt(approvedMinutesBeforeCommit)!);
 const HOUR_MS = 3_600_000;
 
-test('timing (D043 mirror): the recipient row is exactly {id, pairId, templateId, visibleUntil}, with no ids or times', () => {
+test('timing (D043 mirror): the recipient row is exactly {id, pairId, templateId, visibleUntil, hook (D055)}, with no ids or times', () => {
   const internal = nudgeAt(37)!;
   const row = recipientNudgeRow(internal);
-  assert.deepEqual(Object.keys(row).sort(), ['id', 'pairId', 'templateId', 'visibleUntil']);
+  assert.deepEqual(Object.keys(row).sort(), ['hook', 'id', 'pairId', 'templateId', 'visibleUntil']);
   const wire = JSON.stringify(row);
   for (const hidden of [...internal.sourceSignalIds, internal.createdAt, internal.expiresAt]) assert.ok(!wire.includes(hidden), hidden);
 });
@@ -202,7 +202,7 @@ test('timing (D043 mirror): approvals within the same hour give the recipient id
 
 test('timing (D043 mirror): the DS row has the shape CS consumes (RecipientNudgeView; checked by npm run typecheck)', () => {
   const row = rowAt(5) satisfies RecipientNudgeView;
-  const cs: Record<keyof RecipientNudgeView, true> = { id: true, pairId: true, templateId: true, visibleUntil: true };
+  const cs: Record<keyof RecipientNudgeView, true> = { id: true, pairId: true, templateId: true, visibleUntil: true, hook: true }; // hook: D055
   assert.deepEqual(Object.keys(row).sort(), Object.keys(cs).sort());
 });
 
@@ -218,7 +218,7 @@ function approvalTimingFindings(rowFor: (approvedMinutesBeforeCommit: number) =>
   for (const m of APPROVAL_OFFSETS) {
     const internal = nudgeAt(m)!, approvedAt = approvedAtFor(m);
     const { id: _id, ...row } = rowFor(m) as Record<string, unknown>;
-    if (Object.keys(row).sort().join() !== 'pairId,templateId,visibleUntil') findings.add('extra or missing field');
+    if (Object.keys(row).sort().join() !== 'hook,pairId,templateId,visibleUntil') findings.add('extra or missing field');
     const shown = Date.parse(String(row.visibleUntil));
     if (!Number.isFinite(shown) || shown % HOUR_MS !== 0) findings.add('visibleUntil finer than an hour');
     const wire = JSON.stringify(row);

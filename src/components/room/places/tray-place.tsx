@@ -46,7 +46,10 @@ export function TrayPlace() {
         {nudges.map((n) => (
           <li key={n.id} className={ENTER}>
             <Card>
-              <CardHeader><CardTitle className="text-base font-medium leading-snug text-balance">{COPY[n.templateId]}</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="text-base font-medium leading-snug text-balance">{COPY[n.templateId]}</CardTitle>
+                {n.hook && <p className="text-sm text-muted-foreground">{n.hook}</p>}
+              </CardHeader>
               <CardContent className="flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" className="active:scale-[0.97] motion-safe:transition-transform"
                   onClick={() => shared.dismissNudge(n.id).then(setResult)}>Dismiss</Button>

@@ -39,6 +39,7 @@ import ApproveActivityInterestReducer from "./approve_activity_interest_reducer"
 import ApproveSignalReducer from "./approve_signal_reducer";
 import ApproveSignalStandingReducer from "./approve_signal_standing_reducer";
 import AssignRelationshipPresetReducer from "./assign_relationship_preset_reducer";
+import AttachSignalHookReducer from "./attach_signal_hook_reducer";
 import BlockDiscoveryUserReducer from "./block_discovery_user_reducer";
 import BlockIntroductionParticipantReducer from "./block_introduction_participant_reducer";
 import CancelIntroductionRequestReducer from "./cancel_introduction_request_reducer";
@@ -474,6 +475,7 @@ const reducersSchema = __reducers(
   __reducerSchema("approve_signal", ApproveSignalReducer),
   __reducerSchema("approve_signal_standing", ApproveSignalStandingReducer),
   __reducerSchema("assign_relationship_preset", AssignRelationshipPresetReducer),
+  __reducerSchema("attach_signal_hook", AttachSignalHookReducer),
   __reducerSchema("block_discovery_user", BlockDiscoveryUserReducer),
   __reducerSchema("block_introduction_participant", BlockIntroductionParticipantReducer),
   __reducerSchema("cancel_introduction_request", CancelIntroductionRequestReducer),

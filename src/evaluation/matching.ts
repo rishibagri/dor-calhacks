@@ -130,7 +130,8 @@ export function buildNudge(signal: ApprovedSignal, ack: AgentAck, match: Extract
 const HOUR_MS = 3_600_000;
 
 /** The recipient's own nudge row (`my_nudges`), mirroring Cyber's D043 projection in spacetimedb/src/views.ts. */
-export interface RecipientNudgeRow { id: string; pairId: string; templateId: Nudge['templateId']; visibleUntil: string }
+/** D055 adds `hook`: the sender's talking point, null when none (a nudge built from pure fixtures carries none). */
+export interface RecipientNudgeRow { id: string; pairId: string; templateId: Nudge['templateId']; visibleUntil: string; hook: string | null }
 
 /**
  * Projects an internal nudge to exactly what its recipient can subscribe to under D043: no creation time, exact
@@ -139,5 +140,5 @@ export interface RecipientNudgeRow { id: string; pairId: string; templateId: Nud
  */
 export function recipientNudgeRow(n: Nudge): RecipientNudgeRow {
   const visibleUntil = Math.ceil(Date.parse(n.expiresAt) / HOUR_MS) * HOUR_MS;
-  return { id: n.id, pairId: n.pairId, templateId: n.templateId, visibleUntil: new Date(visibleUntil).toISOString() };
+  return { id: n.id, pairId: n.pairId, templateId: n.templateId, visibleUntil: new Date(visibleUntil).toISOString(), hook: null };
 }
