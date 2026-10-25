@@ -5,6 +5,9 @@
  * lookups try camelCase and snake_case).
  */
 import * as raw from './module_bindings';
+import { toCamel } from './names.ts';
+
+export { findTable, toCamel } from './names.ts';
 
 export interface LooseRow {
   readonly [key: string]: unknown;
@@ -53,14 +56,6 @@ export function bindingsGenerated(): boolean {
 export function newBuilder(): LooseBuilder {
   if (!generated.DbConnection) throw new Error('SpacetimeDB bindings not generated');
   return generated.DbConnection.builder();
-}
-
-export function toCamel(snake: string): string {
-  return snake.replace(/_([a-z])/g, (_m, c: string) => c.toUpperCase());
-}
-
-export function findTable(conn: LooseConnection, name: string): LooseTable | undefined {
-  return conn.db[name] ?? conn.db[toCamel(name)];
 }
 
 export function findReducer(conn: LooseConnection, name: string): ((args: unknown) => Promise<unknown>) | undefined {

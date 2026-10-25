@@ -20,6 +20,9 @@ export const RelationshipPresetSchema = z.object({
   schemaVersion: z.literal(1), policyId: id, ownerId: id, presetKind: RelationshipPresetKindSchema,
   purpose: z.literal(DISCLOSURE_PURPOSE), allowedCategories: z.array(SharingCategorySchema)
     .refine(v => new Set(v).size === v.length, 'Duplicate categories'),
+  // D049: the C7 activity permission (preset category `activity_interest`) travels here, never in allowedCategories,
+  // so it can never reach a C3 signal. Absent means false.
+  activityInterestAllowed: z.boolean().optional(),
   approvalMode: z.literal('each_item'), version: z.number().int().positive(),
   expiresAt: time, revokedAt: time.nullable(),
 }).strict();
