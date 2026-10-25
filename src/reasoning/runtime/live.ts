@@ -30,7 +30,7 @@ export interface LiveContext {
   candidate: SignalCandidate | null;
   assessment: PrivateAssessment | null;
   people: LivePerson[];
-  /** D055: ids of remembered facts the model was shown; it may cite them as `memory:<id>`. */
+  /** D056: ids of remembered facts the model was shown; it may cite them as `memory:<id>`. */
   memoryIds?: string[];
 }
 
@@ -62,10 +62,10 @@ export interface ModelReasoning {
     reassessCondition: (typeof REASSESS_CONDITIONS)[number] | null;
     rationale: ReasonCode[];
     evidence: string[];
-    /** D055: what the friend should bring up when they reach out ("ask how the exam went"), or null. */
+    /** D056: what the friend should bring up when they reach out ("ask how the exam went"), or null. */
     talkingPoint?: string | null;
   }[];
-  /** D055: facts worth remembering for later entries, and remembered facts this entry makes stale. */
+  /** D056: facts worth remembering for later entries, and remembered facts this entry makes stale. */
   memory?: { add: { kind: MemoryKind; text: string; ref: string | null; ttlDays: number }[]; expire: string[] };
 }
 
@@ -163,14 +163,14 @@ export function fallbackProposals(ctx: LiveContext): CandidateProposal[] {
     timing: { kind: 'now' }, confidence: a.intent === 'wants_connection' ? 'high' : 'medium', rationale: [],
   });
   if (named.length === 1) return [base(named[0]!, 1, 'act'), abstain];
-  // D055: several named people are all nudged (capped later); the fallback is still never proactive toward unnamed ones.
+  // D056: several named people are all nudged (capped later); the fallback is still never proactive toward unnamed ones.
   if (named.length > 1) return [...named.map((p, n) => base(p, n + 1, 'act')), { ...abstain, rank: named.length + 1 }];
   return [abstain];
 }
 
 export interface LiveDecision {
   decision: ReasoningDecision;
-  /** D055: every friend to nudge (≤ MAX_AUTO_TARGETS), primary first; empty unless `decision.mode` is act. */
+  /** D056: every friend to nudge (≤ MAX_AUTO_TARGETS), primary first; empty unless `decision.mode` is act. */
   actions: { decision: ReasoningDecision; talkingPoint: string | null }[];
   memory: MemoryUpdate | null;
   source: 'model' | 'fallback';
@@ -184,7 +184,7 @@ export function cleanTalkingPoint(raw: string | null | undefined): string | null
 }
 
 /**
- * D055: one decision per distinct target the model wants to act toward. Each runs through finalize() on its own (with
+ * D056: one decision per distinct target the model wants to act toward. Each runs through finalize() on its own (with
  * the shared ABSTAIN), so every gate and cap applies per person; only `act` results are kept.
  */
 function autonomousActions(input: ReasoningEpisodeInput, proposals: CandidateProposal[], model: ModelReasoning | null,
@@ -215,7 +215,7 @@ export async function reasonLive(ctx: LiveContext, model: ReasoningModelPort | n
   }
   const input = buildLiveEpisode(ctx, out);
   const proposals = out ? proposalsFromModel(out, ctx) : fallbackProposals(ctx);
-  // Owner chose proactive behavior (REASONING.md §9 C1b) and, with D055, autonomous delivery: no "ask" outcome.
+  // Owner chose proactive behavior (REASONING.md §9 C1b) and, with D056, autonomous delivery: no "ask" outcome.
   const decision = finalize(input, proposals, { allowUnnamedTargets: out !== null, autonomous: true });
   const memory = out?.memory ? { add: out.memory.add ?? [], expire: out.memory.expire ?? [] } : null;
   return { decision, actions: autonomousActions(input, proposals, out, decision), memory, source: out ? 'model' : 'fallback', input };

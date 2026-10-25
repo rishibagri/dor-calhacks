@@ -26,7 +26,7 @@ const RequestSchema = z.object({
     excluded: z.boolean(),
     paused: z.boolean(),
   }).strict()).max(30),
-  // D055: facts the writer's own device remembered from earlier entries.
+  // D056: facts the writer's own device remembered from earlier entries.
   memory: z.array(z.object({
     id: z.string().regex(/^[A-Za-z0-9_-]{1,40}$/),
     kind: z.enum(MEMORY_KINDS),

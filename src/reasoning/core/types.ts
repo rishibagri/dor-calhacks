@@ -82,7 +82,7 @@ export interface FinalizeOptions {
   /** Offline/test-only (REASONING.md §9 C1b): allow `act` toward a connection the user did not name. Default false. */
   allowUnnamedTargets?: boolean;
   /**
-   * D055 autonomous mode: no `ask` outcome. High-reveal news is shared by friends reaching out (the owner still tells
+   * D056 autonomous mode: no `ask` outcome. High-reveal news is shared by friends reaching out (the owner still tells
    * them); low confidence or a sensitive topic rejects the proposal instead of asking. Every gate still applies.
    */
   autonomous?: boolean;

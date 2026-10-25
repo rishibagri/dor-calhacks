@@ -51,7 +51,7 @@ test('the core still overrides the model: excluded, paused, high-reveal, conflic
   const paused = await reasonLive(ctx({ people: [{ ref: 'p-sam', mentionedAs: 'Sam', excluded: false, paused: true, presetRevoked: false }] }),
     async () => model([proposal({})]));
   assert.equal(paused.decision.mode, 'abstain');
-  // D055: high-reveal news no longer asks; the friend reaches out and the owner still tells them.
+  // D056: high-reveal news no longer asks; the friend reaches out and the owner still tells them.
   const reveal = await reasonLive(ctx(), async () => model([proposal({ action: 'DIRECT_CHECK_IN', supportMode: 'encouraging_note', revealValue: 'high' })]));
   assert.equal(reveal.decision.mode, 'act');
   const conflict = await reasonLive(ctx({ assessment: { intent: 'unclear', risk: 'interpersonal_conflict', mentionedNames: ['Sam'], excludedNames: [], preferredNames: [] } }),
@@ -59,7 +59,7 @@ test('the core still overrides the model: excluded, paused, high-reveal, conflic
   assert.notEqual(conflict.decision.mode, 'act');
 });
 
-test('sensitive topics reported by the model drop that person (D055: dropped, not asked)', async () => {
+test('sensitive topics reported by the model drop that person (D056: dropped, not asked)', async () => {
   const r = await reasonLive(ctx(), async () => model([proposal({ action: 'DIRECT_CHECK_IN', supportMode: 'short_call' })], { topic: 'interviews' },
     [{ ref: 'p-sam', sensitiveTopics: ['interviews'] }]));
   assert.equal(r.decision.mode, 'abstain');
@@ -67,7 +67,7 @@ test('sensitive topics reported by the model drop that person (D055: dropped, no
   assert.deepEqual(r.actions, []);
 });
 
-test('D055 good exam + earlier goal: several friends nudged at once, each with a talking point; never asks', async () => {
+test('D056 good exam + earlier goal: several friends nudged at once, each with a talking point; never asks', async () => {
   const people = [
     { ref: 'p-sam', mentionedAs: null, excluded: false, paused: false, presetRevoked: false },
     { ref: 'p-maya', mentionedAs: null, excluded: false, paused: false, presetRevoked: false },

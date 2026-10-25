@@ -41,7 +41,7 @@ export const DELIVERY_MAPPING: Partial<Record<CandidateAction, { supportMode: Su
   DIRECT_CHECK_IN: { supportMode: 'short_call', intendedTemplate: 'offer_short_call' },
   CASUAL_INVITE: { supportMode: 'shared_activity', intendedTemplate: 'offer_shared_activity' },
   SHARED_ACTIVITY: { supportMode: 'shared_activity', intendedTemplate: 'offer_shared_activity' },
-  // D055: the remaining recipient actions now reuse the existing templates (a note or a call), so they can act.
+  // D056: the remaining recipient actions now reuse the existing templates (a note or a call), so they can act.
   CELEBRATE: { supportMode: 'encouraging_note', intendedTemplate: 'offer_note' },
   RECONNECT: { supportMode: 'short_call', intendedTemplate: 'offer_short_call' },
   PRACTICAL_HELP: { supportMode: 'encouraging_note', intendedTemplate: 'offer_note' },

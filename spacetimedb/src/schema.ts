@@ -573,7 +573,7 @@ export const nudge_request = table(
 );
 
 /**
- * D055: what the recipient's nudge suggests talking about ("ask how the exam went"). Written by the sender's device
+ * D056: what the recipient's nudge suggests talking about ("ask how the exam went"). Written by the sender's device
  * right after approve_signal; shown to the recipient in my_nudges with the nudge built from that signal.
  */
 export const signal_hook = table(

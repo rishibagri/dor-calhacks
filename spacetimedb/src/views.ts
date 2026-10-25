@@ -147,7 +147,7 @@ const ceilToHour = (ts: Timestamp): Timestamp =>
 
 const myNudgeRow = t.row('MyNudgeRow', {
   id: t.string(), pair_id: t.string(), template_id: t.string(), visible_until: t.timestamp(),
-  hook: t.option(t.string()), // D055: the sender's talking point, from the nudge's source signal
+  hook: t.option(t.string()), // D056: the sender's talking point, from the nudge's source signal
 });
 
 /**

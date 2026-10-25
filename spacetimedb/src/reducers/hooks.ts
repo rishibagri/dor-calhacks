@@ -1,4 +1,4 @@
-// D055: attach a talking point to the caller's own approved signal, so the recipient's nudge says what to bring up.
+// D056: attach a talking point to the caller's own approved signal, so the recipient's nudge says what to bring up.
 import { t } from 'spacetimedb/server';
 import { spacetimedb } from '../schema';
 import { fail } from '../errors';

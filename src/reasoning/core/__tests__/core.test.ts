@@ -80,13 +80,13 @@ test('even a proposer that ranks an automated celebration first cannot automate 
   assert.equal(d.capped?.by, 'high_reveal_value');
 });
 
-test('every recipient action now has a delivery path (D055): a plain celebration acts', () => {
+test('every recipient action now has a delivery path (D056): a plain celebration acts', () => {
   const d = finalize(input(), [invite({ action: 'CELEBRATE', supportMode: 'encouraging_note' }), abstainP]);
   assert.equal(d.mode, 'act');
   assert.deepEqual(d.deliveryMapping, { supportMode: 'encouraging_note', intendedTemplate: 'offer_note' });
 });
 
-test('autonomous mode (D055) never asks: high reveal acts, low confidence and sensitive topics are dropped, gates hold', () => {
+test('autonomous mode (D056) never asks: high reveal acts, low confidence and sensitive topics are dropped, gates hold', () => {
   const auto = { autonomous: true };
   const reveal = finalize(input(), [invite({ revealValue: 'high' }), abstainP], auto);
   assert.equal(reveal.mode, 'act');

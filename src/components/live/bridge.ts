@@ -37,7 +37,13 @@ export interface BridgeDeps {
   openSignIn(): void;
   signOut(): Promise<void>;
   /** Cartesia dictation owned by the host page (mic permission lives there). */
-  voice: { start(): Promise<void>; stop(): Promise<string>; cancel(): void; partial: string };
+  voice: {
+    start(): Promise<void>; stop(): Promise<string>; cancel(): void; partial: string;
+    /** Call synchronously inside a tap so later read-aloud can play on phones. */
+    unlock(): void;
+    /** Cartesia read-aloud of dor's own words (never the journal). */
+    say(text: string): Promise<{ stop(): void; done: Promise<void> }>;
+  };
 }
 
 /** The design's book/postcard palette, assigned to real people by a stable index. */
@@ -66,7 +72,7 @@ const listTags = (tags: readonly string[]) => tags.map(tagLabel).join(', ');
 // The quiz's interest question offers only tags the server publishes (the design's "studying" is not one).
 const QUIZ_TAGS = ['board-games', 'hiking', 'coffee', 'live-music', 'cooking', 'running', 'books', 'climbing'].filter((t) => DISCOVERY_TAGS.includes(t));
 const SENT_KEY = 'dor-live-sent';
-/** D055 cross-entry memory: distilled facts only, on this device (localStorage), keyed by the signed-in account. */
+/** D056 cross-entry memory: distilled facts only, on this device (localStorage), keyed by the signed-in account. */
 const MEMORY_KEY = 'dor-reasoning-memory';
 function memoryStore(owner: string | null): MemoryStore {
   const key = `${MEMORY_KEY}:${owner ?? 'anon'}`;
@@ -197,8 +203,8 @@ export class LiveBridge {
     };
     i.bookPlan = () => toast('Plans start from an event you both marked at the window.');
 
-    // notebook: real private reflection, then the same automatic decision path as the room UI (D050).
-    // mic: Cartesia dictation; the transcript lands in the entry, then the same private reflection runs.
+    // notebook: tap to talk, tap again to stop. Nothing leaves the page until the writer taps Send; "Keep talking" asks
+    // one follow-up question, read aloud, so they can say more first.
     i.micTap = async () => {
       const s = i.state, voice = this.deps?.voice;
       if (!voice || s.nbMode === 'transcribing') return;
@@ -208,10 +214,12 @@ export class LiveBridge {
         let text = '';
         try { text = await voice.stop(); } catch { /* reported below */ }
         const nbText = [i.state.nbText, text].filter((t: string) => t && t.trim()).join(' ').trim();
-        i.setState((st: any) => ({ nbMode: 'review', nbText, nbEditing: false, wordsKey: st.wordsKey + 1 }));
-        if (!text) return toast('I didn’t catch that. Try again, or write instead.');
-        return void this.reflect();
+        i.setState((st: any) => ({ nbMode: nbText ? 'review' : 'idle', nbText, nbEditing: false, wordsKey: st.wordsKey + 1 }));
+        this.scrollWords();
+        if (!text) toast('I didn’t catch that. Try again, or write instead.');
+        return;
       }
+      this.stopSpeaking();
       i.setState({ nbMode: 'recording', nbSecs: 0, nbEditing: false, margin: null });
       clearInterval(i.recT);
       i.recT = setInterval(() => i.setState((st: any) => ({ nbSecs: st.nbSecs + 1 })), 1000);
@@ -259,7 +267,7 @@ export class LiveBridge {
       o.all = ['key', 'sign', 'ribbons', 'pencil', 'folded', 'map', 'ticket', 'index', 'door'].map((k, n) => ({ span: 'auto', ...o[k], rot: n % 2 ? .8 : -.8, d: (.5 + n * .05).toFixed(2) }));
       return o;
     };
-    i.nbDone = () => { i.setState({ nbEditing: false }); void this.reflect(); };
+    i.nbDone = () => { i.setState((st: any) => ({ nbEditing: false, nbMode: st.nbText.trim() ? 'review' : 'idle' })); this.scrollWords(); };
     // Reasoning asked only because it was unsure: "yes" sends right away (no stamp step); an owner moment sends nothing.
     i.marginYes = () => {
       const p = this.pending; i.setState({ margin: 'done' });
@@ -413,6 +421,82 @@ export class LiveBridge {
     this.inst?.setState((s: any) => ({ sent: { ...s.sent, [id]: on } }));
   }
 
+  // ---------- conversation: send, keep talking, start over ----------
+  /**
+   * dor's questions in this entry, each placed after the writer's words so far (`at` = length of nbText when asked), so
+   * the page reads as a conversation. Memory only; cleared on send, reset, sign-out or reload. Only the writer's own
+   * words (nbText) are ever sent for reflection.
+   */
+  private asks: { at: number; q: string }[] = [];
+  private speaking: { stop(): void } | null = null;
+  private conversing = false;
+
+  private stopSpeaking() { this.speaking?.stop(); this.speaking = null; }
+
+  /** Keeps the newest words in view: the right page scrolls instead of running off the book. */
+  private scrollWords() {
+    requestAnimationFrame(() => {
+      const el = this.inst && (document.querySelector('iframe') as HTMLIFrameElement | null)?.contentDocument?.querySelector('[data-nbscroll]');
+      if (el) el.scrollTop = el.scrollHeight;
+    });
+  }
+
+  private sendEntry() {
+    const i = this.inst; if (!i) return;
+    this.stopSpeaking();
+    if (i.state.justMe) return i.toast('Just for me is on: nothing was read or sent.');
+    this.asks = [];
+    this.live = { ...this.live, nbAsk: '' };
+    void this.reflect();
+  }
+
+  private async keepTalking() {
+    const i = this.inst; const d = this.deps; if (!i || !d || this.conversing) return;
+    const text: string = (i.state.nbText ?? '').trim();
+    if (!text) return i.toast('Say or write something first.');
+    if (i.state.justMe) return i.toast('Just for me is on, so dor won’t reply. Turn it off to keep talking.');
+    d.voice.unlock(); // inside the tap, before any network wait
+    if (requiresImmediateSupport(text)) { this.live = { ...this.live, support: true }; return i.forceUpdate(); }
+    this.conversing = true;
+    this.live = { ...this.live, nbAsking: true };
+    i.forceUpdate();
+    let question = '';
+    try {
+      const res = await fetch('/api/journal/followup', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ entry: text.slice(-8000), asked: this.asks.map((a) => a.q).slice(-8) }) });
+      const out = res.ok ? await res.json() as { question?: string; distress?: boolean } : null;
+      if (out?.distress) { this.live = { ...this.live, support: true, nbAsking: false }; this.conversing = false; return i.forceUpdate(); }
+      question = out?.question ?? '';
+    } catch { /* reported below */ }
+    this.live = { ...this.live, nbAsking: false };
+    this.conversing = false;
+    if (!question) { i.forceUpdate(); return i.toast('dor couldn’t think of a question just now. Keep going, or send it.'); }
+    this.asks.push({ at: (i.state.nbText ?? '').length, q: question });
+    this.live = { ...this.live, nbAsk: question };
+    i.forceUpdate();
+    this.scrollWords();
+    try {
+      const s = await d.voice.say(question);
+      this.speaking = s;
+      await s.done;
+    } catch { /* the question stays on the page even if read-aloud fails */ }
+    this.speaking = null;
+  }
+
+  private resetEntry() {
+    const i = this.inst; if (!i) return;
+    this.deps?.voice.cancel();
+    this.stopSpeaking();
+    clearInterval(i.recT);
+    if (this.reassessTimer) { clearTimeout(this.reassessTimer); this.reassessTimer = null; }
+    this.pending = null;
+    this.last = null;
+    this.asks = [];
+    this.live = { ...this.live, nbAsk: '', nbAsking: false, thinking: false };
+    i.setState((st: any) => ({ nbMode: 'idle', nbText: '', nbEditing: false, nbSecs: 0, margin: null, nudge: null, wordsKey: st.wordsKey + 1 }));
+    i.toast('Cleared. Nothing was saved or sent.');
+  }
+
   // ---------- reflection → Reasoning (D052) → act / ask / defer / abstain ----------
   private last: LastReflection | null = null;
   private reassessTimer: ReturnType<typeof setTimeout> | null = null;
@@ -482,7 +566,7 @@ export class LiveBridge {
     const ctx: LiveContext = { now: now.toISOString(), episodeId: `ep-${crypto.randomUUID()}`, candidate: last.candidate,
       assessment: last.assessment, people: people.map(({ name: _n, ...p }) => p), memoryIds: memory.map((m) => m.id) };
     const { decision, actions, memory: update, source } = await reasonLive(ctx, this.modelPort(last.text, memory));
-    // D055: remember across entries (on this device only), even when nothing is sent this time.
+    // D056: remember across entries (on this device only), even when nothing is sent this time.
     if (!reassessing) saveMemory(store, applyMemoryUpdate(memory, update, now, () => crypto.randomUUID().slice(0, 12), new Set(people.map((p) => p.ref))));
     const named = (ref: string | undefined) => (ref ? people.find((p) => p.ref === ref)?.name ?? null : null);
     let outcome: string;
@@ -524,7 +608,7 @@ export class LiveBridge {
       i.toast('dor wasn’t sure who you meant, so it did nothing. You can send a note from their book.');
       return 'quiet';
     }
-    // D055: nothing is put to the owner as a question. A moment that must be theirs is noted on the book, quietly.
+    // D056: nothing is put to the owner as a question. A moment that must be theirs is noted on the book, quietly.
     if (ACTION_SURFACE[d.action] === 'owner') {
       i.setState({ margin: 'done' });
       i.log(d.targetRef, { k: 'nudge', t: `This one is yours to tell ${name}`, note: 'dor kept this moment for you · nothing was sent' });
@@ -542,7 +626,7 @@ export class LiveBridge {
     this.pending = { kind: 'send', approval: prepared.approval, pairId: pair.pairId, name, hook,
       copy: prepared.preview.recipientCopy ?? NUDGE_TEMPLATE_COPY.offer_note,
       question: `want dor to send ${name.toLowerCase()} ${ACTION_WORDS[d.action] ?? 'a note'}?${why ? ` ${why}.` : ''}` };
-    // D055: autonomous. An `ask` that still reaches here (older core options) sends too; every gate already passed.
+    // D056: autonomous. An `ask` that still reaches here (older core options) sends too; every gate already passed.
     return (await this.send(true)) ? 'sent' : 'failed';
   }
 
@@ -554,7 +638,7 @@ export class LiveBridge {
     navigator.vibrate?.(14);
     const requestId = requestIdFor(p.approval, null).id;
     const r = await this.shared.approveSignal({ ...p.approval, clientRequestId: requestId });
-    // D055: the friend's nudge says what to bring up. A failed hook never blocks the nudge itself.
+    // D056: the friend's nudge says what to bring up. A failed hook never blocks the nudge itself.
     if (r.ok && p.hook) await this.shared.attachSignalHook(requestId, p.hook).catch(() => undefined);
     this.pending = null;
     await i.wait(500);
@@ -706,6 +790,9 @@ export class LiveBridge {
       nudgeText: this.pending?.copy ?? '',
       nudgeHelp: this.pending ? `This is the kind of note ${this.pending.name} may get. dor’s agents still decide whether it fits.` : '',
       supportClose: () => { this.live = { ...this.live, support: false }; i.forceUpdate(); },
+      nbSend: () => this.sendEntry(),
+      nbMore: () => void this.keepTalking(),
+      nbReset: () => this.resetEntry(),
       feedAge: this.feedAge(),
       // The event's own public page (host-allowlisted at ingest, D039); opened in a new tab, nothing is sent.
       openListing: () => {
@@ -730,6 +817,7 @@ export class LiveBridge {
       ...(nudges.length === 0 && s.planeIn ? { planeIn: false, planeStep: 0 } : {}),
       ...(!this.env && s.envelope ? { envelope: false } : {}),
     }));
+    if (i.state.nbMode === 'recording') this.scrollWords(); // live transcript keeps the newest words in view
     if (first && !this.seenNudges.has(first.id) && !i.state.planeIn && !i.state.doorOn) i.planeArrive();
     if (this.env && !this.seenEnv.has(this.env.key) && !i.state.envelope && !i.state.doorOn) {
       this.seenEnv.add(this.env.key);
@@ -752,6 +840,39 @@ export class LiveBridge {
     if (!e) return 'recently';
     const h = Math.max(0, Math.round((Date.now() - Date.parse(e.fetchedAt)) / 3_600_000));
     return h < 1 ? 'under 1 h' : `${h} h`;
+  }
+
+  /** Notebook template values: the words so far (plus what's being said right now), labels for the two-tap mic. */
+  private notebookVals(i: Inst, nb: any) {
+    const s = i.state;
+    const partial = s.nbMode === 'recording' ? (this.deps?.voice.partial ?? '').trim() : '';
+    const text: string = s.nbText ?? '';
+    const mine = (chunk: string) => chunk.split(/\s+/).filter(Boolean).map((t) => ({ t, c: 'inherit', f: 'inherit' }));
+    const dors = (q: string) => q.split(/\s+/).filter(Boolean).map((t) => ({ t, c: '#2F5C91', f: "400 23px/1.2 'Reenie Beanie'" }));
+    const tokens: { t: string; c: string; f: string }[] = [];
+    let from = 0;
+    for (const a of this.asks) {
+      const at = Math.min(Math.max(a.at, from), text.length);
+      tokens.push(...mine(text.slice(from, at)), ...dors(`dor: ${a.q}`));
+      from = at;
+    }
+    tokens.push(...mine(text.slice(from)), ...mine(partial));
+    // Only the newest words animate in, so a long entry doesn't replay its whole history on every update.
+    const words = tokens.map((w, n) => ({ ...w, d: Math.max(0, n - tokens.length + 12) * 25 }));
+    const stateLabel = this.live.thinking ? 'claude is reading · privately' : this.live.nbAsking ? 'dor is thinking of a question'
+      : s.nbMode === 'recording' ? 'listening · tap the mic to stop' : nb.stateLabel;
+    const micLabel = s.nbMode === 'recording' ? 'Tap to stop' : s.nbMode === 'transcribing' ? 'One moment'
+      : this.live.nbAsk && s.nbMode === 'review' ? 'Tap to answer' : s.nbText ? 'Tap to add more' : 'Tap to speak';
+    return { ...nb, marginQ: this.pending?.question ?? '', stateLabel, micLabel, words, showWords: !s.nbEditing && words.length > 0,
+      placeholder: !s.nbEditing && words.length === 0 };
+  }
+
+  private notebookLive(i: Inst) {
+    const s = i.state;
+    const busy = this.live.thinking || this.live.nbAsking || s.nbMode === 'recording' || s.nbMode === 'transcribing';
+    const hasText = !!(s.nbText ?? '').trim();
+    return { ...this.live, nbActions: hasText && !busy && !s.nbEditing, nbAskOn: !!this.live.nbAsk && !this.live.thinking,
+      nbCanReset: hasText || !!this.live.nbAsk || s.nbMode === 'recording' };
   }
 
   private cardReasons(id: string): { t: string }[] {
@@ -779,14 +900,13 @@ export class LiveBridge {
     const on = bookOpen ? this.deliveryOn(s.bookOpen) : true;
     return {
       ...v,
-      live: this.live,
       boxBooks: [book],
       boxEmpty: false,
       boxHint: link ? 'tap the book to send your invite link · it links your accounts only' : 'making your invite…',
       bo: bookOpen ? { ...v.bo, note: s.paused[s.bookOpen] ? 'paused · 3 days · only you see this' : on ? 'notes from them can reach you' : 'notes from them are off',
         ruleOn: false, ruleLabel: on ? 'Turn off notes from them' : 'Turn notes from them back on' } : v.bo,
-      nb: { ...v.nb, marginQ: this.pending?.question ?? '',
-        jmNote: v.nb.jmNote, stateLabel: this.live.thinking ? 'claude is reading · privately' : v.nb.stateLabel },
+      nb: this.notebookVals(i, v.nb),
+      live: this.notebookLive(i),
       feedLabel: i.FLY.length ? `events & places · ${i.FLY.length} nearby` : 'events & places',
       flyers: v.flyers.map((f: any) => ({ ...f, stamp: `${f.src} · ${this.age(f.id)}` })),
       fo: v.flyerOpen ? { ...v.fo, stampLong: `from ${v.fo.src} · checked ${this.age(s.flyerOpen)} ago` } : v.fo,

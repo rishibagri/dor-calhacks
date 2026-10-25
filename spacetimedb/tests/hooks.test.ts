@@ -1,4 +1,4 @@
-// D055: the sender's talking point travels with the nudge built from that signal. Synthetic identities only.
+// D056: the sender's talking point travels with the nudge built from that signal. Synthetic identities only.
 import { describe, expect, it } from 'vitest';
 import { allSignals, approveArgs, confirmPreset, grantPrefs, jwtAuth, mod, pairUp, setup, view } from './helpers';
 

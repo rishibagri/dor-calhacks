@@ -7,14 +7,14 @@
 import { ACTION_SURFACE, DELIVERY_MAPPING, atLeastMedium, type ReasonCode, type ReasoningMode } from './vocabulary.ts';
 import type { CandidateProposal, FinalizeOptions, ReasoningEpisodeInput } from './types.ts';
 
-export interface CapResult { mode: ReasoningMode; by?: ReasonCode; /** D055 autonomous: drop instead of asking. */ reject?: ReasonCode }
+export interface CapResult { mode: ReasoningMode; by?: ReasonCode; /** D056 autonomous: drop instead of asking. */ reject?: ReasonCode }
 
 export function capProposal(p: CandidateProposal, input: ReasoningEpisodeInput, opts: FinalizeOptions): CapResult {
   if (p.requestedMode !== 'act' || ACTION_SURFACE[p.action] !== 'recipient') return { mode: p.requestedMode };
   const rel = input.relationships.find(r => r.ref === p.targetRef);
   const ask = (by: ReasonCode): CapResult => (opts.autonomous ? { mode: p.requestedMode, reject: by } : { mode: 'ask', by });
   // P5: automation would take the moment away from the person. In autonomous mode the friend reaches out instead and
-  // the owner still shares the news themselves, so the moment stays theirs (D055).
+  // the owner still shares the news themselves, so the moment stays theirs (D056).
   if (p.revealValue === 'high' && !opts.autonomous) return ask('high_reveal_value');
   if (p.topic !== undefined && rel && (rel.sensitiveTopics === 'unknown' || rel.sensitiveTopics.includes(p.topic))) return ask('sensitive_topic');
   // P12: high uncertainty lowers automation.

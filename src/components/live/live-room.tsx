@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import { useClerk, useUser } from '@clerk/nextjs';
-import { createVoiceSessionClient } from '@dor/agents/client';
+import { createVoiceSessionClient, speak } from '@dor/agents/client';
 import { useReflection, useSharedState } from '@/lib/backend';
 import { isClerkConfigured } from '@/lib/config';
 import { useDictation } from '@/features/voice/use-dictation';
@@ -44,6 +44,29 @@ function LiveRoomFrame({ auth }: { auth: LiveAuth }) {
   // Voice journaling (Cartesia) runs here, where the microphone permission lives; the design's mic button drives it.
   const getSession = useMemo(() => createVoiceSessionClient().createSession, []);
   const dictation = useDictation({ getSession });
+  // Read-aloud (Cartesia TTS). Phones only play audio from a context unlocked during a tap, so the notebook's tap calls
+  // unlock() before any network wait and the reply plays through that same context.
+  const audio = useRef<AudioContext | null>(null);
+  const unlock = () => {
+    try { audio.current ??= new AudioContext(); void audio.current.resume(); } catch { /* no Web Audio: text still shows */ }
+  };
+  const say = async (text: string) => {
+    const session = await getSession();
+    return speak(session, text, { play: async (wav, signal) => {
+      const ctx = audio.current ?? (audio.current = new AudioContext());
+      await ctx.resume();
+      const buffer = await ctx.decodeAudioData(wav.slice(0));
+      if (signal.aborted) return;
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      await new Promise<void>((resolve) => {
+        source.onended = () => resolve();
+        signal.addEventListener('abort', () => { source.stop(); resolve(); }, { once: true });
+        source.start();
+      });
+    } });
+  };
   const bridge = useRef<LiveBridge | null>(null);
   if (!bridge.current) bridge.current = new LiveBridge();
   if (typeof window !== 'undefined') window.__dorLive = { attach: (inst) => bridge.current!.attach(inst) };
@@ -51,7 +74,7 @@ function LiveRoomFrame({ auth }: { auth: LiveAuth }) {
   useEffect(() => {
     bridge.current!.update({
       shared, reflection, signedIn: auth.signedIn, accountName: auth.accountName,
-      voice: { start: dictation.start, stop: dictation.stop, cancel: dictation.cancel, partial: dictation.snapshot.partial },
+      voice: { start: dictation.start, stop: dictation.stop, cancel: dictation.cancel, partial: dictation.snapshot.partial, unlock, say },
       openSignIn: auth.openSignIn,
       signOut: auth.signOut,
     });

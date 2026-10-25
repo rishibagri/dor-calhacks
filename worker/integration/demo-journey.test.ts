@@ -189,7 +189,9 @@ describe('backend demo: Alex → Sam', () => {
     // 6. Sam's view updates (in a browser this arrives over the live subscription).
     const samRows = view<Record<string, unknown>>(w, sam, mod.my_nudges);
     expect(samRows).toHaveLength(1);
-    expect(Object.keys(samRows[0]!).sort()).toEqual(['id', 'pair_id', 'template_id', 'visible_until']);
+    // D043 narrow row plus D056's optional talking point; none was attached in this journey, so it stays empty.
+    expect(Object.keys(samRows[0]!).sort()).toEqual(['hook', 'id', 'pair_id', 'template_id', 'visible_until']);
+    expect(samRows[0]!.hook ?? null).toBeNull();
     show('SpacetimeDB', 'Sam', 'sees a nudge appear: fixed, approved copy only (D043 narrow row)',
       { samSees: NUDGE_TEMPLATE_COPY[samRows[0]!.template_id as keyof typeof NUDGE_TEMPLATE_COPY], rowColumns: Object.keys(samRows[0]!),
         notIncluded: 'entry, reflection, mood, exact times, signal ids' }, 'real module in-process');

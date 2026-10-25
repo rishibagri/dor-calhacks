@@ -1,5 +1,5 @@
 /**
- * D055 cross-entry memory, owner-device only. Short facts the model distilled from earlier entries ("wants to reach out
+ * D056 cross-entry memory, owner-device only. Short facts the model distilled from earlier entries ("wants to reach out
  * to friends more", "exam on Friday"), each with a lifetime. Passed back to /api/reasoning so a new entry is read in
  * context. Never sent to SpacetimeDB, peers or logs. Pure: storage is injected.
  */

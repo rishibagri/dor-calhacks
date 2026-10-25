@@ -178,7 +178,7 @@ test('timing (sender_approval_timing): recipient-visible copy does not depend on
 const rowAt = (approvedMinutesBeforeCommit: number) => recipientNudgeRow(nudgeAt(approvedMinutesBeforeCommit)!);
 const HOUR_MS = 3_600_000;
 
-test('timing (D043 mirror): the recipient row is exactly {id, pairId, templateId, visibleUntil, hook (D055)}, with no ids or times', () => {
+test('timing (D043 mirror): the recipient row is exactly {id, pairId, templateId, visibleUntil, hook (D056)}, with no ids or times', () => {
   const internal = nudgeAt(37)!;
   const row = recipientNudgeRow(internal);
   assert.deepEqual(Object.keys(row).sort(), ['hook', 'id', 'pairId', 'templateId', 'visibleUntil']);
@@ -202,7 +202,7 @@ test('timing (D043 mirror): approvals within the same hour give the recipient id
 
 test('timing (D043 mirror): the DS row has the shape CS consumes (RecipientNudgeView; checked by npm run typecheck)', () => {
   const row = rowAt(5) satisfies RecipientNudgeView;
-  const cs: Record<keyof RecipientNudgeView, true> = { id: true, pairId: true, templateId: true, visibleUntil: true, hook: true }; // hook: D055
+  const cs: Record<keyof RecipientNudgeView, true> = { id: true, pairId: true, templateId: true, visibleUntil: true, hook: true }; // hook: D056
   assert.deepEqual(Object.keys(row).sort(), Object.keys(cs).sort());
 });
 

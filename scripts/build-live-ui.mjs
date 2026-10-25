@@ -88,6 +88,23 @@ edit('support card', '<sc-if value="{{ nudgeOn }}" hint-placeholder-val="{{ fals
   `<button sc-camel-on-click="{{ live.supportClose }}" style="margin-top:6px;border:none;background:none;padding:12px 0;font:400 15px 'Spectral',serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer">Close</button></div></sc-if>\n` +
   '<sc-if value="{{ nudgeOn }}" hint-placeholder-val="{{ false }}">');
 
+// 5. Notebook as a conversation: the right page scrolls (newest words in view) instead of running off the book; dor's
+//    spoken questions appear in blue pencil between the writer's words; Start over clears everything; after the writer
+//    stops talking they choose Keep talking (one question, read aloud) or Send (private reflection + reasoning).
+edit('notebook scroll open', '<sc-if value="{{ nb.showWords }}" hint-placeholder-val="{{ false }}"><button sc-camel-on-click="{{ nbEdit }}" style="display:block;width:100%;margin-top:22px;',
+  '<sc-if value="{{ nb.showWords }}" hint-placeholder-val="{{ false }}"><div data-nbscroll="1" style="margin-top:22px;max-height:318px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none"><button sc-camel-on-click="{{ nbEdit }}" style="display:block;width:100%;margin-top:0;');
+edit('notebook scroll close', '</sc-for></button></sc-if>', '</sc-for></button></div></sc-if>');
+edit('notebook word style', '<span style="display:inline-block;margin-right:6px;animation:wordIn .3s cubic-bezier(0.23,1,0.32,1) {{ w.d }}ms both">{{ w.t }}</span>',
+  '<span style="display:inline-block;margin-right:6px;color:{{ w.c }};font:{{ w.f }};animation:wordIn .3s cubic-bezier(0.23,1,0.32,1) {{ w.d }}ms both">{{ w.t }}</span>');
+edit('notebook start over', '>🔒︎ Lock</button>',
+  '>🔒︎ Lock</button><sc-if value="{{ live.nbCanReset }}" hint-placeholder-val="{{ false }}"><button sc-camel-on-click="{{ live.nbReset }}" aria-label="Start over" ' +
+  `style="position:absolute;left:10px;bottom:54px;height:36px;padding:0 12px;border:1px solid #E4DFD2;border-radius:18px;background:#FBF4E4;font:400 13px 'Spectral',serif;color:#1B1A17;cursor:pointer">↺ Start over</button></sc-if>`);
+edit('notebook actions', `<div style="font:400 15px 'Spectral',serif;white-space:nowrap">{{ nb.micLabel }}</div>`,
+  '<sc-if value="{{ live.nbActions }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;margin-bottom:4px">' +
+  `<button sc-camel-on-click="{{ live.nbMore }}" style="height:42px;padding:0 16px;border:1px solid #1B1A17;border-radius:21px;background:#FAF7F0;color:#1B1A17;font:400 15px 'Spectral',serif;cursor:pointer">Keep talking</button>` +
+  `<button sc-camel-on-click="{{ live.nbSend }}" style="height:42px;padding:0 20px;border:none;border-radius:21px;background:#1B1A17;color:#FAF7F0;font:500 15px 'Spectral',serif;cursor:pointer">Send</button></div></sc-if>` +
+  `<div style="font:400 15px 'Spectral',serif;white-space:nowrap">{{ nb.micLabel }}</div>`);
+
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
 for (const dir of ['assets', 'vendor', 'src']) cpSync(join(src, dir), join(out, dir), { recursive: true });
