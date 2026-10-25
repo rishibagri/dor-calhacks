@@ -2,6 +2,8 @@
 
 ### Make human connection easier during life's transitions
 
+> ***dor*** *(Romanian)*: a deep, soulful, and sometimes physical ache of longing or yearning for someone, somewhere, or something cherished that is absent or lost. The app is named after this word.
+
 Starting college, moving, beginning a job or graduating can disrupt a person's support network. dor helps people find local communities, activities and people to meet. Existing relationships and private reflection remain part of the product; dor helps prepare a reason to connect without replacing human conversation.
 
 **Journey:** choose a new chapter and broad area → opt in to selected profile details → discover people and real activities → choose an introduction → the other person decides whether to accept.
