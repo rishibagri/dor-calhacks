@@ -166,6 +166,16 @@ describe('revocation, expiry and pause kill queued work and never resurrect it',
     expect(() => enable(x, { expected_version: 99 })).toThrow('stale: standing rule version changed');
   });
 
+  it('unlinking the pair ends the rule and its queued work', () => {
+    const x = world();
+    enable(x);
+    const sig = autoApprove(x);
+    x.w.call(x.w.alice, ctx => mod.unlink_pair(ctx, { pair_id: x.pairId }));
+    expect(rules(x.w, x.w.alice)[0].active).toBe(false);
+    expect(() => commit(x, sig)).toThrow(/^(stale|invalid|not_found|unauthorized):/);
+    expect(allSignals(x.w).filter(s => !s.revoked_at)).toHaveLength(0);
+  });
+
   it('setting a rule while paused is refused', () => {
     const x = world();
     x.w.call(x.w.alice, ctx => mod.pause_recipient(ctx, { pair_id: x.pairId, expires_at: inDays(x.w, 0.5), expected_version: 0 }));
