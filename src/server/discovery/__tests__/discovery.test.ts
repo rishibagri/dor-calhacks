@@ -171,3 +171,16 @@ test('loadCatalogue fetches once, serves repeat calls from cache, and refuses wi
   assert.equal(a.provenance.build, '1.0.0');
   await assert.rejects(loadCatalogue({}, { fetchImpl }), /not configured/);
 });
+
+test('Luma Bay Area venues reach every launch area; Meetup stays around Berkeley (first live run kept 0 of 24)', () => {
+  const luma = cfg().config;
+  assert.deepEqual(luma.areaKeys, AREA_KEYS);
+  assert.deepEqual(cfg({ APIFY_SOURCE: 'meetup', APIFY_ACTOR_ID: 'filip_cicvarek/meetup-scraper' }).config.areaKeys.every((k) => k.startsWith('berkeley-')), true);
+  const { upserts, rejected } = norm({ 'board-games': [
+    lumaItem({ id: 'evt-SOUTH1', venue: { latitude: 37.8597, longitude: -122.2600 } }), // Telegraph, just south of campus
+    lumaItem({ id: 'evt-SOMA01', venue: { latitude: 37.7870, longitude: -122.4080 } }), // SoMa
+    lumaItem({ id: 'evt-OAKL01', venue: { latitude: 37.8044, longitude: -122.2712 } }), // Oakland: not a launch area
+  ] }, luma);
+  assert.deepEqual(upserts.map((u) => u.area_key), ['berkeley-campus', 'sf-soma']);
+  assert.deepEqual(rejected.map((r) => r.reason), ['outside_region']);
+});

@@ -67,7 +67,8 @@ export function loadDiscoveryConfig(env: Record<string, string | undefined>): Co
     config: {
       source, actorId: actor.replace('/', '~'), build,
       region: { key: 'berkeley-ca', city: 'Berkeley', state: 'CA', country: 'us', lumaCity: 'sf', radiusMiles: 5 },
-      areaKeys: AREA_KEYS.filter((k) => k.startsWith('berkeley-')),
+      // Luma's 'sf' page covers the whole Bay Area, so every launch area can match; Meetup is queried around Berkeley.
+      areaKeys: source === 'luma' ? AREA_KEYS : AREA_KEYS.filter((k) => k.startsWith('berkeley-')),
       topics, maxItems, windowDays, timeoutMs, maxRetries: MAX_RETRIES, cacheTtlMs: DEFAULT_CACHE_TTL_MS,
     },
   };

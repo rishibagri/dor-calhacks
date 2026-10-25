@@ -49,7 +49,8 @@ async function fetchViaAdapter(): Promise<void> {
     console.log(JSON.stringify({ provenance: r.provenance, committed: Boolean(db), upserts: r.upserts.length, rejected: r.rejected,
       events: db ? undefined : r.upserts }, null, 2));
   } catch (e) {
-    if (db) for (const a of AREA_KEYS.filter((k) => k.startsWith('berkeley-'))) { try { recordRun(db, a, false, 0); } catch { /* report the original failure */ } }
+    const c = loadDiscoveryConfig(process.env);
+    if (db) for (const a of c.ok ? c.config.areaKeys : []) { try { recordRun(db, a, false, 0); } catch { /* report the original failure */ } }
     throw e;
   } finally {
     rmSync(lockFile, { force: true });

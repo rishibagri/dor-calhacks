@@ -17,9 +17,12 @@ export interface LaunchArea {
 }
 
 export const LAUNCH_AREAS: readonly LaunchArea[] = [
-  { key: 'berkeley-campus', label: 'UC Berkeley campus', bounds: { south: 37.862, west: -122.27, north: 37.882, east: -122.248 } },
+  // Campus reaches south to Dwight Way so Southside venues (Telegraph) count as campus.
+  { key: 'berkeley-campus', label: 'UC Berkeley campus', bounds: { south: 37.855, west: -122.27, north: 37.882, east: -122.248 } },
   { key: 'berkeley-downtown', label: 'Downtown Berkeley', bounds: { south: 37.86, west: -122.285, north: 37.875, east: -122.27 } },
   { key: 'sf-mission', label: 'Mission District, San Francisco', bounds: { south: 37.748, west: -122.428, north: 37.77, east: -122.405 } },
+  // Most of Luma's Bay Area page is SoMa / Financial District; without this every SF venue is dropped.
+  { key: 'sf-soma', label: 'SoMa & Downtown, San Francisco', bounds: { south: 37.77, west: -122.425, north: 37.81, east: -122.385 } },
 ];
 
 /** Interest tags offered in the profile form (same slugs as DS's ranker fixtures). */
