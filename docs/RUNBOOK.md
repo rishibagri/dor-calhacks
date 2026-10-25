@@ -90,7 +90,7 @@ Shared Maincloud database `dor`, owned by Nimisha's login, first published 2026-
 - [ ] `--sweep` (owner run) and the D041/D043 live checks; rerun the smoke after any republish
 
 ## Extensions (optional, not core)
-Discover/Events UI is on by default (D045; hide with `NEXT_PUBLIC_DOR_DISCOVERY=off`). Bootstrap with `--extensions`, and load events with `node scripts/ingest-catalogue.ts --fixture src/lib/catalogue/fixtures/apify-sample.json --commit <db>` (synthetic) or `--fetch` after Cyber has reviewed the Apify task.
+Discover/Events UI is on by default (D045; hide with `NEXT_PUBLIC_DOR_DISCOVERY=off`). Bootstrap with `--extensions`, and load events with `node scripts/ingest-catalogue.ts --fixture src/lib/catalogue/fixtures/apify-sample.json --commit <db> --server local` (synthetic) or `--fetch` after Cyber has reviewed the Apify task. `--server` defaults to `local`; synthetic fixtures never go to maincloud.
 
 ## Later: verification phase
 Deferred by plan. The two-account journey, denied third account, revoke during generation, reconnect, microphone/provider failure and account-switch checks are listed in README "Core 3" and will be recorded with exact revision and results when run.
