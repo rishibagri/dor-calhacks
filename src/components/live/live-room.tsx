@@ -60,7 +60,15 @@ function LiveRoomFrame({ auth }: { auth: LiveAuth }) {
   useEffect(() => () => { bridge.current!.detach(); delete window.__dorLive; }, []);
 
   return (
-    <iframe src="/live/index.html" title="dor" allow="microphone; web-share; clipboard-write"
-      style={{ position: 'fixed', inset: 0, width: '100%', height: '100dvh', border: 0, background: '#FAF7F0' }} />
+    <>
+      <iframe src="/live/index.html" title="dor" allow="microphone; web-share; clipboard-write"
+        style={{ position: 'fixed', inset: 0, width: '100%', height: '100dvh', border: 0, background: '#FAF7F0' }} />
+      {/* D053 demo backstage: observer-gated live view of the agents and backend (opens in a new tab). */}
+      <a href="/backstage" target="_blank" rel="noopener"
+        style={{ position: 'fixed', right: 12, bottom: 12, zIndex: 10, padding: '4px 10px', borderRadius: 999, fontSize: 12,
+          background: 'rgba(28,25,23,.78)', color: '#FAF7F0', textDecoration: 'none', fontFamily: 'system-ui, sans-serif' }}>
+        backstage ↗
+      </a>
+    </>
   );
 }

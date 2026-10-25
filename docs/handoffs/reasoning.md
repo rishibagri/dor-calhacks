@@ -1,5 +1,14 @@
 # Reasoning handoff — current
 
+## D054 live Reasoning + D053 backstage (2026-10-25)
+
+- **Status:** implemented and offline-verified on `role/reasoning` (uncommitted). Not live until merged, republished and the live session restarted.
+- **Live path:** reflection → `/api/reasoning` (one Claude call, refs only) → deterministic core → act sends without a tap; ask uses the margin; owner moments send nothing; defer reassesses in-session; abstain is quiet. Fallback proposer when the model fails.
+- **Backstage:** `/backstage` (link in the live room). Observer-gated module views; worker health via `/api/backstage/worker`.
+- **Owner steps after merge:** (1) Nimisha: `npm run setup:module -- --server maincloud --run` (additive: 2 tables, 2 reducers, 13 views). (2) Nimisha: `spacetime call -s maincloud dor set_observer_identity '{"__identity__":"0x<hex from /backstage>"}' true`. (3) Adam: restart `scripts/live-session.sh` and the worker from merged main; optional `scripts/deploy-demo.sh` for the guide copy.
+- **Live data changed (approved):** Adam↔Rishi delivery on, Rishi's quiet hours removed, both accept all support styles (29 days), via `scripts/demo-pair.ts --apply`.
+- **Not verified:** a live Claude `/api/reasoning` call (paid, not run), browser behavior of the live room, backstage against Maincloud (needs the republish).
+
 ## Main merged, renumbered to D052, REASONING.md aligned with current gates (2026-10-25)
 
 - **Branch/commit:** `role/reasoning` fast-forwarded to main `6cc56f1` (no merge commit, no conflicts); Reasoning docs uncommitted, not pushed. No source.

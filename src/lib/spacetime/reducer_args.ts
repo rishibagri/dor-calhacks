@@ -8,7 +8,7 @@
 import { ACTIVITY_CATEGORY, DISCOVERY_AUDIENCES, DISCOVERY_NOTICE_VERSION, SHARING_CATEGORIES } from '@dor/contracts/policy';
 import type { SharedStatePort } from '@/lib/backend/ports';
 
-type Input<K extends 'setRelationshipPreset' | 'assignRelationshipPreset' | 'approveSignal' | 'setSupportPreferences' | 'setNudgeDelivery' | 'publishDiscoveryProfile' | 'setStandingConsent' | 'approveSignalStanding'> = Parameters<
+type Input<K extends 'setRelationshipPreset' | 'assignRelationshipPreset' | 'approveSignal' | 'setSupportPreferences' | 'setNudgeDelivery' | 'publishDiscoveryProfile' | 'setStandingConsent' | 'approveSignalStanding' | 'recordReasoningDecision'> = Parameters<
   SharedStatePort[K]
 >[0];
 
@@ -69,6 +69,10 @@ export const reducerArgs = {
   }),
   pauseRecipient: (pairId: string, expiresAt: string, expectedVersion: number) => ({ pairId, expiresAt, expectedVersion }),
   resumeRecipient: (pairId: string, expectedVersion: number) => ({ pairId, expectedVersion }),
+  recordReasoningDecision: (i: Input<'recordReasoningDecision'>) => ({
+    episodeId: i.episodeId, pairId: i.pairId ?? undefined, mode: i.mode, action: i.action ?? undefined, surface: i.surface ?? undefined,
+    reasons: [...i.reasons], rejected: [...i.rejected], reassessAfterMinutes: i.reassessAfterMinutes ?? undefined, source: i.source, outcome: i.outcome,
+  }),
   setStandingConsent: (i: Input<'setStandingConsent'>) => ({ ...i, categories: [...i.categories], expiresAt: iso(i.expiresAt) }),
   revokeStandingConsent: (pairId: string) => ({ pairId }),
   approveSignalStanding: (i: Input<'approveSignalStanding'>) => ({

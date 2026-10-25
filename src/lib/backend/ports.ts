@@ -316,6 +316,11 @@ export interface SharedStatePort {
   /** Owner-only, reason-free pause of one counterpart; expectedVersion 0 = first pause (D041). */
   pauseRecipient(pairId: string, expiresAt: string, expectedVersion: number): Promise<ReducerResult>; // pause_recipient
   resumeRecipient(pairId: string, expectedVersion: number): Promise<ReducerResult>; // resume_recipient
+  /** D052/D053: content-free record of the owner's own Reasoning decision (codes only); authorizes nothing. */
+  recordReasoningDecision(input: {
+    episodeId: string; pairId: string | null; mode: string; action: string | null; surface: string | null;
+    reasons: string[]; rejected: string[]; reassessAfterMinutes: number | null; source: string; outcome: string;
+  }): Promise<ReducerResult>; // record_reasoning_decision
   /** D044: owner explicitly authorizes future enum-only signals for one accepted pair. */
   setStandingConsent(input: {
     pairId: string; categories: SharingCategory[]; expiresAt: string; expectedVersion: number;

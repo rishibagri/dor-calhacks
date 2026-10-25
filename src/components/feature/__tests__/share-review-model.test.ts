@@ -52,17 +52,22 @@ test('the full candidate (with blocked availability) is accepted with availabili
   if (d.allowed) assert.deepEqual(d.payload, { supportMode: 'short_call' });
 });
 
-test('no assignment to this person means no approval and a clear reason', () => {
+test('no assignment to this person: the server default preset applies (7b3b695), bound to this pair and recipient', () => {
   const r = prepareShare({ ...base, assignments: [], candidate: { supportMode: 'short_call' } }, 'Sam');
-  assert.equal(r.kind, 'not_ready');
-  if (r.kind === 'not_ready') assert.match(describeNotReady(r), /No preset is assigned/);
+  assert.equal(r.kind, 'ready');
+  if (r.kind === 'ready') {
+    assert.equal(r.approval.pairId, base.pair.pairId);
+    assert.deepEqual({ supportMode: r.approval.supportMode }, { supportMode: 'short_call' });
+  }
 });
 
-test('an assignment for a different recipient or by a different owner is ignored', () => {
+test('an assignment for a different recipient or by a different owner is ignored: the default applies to this pair only', () => {
   const other = { ...assignment, recipientId: 'cc'.repeat(32) };
   const foreign = { ...assignment, ownerId: 'dd'.repeat(32) };
   for (const a of [other, foreign]) {
-    assert.equal(prepareShare({ ...base, assignments: [a], candidate: { supportMode: 'short_call' } }, 'Sam').kind, 'not_ready');
+    const r = prepareShare({ ...base, assignments: [a], candidate: { supportMode: 'short_call' } }, 'Sam');
+    assert.equal(r.kind, 'ready');
+    if (r.kind === 'ready') assert.equal(r.approval.pairId, base.pair.pairId);
   }
 });
 

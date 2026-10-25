@@ -463,6 +463,38 @@ export const worker_identity = table(
   { identity: t.identity().primaryKey() }
 );
 
+/**
+ * Demo backstage observers (D053, demo-only): identities allow-listed by the module owner to read the read-only
+ * observer_* views across all users. Empty by default, so every observer view returns nothing.
+ */
+export const observer_identity = table(
+  { name: 'observer_identity' },
+  { identity: t.identity().primaryKey() }
+);
+
+/**
+ * Content-free Reasoning decision records (D052/D053), written by the owner's own device after the deterministic core
+ * decides. Codes only: no journal text, names, summaries or model output. Visible to the owner and to observers.
+ */
+export const reasoning_decision = table(
+  { name: 'reasoning_decision' },
+  {
+    decision_id: t.string().primaryKey(),
+    owner: t.identity().index('btree'),
+    episode_id: t.string(),
+    pair_id: t.option(t.string()),
+    mode: t.string(), // act | ask | defer | abstain
+    action: t.option(t.string()),
+    surface: t.option(t.string()),
+    reasons: t.array(t.string()),
+    rejected: t.array(t.string()), // "ACTION:reason" codes
+    reassess_after_minutes: t.option(t.u32()),
+    source: t.string(), // model | fallback
+    outcome: t.string(), // sent | asked | owner_prompt | deferred | quiet | failed
+    created_at: t.timestamp(),
+  }
+);
+
 export const disclosure_receipt = table(
   { name: 'disclosure_receipt' },
   {
@@ -557,4 +589,6 @@ export const spacetimedb = schema({
   standing_approval,
   profile_detail,
   nudge_request,
+  observer_identity,
+  reasoning_decision,
 });

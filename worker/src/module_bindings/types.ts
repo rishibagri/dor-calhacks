@@ -450,6 +450,9 @@ export type MyPresets = __Infer<typeof MyPresets>;
 export const MyProfileDetail = __t.object("MyProfileDetail", {});
 export type MyProfileDetail = __Infer<typeof MyProfileDetail>;
 
+export const MyReasoningDecisions = __t.object("MyReasoningDecisions", {});
+export type MyReasoningDecisions = __Infer<typeof MyReasoningDecisions>;
+
 export const MyReceipts = __t.object("MyReceipts", {});
 export type MyReceipts = __Infer<typeof MyReceipts>;
 
@@ -543,6 +546,150 @@ export const NudgeRequestRow = __t.object("NudgeRequestRow", {
 });
 export type NudgeRequestRow = __Infer<typeof NudgeRequestRow>;
 
+export const ObserverAccountRow = __t.object("ObserverAccountRow", {
+  identity: __t.identity(),
+  displayName: __t.string(),
+  createdAt: __t.timestamp(),
+});
+export type ObserverAccountRow = __Infer<typeof ObserverAccountRow>;
+
+export const ObserverAccounts = __t.object("ObserverAccounts", {});
+export type ObserverAccounts = __Infer<typeof ObserverAccounts>;
+
+export const ObserverAssignmentRow = __t.object("ObserverAssignmentRow", {
+  owner: __t.identity(),
+  pairId: __t.string(),
+  presetKind: __t.string(),
+  assignmentVersion: __t.u32(),
+});
+export type ObserverAssignmentRow = __Infer<typeof ObserverAssignmentRow>;
+
+export const ObserverAssignments = __t.object("ObserverAssignments", {});
+export type ObserverAssignments = __Infer<typeof ObserverAssignments>;
+
+export const ObserverDelivery = __t.object("ObserverDelivery", {});
+export type ObserverDelivery = __Infer<typeof ObserverDelivery>;
+
+export const ObserverDeliveryRow = __t.object("ObserverDeliveryRow", {
+  recipient: __t.identity(),
+  pairId: __t.string(),
+  optedIn: __t.bool(),
+  quietStartMinute: __t.option(__t.u16()),
+  quietEndMinute: __t.option(__t.u16()),
+  utcOffsetMinutes: __t.i16(),
+});
+export type ObserverDeliveryRow = __Infer<typeof ObserverDeliveryRow>;
+
+export const ObserverIdentity = __t.object("ObserverIdentity", {
+  identity: __t.identity(),
+});
+export type ObserverIdentity = __Infer<typeof ObserverIdentity>;
+
+export const ObserverIntroductionRow = __t.object("ObserverIntroductionRow", {
+  introId: __t.string(),
+  sender: __t.identity(),
+  recipient: __t.identity(),
+  sharedTags: __t.array(__t.string()),
+  status: __t.string(),
+  createdAt: __t.timestamp(),
+});
+export type ObserverIntroductionRow = __Infer<typeof ObserverIntroductionRow>;
+
+export const ObserverIntroductions = __t.object("ObserverIntroductions", {});
+export type ObserverIntroductions = __Infer<typeof ObserverIntroductions>;
+
+export const ObserverNudgeRequestRow = __t.object("ObserverNudgeRequestRow", {
+  requestId: __t.string(),
+  sender: __t.identity(),
+  recipient: __t.identity(),
+  via: __t.identity(),
+  hops: __t.u32(),
+  status: __t.string(),
+  createdAt: __t.timestamp(),
+});
+export type ObserverNudgeRequestRow = __Infer<typeof ObserverNudgeRequestRow>;
+
+export const ObserverNudgeRequests = __t.object("ObserverNudgeRequests", {});
+export type ObserverNudgeRequests = __Infer<typeof ObserverNudgeRequests>;
+
+export const ObserverNudgeRow = __t.object("ObserverNudgeRow", {
+  id: __t.string(),
+  pairId: __t.string(),
+  recipientId: __t.identity(),
+  templateId: __t.string(),
+  createdAt: __t.timestamp(),
+  expiresAt: __t.timestamp(),
+  dismissed: __t.bool(),
+  suppressed: __t.bool(),
+});
+export type ObserverNudgeRow = __Infer<typeof ObserverNudgeRow>;
+
+export const ObserverNudges = __t.object("ObserverNudges", {});
+export type ObserverNudges = __Infer<typeof ObserverNudges>;
+
+export const ObserverPairRow = __t.object("ObserverPairRow", {
+  pairId: __t.string(),
+  memberA: __t.identity(),
+  memberB: __t.option(__t.identity()),
+  status: __t.string(),
+  createdAt: __t.timestamp(),
+});
+export type ObserverPairRow = __Infer<typeof ObserverPairRow>;
+
+export const ObserverPairs = __t.object("ObserverPairs", {});
+export type ObserverPairs = __Infer<typeof ObserverPairs>;
+
+export const ObserverPauseRow = __t.object("ObserverPauseRow", {
+  owner: __t.identity(),
+  pairId: __t.string(),
+  expiresAt: __t.timestamp(),
+  resumedAt: __t.option(__t.timestamp()),
+});
+export type ObserverPauseRow = __Infer<typeof ObserverPauseRow>;
+
+export const ObserverPauses = __t.object("ObserverPauses", {});
+export type ObserverPauses = __Infer<typeof ObserverPauses>;
+
+export const ObserverPreferenceRow = __t.object("ObserverPreferenceRow", {
+  recipient: __t.identity(),
+  pairId: __t.string(),
+  supportModes: __t.array(__t.string()),
+  availability: __t.array(__t.string()),
+  consentVersion: __t.u32(),
+  expiresAt: __t.timestamp(),
+  revokedAt: __t.option(__t.timestamp()),
+});
+export type ObserverPreferenceRow = __Infer<typeof ObserverPreferenceRow>;
+
+export const ObserverReasoning = __t.object("ObserverReasoning", {});
+export type ObserverReasoning = __Infer<typeof ObserverReasoning>;
+
+export const ObserverSignalRow = __t.object("ObserverSignalRow", {
+  signalId: __t.string(),
+  pairId: __t.string(),
+  senderId: __t.identity(),
+  recipientId: __t.identity(),
+  supportMode: __t.option(__t.string()),
+  availability: __t.option(__t.string()),
+  expiresAt: __t.timestamp(),
+  revokedAt: __t.option(__t.timestamp()),
+});
+export type ObserverSignalRow = __Infer<typeof ObserverSignalRow>;
+
+export const ObserverSignals = __t.object("ObserverSignals", {});
+export type ObserverSignals = __Infer<typeof ObserverSignals>;
+
+export const ObserverStatus = __t.object("ObserverStatus", {});
+export type ObserverStatus = __Infer<typeof ObserverStatus>;
+
+export const ObserverStatusRow = __t.object("ObserverStatusRow", {
+  observer: __t.bool(),
+});
+export type ObserverStatusRow = __Infer<typeof ObserverStatusRow>;
+
+export const ObserverSupportPreferences = __t.object("ObserverSupportPreferences", {});
+export type ObserverSupportPreferences = __Infer<typeof ObserverSupportPreferences>;
+
 export const Pair = __t.object("Pair", {
   pairId: __t.string(),
   memberA: __t.identity(),
@@ -618,6 +765,40 @@ export const RateWindow = __t.object("RateWindow", {
   count: __t.u32(),
 });
 export type RateWindow = __Infer<typeof RateWindow>;
+
+export const ReasoningDecision = __t.object("ReasoningDecision", {
+  decisionId: __t.string(),
+  owner: __t.identity(),
+  episodeId: __t.string(),
+  pairId: __t.option(__t.string()),
+  mode: __t.string(),
+  action: __t.option(__t.string()),
+  surface: __t.option(__t.string()),
+  reasons: __t.array(__t.string()),
+  rejected: __t.array(__t.string()),
+  reassessAfterMinutes: __t.option(__t.u32()),
+  source: __t.string(),
+  outcome: __t.string(),
+  createdAt: __t.timestamp(),
+});
+export type ReasoningDecision = __Infer<typeof ReasoningDecision>;
+
+export const ReasoningDecisionRow = __t.object("ReasoningDecisionRow", {
+  decisionId: __t.string(),
+  owner: __t.identity(),
+  episodeId: __t.string(),
+  pairId: __t.option(__t.string()),
+  mode: __t.string(),
+  action: __t.option(__t.string()),
+  surface: __t.option(__t.string()),
+  reasons: __t.array(__t.string()),
+  rejected: __t.array(__t.string()),
+  reassessAfterMinutes: __t.option(__t.u32()),
+  source: __t.string(),
+  outcome: __t.string(),
+  createdAt: __t.timestamp(),
+});
+export type ReasoningDecisionRow = __Infer<typeof ReasoningDecisionRow>;
 
 export const RecipientPause = __t.object("RecipientPause", {
   pauseId: __t.string(),

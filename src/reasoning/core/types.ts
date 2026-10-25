@@ -65,6 +65,8 @@ export interface CandidateProposal {
   /** §2.5 factor judgments, recorded for audit, never summed. */
   judgments: Partial<Record<Factor, Level>>;
   revealValue: Level;
+  /** Preferred existing support mode for a deliverable action; must be allowed for the action (ACTION_SUPPORT_MODES). */
+  supportMode?: SupportMode;
   /** Topic of the situation, checked against the relationship's sensitive topics. */
   topic?: string;
   timing: { kind: 'now' | 'after_delay' | 'not_now'; delayMinutes?: number };
