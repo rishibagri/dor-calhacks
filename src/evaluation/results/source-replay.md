@@ -13,5 +13,6 @@ No titles, URLs, hosts or guests are printed. Regenerate with `node src/evaluati
 | berkeley-campus | `apify:20d2fc7814e5…`: hiking<br>`apify:ed932210bcc0…`: board-games+hiking | starts_too_soon 1 |
 | berkeley-downtown | `apify:60aa9b94e1d3…`: board-games<br>`apify:eafaf9062239…`: live-music | none |
 | sf-mission | — | none |
+| sf-soma | — | none |
 
 **Synthetic:** this proves the pipeline shape only. Rerun with a saved approved Actor dataset before any usefulness claim.
