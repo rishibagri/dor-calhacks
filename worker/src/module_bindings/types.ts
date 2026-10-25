@@ -113,6 +113,36 @@ export type CatalogueEventRow = __Infer<typeof CatalogueEventRow>;
 export const CatalogueEvents = __t.object("CatalogueEvents", {});
 export type CatalogueEvents = __Infer<typeof CatalogueEvents>;
 
+export const CataloguePlace = __t.object("CataloguePlace", {
+  placeId: __t.string(),
+  name: __t.string(),
+  kind: __t.string(),
+  label: __t.string(),
+  ratingTenths: __t.u32(),
+  reviewCount: __t.u32(),
+  areaKey: __t.string(),
+  sourceUrl: __t.option(__t.string()),
+  fetchedAt: __t.timestamp(),
+  updatedAt: __t.timestamp(),
+});
+export type CataloguePlace = __Infer<typeof CataloguePlace>;
+
+export const CataloguePlaceRow = __t.object("CataloguePlaceRow", {
+  placeId: __t.string(),
+  name: __t.string(),
+  kind: __t.string(),
+  label: __t.string(),
+  ratingTenths: __t.u32(),
+  reviewCount: __t.u32(),
+  areaKey: __t.string(),
+  sourceUrl: __t.option(__t.string()),
+  fetchedAt: __t.timestamp(),
+});
+export type CataloguePlaceRow = __Infer<typeof CataloguePlaceRow>;
+
+export const CataloguePlaces = __t.object("CataloguePlaces", {});
+export type CataloguePlaces = __Infer<typeof CataloguePlaces>;
+
 export const CatalogueSource = __t.object("CatalogueSource", {
   feedKey: __t.string(),
   lastAttemptAt: __t.timestamp(),

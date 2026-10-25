@@ -247,6 +247,7 @@ export class SpacetimeSharedState implements SharedStateController {
   myIntroductionProposals = () => this.views.proposals;
   myIntroductionSuggestionRequest = () => this.views.suggestionRequest;
   catalogueEvents = () => this.views.catalogue;
+  cataloguePlaces = () => this.views.places;
   catalogueStatus = () => this.views.catalogueStatus;
   myEventIntents = () => this.views.eventIntents;
   eventCompanions = () => this.views.companions;

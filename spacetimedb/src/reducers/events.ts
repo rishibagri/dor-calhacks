@@ -3,7 +3,7 @@
 import { t } from 'spacetimedb/server';
 import { Timestamp, type Identity } from 'spacetimedb';
 import {
-  applyPlanAction, eventErrorCode, guardActivityApproval, guardCatalogueEvent, guardEventIntent, guardPlanTiming,
+  applyPlanAction, eventErrorCode, guardActivityApproval, guardCatalogueEvent, guardCataloguePlace, guardEventIntent, guardPlanTiming,
   intentStands, revisePlan, validClientRequestId, type EventDenyReason, type PlanRefusal,
 } from '@dor/contracts/policy';
 import { spacetimedb } from '../schema';
@@ -66,6 +66,31 @@ export const upsert_catalogue_event = spacetimedb.reducer(
     };
     if (cur) ctx.db.catalogue_event.event_id.update(row);
     else ctx.db.catalogue_event.insert(row);
+  }
+);
+
+/** Server-side place ingestion (D051 proposal): same ingester rule and default-deny normalization as events. */
+export const upsert_catalogue_place = spacetimedb.reducer(
+  {
+    place_id: t.string(), name: t.string(), kind: t.string(), label: t.string(), rating_tenths: t.u32(), review_count: t.u32(),
+    area_key: t.string(), source_url: t.option(t.string()), fetched_at: t.string(),
+  },
+  (ctx, a) => {
+    requireIngester(ctx);
+    const g = guardCataloguePlace({
+      placeId: a.place_id, name: a.name, kind: a.kind, label: a.label, ratingTenths: a.rating_tenths, reviewCount: a.review_count,
+      areaKey: a.area_key, sourceUrl: a.source_url ?? null, fetchedAtMs: parseIso(a.fetched_at),
+    }, { areas: discoveryList(ctx.db, 'areas'), hosts: discoveryList(ctx.db, 'source_hosts') }, toMs(ctx.timestamp));
+    if (!g.ok) fail('invalid', g.reason);
+    const p = g.place;
+    const cur = ctx.db.catalogue_place.place_id.find(p.placeId);
+    if (cur && toMs(cur.fetched_at) > p.fetchedAtMs) fail('stale', 'older_fetch');
+    const row = {
+      place_id: p.placeId, name: p.name, kind: p.kind, label: p.label, rating_tenths: p.ratingTenths, review_count: p.reviewCount,
+      area_key: p.areaKey, source_url: p.sourceUrl ?? undefined, fetched_at: ts(p.fetchedAtMs), updated_at: ctx.timestamp,
+    };
+    if (cur) ctx.db.catalogue_place.place_id.update(row);
+    else ctx.db.catalogue_place.insert(row);
   }
 );
 

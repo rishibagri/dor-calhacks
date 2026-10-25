@@ -178,6 +178,21 @@ export interface CatalogueEventView {
   fetchedAt: string;
 }
 
+/** One `catalogue_places` row (D051 proposal): a public, well-reviewed place near a launch area. Never joined to a person. */
+export interface CataloguePlaceView {
+  placeId: string;
+  name: string;
+  kind: 'food' | 'coffee' | 'dessert' | 'study';
+  /** The source's category text, display only. */
+  label: string;
+  /** Average rating, one decimal (4.6). */
+  rating: number;
+  reviewCount: number;
+  areaKey: string;
+  sourceUrl: string | null;
+  fetchedAt: string;
+}
+
 /** Ingestion health for one configured feed (`catalogue_status`). Operational metadata only. */
 export interface CatalogueStatusView {
   feedKey: string;
@@ -394,6 +409,7 @@ export interface SharedStatePort {
   myIntroductionProposals(): IntroductionProposalView[]; // my_introduction_proposals
   myIntroductionSuggestionRequest(): IntroductionSuggestionRequestView | null; // my_introduction_suggestion_request
   catalogueEvents(): CatalogueEventView[]; // catalogue_events
+  cataloguePlaces(): CataloguePlaceView[]; // catalogue_places (D051 proposal)
   catalogueStatus(): CatalogueStatusView[]; // catalogue_status
   myEventIntents(): EventIntentRow[]; // my_event_intents
   eventCompanions(): EventCompanionRow[]; // event_companions

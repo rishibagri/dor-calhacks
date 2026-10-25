@@ -1,6 +1,6 @@
 # More Apify sources for the window: events and places (proposal)
 
-Status: **proposal, researched only.** Prices, inputs and output fields come from each Actor's Apify Store listing and its pinned build's schema, read on 2026-10-25 with the API (free reads). None of these Actors has been run; nothing here is implemented beyond what [APIFY_SOURCE.md](APIFY_SOURCE.md) describes. Owner: CS (Rishi) for ingestion; Cyber reviews any new source or table; DS owns ranking.
+Status: **Google Maps places and Google Events implemented on `feat/window-places` (D051 proposal); offline-tested and run live against Apify; NOT yet on Maincloud** (places need the owner republish below). Google Search and Instagram stay unimplemented as recommended. Product direction from Adam (2026-10-25): build places without a separate Cyber review; the guard, tests and field allowlists below are the safeguards.
 
 ## Goal
 
@@ -43,3 +43,25 @@ Hashtag results are posts by individuals. The dataset includes usernames, full n
 1. Approve the `catalogue_place` table (CS + Cyber), then owner republish (Nimisha).
 2. Approve the address → area rule for Google Events (DS + Cyber).
 3. Spend: one capped exploratory run per approved Actor (≈$0.05 each) to confirm the output fields before writing the adapters.
+
+## Implemented (D051 proposal, 2026-10-25)
+
+- **Contract:** `guardCataloguePlace` (`contracts/src/places-policy.ts`, re-exported from `@dor/contracts/policy`) is default-deny. It accepts only `{placeId, name, kind, label, ratingTenths, reviewCount, areaKey, sourceUrl, fetchedAtMs}`; kinds are `food | coffee | dessert | study`; text is cleaned; the area must be allowlisted; links pass `safeCatalogueUrl`.
+- **Module:** private table `catalogue_place`; ingester-only `upsert_catalogue_place` (owner or allow-listed worker; never rolls back to an older fetch); public view `catalogue_places` (registered accounts, discovery on, at most 200 rows). The upgrade adds only these (37/53/32 → 38/54/33), rehearsed locally from Maincloud's `f89d0bf`. Module tests: `spacetimedb/tests/places.test.ts`.
+- **Adapters:** `src/server/discovery/google.ts`, on pinned builds `compass~crawler-google-places` `0.14.775` and `johnvc~google-events-api…` `0.0.304`.
+  - Places: one query per kind × launch area ("restaurants Telegraph Avenue near UC Berkeley"); the area comes from the place's coordinates. A place needs a rating of at least 4.0 and at least 30 reviews; closed places are dropped. Only the allowlisted fields are read: no reviews, reviewer names, phone, website, hours or coordinates are stored.
+  - Events: one query per topic × city ("live music events in Berkeley"). **Address rule:** a ZIP when present (94720/94704 campus; 94709/94710/94702/94703 downtown Berkeley; 94110 Mission; 94102–94111/94158 SoMa), otherwise the city (Berkeley → `berkeley-downtown`, San Francisco → `sf-soma`); anything else is dropped. Times like "Oct 29, 7:00 PM" are read as Bay Area local time; an entry without a clock time is dropped, never guessed.
+- **Ingest:** `node --env-file=.env.local --experimental-strip-types scripts/ingest-catalogue.ts --google [--kinds food,coffee,dessert] [--topics …] [--max 20] [--commit dor --server maincloud --cli-config <worker cli.toml>]`. Three Actor runs at a time (the account allows 5 jobs / 16 GB). Each fetch saves `.cache/catalogue/google-latest.json`; `--from-cache` commits that same data without paying again.
+- **Window (live app):** four flyers, two events and two places when both exist. Places come from the viewer's area first, ranked by rating × log10(10 + reviews). A place flyer shows "★ 4.6 · 812 reviews" and its Google category, and "Open listing" opens its Google Maps page. "Show my interest" stays events-only.
+
+### First live runs (2026-10-25)
+- 12 Google Maps jobs (food, coffee, dessert × 4 areas, 20 each): **170 places kept** of 240. The rest were outside the area boxes or had too few or low reviews.
+- 14 Google Events jobs (7 topics × 2 cities): **44 events kept**. Some Berkeley queries returned nothing; the rest were dropped for the 14-day window, region or a missing time.
+- Spend so far: about $1.10 across all Apify runs this month (account limit $205).
+
+### Owner steps (Nimisha), in order
+1. Republish from the merged branch (additive; never `--delete-data`): `spacetime publish -s maincloud --module-path spacetimedb -y dor`. Expect `Created user table: catalogue_place` and `Created view: catalogue_places` only.
+2. Allowlists:
+   `spacetime call -s maincloud dor set_discovery_config '"areas"' '["berkeley-campus","berkeley-downtown","sf-mission","sf-soma"]'`
+   `spacetime call -s maincloud dor set_discovery_config '"source_hosts"' '["eventbrite.com","meetup.com","lu.ma","luma.com","google.com"]'`
+3. Check: `spacetime sql -s maincloud dor "SELECT * FROM discovery_config"` and `spacetime logs -s maincloud dor -n 30`.

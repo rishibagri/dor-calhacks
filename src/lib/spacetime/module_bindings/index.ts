@@ -86,12 +86,14 @@ import SetWorkerIdentityReducer from "./set_worker_identity_reducer";
 import SnoozeNudgeReducer from "./snooze_nudge_reducer";
 import UnlinkPairReducer from "./unlink_pair_reducer";
 import UpsertCatalogueEventReducer from "./upsert_catalogue_event_reducer";
+import UpsertCataloguePlaceReducer from "./upsert_catalogue_place_reducer";
 import WithdrawDiscoveryProfileReducer from "./withdraw_discovery_profile_reducer";
 
 // Import all procedure arg schemas
 
 // Import all table schema definitions
 import CatalogueEventsRow from "./catalogue_events_table";
+import CataloguePlacesRow from "./catalogue_places_table";
 import CatalogueStatusRow from "./catalogue_status_table";
 import DiscoveryCardsRow from "./discovery_cards_table";
 import EventCompanionsRow from "./event_companions_table";
@@ -148,6 +150,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, CatalogueEventsRow),
+  cataloguePlaces: __table({
+    name: 'catalogue_places',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, CataloguePlacesRow),
   catalogueStatus: __table({
     name: 'catalogue_status',
     indexes: [
@@ -512,6 +521,7 @@ const reducersSchema = __reducers(
   __reducerSchema("snooze_nudge", SnoozeNudgeReducer),
   __reducerSchema("unlink_pair", UnlinkPairReducer),
   __reducerSchema("upsert_catalogue_event", UpsertCatalogueEventReducer),
+  __reducerSchema("upsert_catalogue_place", UpsertCataloguePlaceReducer),
   __reducerSchema("withdraw_discovery_profile", WithdrawDiscoveryProfileReducer),
 );
 
@@ -523,6 +533,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
   tables: typeof tablesSchema.schemaType.tables & {
     /** @deprecated Use `catalogueEvents` instead. This alias will be removed in the next major version. */
     readonly "catalogue_events": Omit<typeof tablesSchema.schemaType.tables["catalogueEvents"], "accessorName"> & { readonly accessorName: "catalogue_events" };
+    /** @deprecated Use `cataloguePlaces` instead. This alias will be removed in the next major version. */
+    readonly "catalogue_places": Omit<typeof tablesSchema.schemaType.tables["cataloguePlaces"], "accessorName"> & { readonly accessorName: "catalogue_places" };
     /** @deprecated Use `catalogueStatus` instead. This alias will be removed in the next major version. */
     readonly "catalogue_status": Omit<typeof tablesSchema.schemaType.tables["catalogueStatus"], "accessorName"> & { readonly accessorName: "catalogue_status" };
     /** @deprecated Use `discoveryCards` instead. This alias will be removed in the next major version. */
@@ -630,6 +642,7 @@ const REMOTE_MODULE = {
 
 const tableAccessorAliases = {
   "catalogue_events": "catalogueEvents",
+  "catalogue_places": "cataloguePlaces",
   "catalogue_status": "catalogueStatus",
   "discovery_cards": "discoveryCards",
   "event_companions": "eventCompanions",
@@ -696,6 +709,8 @@ type __DbViewBase = __DbConnectionImpl<typeof REMOTE_MODULE>["db"];
 export type DbView = __DbViewBase & {
   /** @deprecated Use `catalogueEvents` instead. This alias will be removed in the next major version. */
   readonly "catalogue_events": __DbViewBase["catalogueEvents"];
+  /** @deprecated Use `cataloguePlaces` instead. This alias will be removed in the next major version. */
+  readonly "catalogue_places": __DbViewBase["cataloguePlaces"];
   /** @deprecated Use `catalogueStatus` instead. This alias will be removed in the next major version. */
   readonly "catalogue_status": __DbViewBase["catalogueStatus"];
   /** @deprecated Use `discoveryCards` instead. This alias will be removed in the next major version. */
@@ -790,6 +805,8 @@ type __TablesBase = __QueryBuilder<typeof tablesSchema.schemaType>;
 export type Tables = __TablesBase & {
   /** @deprecated Use `catalogueEvents` instead. This alias will be removed in the next major version. */
   readonly "catalogue_events": __TablesBase["catalogueEvents"];
+  /** @deprecated Use `cataloguePlaces` instead. This alias will be removed in the next major version. */
+  readonly "catalogue_places": __TablesBase["cataloguePlaces"];
   /** @deprecated Use `catalogueStatus` instead. This alias will be removed in the next major version. */
   readonly "catalogue_status": __TablesBase["catalogueStatus"];
   /** @deprecated Use `discoveryCards` instead. This alias will be removed in the next major version. */
