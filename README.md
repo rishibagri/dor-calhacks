@@ -2,7 +2,15 @@
 
 ### Find your way back. Find your way in.
 
-Life keeps opening new doors: a move, a new campus, a new job, a new beginning. The people you love can feel farther away, while the people around you are still strangers. As AI makes it easier to stay in a private loop with a screen, dor uses AI to help people take the next step toward each other.
+## The connection gap, in numbers
+
+- **About 1 in 6 people worldwide (15.8%) reported loneliness** in the WHO's global estimates. The WHO identifies major life changes—including moving, job loss, breakups, retirement, and bereavement—as drivers of loneliness and social isolation. ([WHO, 2025](https://www.who.int/news-room/questions-and-answers/item/social-connection))
+- In a prospective study of young adults moving away to college, networks grew with new relationships, while many pre-transition friendships were relinquished and replaced by more accessible ties. The study also found face-to-face contact played a stronger role than digital media in maintaining ties. ([Kempnich et al., *Advances in Life Course Research*, 2024](https://doi.org/10.1016/j.alcr.2024.100632))
+- **AI can offer comfort, but comfort is not the same as reciprocal connection.** In a preregistered, two-week study of 296 first-semester students, daily texting with a randomly paired human peer reduced loneliness; a highly supportive chatbot did not produce the same benefit as peer texting. The authors explicitly caution that this does not show chatbots are harmful. ([Li et al., *Journal of Experimental Social Psychology*, 2026](https://doi.org/10.1016/j.jesp.2026.104911))
+
+Research on AI companionship is still developing: another set of experiments found immediate reductions in loneliness after AI interactions, but no evidence that those reductions persisted between interactions. ([de Freitas et al., *Journal of Consumer Research*, 2025](https://doi.org/10.1093/jcr/ucaf040))
+
+**Our premise:** AI should help people cross the distance between reflection and reaching out. dor uses it to open a door to another person or a real local community—not to stand in for one.
 
 **dor is a connection assistant for life's transitions: it helps you keep meaningful relationships close and find people and places to belong wherever you land.**
 
@@ -57,28 +65,37 @@ flowchart TD
 
 ## Sponsor integrations
 
-| Sponsor / track | What it contributes to dor | How it appears in the product |
-|---|---|---|
-| **Cartesia — Best Use of Cartesia** | Voice is a primary way to use the notebook, not a demo-only add-on. | Speech-to-text voice reflection and text-to-speech follow-up questions/read-aloud. The voice path is designed around a tap-to-talk, tap-to-stop interaction. |
-| **Anthropic — Best Use of Claude** | Language understanding and reflection support. | Claude helps produce a relevant follow-up or structured reasoning input from the reflection the user chose to send. |
-| **Factory — Best Use of the Droid SDK** | Triggered agent work in the running product. | The Droid SDK powers worker-side coordination; Backstage makes the agent activity and outcomes inspectable. |
-| **Figma — Best Figma Workflow Hack** | Frontend planning and design-to-build workflow. | We planned each page in Figma with its purpose, component inventory, visual style, palette, and art direction, then used Figma's Cloud MCP. When MCP credits ran out, we continued the UI implementation in Claude Design. |
-| **SpacetimeDB** | Authoritative shared state and real-time updates. | Reducers enforce state changes; caller-filtered views provide each account its permitted live state. |
-| **Apify** | Public local discovery sources. | Pinned Actors retrieve event and place listings; dor normalizes, validates, caches, and ingests them into the catalogue. |
-| **Meta — Bringing People Closer Together with AI** | The product's central goal. | AI is used to create openings for existing and new human relationships, with a working product flow rather than an AI-only social substitute. |
+### Cartesia — Best Use of Cartesia
 
-### Cartesia challenge fit
+Cartesia powers dor's voice notebook: speech-to-text captures a reflection, and text-to-speech reads dor's follow-up question aloud. The user can tap to talk, stop, correct the transcript, and continue by voice or text. Voice is part of the primary reflection flow, while typing remains an accessible alternative.
 
-The voice experience is part of the core notebook flow: Cartesia handles spoken input and spoken follow-up, so the user can reflect without composing a long prompt. The demo should show one complete voice-to-connection journey, then briefly explain the problem and how the system was built. The implementation keeps a typed path available and does not make voice the only way to use dor.
+**What to show:** one voice reflection, a useful follow-up, and the next connection action. Cartesia's supplied judging rubric gives equal weight to problem/originality, meaningful Cartesia use, execution, and impact/responsibility (25% each). Its submission asks for a working demo, a two-minute demo-first presentation, concise setup/Cartesia/limitations documentation, and source access for judges; those are reflected in this README and the demo plan.
 
-The submission should include a working demo, a two-minute demo-first presentation, setup instructions, the Cartesia features used, known limitations, and source access for judges. The supplied Cartesia rubric weights problem/originality, Cartesia use, execution, and impact/responsibility equally (25% each).
+### Anthropic — Best Use of Claude
 
-### Other challenge fit
+Claude supports reflection and context-sensitive reasoning. When the user chooses **Keep talking**, Claude generates one focused follow-up question; when the user chooses **Send**, selected reflection text can be processed to inform a structured decision. dor's reasoning can act, ask, defer, or abstain instead of turning every reflection into a message. Claude is part of a human-connection workflow, not a standalone chatbot wrapper.
 
-- **Meta:** show how AI meaningfully helps people reconnect or enter a new community; center originality and a strong working demo.
-- **Factory:** Droid must do real triggered work in the running product. The Backstage surface helps make the agent's steps and outcomes visible; the worker is constrained to authorized inputs and guarded actions.
-- **Anthropic:** Claude contributes to reflection and context-sensitive reasoning rather than serving as a generic chat wrapper.
-- **Figma:** Figma was used before implementation to map pages, components, palette, style, and art direction, and through its Cloud MCP. After MCP credits ran out, the team moved the planned design into Claude Design to continue building the frontend.
+### Factory — Best Use of the Droid SDK
+
+The Factory Droid SDK runs agent work in dor's worker flow. Work is triggered by product events and bounded by typed inputs, time limits, allowed actions, and server-side policy checks. The Backstage view makes the status and outcomes of the coordination path visible, so the demo can show what the agent did instead of merely naming the SDK.
+
+The Factory challenge emphasizes meaningful SDK use, event-triggered work, deliberate limits on agent access, and visible plans/steps/results. dor's worker and Backstage view are designed to demonstrate those aspects; it is not a chatbot with Droid added after the fact.
+
+### Meta — Bringing People Closer Together with AI
+
+Meta's challenge is the product thesis: use AI to strengthen human connection. dor applies AI to existing relationships through automatic in-app nudges and to new communities through relevant events and opt-in introductions. The demo should make AI's contribution visible, then show the human action it enables. The people—not the agent—make the call, accept the introduction, or meet at the event.
+
+### SpacetimeDB
+
+SpacetimeDB is dor's shared-state and real-time coordination layer. Reducers validate state transitions, while caller-filtered views expose only the rows an account may read. It supports relationship state, nudge coordination, event catalogues, and discovery workflows; the frontend receives changes through subscriptions rather than treating the database as a passive storage add-on.
+
+### Apify
+
+Apify supplies public event and place listings for discovery. dor uses configured Actor builds for Luma events, Google Maps places, and Google Events, then normalizes, validates, deduplicates, caches, and ingests the results into its catalogue. The latest verified run populated Maincloud with **170 places and 51 events**. Refresh is manual and consumes credits. Actor inputs are source configuration—not a user's journal, private quiz answers, relationship IDs, exact location, or attendance intent.
+
+### Figma — Best Figma Workflow Hack
+
+Figma was used to plan the frontend page by page: each page had a description, component inventory, visual style, palette, and art direction. The team also used Figma through the Cloud MCP. When MCP credits ran out, the team carried the design plan into Claude Design and continued frontend implementation there. Figma shaped the design workflow; it is not a runtime dependency in dor.
 
 ## Live demo and evidence
 
