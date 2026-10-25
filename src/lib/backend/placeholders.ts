@@ -46,6 +46,12 @@ export const placeholderVault: VaultPort = {
   loadProfile: async () => pending(VAULT_MSG),
   saveQuizExtras: async () => pending(VAULT_MSG),
   loadQuizExtras: async () => pending(VAULT_MSG),
+  saveRelationshipPhoto: async () => pending(VAULT_MSG),
+  listRelationshipPhotos: async () => pending(VAULT_MSG),
+  deleteRelationshipPhoto: async () => pending(VAULT_MSG),
+  saveBookInteraction: async () => pending(VAULT_MSG),
+  listBookInteractions: async () => pending(VAULT_MSG),
+  deleteBookInteraction: async () => pending(VAULT_MSG),
 };
 
 export const placeholderReflection: ReflectionPort = {
