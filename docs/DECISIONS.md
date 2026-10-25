@@ -96,3 +96,8 @@
   - Proactive toward unnamed connections is allowed when the model cites evidence and every gate passes (owner decision, REASONING.md §9 C1b). Hard stops, explicit exclusions, pauses, conflict and caps are unchanged; server checks at approve/commit remain authoritative.
   - Each decision is logged content-free with `record_reasoning_decision` (codes only, ≤100 per owner) for `my_reasoning_decisions` and the observer view.
   - The client `prepareShare` now mirrors the server default preset (`7b3b695`).
+- D055 (owner Adam, 2026-10-25; amends the live-room notebook from D054; implemented, partly live-verified): **The live notebook is a conversation the writer finishes.**
+  - The mic takes two taps: tap to talk, tap again to stop. Stopping only transcribes. Nothing is read or sent until the writer taps **Send**, which runs the private reflection and D054 Reasoning exactly as before.
+  - **Keep talking** asks `/api/journal/followup` for one short open question about the writer's own words; Cartesia reads it aloud (audio unlocked on the tap, for phones). Questions are written in blue between the writer's words and kept in memory only. Only the writer's words are ever sent for reflection or reasoning. "Just for me" blocks both buttons from calling Claude; distress (local term check or the model's `distress`) shows the 988 card instead of a question.
+  - **Start over** clears the words, dor's questions, any pending suggestion or reassessment, and a recording in progress. Nothing was persisted.
+  - The right page scrolls with the newest words in view (a live transcript while talking) instead of running off the book.
