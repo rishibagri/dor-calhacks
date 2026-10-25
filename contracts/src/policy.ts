@@ -19,6 +19,7 @@ export * from './enums.js';
 export * from './discovery.js';
 export * from './events-policy.js';
 export * from './places-policy.js';
+export * from './talking-points.js';
 export * from './recipient-pause.js';
 export * from './opaque-id.js';
 export * from './standing-consent.js';

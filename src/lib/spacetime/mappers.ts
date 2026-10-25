@@ -11,7 +11,7 @@ import {
 } from '@dor/contracts';
 import { PLACE_KINDS as CONTRACT_PLACE_KINDS } from '@dor/contracts';
 import type { ApprovedSignal, DisclosureReceipt, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
-import { ACTIVITY_CATEGORY, NUDGE_TEMPLATE_IDS } from '@dor/contracts/policy';
+import { ACTIVITY_CATEGORY, NUDGE_TEMPLATE_IDS, isTalkingPointId } from '@dor/contracts/policy';
 import { MAX_EVENT_TITLE, MAX_EVENT_TOPICS, MAX_INTEREST_TAGS, MAX_PUBLIC_NAME, validRecipientDelivery, validSupportPreferences } from '@dor/contracts/policy';
 import type {
   IntroductionSuggestionRequestView, ActivityApprovalRow, CatalogueDetailView, CatalogueEventView, CataloguePlaceView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView, StandingConsentView,
@@ -117,7 +117,7 @@ export const mapNudge: Mapper<RecipientNudgeView> = (row) => {
   const visibleUntil = str(row, 'visible_until');
   if (!id || !pairId || !templateId || !visibleUntil) return null;
   const hook = str(row, 'hook');
-  return { id, pairId, templateId, visibleUntil, hook: hook && hook.length <= 140 ? hook : null };
+  return { id, pairId, templateId, visibleUntil, hook: isTalkingPointId(hook) ? hook : null }; // D058: listed ids only
 };
 
 export const mapReceipt: Mapper<DisclosureReceipt> = (row) =>

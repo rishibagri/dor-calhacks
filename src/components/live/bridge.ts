@@ -8,6 +8,7 @@
  * arrow-function fields and `renderVals()` builds every template value, so each is replaced on the instance.
  */
 import { NUDGE_TEMPLATE_COPY, DEFAULT_RECIPIENT_DELIVERY, type PrivateAssessment, type SignalCandidate } from '@dor/contracts';
+import { talkingPointText } from '@dor/contracts/policy';
 import type { PairView, ReducerResult, SharedStatePort, ReflectionPort } from '@/lib/backend/ports';
 import { reasonLive, type LiveContext, type LivePerson, type ModelReasoning } from '@/reasoning/runtime/live';
 import { applyMemoryUpdate, memoryForModel, readMemory, saveMemory, type MemoryItem, type MemoryStore } from '@/reasoning/runtime/memory';
@@ -73,8 +74,19 @@ const listTags = (tags: readonly string[]) => tags.map(tagLabel).join(', ');
 // The quiz's interest question offers only tags the server publishes (the design's "studying" is not one).
 const QUIZ_TAGS = ['board-games', 'hiking', 'coffee', 'live-music', 'cooking', 'running', 'books', 'climbing'].filter((t) => DISCOVERY_TAGS.includes(t));
 const SENT_KEY = 'dor-live-sent';
-/** D056 cross-entry memory: distilled facts only, on this device (localStorage), keyed by the signed-in account. */
+/**
+ * D056 cross-entry memory: distilled facts only, on this device (localStorage), keyed by the signed-in account. D058:
+ * signing out wipes every account's memory on this device, so a shared or borrowed phone never keeps them.
+ */
 const MEMORY_KEY = 'dor-reasoning-memory';
+function clearAllMemory(): void {
+  try {
+    for (let n = localStorage.length - 1; n >= 0; n--) {
+      const key = localStorage.key(n);
+      if (key?.startsWith(`${MEMORY_KEY}:`)) localStorage.removeItem(key);
+    }
+  } catch { /* storage blocked: nothing was kept */ }
+}
 function memoryStore(owner: string | null): MemoryStore {
   const key = `${MEMORY_KEY}:${owner ?? 'anon'}`;
   return {
@@ -162,7 +174,7 @@ export class LiveBridge {
       writePref(store, { ...readPref(store), transition: t ?? null });
       setTimeout(() => i.setState({ doorStep: 'key' }), 1000);
     };
-    i.signOut = async () => { await this.orig.signOut(); await this.deps?.signOut(); };
+    i.signOut = async () => { clearAllMemory(); this.resetEntry(); await this.orig.signOut(); await this.deps?.signOut(); };
     i.chapterLine = () => `${i.state.chapter || 'New here'} · ${areaLabel(this.shared.myDiscoveryProfile()?.areaKey ?? null) ?? 'Berkeley'}`;
     i.pinText = (k: string) => (k === 'name' ? this.myName() : k === 'chapter' ? i.chapterLine() : this.orig.pinText(k));
 
@@ -653,8 +665,8 @@ export class LiveBridge {
     i.setState({ nudge: null });
     if (!r.ok) { i.toast(`No nudge was started: ${failText(r)}`); return false; }
     i.log(p.pairId, { k: 'nudge', t: auto ? `dor nudged ${p.name} to reach out` : `A note for ${p.name} went to dor’s agents`, q: p.copy,
-      note: p.hook ? `they’ll be prompted: “${p.hook}”` : 'their agent still checks it fits' });
-    i.toast(`dor nudged ${p.name} to reach out${p.hook ? ` (“${p.hook}”)` : ''}.`);
+      note: talkingPointText(p.hook) ? `their nudge suggests: “${talkingPointText(p.hook)}”` : 'their agent still checks it fits' });
+    i.toast(`dor nudged ${p.name} to reach out.`);
     return true;
   }
 
@@ -803,7 +815,7 @@ export class LiveBridge {
       ...this.live,
       myName: this.myName(),
       plate: this.myName().toLowerCase(),
-      planeText: first ? (first.hook ? `${NUDGE_TEMPLATE_COPY[first.templateId]} ${first.hook}` : NUDGE_TEMPLATE_COPY[first.templateId]) : '',
+      planeText: first ? [NUDGE_TEMPLATE_COPY[first.templateId], talkingPointText(first.hook)].filter(Boolean).join(' ') : '',
       planeName: first ? this.nameOf(first.pairId) : '',
       planeWho: first ? this.nameOf(first.pairId).toLowerCase() : '',
       nudgeName: this.pending?.name ?? '',

@@ -6,6 +6,7 @@
  * The core always has the last word; any model failure falls back, and the fallback itself never widens anything.
  */
 import type { PrivateAssessment, SignalCandidate, SupportMode } from '@dor/contracts';
+import { isTalkingPointId, type TalkingPointId } from '@dor/contracts/policy';
 import { finalize } from '../core/finalize.ts';
 import {
   ACTION_SUPPORT_MODES, CANDIDATE_ACTIONS, LEVELS, REASON_CODES, REASONING_MODES, REASSESS_CONDITIONS,
@@ -63,6 +64,7 @@ export interface ModelReasoning {
     rationale: ReasonCode[];
     evidence: string[];
     /** D056: what the friend should bring up when they reach out ("ask how the exam went"), or null. */
+    /** D058: an id from TALKING_POINTS (generic conversation starters), never free text. */
     talkingPoint?: string | null;
   }[];
   /** D056: facts worth remembering for later entries, and remembered facts this entry makes stale. */
@@ -75,7 +77,6 @@ export type ReasoningModelPort = (request: { people: { ref: string; mentionedAs:
 
 /** At most this many friends are nudged from one entry. */
 export const MAX_AUTO_TARGETS = 3;
-export const MAX_TALKING_POINT = 140;
 
 const FALLBACK_WINDOW_MINUTES = 180;
 const slug = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
@@ -171,16 +172,15 @@ export function fallbackProposals(ctx: LiveContext): CandidateProposal[] {
 export interface LiveDecision {
   decision: ReasoningDecision;
   /** D056: every friend to nudge (≤ MAX_AUTO_TARGETS), primary first; empty unless `decision.mode` is act. */
-  actions: { decision: ReasoningDecision; talkingPoint: string | null }[];
+  actions: { decision: ReasoningDecision; talkingPoint: TalkingPointId | null }[];
   memory: MemoryUpdate | null;
   source: 'model' | 'fallback';
   input: ReasoningEpisodeInput;
 }
 
-export function cleanTalkingPoint(raw: string | null | undefined): string | null {
-  const v = (raw ?? '').replace(/\s+/g, ' ').trim();
-  if (!v || /(https?:\/\/|www\.)/i.test(v)) return null;
-  return v.length > MAX_TALKING_POINT ? `${v.slice(0, MAX_TALKING_POINT - 1).trimEnd()}…` : v;
+/** D058: a talking point is an id from the fixed generic list (TALKING_POINTS), never free text; anything else is dropped. */
+export function cleanTalkingPoint(raw: string | null | undefined): TalkingPointId | null {
+  return isTalkingPointId(raw) ? raw : null;
 }
 
 /**
@@ -190,7 +190,7 @@ export function cleanTalkingPoint(raw: string | null | undefined): string | null
 function autonomousActions(input: ReasoningEpisodeInput, proposals: CandidateProposal[], model: ModelReasoning | null,
   primary: ReasoningDecision): LiveDecision['actions'] {
   if (primary.mode !== 'act' || !primary.targetRef) return [];
-  const hooks = new Map<string, string | null>();
+  const hooks = new Map<string, TalkingPointId | null>();
   for (const m of model?.proposals ?? []) if (m.targetRef && !hooks.has(m.targetRef)) hooks.set(m.targetRef, cleanTalkingPoint(m.talkingPoint));
   const abstain = proposals.filter(p => p.action === 'ABSTAIN');
   const out: LiveDecision['actions'] = [{ decision: primary, talkingPoint: hooks.get(primary.targetRef) ?? null }];
