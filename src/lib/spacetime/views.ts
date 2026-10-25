@@ -8,7 +8,7 @@ import { mapAll, mapConnectionProfile, mapFofCard, mapNudgeRequest, mapProfileDe
 import type { LooseConnection, LooseRow, LooseTable } from './bindings';
 import { findTable } from './names.ts';
 import {
-  mapAccount, mapAssignment, mapInvite, mapNudge, mapNudgeDelivery, mapPair, mapRecipientPause, mapPreset, mapReceipt, mapRows,
+  mapAccount, mapAssignment, mapDemoRound, mapInvite, mapNudge, mapNudgeDelivery, mapPair, mapRecipientPause, mapPreset, mapReceipt, mapRows,
   mapActivityApproval, mapCatalogueDetail, mapCatalogueEvent, mapCataloguePlace, mapCatalogueStatus, mapCompanion, mapDiscoveryCard, mapEventIntent, mapIntroduction,
   mapIntroductionProposal, mapSuggestionRequest, mapPlan, unreadableRow, mapMyDiscovery, mapSignal, mapSupportPreferences, mapStandingConsent,
 } from './mappers.ts';
@@ -20,7 +20,7 @@ export const VIEW_NAMES = [
   'my_discovery_profile', 'discovery_cards', 'my_introductions', 'my_introduction_proposals',
   'my_introduction_suggestion_request',
   'catalogue_events', 'catalogue_places', 'catalogue_details', 'catalogue_status', 'my_event_intents', 'event_companions', 'my_activity_approvals', 'my_plans',
-  'my_profile_detail', 'fof_cards', 'my_nudge_requests', 'my_connection_profiles',
+  'my_profile_detail', 'fof_cards', 'my_nudge_requests', 'my_connection_profiles', 'my_demo_round',
 ] as const;
 
 export type ViewName = (typeof VIEW_NAMES)[number];
@@ -52,13 +52,14 @@ export interface ViewData {
   readonly activityApprovals: ActivityApprovalRow[];
   readonly plans: PlanView[];
   readonly network: NetworkData;
+  readonly demoRound: { slot: string; round: number } | null;
   readonly unreadable: Unreadable;
 }
 
 export const EMPTY_VIEWS: ViewData = {
   account: null, pairs: [], invites: [], presets: [], assignments: [], nudges: [], receipts: [], signals: [], supportPreferences: [], nudgeDelivery: [], pauses: [], standingConsents: [],
   discoveryProfile: null, discoveryCards: [], introductions: [], proposals: [], suggestionRequest: null,
-  catalogue: [], places: [], details: [], catalogueStatus: [], eventIntents: [], companions: [], activityApprovals: [], plans: [], network: EMPTY_NETWORK,
+  catalogue: [], places: [], details: [], catalogueStatus: [], eventIntents: [], companions: [], activityApprovals: [], plans: [], network: EMPTY_NETWORK, demoRound: null,
   unreadable: { signals: [], supportPreferences: [], nudgeDelivery: [], presets: [], counts: {} },
 };
 
@@ -111,6 +112,7 @@ export function readViews(conn: LooseConnection): ViewData {
     discoveryProfile: take('my_discovery_profile', mapMyDiscovery)[0] ?? null,
     discoveryCards: take('discovery_cards', mapDiscoveryCard),
     introductions: take('my_introductions', mapIntroduction),
+    demoRound: take('my_demo_round', mapDemoRound)[0] ?? null,
   };
   return {
     ...data,

@@ -615,6 +615,21 @@ export const signal_hook = table(
   }
 );
 
+/**
+ * Demo reset (D061, demo-only): the team's demo accounts, each in one starting-board slot, allow-listed by the module
+ * owner. `operator` may call demo_reset. Empty by default, so demo_reset refuses everyone.
+ */
+export const demo_member = table(
+  { name: 'demo_member' },
+  { identity: t.identity().primaryKey(), slot: t.string(), operator: t.bool() }
+);
+
+/** Demo reset (D061): singleton round counter. Phones that see a new round clear their device-only notebook and memory. */
+export const demo_round = table(
+  { name: 'demo_round' },
+  { key: t.string().primaryKey(), round: t.u32(), reset_at: t.timestamp() }
+);
+
 export const spacetimedb = schema({
   module_owner,
   auth_config,
@@ -659,4 +674,6 @@ export const spacetimedb = schema({
   observer_identity,
   reasoning_decision,
   catalogue_detail,
+  demo_member,
+  demo_round,
 });

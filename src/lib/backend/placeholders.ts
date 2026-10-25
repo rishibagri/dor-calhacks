@@ -89,7 +89,7 @@ export function createOfflineSharedState(
     myDiscoveryProfile: () => null, discoveryCards: () => EMPTY, myIntroductions: () => EMPTY,
     myIntroductionProposals: () => EMPTY, myIntroductionSuggestionRequest: () => null, catalogueEvents: () => EMPTY, cataloguePlaces: () => EMPTY, catalogueDetails: () => EMPTY, catalogueStatus: () => EMPTY, myEventIntents: () => EMPTY,
     eventCompanions: () => EMPTY, myActivityApprovals: () => EMPTY, myPlans: () => EMPTY, unreadable: () => NO_UNREADABLE, myNudgeDelivery: () => EMPTY, myRecipientPauses: () => EMPTY,
-    myProfileDetail: () => null, fofCards: () => EMPTY, myNudgeRequests: () => EMPTY, myConnectionProfiles: () => EMPTY,
+    myProfileDetail: () => null, fofCards: () => EMPTY, myNudgeRequests: () => EMPTY, myConnectionProfiles: () => EMPTY, myDemoRound: () => null,
     subscribe: () => () => undefined,
     getVersion: () => 0,
     dispose: () => undefined,

@@ -24,6 +24,7 @@ import CommitIntroductionProposalReducer from "../commit_introduction_proposal_r
 import CommitNudgeReducer from "../commit_nudge_reducer";
 import CommitPlanProposalReducer from "../commit_plan_proposal_reducer";
 import CreatePairInviteReducer from "../create_pair_invite_reducer";
+import DemoResetReducer from "../demo_reset_reducer";
 import DismissIntroductionProposalReducer from "../dismiss_introduction_proposal_reducer";
 import DismissNudgeReducer from "../dismiss_nudge_reducer";
 import PauseRecipientReducer from "../pause_recipient_reducer";
@@ -48,6 +49,7 @@ import SendIntroductionRequestReducer from "../send_introduction_request_reducer
 import SendNudgeRequestReducer from "../send_nudge_request_reducer";
 import SetAuthAudienceReducer from "../set_auth_audience_reducer";
 import SetAuthIssuerReducer from "../set_auth_issuer_reducer";
+import SetDemoMemberReducer from "../set_demo_member_reducer";
 import SetDiscoveryAreaReducer from "../set_discovery_area_reducer";
 import SetDiscoveryConfigReducer from "../set_discovery_config_reducer";
 import SetDiscoveryPageReducer from "../set_discovery_page_reducer";
@@ -83,6 +85,7 @@ export type CommitIntroductionProposalParams = __Infer<typeof CommitIntroduction
 export type CommitNudgeParams = __Infer<typeof CommitNudgeReducer>;
 export type CommitPlanProposalParams = __Infer<typeof CommitPlanProposalReducer>;
 export type CreatePairInviteParams = __Infer<typeof CreatePairInviteReducer>;
+export type DemoResetParams = __Infer<typeof DemoResetReducer>;
 export type DismissIntroductionProposalParams = __Infer<typeof DismissIntroductionProposalReducer>;
 export type DismissNudgeParams = __Infer<typeof DismissNudgeReducer>;
 export type PauseRecipientParams = __Infer<typeof PauseRecipientReducer>;
@@ -107,6 +110,7 @@ export type SendIntroductionRequestParams = __Infer<typeof SendIntroductionReque
 export type SendNudgeRequestParams = __Infer<typeof SendNudgeRequestReducer>;
 export type SetAuthAudienceParams = __Infer<typeof SetAuthAudienceReducer>;
 export type SetAuthIssuerParams = __Infer<typeof SetAuthIssuerReducer>;
+export type SetDemoMemberParams = __Infer<typeof SetDemoMemberReducer>;
 export type SetDiscoveryAreaParams = __Infer<typeof SetDiscoveryAreaReducer>;
 export type SetDiscoveryConfigParams = __Infer<typeof SetDiscoveryConfigReducer>;
 export type SetDiscoveryPageParams = __Infer<typeof SetDiscoveryPageReducer>;

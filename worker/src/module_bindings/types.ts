@@ -201,6 +201,20 @@ export const ConnectionProfileRow = __t.object("ConnectionProfileRow", {
 });
 export type ConnectionProfileRow = __Infer<typeof ConnectionProfileRow>;
 
+export const DemoMember = __t.object("DemoMember", {
+  identity: __t.identity(),
+  slot: __t.string(),
+  operator: __t.bool(),
+});
+export type DemoMember = __Infer<typeof DemoMember>;
+
+export const DemoRound = __t.object("DemoRound", {
+  key: __t.string(),
+  round: __t.u32(),
+  resetAt: __t.timestamp(),
+});
+export type DemoRound = __Infer<typeof DemoRound>;
+
 export const DisclosureReceipt = __t.object("DisclosureReceipt", {
   receiptId: __t.string(),
   signalId: __t.string(),
@@ -422,6 +436,17 @@ export type MyActivityApprovals = __Infer<typeof MyActivityApprovals>;
 export const MyConnectionProfiles = __t.object("MyConnectionProfiles", {});
 export type MyConnectionProfiles = __Infer<typeof MyConnectionProfiles>;
 
+export const MyDemoRound = __t.object("MyDemoRound", {});
+export type MyDemoRound = __Infer<typeof MyDemoRound>;
+
+export const MyDemoRoundRow = __t.object("MyDemoRoundRow", {
+  slot: __t.string(),
+  operator: __t.bool(),
+  round: __t.u32(),
+  resetAt: __t.option(__t.timestamp()),
+});
+export type MyDemoRoundRow = __Infer<typeof MyDemoRoundRow>;
+
 export const MyDiscoveryProfile = __t.object("MyDiscoveryProfile", {});
 export type MyDiscoveryProfile = __Infer<typeof MyDiscoveryProfile>;
 
@@ -635,6 +660,18 @@ export const ObserverDeliveryRow = __t.object("ObserverDeliveryRow", {
 });
 export type ObserverDeliveryRow = __Infer<typeof ObserverDeliveryRow>;
 
+export const ObserverDemoMemberRow = __t.object("ObserverDemoMemberRow", {
+  identity: __t.identity(),
+  slot: __t.string(),
+  operator: __t.bool(),
+  published: __t.bool(),
+  areaKey: __t.option(__t.string()),
+});
+export type ObserverDemoMemberRow = __Infer<typeof ObserverDemoMemberRow>;
+
+export const ObserverDemoMembers = __t.object("ObserverDemoMembers", {});
+export type ObserverDemoMembers = __Infer<typeof ObserverDemoMembers>;
+
 export const ObserverIdentity = __t.object("ObserverIdentity", {
   identity: __t.identity(),
 });
@@ -719,6 +756,12 @@ export type ObserverPreferenceRow = __Infer<typeof ObserverPreferenceRow>;
 export const ObserverReasoning = __t.object("ObserverReasoning", {});
 export type ObserverReasoning = __Infer<typeof ObserverReasoning>;
 
+export const ObserverScheduleRow = __t.object("ObserverScheduleRow", {
+  signalId: __t.string(),
+  deliverAfter: __t.timestamp(),
+});
+export type ObserverScheduleRow = __Infer<typeof ObserverScheduleRow>;
+
 export const ObserverSignalRow = __t.object("ObserverSignalRow", {
   signalId: __t.string(),
   pairId: __t.string(),
@@ -730,6 +773,9 @@ export const ObserverSignalRow = __t.object("ObserverSignalRow", {
   revokedAt: __t.option(__t.timestamp()),
 });
 export type ObserverSignalRow = __Infer<typeof ObserverSignalRow>;
+
+export const ObserverSignalSchedules = __t.object("ObserverSignalSchedules", {});
+export type ObserverSignalSchedules = __Infer<typeof ObserverSignalSchedules>;
 
 export const ObserverSignals = __t.object("ObserverSignals", {});
 export type ObserverSignals = __Infer<typeof ObserverSignals>;

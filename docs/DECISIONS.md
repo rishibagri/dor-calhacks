@@ -128,4 +128,18 @@
   - `/backstage` is no longer linked from the app; developers open it by URL. It adds a "Tools in use" panel (Claude, Cartesia, Apify, Factory Droid, SpacetimeDB, Clerk: configured, in use now, last used, live detail) and shows in-flight provider calls (for example "Adam · journal reflection — in progress") in the activity timeline.
   - Source: an in-process, metadata-only activity log on the live host (`src/server/activity.ts`): tool, fixed action label, Clerk user id (shown as first name), timing and outcome. Never bodies, text, prompts or tokens. `/api/backstage/activity` (signed-in) serves it with tool configuration, worker health and a Clerk account summary; it replaces `/api/backstage/worker`.
   - A "Reset demo" button sits on the backstage as a placeholder only; it changes nothing yet.
+- D061 (owner Adam, 2026-10-25; demo tooling, team-agreed; offline-verified, needs the owner's republish): **one-tap demo reset to a fixed starting board.**
+  - **Roster.** Owner-only `set_demo_member({member, slot, operator, enabled})` puts each team demo account in a slot (`adam`, `rishi`, `nimisha`, `sumedh`). The `demo_member` table is empty by default, and `demo_reset` refuses everyone until it is filled. `admin_purge_account` also removes the target from the roster.
+  - **Reset.** `demo_reset()`, demo operator only, runs in one transaction. It purges every row involving the four accounts except the accounts, observer access and profile text: signals, schedules, nudges, receipts, introductions, friend-of-friend requests, plans, intents, approvals, pauses, blocks, reports, rate windows, reasoning decisions and pairs. Then it seeds the board:
+    - Adam–Rishi and Rishi–Sumedh are accepted pairs.
+    - In each pair, each member has a current friend preset (both C3 categories plus activity interest) assigned to the other, standard support styles (all modes and windows, 29 days), notes on and no quiet hours.
+    - All four are published on `berkeley-campus` with fixed overlapping interests. Profile area and interests match.
+  - **Consent shortcut.** The team agreed to have these settings written for their own demo accounts without each person tapping through. Nothing else in dor writes consent on someone's behalf.
+  - **Why this board.** Friend-of-friend reach is 3 hops. If all four were linked, every "nearby" card would become a friend-of-friend card. So Nimisha starts unlinked: she is a plain nearby postcard for everyone, while Sumedh is Adam's friend of a friend through Rishi.
+  - **Phones.** `demo_round` counts resets. Demo members see it through `my_demo_round`. A phone that sees a new round clears its device-only memory, notebook, sent marks and open sheets. The sill shows one card per person: someone reachable through a friend appears only as the friend-of-friend card.
+  - **Backstage.**
+    - The Reset button works with two taps.
+    - New observer views: `observer_demo_members` (roster and published state) and `observer_signal_schedules`. With these, a held bad-news nudge shows as logged, with its delivery time.
+    - A Demo playbook lists ten scenarios with who runs each and a live ready/used/blocked check from real rows. Held nudges are not compressed: the demo shows them held, not delivered.
+    - Team runbook: [DEMO_RESET.md](features/DEMO_RESET.md).
 
