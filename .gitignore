@@ -13,3 +13,4 @@ demo/exports/
 next-env.d.ts
 *.tsbuildinfo
 .cache/
+public/live/

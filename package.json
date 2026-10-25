@@ -15,7 +15,7 @@
     "predev": "npm run build -w @dor/contracts && npm run build -w @dor/agents",
     "dev": "next dev",
     "prebuild:app": "npm run build -w @dor/contracts && npm run build -w @dor/agents",
-    "build:app": "next build",
+    "build:app": "node scripts/build-live-ui.mjs && next build",
     "start": "next start",
     "typecheck": "npm run build -w @dor/contracts && npm run build -w @dor/agents && tsc --noEmit",
     "build": "npm run build -w @dor/contracts",

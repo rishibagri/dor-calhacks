@@ -1064,7 +1064,7 @@ input,textarea{font:inherit;color:inherit}
 <sc-if value="{{ matEmpty }}" hint-placeholder-val="{{ true }}">
 <div data-screen-label="Door mat · settings" style="position:absolute;left:0;right:0;bottom:0;max-height:640px;overflow-x:hidden;overflow-y:auto;background:#FAF7F0;border-radius:24px 24px 0 0;box-shadow:0 -12px 40px rgba(27,26,23,.10);padding:22px 22px 26px;z-index:6;animation:sheetIn .5s cubic-bezier(0.55,0,0.1,1) .35s both">
 <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:15px;font-variant:small-caps;letter-spacing:.06em;color:#6B665D">at the door</span><span style="font:400 19px/1 'Reenie Beanie';color:#6B665D">{{ matNote }}</span></div>
-<div style="margin-top:2px;font:500 27px/1.2 'Cormorant Garamond',serif">Settings</div>
+<div style="margin-top:2px;display:flex;justify-content:space-between;align-items:center;gap:12px"><span style="font:500 27px/1.2 'Cormorant Garamond',serif">Settings</span><span style="min-width:0;text-align:right"><span style="display:block;font-size:12.5px;font-variant:small-caps;letter-spacing:.06em;color:#6B665D;line-height:14px">signed in as</span><span style="display:block;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 24px/1.05 'Caveat';color:#1B1A17">{{ meName }}</span></span></div>
 <div style="margin-top:2px;font:400 15px/22px 'Spectral',serif;color:#6B665D;text-wrap:pretty">Who can see you, what reaches you, and how to leave. The drawer keeps the same switches.</div>
 <div style="margin-top:8px;display:grid">
 <sc-for list="{{ matItems }}" as="o" hint-placeholder-count="6">
@@ -1911,7 +1911,7 @@ class Component extends DCLogic {
       reasonOpts: ['Grab coffee','Study together','Go to an event together'].map(l => ({label:l, ...this.sel(s.introReason === l), tap:() => this.setState({introReason:l})})),
       recall:this.recall, startIntro:this.startIntro, passCard:this.passCard, blockCard:this.blockCard, toggleAttach:this.toggleAttach, previewIntro:this.previewIntro, cancelIntro:this.cancelIntro, sendIntro:this.sendIntro,
       // mat
-      matEnv: s.envelope, matEmpty: !s.envelope, matNote: s.visible ? 'visible nearby' : 'just for me',
+      matEnv: s.envelope, matEmpty: !s.envelope, matNote: s.visible ? 'visible nearby' : 'just for me', meName: this.pinText('name'),
       matItems: (() => { const d = this.drawerItemsList(); const I = {
           sign:['visibility','settings','M8 3v10 M3 5h10v4H3z'], map:['your area','todo','M2.5 4l3.5-1.5 4 1.5 3.5-1.5v9l-3.5 1.5-4-1.5-3.5 1.5z M6 2.5v9 M10 4v9'],
           key:['journal lock','you','M4 7.5h8v6H4z M5.5 7.5V5.5a2.5 2.5 0 0 1 5 0v2'], ribbons:['standing rules','people','M6 2h4v12l-2-2-2 2z'],
