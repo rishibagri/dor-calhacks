@@ -8,7 +8,7 @@
  * NOT guaranteed: protection from script running in this origin while unlocked (XSS), extensions,
  * malware, provider processing, or secure erase of IndexedDB's on-disk residue.
  */
-import { LocalConnectionProfileSchema, type LocalConnectionProfile } from '@dor/contracts';
+import { LocalConnectionProfileSchema, NUDGE_TEMPLATE_COPY, type LocalConnectionProfile } from '@dor/contracts';
 import type {
   AdapterStatus, JournalEntrySummary, LocalQuizExtras, VaultErrorCode, VaultPort, VaultState,
 } from '../lib/backend/ports.ts';
@@ -17,6 +17,13 @@ import {
   normalizeRecoveryCode, openRecord, passphraseKek, recoveryKek, sealRecord, unwrapDek, wrapDek, type Bytes,
 } from './crypto.ts';
 import { IndexedDbVaultStore, type RecordStore, type VaultMeta, type VaultStore } from './store.ts';
+import {
+  RELATIONSHIP_PHOTO_MIME_TYPES,
+  type BookInteraction,
+  type NewBookInteraction,
+  type NewRelationshipBookPhoto,
+  type RelationshipBookPhoto,
+} from './book-types.ts';
 
 export class VaultError extends Error {
   readonly code: VaultErrorCode;
@@ -38,6 +45,11 @@ const MAX_JOURNAL_CHARS = 100_000;
 const MAX_REFLECTION_CHARS = 2_000; // PrivateReflectionSchema.reflection max
 const ACTIVITIES = ['talking', 'games', 'watching_together', 'creating', 'other'] as const;
 const ACTIVITIES_NOTE_MAX = 200;
+const PHOTO_MAX_BYTES = 1_500_000;
+const PHOTO_CAPTION_MAX = 160;
+const RELATIONSHIP_PHOTO_LIMIT = 24;
+const BOOK_INTERACTION_NOTE_MAX = 320;
+const BOOK_INTERACTION_LIMIT = 500;
 const SINGLETON = { profile: 'profile', quizExtras: 'quizExtras' } as const;
 
 interface JournalPlain { localId: string; text: string; createdAt: string }
@@ -180,6 +192,82 @@ export class LocalVault implements VaultPort {
     return r.reflection;
   }
 
+  // ---- relationship books (local-only, encrypted records) ----
+  async saveRelationshipPhoto(input: NewRelationshipBookPhoto): Promise<void> {
+    const photo = relationshipPhotoInput(input);
+    const recordId = bookRecordId(photo.pairId, photo.photoId);
+    const existing = await this.readPlain('relationshipPhoto', recordId);
+    if (existing === null && (await this.listRelationshipPhotos(photo.pairId)).length >= RELATIONSHIP_PHOTO_LIMIT)
+      throw new VaultError('invalid_input');
+    await this.write('relationshipPhoto', recordId, { ...photo, createdAt: photo.createdAt ?? new Date().toISOString() });
+  }
+
+  async listRelationshipPhotos(pairId: string): Promise<RelationshipBookPhoto[]> {
+    if (!isId(pairId)) throw new VaultError('invalid_input');
+    const dek = this.key();
+    const prefix = `${pairId}--`;
+    const result: RelationshipBookPhoto[] = [];
+    for (const rec of await this.store.list('relationshipPhoto')) {
+      if (!rec.id.startsWith(prefix)) continue;
+      const photo = relationshipPhotoShape(await this.open(dek, 'relationshipPhoto', rec.id, rec));
+      if (photo.pairId !== pairId || bookRecordId(pairId, photo.photoId) !== rec.id) throw new VaultError('vault_corrupt');
+      result.push(photo);
+    }
+    this.touch();
+    return result.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.photoId.localeCompare(b.photoId));
+  }
+
+  async deleteRelationshipPhoto(pairId: string, photoId: string): Promise<void> {
+    if (!isId(pairId) || !isId(photoId)) throw new VaultError('invalid_input');
+    this.key();
+    await this.store.delete('relationshipPhoto', bookRecordId(pairId, photoId));
+    this.touch();
+  }
+
+  async saveBookInteraction(input: NewBookInteraction): Promise<void> {
+    const interaction = bookInteractionInput(input);
+    if (interaction.kind === 'nudge_received') {
+      const prior = (await this.listBookInteractions(interaction.pairId))
+        .find((row) => row.kind === 'nudge_received' && row.sourceId === interaction.sourceId);
+      if (prior) {
+        if (prior.templateId !== interaction.templateId) throw new VaultError('invalid_input');
+        if (interaction.outcome === undefined || interaction.outcome === prior.outcome) return;
+        await this.write('bookInteraction', bookRecordId(prior.pairId, prior.interactionId), {
+          ...prior, outcome: interaction.outcome, createdAt: prior.createdAt,
+        });
+        return;
+      }
+    }
+    const recordId = bookRecordId(interaction.pairId, interaction.interactionId);
+    const existing = await this.readPlain('bookInteraction', recordId);
+    if (existing === null && (await this.listBookInteractions(interaction.pairId)).length >= BOOK_INTERACTION_LIMIT)
+      throw new VaultError('invalid_input');
+    await this.write('bookInteraction', recordId, { ...interaction, createdAt: interaction.createdAt ?? new Date().toISOString() });
+  }
+
+  async listBookInteractions(pairId: string): Promise<BookInteraction[]> {
+    if (!isId(pairId)) throw new VaultError('invalid_input');
+    const dek = this.key();
+    const prefix = `${pairId}--`;
+    const result: BookInteraction[] = [];
+    for (const rec of await this.store.list('bookInteraction')) {
+      if (!rec.id.startsWith(prefix)) continue;
+      const interaction = bookInteractionShape(await this.open(dek, 'bookInteraction', rec.id, rec));
+      if (interaction.pairId !== pairId || bookRecordId(pairId, interaction.interactionId) !== rec.id)
+        throw new VaultError('vault_corrupt');
+      result.push(interaction);
+    }
+    this.touch();
+    return result.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.interactionId.localeCompare(b.interactionId));
+  }
+
+  async deleteBookInteraction(pairId: string, interactionId: string): Promise<void> {
+    if (!isId(pairId) || !isId(interactionId)) throw new VaultError('invalid_input');
+    this.key();
+    await this.store.delete('bookInteraction', bookRecordId(pairId, interactionId));
+    this.touch();
+  }
+
   // ---- profile + quiz extras (owner-only; never an authorization input) ----
   async saveProfile(profile: LocalConnectionProfile): Promise<void> {
     const parsed = LocalConnectionProfileSchema.safeParse(profile);
@@ -286,6 +374,98 @@ function checkPassphrase(p: unknown): void {
 }
 
 const isId = (v: unknown): v is string => typeof v === 'string' && ID_RE.test(v);
+
+function bookRecordId(pairId: string, recordId: string): string { return `${pairId}--${recordId}`; }
+
+function exactKeys(value: unknown, allowed: readonly string[], required: readonly string[]): value is Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const proto = Object.getPrototypeOf(value);
+  if (proto !== Object.prototype && proto !== null) return false;
+  const keys = Object.keys(value);
+  return keys.every((key) => allowed.includes(key)) && required.every((key) => Object.hasOwn(value, key));
+}
+
+function validIsoDate(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) && new Date(ms).toISOString() === value;
+}
+
+function validPhotoDataUrl(value: unknown, mimeType: unknown): value is string {
+  if (typeof mimeType !== 'string' || !(RELATIONSHIP_PHOTO_MIME_TYPES as readonly string[]).includes(mimeType) ||
+    typeof value !== 'string' || value.length > Math.ceil(PHOTO_MAX_BYTES / 3) * 4 + 40) return false;
+  const match = /^data:(image\/(?:jpeg|png|webp));base64,((?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?)$/.exec(value);
+  if (!match || match[1] !== mimeType || match[2].length === 0) return false;
+  const padding = match[2].endsWith('==') ? 2 : match[2].endsWith('=') ? 1 : 0;
+  const decodedBytes = (match[2].length / 4) * 3 - padding;
+  return decodedBytes > 0 && decodedBytes <= PHOTO_MAX_BYTES;
+}
+
+function relationshipPhotoInput(value: unknown): NewRelationshipBookPhoto {
+  const allowed = ['photoId', 'pairId', 'mimeType', 'dataUrl', 'caption', 'createdAt'];
+  const required = ['photoId', 'pairId', 'mimeType', 'dataUrl', 'caption'];
+  if (!exactKeys(value, allowed, required)) throw new VaultError('invalid_input');
+  const v = value;
+  if (!isId(v.photoId) || !isId(v.pairId) ||
+    !(RELATIONSHIP_PHOTO_MIME_TYPES as readonly unknown[]).includes(v.mimeType) ||
+    !validPhotoDataUrl(v.dataUrl, v.mimeType) || typeof v.caption !== 'string' || v.caption.length > PHOTO_CAPTION_MAX ||
+    (v.createdAt !== undefined && !validIsoDate(v.createdAt))) throw new VaultError('invalid_input');
+  return {
+    photoId: v.photoId, pairId: v.pairId, mimeType: v.mimeType as RelationshipBookPhoto['mimeType'],
+    dataUrl: v.dataUrl, caption: v.caption, ...(v.createdAt === undefined ? {} : { createdAt: v.createdAt }),
+  };
+}
+
+function relationshipPhotoShape(value: unknown): RelationshipBookPhoto {
+  if (!exactKeys(value, ['photoId', 'pairId', 'mimeType', 'dataUrl', 'caption', 'createdAt'],
+    ['photoId', 'pairId', 'mimeType', 'dataUrl', 'caption', 'createdAt'])) throw new VaultError('vault_corrupt');
+  try {
+    const photo = relationshipPhotoInput(value);
+    if (!validIsoDate(photo.createdAt)) throw new VaultError('vault_corrupt');
+    return photo as RelationshipBookPhoto;
+  } catch {
+    throw new VaultError('vault_corrupt');
+  }
+}
+
+function bookInteractionInput(value: unknown): NewBookInteraction {
+  const allowed = ['interactionId', 'pairId', 'kind', 'sourceId', 'templateId', 'outcome', 'note', 'createdAt'];
+  if (!exactKeys(value, allowed, ['interactionId', 'pairId', 'kind'])) throw new VaultError('invalid_input');
+  const v = value;
+  const kinds = ['call', 'nudge_received', 'introduction'];
+  const outcomes = ['positive', 'neutral', 'negative'];
+  const templateIds = Object.keys(NUDGE_TEMPLATE_COPY);
+  if (!isId(v.interactionId) || !isId(v.pairId) || !kinds.includes(v.kind as string) ||
+    (v.sourceId !== undefined && !isId(v.sourceId)) ||
+    (v.templateId !== undefined && !templateIds.includes(v.templateId as string)) ||
+    (v.outcome !== undefined && !outcomes.includes(v.outcome as string)) ||
+    (v.note !== undefined && (typeof v.note !== 'string' || v.note.length > BOOK_INTERACTION_NOTE_MAX)) ||
+    (v.createdAt !== undefined && !validIsoDate(v.createdAt))) throw new VaultError('invalid_input');
+  if (v.kind === 'call' && (v.sourceId !== undefined || v.templateId !== undefined)) throw new VaultError('invalid_input');
+  if (v.kind === 'introduction' && (!isId(v.sourceId) || v.templateId !== undefined)) throw new VaultError('invalid_input');
+  if (v.kind === 'nudge_received' && (!isId(v.sourceId) || !templateIds.includes(v.templateId as string) || v.note !== undefined))
+    throw new VaultError('invalid_input');
+  return {
+    interactionId: v.interactionId, pairId: v.pairId, kind: v.kind as BookInteraction['kind'],
+    ...(v.sourceId === undefined ? {} : { sourceId: v.sourceId }),
+    ...(v.templateId === undefined ? {} : { templateId: v.templateId as BookInteraction['templateId'] }),
+    ...(v.outcome === undefined ? {} : { outcome: v.outcome as BookInteraction['outcome'] }),
+    ...(v.note === undefined ? {} : { note: v.note }),
+    ...(v.createdAt === undefined ? {} : { createdAt: v.createdAt }),
+  };
+}
+
+function bookInteractionShape(value: unknown): BookInteraction {
+  if (!exactKeys(value, ['interactionId', 'pairId', 'kind', 'sourceId', 'templateId', 'outcome', 'note', 'createdAt'],
+    ['interactionId', 'pairId', 'kind', 'createdAt'])) throw new VaultError('vault_corrupt');
+  try {
+    const interaction = bookInteractionInput(value);
+    if (!validIsoDate(interaction.createdAt)) throw new VaultError('vault_corrupt');
+    return interaction as BookInteraction;
+  } catch {
+    throw new VaultError('vault_corrupt');
+  }
+}
 
 function journalShape(v: unknown): JournalPlain {
   const j = v as Partial<JournalPlain> | null;

@@ -76,3 +76,9 @@ Offline-verified unless stated otherwise.
 - **D044 status:** this ledger originally said the hosted module predated D044. The owner has since reported that the D044 backend is live on Maincloud. This PR does not connect to or change Maincloud; record a fresh two-account verification separately before calling this workspace live-verified.
 - **Live-verified:** 8/8 anonymous/worker denial checks (DS, before the issuer/audience were set), then `scripts/smoke-core3.ts` 26/26 run by a non-owner (Adam, `SMOKE_TAG=adam`, worker stopped, no paid calls; details in the team message).
 - **Not verified:** `--sweep` expiry (owner run), D041 pause and D043 nudge row live, Clerk sign-in through the browser app, worker delivery (Stage C), hosted app, D044 anywhere live.
+
+## Relationship books follow-up — offline status
+
+The current CS/Cyber work adds an expandable book to each accepted connection. Selected photos, manually entered calls, user-linked introductions, and nudge feedback are stored in the user's encrypted local vault. Photos are not fetched through Apify or social media; call history is not imported. Cyber added pair-scoped encrypted record types, strict validation and an IndexedDB v1→v2 additive migration (D049). CS added the local vault interface and Connections UI. D044's explicit owner-enabled named-pair standing-consent requirements and recipient/server gates are unchanged.
+
+**Evidence:** latest main `fb5dfa4` merged; typecheck passed; vault tests 20/20; contract check 131/131; app build passed; `git diff --check` passed. Browser/photo/network behavior, deployment, and provider integrations have not been verified. See `docs/features/RELATIONSHIP_BOOKS.md` and `docs/handoffs/cs.md`.

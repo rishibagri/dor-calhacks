@@ -1,5 +1,17 @@
 # CYBER handoff (Sumedh): current, Core 2 (D041 recipient pause)
 
+## Relationship books (D049) — 2026-10-25
+
+**Status:** Cyber-owned encrypted local persistence implemented; offline verified only. No commit or push. The local book API is implemented in `src/vault/local-vault.ts`; CS owns the frontend `VaultPort` in `src/lib/backend/ports.ts`.
+
+- Photos: user-selected JPEG/PNG/WebP data URLs, strict base64/MIME/size checks, ≤1.5 MiB decoded and ≤24 photos per pair; encrypted per record in IndexedDB v2.
+- Interaction rows: `call | nudge_received | introduction`; local only. `nudge_received` requires an opaque source ID and allowlisted fixed template ID, may update its outcome, and upserts by pair/source/kind while preserving the initial row ID and first-seen time.
+- Pair-scoped list/delete; interaction and photo caps; v1-to-v2 IndexedDB upgrade preserves existing stores and rows. Vault lock rejects reads/writes; UI must clear/unmount decrypted data on lock.
+- Exact methods and types: `saveRelationshipPhoto`, `listRelationshipPhotos`, `deleteRelationshipPhoto`, `saveBookInteraction`, `listBookInteractions`, `deleteBookInteraction`; exported local types in `src/vault/book-types.ts`. No wire contract, Apify, provider, URL fetch, raw calls, or shared DB data.
+- Verification: root `npm run check` passed (contracts 131/131); `node --test src/vault/__tests__/vault.test.ts` passed 20/20. CS reported an integrated typecheck is running; Cyber should not run a concurrent build/typecheck. No browser or live IndexedDB verification.
+
+**CS next:** ACK D049 and use the exported local types; render current caller-filtered nudges as `nudge_received` with `sourceId` + `templateId`, update `outcome` on the same row, and clear decrypted photo/interaction state immediately on vault lock. Do not send local content back to SpacetimeDB or a provider.
+
 Status: implemented offline on `role/cyber-privacy` (on main `126f072`, including #30 and #31). Not published or live-verified.
 
 ## Reviews done
