@@ -47,7 +47,7 @@ function SignInTag() {
     <>
       <p className="font-hand text-[28px] leading-none">Sign in to come in</p>
       <p className="mt-2 text-sm text-muted-foreground">Your notebook stays on this device. Everything else is opt-in.</p>
-      <SignInButton mode="modal">
+      <SignInButton mode="modal" forceRedirectUrl="/" signUpForceRedirectUrl="/">
         <button type="button" className="chapter-choice mt-3">Knock</button>
       </SignInButton>
     </>

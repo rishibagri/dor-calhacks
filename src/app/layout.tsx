@@ -35,7 +35,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className={`${body.variable} ${hand.variable} ${pencil.variable} ${typed.variable}`}>
       <body className="min-h-dvh antialiased">
         <SwRegister />
-        {isClerkConfigured ? <ClerkProvider>{app}</ClerkProvider> : app}
+        {isClerkConfigured
+          // Every auth flow lands back in the room, never on Clerk's hosted pages.
+          ? <ClerkProvider signInFallbackRedirectUrl="/" signUpFallbackRedirectUrl="/" afterSignOutUrl="/">{app}</ClerkProvider>
+          : app}
       </body>
     </html>
   );
