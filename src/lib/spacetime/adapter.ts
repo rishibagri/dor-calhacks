@@ -134,7 +134,13 @@ export class SpacetimeSharedState implements SharedStateController {
     });
   }
 
-  private setViews(views: ViewData): void { this.views = views; this.emit(); }
+  private setViews(views: ViewData): void {
+    // Diagnostics only: view names and counts, never row contents (D049). Logged when the set changes.
+    const counts = JSON.stringify(views.unreadable.counts);
+    if (counts !== JSON.stringify(this.views.unreadable.counts) && counts !== '{}') console.warn('[dor] unreadable view rows', counts);
+    this.views = views;
+    this.emit();
+  }
   private set(connection: ConnectionState, status: AdapterStatus): void {
     this.conState = connection; this.adapterStatus = status; this.emit();
   }
@@ -164,8 +170,11 @@ export class SpacetimeSharedState implements SharedStateController {
   createPairInvite = () => this.call('create_pair_invite', () => ({}));
   acceptPairInvite = (t: string) => this.call('accept_pair_invite', () => A.acceptPairInvite(t));
   unlinkPair = (id: string) => this.call('unlink_pair', () => A.unlinkPair(id));
+  // A save that doesn't mention the activity permission keeps the preset's current value (D049), so re-saving the
+  // core categories never silently drops it; with no visible preset it stays off.
   setRelationshipPreset: SharedStatePort['setRelationshipPreset'] = (i) =>
-    this.call('set_relationship_preset', () => A.setRelationshipPreset(i));
+    this.call('set_relationship_preset', () => A.setRelationshipPreset({ ...i, activityInterestAllowed: i.activityInterestAllowed
+      ?? this.views.presets.find((p) => p.presetKind === i.presetKind)?.activityInterestAllowed ?? false }));
   assignRelationshipPreset: SharedStatePort['assignRelationshipPreset'] = (i) =>
     this.call('assign_relationship_preset', () => A.assignRelationshipPreset(i));
   approveSignal: SharedStatePort['approveSignal'] = (i) => this.call('approve_signal', () => A.approveSignal(i));
@@ -196,6 +205,8 @@ export class SpacetimeSharedState implements SharedStateController {
   publishEventIntent = (eventId: string, kind: 'interested' | 'going', expectedVersion: number) =>
     this.call('publish_event_intent', () => ({ eventId, kind, expectedVersion }));
   revokeEventIntent = (eventId: string) => this.call('revoke_event_intent', () => ({ eventId }));
+  approveActivityInterest: SharedStatePort['approveActivityInterest'] = (i) =>
+    this.call('approve_activity_interest', () => ({ ...i, topics: [...i.topics] }));
   revokeActivityInterest = (approvalId: string) => this.call('revoke_activity_interest', () => ({ approvalId }));
   respondPlan = (planId: string, revision: number, accept: boolean) =>
     this.call('respond_plan', () => ({ planId, revision, accept }));

@@ -5,7 +5,7 @@
  * `__tests__/reducer-args.test.ts` checks each builder against the generated bindings' field types.
  * If `spacetime generate` represents an enum/Timestamp differently, this is the single adapter file to adjust.
  */
-import { DISCOVERY_AUDIENCES, DISCOVERY_NOTICE_VERSION } from '@dor/contracts/policy';
+import { ACTIVITY_CATEGORY, DISCOVERY_AUDIENCES, DISCOVERY_NOTICE_VERSION, SHARING_CATEGORIES } from '@dor/contracts/policy';
 import type { SharedStatePort } from '@/lib/backend/ports';
 
 type Input<K extends 'setRelationshipPreset' | 'assignRelationshipPreset' | 'approveSignal' | 'setSupportPreferences' | 'setNudgeDelivery' | 'publishDiscoveryProfile' | 'setStandingConsent' | 'approveSignalStanding'> = Parameters<
@@ -27,9 +27,17 @@ export const reducerArgs = {
   registerAccount: (displayName: string) => ({ displayName }),
   acceptPairInvite: (inviteToken: string) => ({ inviteToken }),
   unlinkPair: (pairId: string) => ({ pairId }),
+  // The module stores the C7 activity permission as one more preset category (D039); it is added here only from the
+  // explicit flag, and the core list may hold C3 categories only (D049).
   setRelationshipPreset: (i: Input<'setRelationshipPreset'>) => ({
     presetKind: i.presetKind,
-    allowedCategories: i.allowedCategories,
+    allowedCategories: [
+      ...i.allowedCategories.map((c) => {
+        if (!(SHARING_CATEGORIES as readonly string[]).includes(c)) throw new Error('invalid: not a core sharing category');
+        return c;
+      }),
+      ...(i.activityInterestAllowed ? [ACTIVITY_CATEGORY] : []),
+    ],
     expectedVersion: i.expectedVersion,
     expiresAt: iso(i.expiresAt),
   }),
