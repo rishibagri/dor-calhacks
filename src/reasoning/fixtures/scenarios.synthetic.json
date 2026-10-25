@@ -1,0 +1,323 @@
+{
+  "description": "Reasoning v1 synthetic scenarios (REASONING.md §2.8, §11). All people, refs and times are fictional. Expected outcomes were written before the code ran. Omitted relationship fields default to: gates open (not paused, not opted out, no cooldown, not quiet hours, default preset with both categories), conflict none, no sensitive topics. Omitted episode fields default to: risk none, assessment valid, no explicit intent. adversarialProposals are deliberately bad proposals added to prove a core gate; they are not reference-policy output.",
+  "now": "2026-10-25T18:00:00Z",
+  "scenarios": [
+    {
+      "id": "s01-exam-friend-free-soon",
+      "title": "Failed exam, doesn't want to talk; distraction helps; unnamed close friend free soon",
+      "demonstrates": ["proactive", "explicit_intent"],
+      "offlineOnly": "allowUnnamedTargets: the user did not name Jordan (REASONING.md §9 C1b)",
+      "options": { "allowUnnamedTargets": true },
+      "episode": {
+        "explicitIntent": { "doesNotWantToTalk": true },
+        "window": { "startedAt": "2026-10-25T17:30:00Z", "inferredMinutes": 180, "confidence": "medium", "fallbackMinutes": 180 },
+        "evidence": ["assessment:intent", "pattern:pat-distract", "person:p-jordan"],
+        "relationships": [{ "ref": "p-jordan" }]
+      },
+      "context": {
+        "event": { "kind": "academic_setback" },
+        "user": { "distress": "still", "withPeopleNow": false },
+        "patterns": [{ "id": "pat-distract", "trigger": "academic_setback", "behavior": "distraction_company", "delayMinutes": 60, "source": "inferred", "confidence": "high", "evidenceCount": 4 }],
+        "people": [{ "ref": "p-jordan", "closeness": "close", "involvement": "none", "goodAt": ["CASUAL_INVITE"], "calendar": "free_soon", "receptive": true }]
+      },
+      "adversarialProposals": [
+        { "rank": 0, "action": "DIRECT_CHECK_IN", "targetRef": "p-jordan", "requestedMode": "act", "evidenceRefs": ["person:p-jordan"], "judgments": {}, "revealValue": "low", "timing": { "kind": "now" }, "confidence": "high", "rationale": [] }
+      ],
+      "expected": { "mode": "act", "action": "CASUAL_INVITE", "targetRef": "p-jordan", "timing": "after_delay",
+        "rejected": [{ "action": "DIRECT_CHECK_IN", "reason": "explicit_intent" }] }
+    },
+    {
+      "id": "s02-exam-friend-tomorrow",
+      "title": "Failed exam; the friend who helps is only free tomorrow",
+      "demonstrates": ["defer", "current_state"],
+      "episode": {
+        "explicitIntent": { "doesNotWantToTalk": true, "namedRefs": ["p-jordan"] },
+        "window": { "startedAt": "2026-10-25T17:30:00Z", "inferredMinutes": 180, "confidence": "medium", "fallbackMinutes": 180 },
+        "evidence": ["assessment:intent", "pattern:pat-distract", "person:p-jordan"],
+        "relationships": [{ "ref": "p-jordan" }]
+      },
+      "context": {
+        "event": { "kind": "academic_setback" },
+        "user": { "distress": "still", "withPeopleNow": false },
+        "patterns": [{ "id": "pat-distract", "trigger": "academic_setback", "behavior": "distraction_company", "delayMinutes": 60, "source": "inferred", "confidence": "high", "evidenceCount": 4 }],
+        "people": [{ "ref": "p-jordan", "closeness": "close", "involvement": "none", "goodAt": ["CASUAL_INVITE"], "calendar": "free_later", "receptive": true }]
+      },
+      "expected": { "mode": "defer", "reassess": { "afterMinutes": 90, "condition": "distress_still_relevant" },
+        "rejected": [{ "action": "CASUAL_INVITE", "reason": "unavailable" }] }
+    },
+    {
+      "id": "s03-great-news-best-friend",
+      "title": "Got the internship; best friend helped extensively with prep",
+      "demonstrates": ["reveal_value", "restrained"],
+      "episode": {
+        "explicitIntent": { "namedRefs": ["p-sam"] },
+        "window": { "startedAt": "2026-10-25T17:00:00Z", "inferredMinutes": 2880, "confidence": "high", "fallbackMinutes": 2880 },
+        "evidence": ["assessment:event", "person:p-sam"],
+        "relationships": [{ "ref": "p-sam" }]
+      },
+      "context": {
+        "event": { "kind": "major_good_news", "topic": "internship" },
+        "user": { "distress": "unknown", "withPeopleNow": false },
+        "patterns": [],
+        "people": [{ "ref": "p-sam", "closeness": "close", "involvement": "deep", "goodAt": ["CELEBRATE"], "calendar": "free_soon", "receptive": true }]
+      },
+      "expected": { "mode": "act", "action": "HELP_USER_REACH_OUT", "targetRef": "p-sam", "surface": "owner",
+        "rejected": [{ "action": "CELEBRATE", "reason": "high_reveal_value" }] }
+    },
+    {
+      "id": "s04-great-news-medium-friend",
+      "title": "Got the internship; a medium-distance friend helped a little",
+      "demonstrates": ["reveal_value"],
+      "episode": {
+        "explicitIntent": { "namedRefs": ["p-maya"] },
+        "window": { "startedAt": "2026-10-25T17:00:00Z", "inferredMinutes": 2880, "confidence": "high", "fallbackMinutes": 2880 },
+        "evidence": ["assessment:event", "person:p-maya"],
+        "relationships": [{ "ref": "p-maya" }]
+      },
+      "context": {
+        "event": { "kind": "major_good_news", "topic": "internship" },
+        "user": { "distress": "unknown", "withPeopleNow": false },
+        "patterns": [],
+        "people": [{ "ref": "p-maya", "closeness": "medium", "involvement": "some", "goodAt": ["CELEBRATE"], "calendar": "free_soon", "receptive": true }]
+      },
+      "expected": { "mode": "ask", "action": "CELEBRATE", "targetRef": "p-maya", "cappedBy": "no_delivery_path" }
+    },
+    {
+      "id": "s05-busy-week-recharges-alone",
+      "title": "Busy first week in a new city; this user recharges alone",
+      "demonstrates": ["abstain", "restrained"],
+      "episode": {
+        "window": { "startedAt": "2026-10-25T16:00:00Z", "inferredMinutes": 1440, "confidence": "medium", "fallbackMinutes": 1440 },
+        "evidence": ["pattern:pat-alone", "person:p-jordan"],
+        "relationships": [{ "ref": "p-jordan" }]
+      },
+      "context": {
+        "event": { "kind": "busy_period" },
+        "user": { "distress": "still", "withPeopleNow": false },
+        "patterns": [{ "id": "pat-alone", "trigger": "busy_period", "behavior": "alone_first", "source": "explicit", "confidence": "high", "evidenceCount": 3 }],
+        "people": [{ "ref": "p-jordan", "closeness": "close", "involvement": "none", "goodAt": ["CASUAL_INVITE"], "calendar": "free_soon", "receptive": true }]
+      },
+      "expected": { "mode": "abstain", "reasons": ["pattern_prefers_alone"] }
+    },
+    {
+      "id": "s06-busy-week-brief-contact",
+      "title": "Busy week; brief contact helps this user; one friend is free but heads-down, another is free and open",
+      "demonstrates": ["availability_vs_receptiveness", "proactive"],
+      "episode": {
+        "explicitIntent": { "namedRefs": ["p-jordan", "p-lee"] },
+        "window": { "startedAt": "2026-10-25T16:00:00Z", "inferredMinutes": 1440, "confidence": "medium", "fallbackMinutes": 1440 },
+        "evidence": ["pattern:pat-brief", "person:p-jordan", "person:p-lee"],
+        "relationships": [{ "ref": "p-jordan" }, { "ref": "p-lee" }]
+      },
+      "context": {
+        "event": { "kind": "busy_period" },
+        "user": { "distress": "still", "withPeopleNow": false },
+        "patterns": [{ "id": "pat-brief", "trigger": "busy_period", "behavior": "brief_contact_recharges", "source": "explicit", "confidence": "high", "evidenceCount": 3 }],
+        "people": [
+          { "ref": "p-lee", "closeness": "close", "involvement": "none", "goodAt": ["CASUAL_INVITE"], "calendar": "free_soon", "receptive": false },
+          { "ref": "p-jordan", "closeness": "close", "involvement": "none", "goodAt": ["CASUAL_INVITE"], "calendar": "free_soon", "receptive": true }
+        ]
+      },
+      "expected": { "mode": "act", "action": "CASUAL_INVITE", "targetRef": "p-jordan",
+        "rejected": [{ "action": "CASUAL_INVITE", "targetRef": "p-lee", "reason": "not_receptive" }] }
+    },
+    {
+      "id": "s07-parent-pressure",
+      "title": "Interview progress; mom's repeated questions about interviews are stressful",
+      "demonstrates": ["reveal_value", "restrained"],
+      "episode": {
+        "explicitIntent": { "namedRefs": ["p-mom"] },
+        "window": { "startedAt": "2026-10-25T17:00:00Z", "inferredMinutes": 2880, "confidence": "high", "fallbackMinutes": 2880 },
+        "evidence": ["assessment:event", "person:p-mom"],
+        "relationships": [{ "ref": "p-mom", "sensitiveTopics": ["interviews"] }]
+      },
+      "context": {
+        "event": { "kind": "major_good_news", "topic": "interviews" },
+        "user": { "distress": "unknown", "withPeopleNow": false },
+        "patterns": [],
+        "people": [{ "ref": "p-mom", "closeness": "close", "involvement": "some", "goodAt": ["CELEBRATE"], "calendar": "free_soon", "receptive": true }]
+      },
+      "expected": { "mode": "ask", "action": "CELEBRATE", "targetRef": "p-mom", "cappedBy": "sensitive_topic" }
+    },
+    {
+      "id": "s08-silence-explained",
+      "title": "Two weeks without contact; both were traveling for work",
+      "demonstrates": ["abstain", "baseline"],
+      "episode": {
+        "window": { "startedAt": "2026-10-25T09:00:00Z", "inferredMinutes": 10080, "confidence": "medium", "fallbackMinutes": 10080 },
+        "evidence": ["person:p-ari", "book:p-ari"],
+        "relationships": [{ "ref": "p-ari" }]
+      },
+      "context": {
+        "event": { "kind": "silence" },
+        "user": { "distress": "unknown", "withPeopleNow": false },
+        "patterns": [],
+        "people": [{ "ref": "p-ari", "closeness": "close", "involvement": "none", "goodAt": ["RECONNECT"], "calendar": "busy", "receptive": "unknown", "silenceExplained": true }]
+      },
+      "expected": { "mode": "abstain", "reasons": ["explained_silence"],
+        "rejected": [{ "action": "RECONNECT", "reason": "explained_silence" }] }
+    },
+    {
+      "id": "s09-silence-natural-opening",
+      "title": "Two weeks without contact, unexplained; both have an easy evening free",
+      "demonstrates": ["proactive"],
+      "episode": {
+        "window": { "startedAt": "2026-10-25T09:00:00Z", "inferredMinutes": 10080, "confidence": "medium", "fallbackMinutes": 10080 },
+        "evidence": ["person:p-ari", "book:p-ari"],
+        "relationships": [{ "ref": "p-ari" }]
+      },
+      "context": {
+        "event": { "kind": "silence" },
+        "user": { "distress": "unknown", "withPeopleNow": false },
+        "patterns": [],
+        "people": [{ "ref": "p-ari", "closeness": "close", "involvement": "none", "goodAt": ["RECONNECT"], "calendar": "free_soon", "receptive": true, "silenceExplained": false }]
+      },
+      "expected": { "mode": "ask", "action": "RECONNECT", "targetRef": "p-ari", "cappedBy": "unnamed_target" }
+    },
+    {
+      "id": "s10-rarely-initiating-friend-twice",
+      "title": "A friend who rarely initiates has reached out twice this week",
+      "demonstrates": ["baseline", "proactive"],
+      "episode": {
+        "explicitIntent": { "namedRefs": ["p-riley"] },
+        "window": { "startedAt": "2026-10-25T12:00:00Z", "inferredMinutes": 1440, "confidence": "medium", "fallbackMinutes": 1440 },
+        "evidence": ["person:p-riley", "book:p-riley"],
+        "relationships": [{ "ref": "p-riley" }]
+      },
+      "context": {
+        "event": { "kind": "contact_spike" },
+        "user": { "distress": "unknown", "withPeopleNow": false },
+        "patterns": [],
+        "people": [{ "ref": "p-riley", "closeness": "medium", "involvement": "none", "goodAt": ["CASUAL_INVITE"], "calendar": "free_soon", "receptive": true,
+          "baseline": { "contactsPer30d": 2, "theirInitiationShare": 0.2 }, "recent": { "theirInitiations14d": 2 } }]
+      },
+      "expected": { "mode": "act", "action": "CASUAL_INVITE", "targetRef": "p-riley", "reasons": ["above_baseline"] }
+    },
+    {
+      "id": "s11-frequent-friend-twice",
+      "title": "A friend who usually initiates often has reached out twice this week",
+      "demonstrates": ["baseline", "abstain"],
+      "episode": {
+        "explicitIntent": { "namedRefs": ["p-kai"] },
+        "window": { "startedAt": "2026-10-25T12:00:00Z", "inferredMinutes": 1440, "confidence": "medium", "fallbackMinutes": 1440 },
+        "evidence": ["person:p-kai", "book:p-kai"],
+        "relationships": [{ "ref": "p-kai" }]
+      },
+      "context": {
+        "event": { "kind": "contact_spike" },
+        "user": { "distress": "unknown", "withPeopleNow": false },
+        "patterns": [],
+        "people": [{ "ref": "p-kai", "closeness": "close", "involvement": "none", "goodAt": ["CASUAL_INVITE"], "calendar": "free_soon", "receptive": true,
+          "baseline": { "contactsPer30d": 20, "theirInitiationShare": 0.5 }, "recent": { "theirInitiations14d": 2 } }]
+      },
+      "expected": { "mode": "abstain", "reasons": ["saturated_vs_baseline"],
+        "rejected": [{ "action": "CASUAL_INVITE", "reason": "saturated_vs_baseline" }] }
+    },
+    {
+      "id": "s12-rough-week-now-at-dinner",
+      "title": "Rough week four days ago; now happily at dinner with classmates",
+      "demonstrates": ["current_state", "abstain"],
+      "episode": {
+        "explicitIntent": { "namedRefs": ["p-sam"] },
+        "window": { "startedAt": "2026-10-21T18:00:00Z", "inferredMinutes": 2880, "confidence": "high", "fallbackMinutes": 1440 },
+        "evidence": ["person:p-sam"],
+        "relationships": [{ "ref": "p-sam" }]
+      },
+      "context": {
+        "event": { "kind": "work_stress" },
+        "user": { "distress": "recovered", "withPeopleNow": true },
+        "patterns": [],
+        "people": [{ "ref": "p-sam", "closeness": "close", "involvement": "none", "goodAt": ["DIRECT_CHECK_IN"], "calendar": "free_soon", "receptive": true }]
+      },
+      "adversarialProposals": [
+        { "rank": 0, "action": "DIRECT_CHECK_IN", "targetRef": "p-sam", "requestedMode": "act", "evidenceRefs": ["person:p-sam"], "judgments": {}, "revealValue": "low", "timing": { "kind": "now" }, "confidence": "high", "rationale": [] }
+      ],
+      "expected": { "mode": "abstain", "freshness": "expired", "reasons": ["already_with_people", "recovered"],
+        "rejected": [{ "action": "DIRECT_CHECK_IN", "reason": "context_expired" }] }
+    },
+    {
+      "id": "s13-urgent-support",
+      "title": "Serious distress in the entry",
+      "demonstrates": ["safety"],
+      "episode": {
+        "hardStops": { "risk": "urgent_support", "assessmentValid": true },
+        "explicitIntent": { "namedRefs": ["p-jordan"] },
+        "window": { "startedAt": "2026-10-25T17:30:00Z", "inferredMinutes": 180, "confidence": "medium", "fallbackMinutes": 180 },
+        "evidence": ["assessment:intent", "pattern:pat-distract", "person:p-jordan"],
+        "relationships": [{ "ref": "p-jordan" }]
+      },
+      "context": {
+        "event": { "kind": "academic_setback" },
+        "user": { "distress": "still", "withPeopleNow": false },
+        "patterns": [{ "id": "pat-distract", "trigger": "academic_setback", "behavior": "distraction_company", "delayMinutes": 60, "source": "inferred", "confidence": "high", "evidenceCount": 4 }],
+        "people": [{ "ref": "p-jordan", "closeness": "close", "involvement": "none", "goodAt": ["CASUAL_INVITE"], "calendar": "free_soon", "receptive": true }]
+      },
+      "expected": { "mode": "abstain", "reasons": ["hard_stop"],
+        "rejected": [{ "action": "CASUAL_INVITE", "reason": "hard_stop" }] }
+    },
+    {
+      "id": "s14-conflict",
+      "title": "Unresolved argument with Sam; the user wishes it were fixed",
+      "demonstrates": ["conflict", "restrained"],
+      "episode": {
+        "hardStops": { "risk": "interpersonal_conflict", "assessmentValid": true },
+        "explicitIntent": { "namedRefs": ["p-sam"] },
+        "window": { "startedAt": "2026-10-25T16:00:00Z", "inferredMinutes": 1440, "confidence": "medium", "fallbackMinutes": 1440 },
+        "evidence": ["assessment:risk", "person:p-sam"],
+        "relationships": [{ "ref": "p-sam", "conflict": "unresolved" }]
+      },
+      "context": {
+        "event": { "kind": "conflict" },
+        "user": { "distress": "still", "withPeopleNow": false },
+        "patterns": [],
+        "people": [{ "ref": "p-sam", "closeness": "close", "involvement": "none", "goodAt": ["CASUAL_INVITE"], "calendar": "free_soon", "receptive": "unknown" }]
+      },
+      "adversarialProposals": [
+        { "rank": 0, "action": "CASUAL_INVITE", "targetRef": "p-sam", "requestedMode": "act", "evidenceRefs": ["person:p-sam"], "judgments": {}, "revealValue": "low", "timing": { "kind": "now" }, "confidence": "high", "rationale": [] }
+      ],
+      "expected": { "mode": "ask", "action": "HELP_USER_REACH_OUT", "targetRef": "p-sam", "surface": "owner",
+        "rejected": [{ "action": "CASUAL_INVITE", "reason": "conflict" }] }
+    },
+    {
+      "id": "s15-missing-assessment",
+      "title": "The private assessment is missing or malformed",
+      "demonstrates": ["safety"],
+      "episode": {
+        "hardStops": { "risk": "none", "assessmentValid": false },
+        "explicitIntent": { "namedRefs": ["p-jordan"] },
+        "window": { "startedAt": "2026-10-25T17:30:00Z", "inferredMinutes": 180, "confidence": "medium", "fallbackMinutes": 180 },
+        "evidence": ["pattern:pat-distract", "person:p-jordan"],
+        "relationships": [{ "ref": "p-jordan" }]
+      },
+      "context": {
+        "event": { "kind": "academic_setback" },
+        "user": { "distress": "still", "withPeopleNow": false },
+        "patterns": [{ "id": "pat-distract", "trigger": "academic_setback", "behavior": "distraction_company", "delayMinutes": 60, "source": "inferred", "confidence": "high", "evidenceCount": 4 }],
+        "people": [{ "ref": "p-jordan", "closeness": "close", "involvement": "none", "goodAt": ["CASUAL_INVITE"], "calendar": "free_soon", "receptive": true }]
+      },
+      "expected": { "mode": "abstain", "reasons": ["invalid_input"] }
+    },
+    {
+      "id": "s16-excluded-person",
+      "title": "Wants company after a bad day, \"not Alex tonight\"; Alex and Sam are both free",
+      "demonstrates": ["explicit_intent", "safety"],
+      "episode": {
+        "explicitIntent": { "excludedRefs": ["p-alex"], "namedRefs": ["p-alex", "p-sam"] },
+        "window": { "startedAt": "2026-10-25T17:30:00Z", "inferredMinutes": 180, "confidence": "medium", "fallbackMinutes": 180 },
+        "evidence": ["assessment:intent", "pattern:pat-distract", "person:p-alex", "person:p-sam"],
+        "relationships": [{ "ref": "p-alex" }, { "ref": "p-sam" }]
+      },
+      "context": {
+        "event": { "kind": "academic_setback" },
+        "user": { "distress": "still", "withPeopleNow": false },
+        "patterns": [{ "id": "pat-distract", "trigger": "academic_setback", "behavior": "distraction_company", "delayMinutes": 30, "source": "explicit", "confidence": "high", "evidenceCount": 2 }],
+        "people": [
+          { "ref": "p-alex", "closeness": "close", "involvement": "none", "goodAt": ["CASUAL_INVITE"], "calendar": "free_soon", "receptive": true },
+          { "ref": "p-sam", "closeness": "close", "involvement": "none", "goodAt": ["CASUAL_INVITE"], "calendar": "free_soon", "receptive": true }
+        ]
+      },
+      "expected": { "mode": "act", "action": "CASUAL_INVITE", "targetRef": "p-sam",
+        "rejected": [{ "action": "CASUAL_INVITE", "targetRef": "p-alex", "reason": "excluded" }] }
+    }
+  ]
+}

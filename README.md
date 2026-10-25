@@ -44,6 +44,7 @@ Set local values in `.env.local` using [.env.example](.env.example). Never commi
 | DS | Nimisha | Ranking, discovery quality and evaluation |
 | AI | Adam | Voice, constrained reasoning and worker |
 | Cyber | Sumedh | Authorization, consent and privacy review |
+| Reasoning | Sumedh (D052, proposed) | Relational decision layer: whether, how and when to suggest a connection |
 
 Read [AGENTS.md](AGENTS.md) before working. Start with [INSTRUCTIONS.md](INSTRUCTIONS.md), then your role plan and handoff. Shared contracts live on `main`; role updates are in `docs/updates/`.
 

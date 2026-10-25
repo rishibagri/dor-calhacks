@@ -82,3 +82,7 @@ Offline-verified unless stated otherwise.
 The current CS/Cyber work adds an expandable book to each accepted connection. Selected photos, manually entered calls, user-linked introductions, and nudge feedback are stored in the user's encrypted local vault. Photos are not fetched through Apify or social media; call history is not imported. Cyber added pair-scoped encrypted record types, strict validation and an IndexedDB v1→v2 additive migration (D049). CS added the local vault interface and Connections UI. D044's explicit owner-enabled named-pair standing-consent requirements and recipient/server gates are unchanged.
 
 **Evidence:** latest main `fb5dfa4` merged; typecheck passed; vault tests 20/20; contract check 131/131; app build passed; `git diff --check` passed. Browser/photo/network behavior, deployment, and provider integrations have not been verified. See `docs/features/RELATIONSHIP_BOOKS.md` and `docs/handoffs/cs.md`.
+
+## Reasoning role — planned (D052, 2026-10-25)
+
+**Planned only.** A new Reasoning workstream (owner Sumedh, separate from Cyber) is proposed for the relational decision layer: a deterministic `src/reasoning/core` plus an agentic, provider-agnostic `src/reasoning/runtime` reached through ports; AI keeps provider adapters. Architecture: `docs/features/REASONING.md` (behavioral framework pending). Role docs exist on `role/reasoning`; no reasoning code, contract or schema exists and nothing is implemented, deployed or live. See `docs/roles/reasoning.md`.
