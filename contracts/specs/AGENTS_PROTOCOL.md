@@ -1,10 +1,10 @@
 # Bounded agent protocol v1
 1. PrivateAgent(owner) uses a disclosed transient Claude request on owner-selected local-vault content and reflects on an owner-only journal and proposes an owner-only candidate. No network transmission to peer.
-2. Owner previews/approves a schema-constrained signal. Cyber policy service issues a validated envelope; agents cannot mint one.
+2. For D050, the owner device resolves one literal mention to one accepted pair and screens private risk. With no risk, the owner-side flow may submit a schema-constrained candidate automatically under the current preset. Cyber policy code validates the envelope; agents cannot mint authority or expand its fields. Ambiguous recipient, conflict, urgent-support or invalid assessment means no relationship workflow.
 3. SenderAgent publishes only the approved envelope to the coordinator.
-4. RecipientAgent reads that envelope plus its own explicitly approved preferences and returns a schema-constrained ACK: compatible support mode and coarse availability, or decline. It cannot query either journal store. Recipient preferences require their own current consent record; no implicit return disclosure.
+4. RecipientAgent reads that envelope plus its own standard support styles (or optional customized preferences) and returns a schema-constrained ACK: compatible support mode and coarse availability, or decline. It cannot query either journal store. Missing customization means standard styles; recipient opt-out, pair pause, quiet hours, cooldown and preset checks remain authoritative.
 5. Factory worker orchestrates the bounded exchange using only approved structured signals and restricted tools. Coordinator intersects approved modes/windows, ranks eligible actions, and emits a template ID. Maximum two rounds and one nudge per pair per 24 hours; no free-form agent conversation or hidden chain-of-thought logging.
-6. Before rendering the nudge, policy rechecks every source consent. Lack of an intersection means no nudge, not a request for more private details.
+6. Before rendering the nudge, policy rechecks every source, pair preset/assignment, recipient opt-out and current pause/delivery state. Lack of an allowed intersection means no nudge, not a request for more private details.
 
 Timeout: proposed 8 seconds per model call, one retry with same idempotency key. Fall back to an approved fixed template only when all policy conditions hold; otherwise return no suggestion. Record only sanitized outcome codes. These are initial engineering targets, not measured performance.
 

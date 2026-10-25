@@ -33,7 +33,7 @@ Neither stops an already-approved signal or a queued worker job. A pause must.
    - **worker read:** `worker_signal_context` (and `worker_support_preferences` if relevant) must not present that pair's signals as usable;
    - **commit:** `commit_nudge` refuses in its own transaction;
    - **visibility:** `my_nudges` hides already-committed nudges derived from signals the owner has since paused.
-4. **No resurrection.** Resuming, an expiring pause, a retry, a reconnect or a later clarification answer must not make a signal or job from **before** the pause usable again. New sharing needs a fresh preview and approval. One option: pausing revokes or invalidates that pair's standing approved signals, or bumps a version the guards bind.
+4. **No resurrection.** Resuming, an expiring pause, a retry, a reconnect or a later clarification answer must not make a signal or job from **before** the pause usable again. A genuinely new reflection after resume may enter the D050 automatic flow, but it must resolve the pair again and pass every current server gate. One option: pausing revokes or invalidates that pair's outstanding signals, or bumps a version the guards bind.
 5. **Silent to the counterpart.** No receipt, badge, error, timing difference or view row tells the paused person anything. Refusals the counterpart could observe must be indistinguishable from "nothing was sent" (no oracle).
 6. **Fail closed.** If the pause state is unreadable or ambiguous, the result is "no delivery".
 

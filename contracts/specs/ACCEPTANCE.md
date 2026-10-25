@@ -4,9 +4,10 @@
 - Two authenticated users can accept a pair invite; a third user cannot access it.
 - Voice record/stop/reflection works; denied mic and provider errors offer typed entry.
 - Journal is visible only to its owner, including through direct provider/API requests and database subscriptions.
-- User sees exact allowed signal before approval. Declining creates no shared state.
+- For D050, a uniquely resolved accepted connection enters the automatic flow without a per-nudge approval tap; ambiguous names require clarification. Private risk suppresses unsafe flows. Only allowlisted signal fields can reach the two-agent coordinator.
 - Bounded agent exchange produces a useful inbox nudge from approved inputs.
-- Dismiss, snooze, cooldown, quiet hours, and unlink behave consistently.
+- Recipient opt-out, owner pause, cooldown, configured quiet hours, revocation, and unlink behave consistently.
+- Serious-distress terms immediately show the support-resource card, suppress the relationship flow, and never contact a connection.
 - Partners, friends, and family each have a reproducible complete seed and reset path.
 
 ## Evaluation set (DS)
@@ -25,7 +26,7 @@ Each role logs commands/results or reproducible manual steps. No claim of implem
 ## dor stack and onboarding acceptance
 - Local vault locks/unlocks, ciphertext persists without plaintext transcript, and clearing storage/recovery behavior is explicit.
 - SpacetimeDB direct reducer calls and subscriptions cannot bypass API checks; caller identity and policy versions are enforced.
-- Different assigned presets produce different permissions for the same source input; same-preset connections share category rules, while item approvals remain recipient-bound. Quiz selection/skip does not create or broaden consent.
+- Different assigned presets produce different allowed enum payloads for the same private input; same-preset connections share category rules. Quiz selection/skip does not create or broaden consent. Recipient opt-out and pause block default-on nudges for that pair.
 - Factory executes a real event-triggered bounded workflow in its deployed compatible worker; no private journal content in sessions, work queues or logs.
 - Cartesia transcription and voice are exercised live; provider-processing notices accurately describe the tested path.
 - No source-ID leakage from local vault; receipts link only approved signal IDs.

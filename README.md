@@ -10,12 +10,12 @@ Starting college, moving, beginning a job or graduating can disrupt a person's s
 
 - Nearby discovery uses one-time approximate location and opted-in public profile fields. Journal data and private quiz answers do not enter discovery.
 - Apify collects a generic, developer-configured public event catalogue. It never receives journal text, private quiz answers, relationship IDs, personal attendance intent or device-derived location.
-- Existing-connection nudges retain recipient opt-in, quiet hours, pauses and server rechecks. D044 allows automatic approval only for one named pair, selected categories and an explicit expiring rule. Manual review remains the default; journal text is never auto-shared.
-- Product, architecture and role phases: [INSTRUCTIONS.md](INSTRUCTIONS.md). Normative boundaries: [contracts/README.md](contracts/README.md), [D044 specification](docs/features/AUTOMATIC_NUDGES.md), [Apify source guide](docs/features/APIFY_SOURCE.md).
+- Existing-connection nudges run automatically for accepted pairs under the current preset and server checks. Recipients can opt out per connection; pauses, quiet hours and cooldown still apply. Journal text is never shared. Conflict risk suppresses nudging; serious mental-health distress shows support resources immediately and never contacts a connection.
+- Product, architecture and role phases: [INSTRUCTIONS.md](INSTRUCTIONS.md). Normative boundaries: [contracts/README.md](contracts/README.md), [D050 automatic-nudge specification](docs/features/AUTOMATIC_NUDGES.md), [Apify source guide](docs/features/APIFY_SOURCE.md).
 
 ## Current status
 
-- **D044:** backend reducers/views are in the repository; the team reports the backend is live on Maincloud. This PR adds the Connections permission UI and ShareReview automatic-approval path. App checks are offline evidence; this PR does not publish, deploy or live-verify Maincloud.
+- **D050:** implemented on this branch and offline-verified; PR pending, not live-verified. Accepted pairs use default-on in-app nudges under their assigned preset, with recipient per-pair opt-out, pause, configured quiet hours and cooldown. Private conflict suppresses nudges; serious-distress terms show a local U.S. 988 resource card and never contact a connection. D044 backend remains for compatibility.
 - **Apify:** server-only Actor adapter, bounded normalization/cache and fixture path exist. Live retrieval is still unverified. `--fetch` spends credits and needs configured credentials and source review.
 - **Discovery:** UI and guarded state paths are implemented; live candidate/event density and full newcomer journey still require verification.
 

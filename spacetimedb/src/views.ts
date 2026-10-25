@@ -1,4 +1,4 @@
-import { connectedCounterparts, findAssignment, findPreset, findPublicationRow, pairsOf, pauseInForce, standingApprovalStands, standingRuleActive } from './policy_state';
+import { connectedCounterparts, findAssignment, findPreset, findPublicationRow, fromMs, pairsOf, pauseInForce, standingApprovalStands, standingRuleActive } from './policy_state';
 import { t } from 'spacetimedb/server';
 import { Timestamp, type Identity } from 'spacetimedb';
 import {
@@ -250,12 +250,12 @@ const workerDeliveryRow = t.row('WorkerDeliveryRow', {
   last_nudge_at: t.option(t.timestamp()),
 });
 
-/** Opted-in delivery rows plus the pair's last nudge time, for the coordinator's pre-check (DeliveryStatePort). */
+/** Explicit delivery preferences plus the pair's last nudge time; absent rows use the accepted-pair default. */
 export const worker_delivery = spacetimedb.view(
   { name: 'worker_delivery', public: true }, t.array(workerDeliveryRow),
   ctx => {
     if (!isWorker(ctx.db, ctx.sender)) return [];
-    return [...ctx.db.nudge_delivery.iter()].filter(d => d.opted_in).map(d => {
+    return [...ctx.db.nudge_delivery.iter()].map(d => {
       const last = [...ctx.db.nudge.pair_id.filter(d.pair_id)]
         .reduce<typeof d.updated_at | undefined>((m, n) => (!m || n.created_at.microsSinceUnixEpoch > m.microsSinceUnixEpoch ? n.created_at : m), undefined);
       return {
@@ -280,14 +280,14 @@ export const worker_support_preferences = spacetimedb.view(
   { name: 'worker_support_preferences', public: true }, t.array(workerPreferenceRow),
   ctx => {
     if (!isWorker(ctx.db, ctx.sender)) return [];
-    return [...ctx.db.support_preference.iter()].flatMap(p => {
-      const pref = loadPreference(ctx.db, p.recipient, p.pair_id);
-      if (!pref || pref.expiresAtMs === 0 || !guardPreferenceStanding(pref, hex(p.recipient), p.pair_id, null).allowed) return [];
-      if (ctx.db.pair.pair_id.find(p.pair_id)?.status !== 'accepted') return [];
-      return [{
-        consent_id: p.consent_id, pair_id: p.pair_id, recipient: p.recipient, support_modes: p.support_modes,
-        availability: p.availability, consent_version: p.consent_version, expires_at: p.expires_at,
-      }];
+    return [...ctx.db.pair.iter()].flatMap(pair => {
+      if (pair.status !== 'accepted' || !pair.member_b) return [];
+      return [pair.member_a, pair.member_b].flatMap(recipient => {
+        const pref = loadPreference(ctx.db, recipient, pair.pair_id);
+        if (!pref || !guardPreferenceStanding(pref, hex(recipient), pair.pair_id, null).allowed) return [];
+        return [{ consent_id: pref.consentId, pair_id: pair.pair_id, recipient, support_modes: [...pref.supportModes],
+          availability: [...pref.availability], consent_version: pref.consentVersion, expires_at: new Timestamp(fromMs(pref.expiresAtMs)) }];
+      });
     });
   }
 );

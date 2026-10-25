@@ -16,7 +16,7 @@ function claudeStub(respond) {
   return { calls, client: { beta: { messages: { parse: async (params) => { calls.push(params); return respond(params); } } } } };
 }
 const parsed = (parsed_output, stop_reason = 'end_turn') => ({ stop_reason, parsed_output, content: [] });
-const CONNECT = { intent: 'wants_connection', excludedNames: [], preferredNames: [] };
+const CONNECT = { intent: 'wants_connection', risk: 'none', mentionedNames: [], excludedNames: [], preferredNames: [] };
 
 test('reflection fixtures satisfy the C1 contract and their own expectations', () => {
   for (const c of reflections.cases) {
@@ -153,7 +153,8 @@ test('claude usage: metadata only, reported for success and for every failure pa
   const seen = [];
   const usage = { input_tokens: 812, output_tokens: 96, cache_read_input_tokens: 700 };
   const ok = claudeStub(() => ({ stop_reason: 'end_turn', usage,
-    parsed_output: { reflection: 'SYNTHETIC reflection', candidate: { supportMode: 'short_call', availability: null } } }));
+    parsed_output: { reflection: 'SYNTHETIC reflection', candidate: { supportMode: 'short_call', availability: null },
+      assessment: { intent: 'wants_connection', risk: 'none', mentionedNames: [], excludedNames: [], preferredNames: [] } } }));
   await new ClaudeReflectionAdapter({ client: ok.client, onUsage: u => seen.push(u) }).reflect('SYNTHETIC secret', 'req-1');
   const cut = claudeStub(() => ({ stop_reason: 'max_tokens', usage, parsed_output: null }));
   await assert.rejects(new ClaudeReflectionAdapter({ client: cut.client, onUsage: u => seen.push(u) }).reflect('SYNTHETIC', 'r'));
@@ -167,9 +168,9 @@ test('claude usage: metadata only, reported for success and for every failure pa
 
 test('D040 assessment repair: whitespace and case duplicates fixed; overlap drops the preference; anything unsafe suggests nothing', async () => {
   const { toPrivateAssessment } = await import('../dist/index.js');
-  const NOTHING = { intent: 'wants_space', excludedNames: [], preferredNames: [] };
-  assert.deepEqual(toPrivateAssessment({ intent: 'wants_connection', excludedNames: [' Alex ', 'alex'], preferredNames: ['Sam', 'ALEX'] }),
-    { intent: 'wants_connection', excludedNames: ['Alex'], preferredNames: ['Sam'] }, 'an exclusion always wins over a preference');
+  const NOTHING = { intent: 'wants_space', risk: 'interpersonal_conflict', mentionedNames: [], excludedNames: [], preferredNames: [] };
+  assert.deepEqual(toPrivateAssessment({ intent: 'wants_connection', risk: 'none', mentionedNames: ['Sam'], excludedNames: [' Alex ', 'alex'], preferredNames: ['Sam', 'ALEX'] }),
+    { intent: 'wants_connection', risk: 'none', mentionedNames: ['Sam'], excludedNames: ['Alex'], preferredNames: ['Sam'] }, 'an exclusion always wins over a preference');
   assert.deepEqual(toPrivateAssessment(undefined), NOTHING, 'missing assessment = suggest nothing');
   assert.deepEqual(toPrivateAssessment({ intent: 'unclear', excludedNames: ['A', 'B', 'C', 'D', 'E', 'F'], preferredNames: [] }), NOTHING,
     'cannot keep every veto → suggest nothing, never drop one');
@@ -186,4 +187,12 @@ test('D040: a reply without an assessment is treated as "suggest nothing", not a
   assert.equal(result.assessment.intent, 'wants_space');
   assert.match(REFLECTION_SYSTEM_PROMPT, /never infer it from events, excuses, contradictions/i);
   assert.match(REFLECTION_SYSTEM_PROMPT, /can never send anything or choose a person/i);
+});
+
+test('D050: a serious-distress risk removes any candidate even if the model also returned one', async () => {
+  const { client } = claudeStub(() => parsed({ reflection: 'Support is available now.',
+    candidate: { supportMode: 'short_call', availability: 'today' }, assessment: { ...CONNECT, risk: 'urgent_support' } }));
+  const result = await new ClaudeReflectionAdapter({ client }).reflect('SYNTHETIC distress', 'r');
+  assert.equal(result.candidate, null);
+  assert.equal(result.assessment.risk, 'urgent_support');
 });

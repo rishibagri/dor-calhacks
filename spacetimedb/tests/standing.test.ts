@@ -15,7 +15,7 @@ function world({ optIn = true } = {}) {
   const { pairId } = pairUp(w);
   confirmPreset(w, w.alice, pairId, 'partner', ['support_preference', 'coarse_availability']);
   const pref = grantPrefs(w, w.bob, pairId);
-  if (optIn) w.call(w.bob, ctx => mod.set_nudge_delivery(ctx, { pair_id: pairId, opted_in: true, quiet_start_minute: undefined, quiet_end_minute: undefined, utc_offset_minutes: 0 }));
+  w.call(w.bob, ctx => mod.set_nudge_delivery(ctx, { pair_id: pairId, opted_in: optIn, quiet_start_minute: undefined, quiet_end_minute: undefined, utc_offset_minutes: 0 }));
   const worker = jwtAuth('dor-worker', 50n, 'https://worker.spacetimedb.example');
   const workerId = w.h.withReducerTx(worker, ctx => ctx.sender);
   w.h.withReducerTx(w.admin, ctx => mod.set_worker_identity(ctx, { worker: workerId, enabled: true }));
@@ -86,7 +86,7 @@ describe('off by default; only an explicit owner action enables it', () => {
 });
 
 describe('automatic approval keeps every check', () => {
-  it('a matching candidate is approved without a preview and delivered once the recipient opted in', () => {
+  it('a matching candidate is approved without a preview and delivered under default-on recipient settings', () => {
     const x = world();
     enable(x);
     const sig = autoApprove(x);

@@ -14,7 +14,9 @@
         "assessment": {
           "intent": "wants_connection",
           "excludedNames": [],
-          "preferredNames": []
+          "preferredNames": [],
+          "risk": "none",
+          "mentionedNames": []
         }
       },
       "output": {
@@ -27,7 +29,9 @@
         "assessment": {
           "intent": "wants_connection",
           "excludedNames": [],
-          "preferredNames": []
+          "preferredNames": [],
+          "risk": "none",
+          "mentionedNames": []
         }
       }
     },
@@ -43,7 +47,9 @@
         "assessment": {
           "intent": "wants_connection",
           "excludedNames": [],
-          "preferredNames": []
+          "preferredNames": [],
+          "risk": "none",
+          "mentionedNames": []
         }
       },
       "output": {
@@ -56,7 +62,9 @@
         "assessment": {
           "intent": "wants_connection",
           "excludedNames": [],
-          "preferredNames": []
+          "preferredNames": [],
+          "risk": "none",
+          "mentionedNames": []
         }
       }
     },
@@ -72,7 +80,9 @@
         "assessment": {
           "intent": "wants_connection",
           "excludedNames": [],
-          "preferredNames": []
+          "preferredNames": [],
+          "risk": "none",
+          "mentionedNames": []
         }
       },
       "output": {
@@ -85,7 +95,9 @@
         "assessment": {
           "intent": "wants_connection",
           "excludedNames": [],
-          "preferredNames": []
+          "preferredNames": [],
+          "risk": "none",
+          "mentionedNames": []
         }
       }
     },
@@ -98,7 +110,9 @@
         "assessment": {
           "intent": "wants_space",
           "excludedNames": [],
-          "preferredNames": []
+          "preferredNames": [],
+          "risk": "none",
+          "mentionedNames": []
         }
       },
       "output": {
@@ -108,7 +122,9 @@
         "assessment": {
           "intent": "wants_space",
           "excludedNames": [],
-          "preferredNames": []
+          "preferredNames": [],
+          "risk": "none",
+          "mentionedNames": []
         }
       }
     },
@@ -121,7 +137,9 @@
         "assessment": {
           "intent": "unclear",
           "excludedNames": [],
-          "preferredNames": []
+          "preferredNames": [],
+          "risk": "none",
+          "mentionedNames": []
         }
       },
       "output": {
@@ -131,7 +149,9 @@
         "assessment": {
           "intent": "unclear",
           "excludedNames": [],
-          "preferredNames": []
+          "preferredNames": [],
+          "risk": "none",
+          "mentionedNames": []
         }
       }
     },
@@ -144,8 +164,10 @@
         "reflectionMentionsCrisisSupport": true,
         "assessment": {
           "intent": "wants_space",
+          "risk": "urgent_support",
           "excludedNames": [],
-          "preferredNames": []
+          "preferredNames": [],
+          "mentionedNames": []
         }
       },
       "output": {
@@ -154,8 +176,10 @@
         "candidate": null,
         "assessment": {
           "intent": "wants_space",
+          "risk": "urgent_support",
           "excludedNames": [],
-          "preferredNames": []
+          "preferredNames": [],
+          "mentionedNames": []
         }
       }
     },
@@ -173,6 +197,10 @@
           "excludedNames": [],
           "preferredNames": [
             "Sam"
+          ],
+          "risk": "none",
+          "mentionedNames": [
+            "Sam"
           ]
         }
       },
@@ -187,6 +215,10 @@
           "intent": "wants_connection",
           "excludedNames": [],
           "preferredNames": [
+            "Sam"
+          ],
+          "risk": "none",
+          "mentionedNames": [
             "Sam"
           ]
         }
@@ -206,7 +238,11 @@
           "excludedNames": [
             "Alex"
           ],
-          "preferredNames": []
+          "preferredNames": [],
+          "risk": "none",
+          "mentionedNames": [
+            "Alex"
+          ]
         }
       },
       "output": {
@@ -221,7 +257,11 @@
           "excludedNames": [
             "Alex"
           ],
-          "preferredNames": []
+          "preferredNames": [],
+          "risk": "none",
+          "mentionedNames": [
+            "Alex"
+          ]
         }
       }
     },
@@ -237,7 +277,9 @@
         "assessment": {
           "intent": "unclear",
           "excludedNames": [],
-          "preferredNames": []
+          "preferredNames": [],
+          "risk": "none",
+          "mentionedNames": []
         }
       },
       "output": {
@@ -250,7 +292,9 @@
         "assessment": {
           "intent": "unclear",
           "excludedNames": [],
-          "preferredNames": []
+          "preferredNames": [],
+          "risk": "none",
+          "mentionedNames": []
         }
       }
     },
@@ -262,8 +306,12 @@
         "candidate": null,
         "assessment": {
           "intent": "unclear",
+          "risk": "interpersonal_conflict",
           "excludedNames": [],
-          "preferredNames": []
+          "preferredNames": [],
+          "mentionedNames": [
+            "Jordan"
+          ]
         },
         "noEventOrTimingCopy": true
       },
@@ -273,8 +321,12 @@
         "candidate": null,
         "assessment": {
           "intent": "unclear",
+          "risk": "interpersonal_conflict",
           "excludedNames": [],
-          "preferredNames": []
+          "preferredNames": [],
+          "mentionedNames": [
+            "Jordan"
+          ]
         }
       }
     }

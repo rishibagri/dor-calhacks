@@ -22,9 +22,9 @@ Docs in this folder: [REVIEWS.md](REVIEWS.md) (D016–D021 verdicts, C8 review),
 - **Preview omits blocked fields.** An approval still carrying a blocked field is **denied** (`blocked_category`), never stripped. `no_preference` is never substituted.
 - **Any preset or assignment version change** (including broadening) stales older approvals.
 - **Expiry** is min(now + 24h, preset expiry). An approval replay with the same `client_request_id` is a no-op even after revoke.
-- **F5:** no `nudge_delivery` row means not opted in (D017). Quiet hours use the recipient's local offset (D018). Cooldown is 24h per pair and counts every nudge.
-- **F7:** every source passes `guardSignalUse` at commit, and the template must be `templateForSignal` of an approved source (availability-only gives no nudge). Then the recipient's **current** preference consent must match the bound `recipient_consent_id/version`, be unrevoked and unexpired, and include the template's mode. An F5 recheck follows. Nudge expiry = min(sources, consent, now + 24h). A replay with the same `nudge_id` and the same binding is a no-op and never resurrects; a different binding is `invalid: nudge_id reused`.
-- **Recipient preference consent (C4, D035):** recipient-owned `support_preference` row per pair, written only via `set_support_preferences` / `revoke_support_preferences` (caller = recipient, accepted pair, expiry ≤ 30 days, optimistic `expected_version`). Every change bumps `consent_version`. Revoke suppresses pending nudges, and `my_nudges` hides any nudge whose bound consent was revoked, expired, replaced by a different record, or no longer covers its mode. Never visible to the sender.
+- **F5 (D050):** an accepted pair with no `nudge_delivery` row uses `DEFAULT_RECIPIENT_DELIVERY` (nudges on). A recipient's persisted `opted_in: false` row blocks delivery. Quiet hours use the recipient's local offset (D018); cooldown is 24h per pair and counts every nudge.
+- **F7 (D050):** every source passes `guardSignalUse` at commit, and the template must be `templateForSignal` of an approved source (availability-only gives no nudge). The worker binds the recipient support-style state it read; if there is no customization row, the module supplies the standard allowed styles for that accepted pair. The commit rechecks that binding, current signal, recipient opt-out, pause, quiet hours and cooldown. Custom preferences remain recipient-owned personalization, not an additional authorization gate. Nudge expiry is bounded by the source and cooldown window. Replay never resurrects a suppressed nudge.
+- **Recipient support preferences (C4, D035):** recipient-owned `support_preference` rows remain optional customization, written only via `set_support_preferences` / `revoke_support_preferences` (caller = recipient, accepted pair, expiry ≤ 30 days, optimistic `expected_version`). Missing, expired or revoked customization resolves to standard support styles; it does not silently opt the recipient out. Use `set_nudge_delivery({opted_in:false})` for the per-pair opt-out. A custom preference change during generation invalidates the old worker binding.
 - **Expiry and snooze in views:** `sweep_expired` (internal only) suppresses expired nudges, clears snoozes that have ended, and marks expired signals, preferences, publications and areas. `my_nudges` hides snoozed nudges. Stale window ≤ one sweep interval.
 - **JWT audience:** every reducer caller's token must carry an allow-listed `aud` (`auth_audience`, owner-managed); empty allowlist = nobody.
 - **Reason → error code:**
@@ -38,17 +38,17 @@ Docs in this folder: [REVIEWS.md](REVIEWS.md) (D016–D021 verdicts, C8 review),
   | `quiet_hours`, `cooldown` | `rate_limited` |
 
 ## Integration instructions
-### CS: device preview → approve (F3/F4)
+### CS: automatic enum submission (F3/F4, D050)
 1. Run `previewDisclosure({candidate, ownerId, recipientId, pairId, pairStatus, preset, assignment, now}, recipientName)` on the device, building the inputs from `my_pairs`, `my_preset_assignments` and `my_presets`. No network call.
-2. On `shareable`, send exactly `payload` to `approve_signal` with:
+2. If the private risk check passes and exactly one accepted pair is resolved, send exactly the allowed `payload` to `approve_signal` with:
    - `payload_revision = payloadRevision({pairId, recipientId: counterpartHex, ...payload, recipientPolicyVersion, presetAssignmentVersion, consentVersion: DISCLOSURE_CONSENT_VERSION})`
    - the same versions
-   - a fresh `client_request_id` per preview, reused only for retries of that approval
+   - an idempotent `client_request_id`, reused only for retries of this exact payload and version set
 3. Privacy center: `my_signals` (sender-only, with revoke) and `my_receipts` (sender-only: approved/used/revoked/suppressed).
 
 ### CS: recipient settings (F5)
 - `set_nudge_delivery({pair_id, opted_in, quiet_start_minute?, quiet_end_minute?, utc_offset_minutes})`. Read it back via `my_nudge_delivery`.
-- Default UI state is **off**. Capture `utc_offset_minutes` as the negation of `new Date().getTimezoneOffset()`.
+- Default UI state is **on** when no row exists. An explicit `opted_in: false` row is the recipient's per-pair opt-out. Capture `utc_offset_minutes` as the negation of `new Date().getTimezoneOffset()` when setting quiet hours.
 
 ### CS + Adam: worker (F6/F7)
 1. Ops: publish, then `spacetime call dor set_worker_identity '<worker identity hex>' true` as the module owner. The worker connects with its own SpacetimeDB token and never registers an account.
@@ -58,11 +58,11 @@ Docs in this folder: [REVIEWS.md](REVIEWS.md) (D016–D021 verdicts, C8 review),
    - `snapshot.assignment`: `{ownerId: sender hex, recipientId: assignment_recipient hex, pairId, presetId: assignment_preset_id, assignmentVersion: assignment_version}` (null if missing)
    - `snapshot.preset`: `{policyId: assignment_preset_id, ownerId: sender hex, allowedCategories: preset_allowed_categories, version: preset_version, expiresAtMs, revokedAtMs: preset_revoked ? 0 : null}`
 3. Use `new DisclosurePolicy(reader, clock)` in place of `FakeDisclosurePolicy`. `worker_delivery` backs `DeliveryStatePort`.
-4. `worker_support_preferences` backs `RecipientPreferencesPort`. Map each row to `RecipientSupportPreferences`: `{schemaVersion: 1, consentId: consent_id, consentVersion: consent_version, pairId: pair_id, recipientId: recipient hex, purpose: 'support_nudge', supportModes: support_modes, availability, expiresAt: ISO(expires_at), revokedAt: null}`. No row means `preferences_unavailable`.
+4. `worker_support_preferences` backs `RecipientPreferencesPort`. Map each row to `RecipientSupportPreferences`: `{schemaVersion: 1, consentId: consent_id, consentVersion: consent_version, pairId: pair_id, recipientId: recipient hex, purpose: 'support_nudge', supportModes: support_modes, availability, expiresAt: ISO(expires_at), revokedAt: null}`. Accepted pairs receive a server-derived standard-style row when no custom settings exist.
 5. Commit with `commit_nudge({nudge_id, pair_id, template_id, source_signal_ids, source_consent_versions, recipient_consent_id: ack.recipientConsentId, recipient_consent_version: ack.recipientConsentVersion})`. Errors are sanitized codes, so map them to `CoordinationOutcome` and **never show them to the sender** (REVIEWS.md D021 #5).
 
 ### CS: recipient preference settings (C4, D035)
-- `set_support_preferences({pair_id, support_modes, availability, expires_at, expected_version})`, `revoke_support_preferences({pair_id})`. Read back via `my_support_preferences`. Default UI state: no consent (no row). Show the expiry; offer renew and revoke.
+- `set_support_preferences({pair_id, support_modes, availability, expires_at, expected_version})`, `revoke_support_preferences({pair_id})`. Read back via `my_support_preferences`. These are optional style customizations; reset/revoke returns to standard styles. Show expiry and offer reset/revoke. The separate per-pair delivery toggle controls opt-out.
 
 ### Ops (CS): auth and sweep
 1. Clerk JWT template (`NEXT_PUBLIC_CLERK_SPACETIME_JWT_TEMPLATE`): set a fixed `aud` claim, e.g. `"aud": "dor-spacetimedb"`.
@@ -78,12 +78,12 @@ Client: `send_introduction_request({card_ref, client_request_id})` (a fresh rand
 ### Adam: introduction proposals (D033 → D038)
 Commit each proposal with the worker identity through `commit_introduction_proposal({proposal_id, viewer_ref, candidate_ref, viewer_publication_version, candidate_publication_version, reason_code: 'shared_interest', shared_tags, event_id: none, opener_id: 'suggest_shared_interest', decided_by, expires_at})`. `proposal_id` must match `^[A-Za-z0-9_-]{8,64}$` (a UUID qualifies). The reducer is the authority: treat `stale:*`, `not_found:*`, `unauthorized: withdrawn` and `invalid:*` as no proposal, and `unauthorized: worker only` as a deployment fault. `same_event` is refused until R3.
 
-### CS: automatic nudges (D044, off by default)
-Spec and owner copy: `docs/features/AUTOMATIC_NUDGES.md`.
-- **Reducers:** `set_standing_consent`, `revoke_standing_consent` and `approve_signal_standing`, plus the owner-only view `my_standing_consents`.
-- **Setup screen:** a separate screen outside the journal, with a clear revoke control.
-- **Candidates:** use only those the decision loop resolved to that uniquely chosen pair.
-- **Manual preview** stays the default.
+### CS: automatic nudges (D050, default on)
+Current behavior and acceptance cases: `docs/features/AUTOMATIC_NUDGES.md`.
+- **Approval:** `approve_signal` only after one literal name uniquely matches one accepted connection on-device. The server rechecks current pair, preset, assignment, category and payload.
+- **Recipient:** missing delivery row is on; explicit per-connection opt-out is authoritative. Standard support styles apply unless customized. Pause, quiet hours, cooldown and commit checks remain.
+- **Safety:** conflict or urgent-support assessment suppresses the entire reflection's nudge path. Urgent support shows local resource copy only; no connection is contacted.
+- **D044:** standing-consent reducers and views remain for compatibility, but the active D050 client path does not require them.
 
 ### CS: recipient pause controls (D041, core)
 - **Reducers:** `pause_recipient({pair_id, expires_at, expected_version})` and `resume_recipient({pair_id, expected_version})`. `expected_version` is the row's `version` from `my_recipient_pauses` (0 for none). Join `pair_id` to `my_pairs` to show the name. Show `expires_at`, offer resume, and never ask for a reason.

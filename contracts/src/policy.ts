@@ -325,7 +325,7 @@ export function guardSignalUse(sig: StoredSignal, s: PolicySnapshot, expectedRec
 
 // ---- F5 recipient delivery gate (D017, D018) ----
 
-/** Recipient-owned delivery preferences (D017, D018). Defaults deny. */
+/** Recipient-owned delivery preferences (D017, D018). Accepted pairs default to in-app nudges; the recipient can opt out. */
 export interface RecipientDelivery {
   optedIn: boolean;
   /** Minutes after local midnight; start > end wraps midnight. Null disables quiet hours. */
@@ -335,7 +335,7 @@ export interface RecipientDelivery {
   utcOffsetMinutes: number;
 }
 export const DEFAULT_RECIPIENT_DELIVERY: RecipientDelivery = {
-  optedIn: false, quietStartMinute: 22 * 60, quietEndMinute: 8 * 60, utcOffsetMinutes: 0,
+  optedIn: true, quietStartMinute: null, quietEndMinute: null, utcOffsetMinutes: 0,
 };
 
 export type DeliveryDenyReason = 'not_opted_in' | 'quiet_hours' | 'cooldown';
@@ -397,6 +397,12 @@ export interface SupportPreferenceState {
   revokedAtMs: number | null;
 }
 
+/** Server-derived standard support styles for an accepted pair without current custom preferences. */
+export function defaultSupportPreferences(pairId: string, recipientId: string): SupportPreferenceState {
+  return { consentId: `default:${pairId}:${recipientId}`, recipientId, pairId, supportModes: [...SUPPORT_MODES], availability: [],
+    consentVersion: 1, expiresAtMs: Date.UTC(9999, 11, 31, 23, 59, 59, 999), revokedAtMs: null };
+}
+
 /** Strict shape check for set_support_preferences: ≥1 unique support mode, unique availability enums. */
 export function validSupportPreferences(p: { supportModes: readonly unknown[]; availability: readonly unknown[] }): boolean {
   const unique = (a: readonly unknown[]) => new Set(a).size === a.length;
@@ -437,8 +443,8 @@ export interface NudgeCommitRequest {
 }
 export interface NudgeSource { signal: StoredSignal; snapshot: PolicySnapshot }
 /**
- * Recipient-side state at commit: delivery row (null = never set = DEFAULT, i.e. not opted in), last nudge
- * in the pair, and the recipient's CURRENT preference consent (null = none = deny).
+ * Recipient-side state at commit: delivery row (null = accepted-pair default: in-app nudges on), last nudge
+ * in the pair, and the recipient's CURRENT support-style preference (null = no preference customization).
  */
 export interface DeliveryGate {
   pref: RecipientDelivery | null;
@@ -453,7 +459,7 @@ export type NudgeDecision =
 /**
  * F7 guard for committing a coordinator-proposed nudge. Every source must pass guardSignalUse for this
  * pair and recipient; the template must be `templateForSignal` of an approved source (availability-only
- * sources justify nothing); then the F5 gate (opt-in, cooldown, quiet hours) is rechecked at commit.
+ * sources justify nothing); recipient opt-out, cooldown and any configured quiet hours are rechecked at commit.
  * Expiry is clamped to the earliest source and to one cooldown window.
  * Model/coordinator output is input to this check, never authority.
  */
@@ -480,7 +486,9 @@ export function guardNudgeCommit(req: NudgeCommitRequest, sources: ReadonlyMap<s
   if (!templateApproved) return deny('blocked_category');
   // Recipient consent: the exact current version the coordinator used, still standing, covering this mode.
   if (!isId(req.recipientConsentId) || !isVersion(req.recipientConsentVersion)) return deny('invalid_schema');
-  const prefs = gate.preferences;
+  // Missing customization means standard styles for this already-validated accepted pair. The worker binds this
+  // deterministic identity; it does not represent a separate recipient authorization grant.
+  const prefs = gate.preferences ?? defaultSupportPreferences(req.pairId, req.recipientId);
   const p = guardPreferenceStanding(prefs, req.recipientId, req.pairId, gate.nowMs);
   if (!p.allowed) return p;
   if (prefs!.consentId !== req.recipientConsentId || prefs!.consentVersion !== req.recipientConsentVersion) return deny('stale_policy');
