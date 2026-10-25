@@ -7,9 +7,9 @@
 | | Before | After |
 |---|---|---|
 | What's hosted | The Claude Design prototype (`frontend/`) exactly as committed, plus a small "DEMO · sample data · not live" pill | The same prototype, plus an injected **guide** |
-| Layout (computer) | The phone, with the design's own reviewer column **beside it** ("dor · the room": jump to a place, simulate the other side, reset). Phone off-centre, no explanation of what dor is. | **Left:** what dor is (the README's opening) and "You're looking at" (describes whichever place is open). **Middle:** the phone, centred. **Right:** "Take the tour" or "Skip", then "Jump to" plus "Pretend you're the other person" plus Restart tour / Reset demo. The design's reviewer column is hidden; its buttons are re-offered on the right. |
+| Layout (computer) | The phone, with the design's own reviewer column **beside it** ("dor · the room": jump to a place, simulate the other side, reset). Phone off-centre, no explanation of what dor is. | Styled like the design's own column: 300px columns 40px from the phone, vertically centred, no card backgrounds, Cormorant Garamond headings, Reenie Beanie pencil lines, small-caps labels, Spectral body, pill buttons. **Left:** a fixed blurb of what dor is (the README's opening). **Middle:** the phone, centred. **Right:** "Take the tour" or "Skip", then "jump to a place" plus "simulate the other side" (the design's buttons, proxied) plus Restart tour / Reset demo. Below that, "You're looking at", which describes whichever place is open. The design's reviewer column is hidden. |
 | Tour | None | 12 steps. Each step dims the phone except one place, shows "Tap here: …", and offers "Open it for me". The dimming is clipped to the phone. |
-| Phone-width screens (< 1100 px) | The reviewer column wrapped below the phone | A **Guide** button opens a sheet with the same content. Tour steps show a card with their own Back / Next / End buttons; inside an open place the card moves to the top. |
+| Narrow screens (when two 300px columns don't fit beside the phone) | The reviewer column wrapped below the phone | A **Guide** button opens a sheet with the same content. Tour steps show a card with their own Back / Next / End buttons; inside an open place the card moves to the top. |
 | Design files changed | — | **None.** `frontend/` is untouched. Everything is injected at deploy time. |
 
 ## Files
@@ -37,12 +37,12 @@ The live app is separate: `scripts/live-session.sh` runs it on Adam's laptop and
 ## Making changes
 
 Edit only `scripts/demo-guide.html` (or `demo-banner.html`). Places to look:
-- **Blurb:** the `ABOUT` string.
-- **Per-place descriptions** ("You're looking at" and the tour text): the `PLACES` object. Each entry has `t` (title), `l` (one line), `d` (description) and `b` (bullets).
+- **Blurb (left column):** the `ABOUT` string.
+- **Per-place descriptions** ("You're looking at", under the tour on the right, and the tour text on phones): the `PLACES` object. Each entry has `t` (title), `l` (one line), `d` (description) and `b` (bullets).
 - **Tour order:** `ORDER`. The tour is `door → home → ORDER`.
 - **Tour wording:** `guideHtml()`, which also covers the welcome screen, the step text and the button labels.
 - **Simulate buttons:** `SIMS`.
-- **Look:** the `<style>` block (`.dg-*` classes). The computer/phone switch is the `1099px` media query plus `innerWidth < 1100` in the script.
+- **Look:** the `<style>` block. It copies the design column's fonts and pills. Column width and gap are `COL` and `GAP` in `frame()`, which also switches to phone mode (`html.dg-narrow`) when the columns don't fit.
 
 **Coupling to the design.** If the design changes, check these:
 1. **Finding the component:** the guide follows React's internal links from page elements to the design's component, recognised by having `go()` and `skipDoor()`. It reads `state.place` and `state.doorOn`, and calls `go(place)` and `skipDoor()`.

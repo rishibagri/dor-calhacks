@@ -3,86 +3,75 @@
      guided tour (spotlight + "tap here" prompt on the phone), then a "Jump to" list. Narrow screens: a Guide button
      opens the same content as a sheet. Reads and drives the design's own component (state.place, go(), skipDoor()). -->
 <style>
-  .dg { --ink:#1b1a17; --muted:#5f5a51; --paper:#faf7f0; --card:#fbf4e4; --rule:#e4dccb; --sky:#2f5c91; --skyw:#eaf2fc;
-    font: 400 15px/1.55 Georgia, "Times New Roman", serif; color: var(--ink); }
-  .dg-panel { position: fixed; top: 24px; bottom: 24px; z-index: 2147483000; width: min(360px, calc((100vw - var(--dg-phone, 420px)) / 2 - 48px));
-    overflow-y: auto; padding: 22px 22px 18px; box-sizing: border-box; background: rgba(250,247,240,.92); border: 1px solid var(--rule);
-    border-radius: 18px; box-shadow: 0 10px 30px rgba(27,26,23,.08); }
-  .dg-left { left: 24px; } .dg-right { right: 24px; }
-  .dg h1 { font: 500 30px/1.1 Georgia, serif; margin: 0 0 4px; letter-spacing: 0; }
-  .dg .tag { margin: 0 0 14px; font-style: italic; color: var(--muted); }
-  .dg p { margin: 0 0 12px; }
-  .dg .flow { padding: 10px 12px; border-left: 3px solid var(--sky); background: var(--skyw); border-radius: 6px; color: var(--sky); font-size: 14.5px; }
-  .dg .note { font: 500 12.5px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #7a5200; background: #fbf0d9;
-    border: 1px solid #ecd9ae; border-radius: 10px; padding: 8px 10px; }
-  .dg .kicker { font: 600 11px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; }
-  .dg .feat { padding: 12px 14px; border: 1px solid var(--rule); border-radius: 14px; background: var(--card); }
-  .dg .feat h2 { font: 500 19px/1.2 Georgia, serif; margin: 0 0 6px; }
-  .dg .feat p { margin: 0 0 8px; font-size: 14.5px; }
-  .dg .feat ul { margin: 0; padding-left: 18px; font-size: 14px; color: var(--muted); }
-  .dg .btn { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px;
-    border-radius: 999px; cursor: pointer; font: 500 15px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-  .dg .btn.primary { background: var(--ink); color: var(--paper); }
-  .dg .btn.ghost { border: 1px solid var(--rule); background: #fff8; color: var(--ink); }
+  /* Matches the design's own side column ("dor · the room"): a 300px column 40px from the phone, no card
+     backgrounds, Cormorant Garamond headings, Reenie Beanie pencil lines, small-caps labels, Spectral body, pill buttons. */
+  .dg { --ink:#1b1a17; --muted:#6b665d; --pill:#a39e93; --paper:#faf7f0; --sky:#2f5c91; color: var(--ink); font: 400 15px/23px 'Spectral', Georgia, serif; }
+  .dg-panel { position: fixed; z-index: 2147483000; width: 300px; display: flex; flex-direction: column; justify-content: center; gap: 18px;
+    overflow-y: auto; box-sizing: border-box; padding: 4px 2px; left: var(--dg-x, -9999px); top: var(--dg-top, 24px); height: var(--dg-h, 80vh); }
+  .dg-left { left: var(--dg-lx, -9999px); }
+  .dg-right { left: var(--dg-rx, -9999px); }
+  .dg h1 { font: 500 34px/1.1 'Cormorant Garamond', Georgia, serif; margin: 0; letter-spacing: 0; }
+  .dg .pencil { margin: 4px 0 0; font: 400 22px/1.1 'Reenie Beanie', cursive; color: var(--muted); }
+  .dg p { margin: 0 0 10px; }
+  .dg .muted { color: var(--muted); font-size: 14px; line-height: 21px; }
+  .dg .flow { font-style: italic; color: var(--muted); }
+  .dg .label { font-size: 15px; font-variant: small-caps; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
+  .dg h2 { font: 500 26px/1.15 'Cormorant Garamond', Georgia, serif; margin: 0 0 6px; letter-spacing: 0; }
+  .dg ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 14px; line-height: 21px; }
+  .dg .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .dg .btn { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: 18px;
+    border: 1px solid var(--pill); background: var(--paper); font: 400 14px 'Spectral', Georgia, serif; color: var(--ink); cursor: pointer; }
+  .dg .btn.primary { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .dg .btn[aria-current="true"] { border-color: var(--sky); color: var(--sky); }
   .dg .btn:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
-  .dg .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-  .dg .steps { font: 500 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--muted); margin-bottom: 8px; }
-  .dg .bar { height: 4px; border-radius: 4px; background: var(--rule); overflow: hidden; margin-bottom: 14px; }
-  .dg .bar span { display: block; height: 100%; background: var(--sky); transition: width .4s cubic-bezier(.23,1,.32,1); }
-  .dg .jump { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-  .dg .jump button { all: unset; box-sizing: border-box; cursor: pointer; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--rule); background: var(--card); }
-  .dg .jump button[aria-current="true"] { border-color: var(--sky); background: var(--skyw); }
-  .dg .jump b { display: block; font: 500 14.5px/1.2 Georgia, serif; }
-  .dg .jump small { display: block; color: var(--muted); font-size: 12px; line-height: 1.3; }
-  .dg .jump button:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
-  /* Spotlight over the phone: dims everything but the target; taps pass through to the design. */
+  .dg .row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .dg .bar { height: 2px; background: #d9d2c2; margin: 0 0 12px; }
+  .dg .bar span { display: block; height: 100%; background: var(--ink); transition: width .4s cubic-bezier(.23,1,.32,1); }
+  /* Spotlight over the phone: dims everything but the target (clipped to the phone); taps pass through. */
   .dg-clip { position: fixed; z-index: 2147483100; pointer-events: none; overflow: hidden; border-radius: 44px; }
   .dg-spot { position: absolute; pointer-events: none; border-radius: 14px; box-shadow: 0 0 0 9999px rgba(27,26,23,.42);
     outline: 2px solid #f6d77a; transition: left .25s, top .25s, width .25s, height .25s; }
   .dg-spot::after { content: ""; position: absolute; inset: -8px; border-radius: 18px; border: 2px solid #f6d77a; animation: dgPulse 1.6s cubic-bezier(.23,1,.32,1) infinite; }
   @keyframes dgPulse { from { opacity: .9; transform: scale(.96); } to { opacity: 0; transform: scale(1.12); } }
   .dg-bubble { position: fixed; z-index: 2147483200; max-width: 260px; padding: 10px 12px; border-radius: 12px; background: var(--paper);
-    border: 1px solid var(--rule); box-shadow: 0 8px 24px rgba(27,26,23,.18); font: 500 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    border: 1px solid #d9d2c2; box-shadow: 0 8px 24px rgba(27,26,23,.18); font-size: 14px; line-height: 21px; }
   .dg-bubble .mobile-only { display: none; }
   .dg-fab { display: none; position: fixed; z-index: 2147483000; left: 12px; bottom: max(14px, env(safe-area-inset-bottom)); }
   .dg-sheet { display: none; position: fixed; z-index: 2147483300; left: 0; right: 0; bottom: 0; max-height: 78vh; overflow-y: auto; padding: 18px 18px 26px;
-    background: var(--paper); border-top: 1px solid var(--rule); border-radius: 18px 18px 0 0; box-shadow: 0 -10px 30px rgba(27,26,23,.18); }
+    background: var(--paper); border-top: 1px solid #d9d2c2; border-radius: 18px 18px 0 0; box-shadow: 0 -10px 30px rgba(27,26,23,.18); }
+  .dg-sheet > * + * { margin-top: 16px; }
   .dg-sheet.open { display: block; }
-  @media (max-width: 1099px) {
-    .dg-panel { display: none; }
-    .dg-fab { display: inline-flex; }
-    .dg-bubble .mobile-only { display: block; }
-  }
+  /* Not enough room for both columns beside the phone: phone mode (Guide button + sheet, tour cards on the phone). */
+  html.dg-narrow .dg-panel { display: none; }
+  html.dg-narrow .dg-fab { display: inline-flex; }
+  html.dg-narrow .dg-bubble .mobile-only { display: block; }
   @media (prefers-reduced-motion: reduce) { .dg-spot::after { animation: none; } .dg-spot { transition: none; } }
 </style>
 
 <aside class="dg dg-panel dg-left" aria-label="About dor">
   <div data-dg="about"></div>
-  <div class="kicker">You're looking at</div>
-  <div class="feat" data-dg="feature" aria-live="polite"></div>
 </aside>
 <aside class="dg dg-panel dg-right" aria-label="Guide">
   <div data-dg="guide"></div>
+  <div><div class="label">you’re looking at</div><div data-dg="feature" aria-live="polite"></div></div>
 </aside>
 <div class="dg dg-fab"><button class="btn primary" type="button" data-dg="fab">Guide</button></div>
 <div class="dg dg-sheet" role="dialog" aria-label="Guide" data-dg="sheet">
-  <div class="row" style="justify-content:space-between;margin:0 0 10px"><strong>Guide</strong><button class="btn ghost" type="button" data-dg="close">Close</button></div>
+  <div class="row" style="justify-content:space-between;margin:0"><span class="label" style="margin:0">guide</span><button class="btn" type="button" data-dg="close">Close</button></div>
   <div data-dg="about"></div>
-  <div class="kicker">You're looking at</div>
-  <div class="feat" data-dg="feature"></div>
-  <div class="kicker">Tour</div>
   <div data-dg="guide"></div>
+  <div><div class="label">you’re looking at</div><div data-dg="feature"></div></div>
 </div>
 
 <script>
 (function () {
   // ---- Content (from the README's opening and the Room UI spec) ----
-  var ABOUT = '<h1>dor</h1><p class="tag">AI that helps people build connection through life’s transitions</p>' +
+  var ABOUT = '<h1>dor</h1><p class="pencil">ai that helps people build connection through life’s transitions</p><div style="height:14px"></div>' +
     '<p>When someone starts college, moves to a new city, begins a job or graduates, dor helps them build a human support network. ' +
     'Meeting new people and finding real things to do nearby is the main path; keeping up with the people you already know is a supporting one.</p>' +
     '<p>It’s for making real human connection easier, not for replacing it with a chatbot. Every share is your own visible choice, and the AI never decides who you meet or writes messages as you.</p>' +
     '<p class="flow">Choose a new chapter → discover people and real things to do → make the first human connection.</p>' +
-    '<p class="note">Demo with sample data: nothing you do here is saved or sent, and no real people are shown. The whole app is one room on your phone; every “page” is a place in it.</p>';
+    '<p class="muted" style="margin:0">Demo with sample data: nothing you do here is saved or sent, and no real people are shown. The whole app is one room on your phone; every “page” is a place in it.</p>';
   var PLACES = {
     door:     { t: 'The door', l: 'Sign in and pick your new chapter', d: 'Where you come in. In the real app you sign in and choose your new chapter: starting college, a new city, a new job or just graduated.', b: ['Your chapter stays on your phone unless you put it on your pinboard.'] },
     home:     { t: 'Your room', l: 'The whole room', d: 'The app is one room. Tap any place to glide to it; back always zooms out one level. Things that are new show up as real objects (an envelope on the mat, a flyer in the window) instead of red badges.', b: ['Pulsing markers show where to tap.', 'The room colours in as your new life settles in.'] },
@@ -131,7 +120,7 @@
   var all = function (sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); };
   function featureHtml(id) {
     var p = PLACES[id] || PLACES.home;
-    return '<h2>' + p.t + '</h2><p>' + p.d + '</p>' + (p.b.length ? '<ul>' + p.b.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul>' : '');
+    return '<h2>' + p.t + '</h2><p class="muted" style="color:var(--ink);margin:0">' + p.d + '</p>' + (p.b.length ? '<ul>' + p.b.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul>' : '');
   }
   all('[data-dg="about"]').forEach(function (el) { el.innerHTML = ABOUT; });
 
@@ -141,33 +130,32 @@
 
   function guideHtml(here) {
     if (mode === 'choose') {
-      return '<div class="kicker" style="margin-top:0">Welcome</div><p>There’s a lot in this room. Want a quick tour? It points at each place on the phone and explains what it does, about a minute.</p>' +
-        '<div class="row"><button class="btn primary" data-act="start">Take the tour</button><button class="btn ghost" data-act="skip">Skip, let me explore</button></div>';
+      return '<div class="label">welcome</div><h2>A quick tour?</h2><p class="muted" style="color:var(--ink)">There’s a lot in this room. The tour points at each place on the phone and explains what it does. About a minute.</p>' +
+        '<div class="row"><button class="btn primary" data-act="start">Take the tour</button><button class="btn" data-act="skip">Skip, let me explore</button></div>';
     }
     if (mode === 'tour') {
       var s = TOUR[step], p = PLACES[s.id], opened = here === s.id;
       var lead = s.id === 'door' ? 'This is the front door. In the real app you sign in here and pick your new chapter. For the demo, we’ll walk straight in.'
         : s.id === 'home' ? 'This is your whole room. Each object is one part of dor. Next, we’ll visit them one at a time.'
-        : opened ? (window.innerWidth < 1100 ? p.d + ' Look around, then press Next.' : 'You’re in ' + p.t.toLowerCase() + '. The left side explains it. Look around, then press Next.')
+        : opened ? (narrowMode() ? p.d + ' Look around, then press Next.' : 'You’re in ' + p.t.toLowerCase() + '. It’s explained below. Look around, then press Next.')
         : 'Tap the highlighted ' + p.t.replace(/^The /, '').toLowerCase() + ' on the phone (' + p.l.toLowerCase() + ').';
       var nextLabel = step === TOUR.length - 1 ? 'Finish' : s.id === 'door' ? 'Walk in' : 'Next';
-      return '<div class="steps">Tour · ' + (step + 1) + ' of ' + TOUR.length + '</div><div class="bar"><span style="width:' + ((step + 1) / TOUR.length * 100) + '%"></span></div>' +
-        '<h2 style="font:500 22px/1.2 Georgia,serif;margin:0 0 6px">' + p.t + '</h2><p>' + lead + '</p>' +
-        '<div class="row">' + (step > 0 ? '<button class="btn ghost" data-act="prev">Back</button>' : '') +
-        (!opened && HOT[s.id] ? '<button class="btn ghost" data-act="open">Open it for me</button>' : '') +
-        '<button class="btn primary" data-act="next">' + nextLabel + '</button></div>' +
-        '<div class="row"><button class="btn ghost" data-act="skip">End tour, explore</button></div>';
+      return '<div class="label">tour · ' + (step + 1) + ' of ' + TOUR.length + '</div><div class="bar"><span style="width:' + ((step + 1) / TOUR.length * 100) + '%"></span></div>' +
+        '<h2>' + p.t + '</h2><p class="muted" style="color:var(--ink)">' + lead + '</p>' +
+        '<div class="row">' + (step > 0 ? '<button class="btn" data-act="prev">Back</button>' : '') +
+        (!opened && HOT[s.id] ? '<button class="btn" data-act="open">Open it for me</button>' : '') +
+        '<button class="btn primary" data-act="next">' + nextLabel + '</button><button class="btn" data-act="skip">End tour</button></div>';
     }
     var list = ['home'].concat(ORDER).map(function (id) {
       var p = PLACES[id];
-      return '<button type="button" data-go="' + id + '" aria-current="' + (here === id) + '"><b>' + p.t + '</b><small>' + p.l + '</small></button>';
+      return '<button type="button" class="btn" data-go="' + id + '" title="' + p.l + '" aria-current="' + (here === id) + '">' + (id === 'home' ? 'Room' : (function (n) { return n.charAt(0).toUpperCase() + n.slice(1); })(p.t.replace(/^The /, ''))) + '</button>';
     }).join('');
     var sims = SIMS.filter(function (t) { return reviewButton(t); }).map(function (t) {
-      return '<button class="btn ghost" data-act="sim:' + t + '">' + t + '</button>';
+      return '<button class="btn" data-act="sim:' + t + '">' + t + '</button>';
     }).join('');
-    return '<div class="kicker" style="margin-top:0">Jump to</div><div class="jump">' + list + '</div>' +
-      (sims ? '<div class="kicker">Pretend you’re the other person</div><p style="font-size:14px;color:var(--muted);margin:0 0 4px">See what arrives when someone else acts.</p><div class="row" style="margin-top:4px">' + sims + '</div>' : '') +
-      '<div class="row"><button class="btn ghost" data-act="start">Restart tour</button><button class="btn ghost" data-act="reset">Reset demo</button></div>';
+    return '<div class="label">jump to a place</div><div class="pills">' + list + '</div>' +
+      (sims ? '<div class="label" style="margin-top:16px">simulate the other side</div><div class="pills">' + sims + '</div>' : '') +
+      '<div class="row" style="margin-top:16px"><button class="btn" data-act="start">Restart tour</button><button class="btn" data-act="reset">Reset demo</button></div>';
   }
 
   // ---- Spotlight + prompt on the phone ----
@@ -196,7 +184,7 @@
   function setBubble(html) { if (bubble._html !== html) { bubble._html = html; bubble.innerHTML = html; } }
   function placeSpot() {
     var t = target();
-    var narrow = window.innerWidth < 1100;
+    var narrow = narrowMode();
     if (!t) {
       clip.hidden = true;
       // Phones have no side panel, so tour steps with nothing to point at get the tour card at the bottom instead.
@@ -289,9 +277,20 @@
     return REVIEW && Array.prototype.find.call(REVIEW.querySelectorAll('button'), function (b) { return b.textContent.trim() === text; });
   }
   function proxy(text) { var b = reviewButton(text); if (b) { b.click(); return true; } return false; }
+  // Columns sit 40px from the phone's real edges (the design's own gap), vertically centred against it. When
+  // two 300px columns don't fit beside the phone, switch to phone mode (Guide button + sheet).
+  var COL = 300, GAP = 40;
+  function narrowMode() { return document.documentElement.classList.contains('dg-narrow'); }
   function frame() {
     locate();
-    if (PHONE) document.documentElement.style.setProperty('--dg-phone', Math.round(PHONE.getBoundingClientRect().width) + 'px');
+    var root = document.documentElement, r = PHONE && PHONE.getBoundingClientRect();
+    var fits = r && r.width > 0 && r.left - GAP - COL >= 16 && r.right + GAP + COL <= window.innerWidth - 16;
+    root.classList.toggle('dg-narrow', !fits);
+    if (!fits) return;
+    root.style.setProperty('--dg-lx', Math.round(r.left - GAP - COL) + 'px');
+    root.style.setProperty('--dg-rx', Math.round(r.right + GAP) + 'px');
+    root.style.setProperty('--dg-top', Math.round(Math.max(16, r.top)) + 'px');
+    root.style.setProperty('--dg-h', Math.round(Math.min(r.height, window.innerHeight - 32)) + 'px');
   }
   (function boot(tries) {
     L = find();
