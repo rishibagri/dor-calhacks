@@ -38,6 +38,9 @@
         ]
       }
     },
+    "activityInterestAllowed": {
+      "type": "boolean"
+    },
     "approvalMode": {
       "type": "string",
       "const": "each_item"

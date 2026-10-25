@@ -81,12 +81,12 @@ export function createOfflineSharedState(
     blockDiscoveryUser: refuse, setDiscoveryPage: refuse, sendIntroductionRequest: refuse, respondIntroductionRequest: refuse,
     cancelIntroductionRequest: refuse, blockIntroductionParticipant: refuse, reportDiscoveryUser: refuse,
     dismissIntroductionProposal: refuse, requestIntroductionSuggestion: refuse, publishEventIntent: refuse, revokeEventIntent: refuse,
-    revokeActivityInterest: refuse, respondPlan: refuse, cancelPlan: refuse,
+    approveActivityInterest: refuse, revokeActivityInterest: refuse, respondPlan: refuse, cancelPlan: refuse,
     myAccount: () => null, myPairs: () => EMPTY, myInvites: () => EMPTY, myPresets: () => EMPTY,
     myPresetAssignments: () => EMPTY, myNudges: () => EMPTY, myReceipts: () => EMPTY,
     mySignals: () => EMPTY, mySupportPreferences: () => EMPTY, myStandingConsents: () => EMPTY,
     myDiscoveryProfile: () => null, discoveryCards: () => EMPTY, myIntroductions: () => EMPTY,
-    myIntroductionProposals: () => EMPTY, catalogueEvents: () => EMPTY, catalogueStatus: () => EMPTY, myEventIntents: () => EMPTY,
+    myIntroductionProposals: () => EMPTY, myIntroductionSuggestionRequest: () => null, catalogueEvents: () => EMPTY, catalogueStatus: () => EMPTY, myEventIntents: () => EMPTY,
     eventCompanions: () => EMPTY, myActivityApprovals: () => EMPTY, myPlans: () => EMPTY, unreadable: () => NO_UNREADABLE, myNudgeDelivery: () => EMPTY, myRecipientPauses: () => EMPTY,
     subscribe: () => () => undefined,
     getVersion: () => 0,
@@ -95,7 +95,7 @@ export function createOfflineSharedState(
 }
 
 const EMPTY: never[] = [];
-const NO_UNREADABLE = { signals: EMPTY, supportPreferences: EMPTY, nudgeDelivery: EMPTY };
+const NO_UNREADABLE = { signals: EMPTY, supportPreferences: EMPTY, nudgeDelivery: EMPTY, presets: EMPTY, counts: {} };
 
 function describe(status: AdapterStatus): string {
   return status.kind === 'live' ? 'offline' : status.reason;

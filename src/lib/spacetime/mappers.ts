@@ -10,13 +10,14 @@ import {
   RelationshipPresetSchema,
 } from '@dor/contracts';
 import type { ApprovedSignal, DisclosureReceipt, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
-import { NUDGE_TEMPLATE_IDS } from '@dor/contracts/policy';
+import { ACTIVITY_CATEGORY, NUDGE_TEMPLATE_IDS } from '@dor/contracts/policy';
 import { MAX_EVENT_TITLE, MAX_EVENT_TOPICS, MAX_INTEREST_TAGS, MAX_PUBLIC_NAME, validRecipientDelivery, validSupportPreferences } from '@dor/contracts/policy';
 import type {
-  ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView, StandingConsentView,
+  IntroductionSuggestionRequestView, ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView, StandingConsentView,
 } from '@/lib/backend/ports';
 import { SHARING_CATEGORIES } from '@dor/contracts';
-import { toCamel, type LooseRow } from './bindings';
+import type { LooseRow } from './bindings';
+import { toCamel } from './names.ts';
 
 type Mapper<T> = (row: LooseRow) => T | null;
 
@@ -72,19 +73,30 @@ export const mapAccount = (row: LooseRow): { displayName: string } | null => {
   return displayName ? { displayName } : null;
 };
 
-export const mapPreset: Mapper<RelationshipPreset> = (row) =>
-  parsed<RelationshipPreset>(RelationshipPresetSchema, {
+/**
+ * The module's preset row lists the C7 permission `activity_interest` among its categories (D039). It is split out
+ * into `activityInterestAllowed` (D049) so the preset stays readable and the core list holds C3 categories only;
+ * any other unknown or duplicate category still rejects the row.
+ */
+export const mapPreset: Mapper<RelationshipPreset> = (row) => {
+  const all = get(row, 'allowed_categories') ?? [];
+  if (!Array.isArray(all)) return null;
+  const activity = all.filter((c) => c === ACTIVITY_CATEGORY).length;
+  if (activity > 1) return null;
+  return parsed<RelationshipPreset>(RelationshipPresetSchema, {
     schemaVersion: 1,
     policyId: str(row, 'policy_id'),
     ownerId: str(row, 'owner_id'),
     presetKind: str(row, 'preset_kind'),
     purpose: 'support_nudge',
-    allowedCategories: get(row, 'allowed_categories') ?? [],
+    allowedCategories: all.filter((c) => c !== ACTIVITY_CATEGORY),
+    activityInterestAllowed: activity === 1,
     approvalMode: 'each_item',
     version: Number(plain(get(row, 'version'))),
     expiresAt: str(row, 'expires_at'),
     revokedAt: str(row, 'revoked_at'),
   });
+};
 
 export const mapAssignment: Mapper<RecipientPresetAssignment> = (row) =>
   parsed<RecipientPresetAssignment>(RecipientPresetAssignmentSchema, {
@@ -254,6 +266,14 @@ export const mapIntroductionProposal: Mapper<IntroductionProposalView> = (row) =
   const expiresAt = str(row, 'expires_at');
   if (!proposalId || !candidateRef || !reasonCode || !openerId || !sharedTags || !expiresAt) return null;
   return { proposalId, candidateRef, reasonCode, openerId, sharedTags, expiresAt };
+};
+
+const SUGGESTION_STATUS: readonly IntroductionSuggestionRequestView['status'][] = ['open', 'done'];
+
+export const mapSuggestionRequest: Mapper<IntroductionSuggestionRequestView> = (row) => {
+  const requestId = str(row, 'request_id'), createdAt = str(row, 'created_at'), expiresAt = str(row, 'expires_at');
+  const status = SUGGESTION_STATUS.find((s) => s === str(row, 'status'));
+  return requestId && status && createdAt && expiresAt ? { requestId, status, createdAt, expiresAt } : null;
 };
 
 const FORMATS: readonly CatalogueEventView['format'][] = ['in_person', 'online'];
