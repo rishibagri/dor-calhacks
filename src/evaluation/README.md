@@ -39,6 +39,8 @@ Report: `npm run build && node src/evaluation/report.ts --write` regenerates `re
 
 Core 4: `node src/evaluation/core4.ts --write` regenerates `results/core4.md`; `core4.test.ts` fails if it is stale, and each privacy check has a negative control that must make it fail.
 
+D044 automatic nudges (DS consumer check, `__tests__/standing-consent.test.ts`): no decision-loop, assessment or quiz output carries a standing rule; rule-granting fields in an assessment or candidate are rejected and never preview; quiz drafts can't satisfy `guardStandingRule`; and for every ready preview in `decision-cases.json`, a revoked, replaced, expired, paused-then-resumed or preset-changed rule no longer stands (`standingRuleStands`). Only the shared `@dor/contracts` guards and the pure models run; reducers, sweep and worker behavior are Cyber's module tests. Core 1–4 numbers above assume manual per-item approval (D044 is off by default).
+
 ## Teammate ratings (Core 3)
 Two teammates rate the decision-loop outcomes independently. Neither may be the DS annotator who wrote the labels.
 1. DS runs `node src/evaluation/rate.ts --sheets`. This writes `results/ratings/rater-a.md`, `rater-b.md` and `key.json`. It refuses to overwrite a sheet that already has ratings unless `--force` is given.
