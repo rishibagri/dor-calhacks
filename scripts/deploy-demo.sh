@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Always-on demo (no backend, no keys): deploy frontend/ to Cloudflare Pages as https://doratcalhacks.site.
-# The hosted copy gets scripts/demo-banner.html injected ("DEMO · sample data · not live", plus a link to
+# The hosted copy gets scripts/demo-banner.html and scripts/demo-guide.html (about panel, feature notes, tour) injected ("DEMO · sample data · not live", plus a link to
 # https://live.doratcalhacks.site when the laptop tunnel is up). frontend/ itself is never modified.
 #
 #   scripts/deploy-demo.sh            deploy frontend/ from the current checkout (usually main)
@@ -18,13 +18,14 @@ OUT="$(mktemp -d)/site"
 cp -R frontend "$OUT"
 rm -f "$OUT/README.md"
 # Insert the banner just before </body> (the last one) in index.html.
-python3 - "$OUT/index.html" scripts/demo-banner.html <<'EOF'
+python3 - "$OUT/index.html" scripts/demo-banner.html scripts/demo-guide.html <<'EOF'
 import sys
-page, banner = open(sys.argv[1]).read(), open(sys.argv[2]).read()
+page = open(sys.argv[1]).read()
+extra = ''.join(open(f).read() for f in sys.argv[2:])
 i = page.rfind('</body>')
-open(sys.argv[1], 'w').write(page[:i] + banner + page[i:])
+open(sys.argv[1], 'w').write(page[:i] + extra + page[i:])
 EOF
-grep -q 'id="dor-demo-banner"' "$OUT/index.html" || { echo "banner injection failed" >&2; exit 1; }
+grep -q 'id="dor-demo-banner"' "$OUT/index.html" && grep -q 'dg-panel' "$OUT/index.html" || { echo "banner/guide injection failed" >&2; exit 1; }
 echo "Built demo copy with banner: $OUT ($(git rev-parse --short HEAD))"
 
 if [ "${DRY_RUN:-0}" = 1 ]; then exit 0; fi

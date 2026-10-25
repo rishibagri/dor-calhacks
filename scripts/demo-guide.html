@@ -1,0 +1,304 @@
+<!-- dor demo guide: injected by scripts/deploy-demo.sh into the hosted copy only (frontend/ is untouched).
+     Desktop: left = what dor is + "You're looking at" (follows the open place); centre = the phone; right = optional
+     guided tour (spotlight + "tap here" prompt on the phone), then a "Jump to" list. Narrow screens: a Guide button
+     opens the same content as a sheet. Reads and drives the design's own component (state.place, go(), skipDoor()). -->
+<style>
+  .dg { --ink:#1b1a17; --muted:#5f5a51; --paper:#faf7f0; --card:#fbf4e4; --rule:#e4dccb; --sky:#2f5c91; --skyw:#eaf2fc;
+    font: 400 15px/1.55 Georgia, "Times New Roman", serif; color: var(--ink); }
+  .dg-panel { position: fixed; top: 24px; bottom: 24px; z-index: 2147483000; width: min(360px, calc((100vw - var(--dg-phone, 420px)) / 2 - 48px));
+    overflow-y: auto; padding: 22px 22px 18px; box-sizing: border-box; background: rgba(250,247,240,.92); border: 1px solid var(--rule);
+    border-radius: 18px; box-shadow: 0 10px 30px rgba(27,26,23,.08); }
+  .dg-left { left: 24px; } .dg-right { right: 24px; }
+  .dg h1 { font: 500 30px/1.1 Georgia, serif; margin: 0 0 4px; letter-spacing: 0; }
+  .dg .tag { margin: 0 0 14px; font-style: italic; color: var(--muted); }
+  .dg p { margin: 0 0 12px; }
+  .dg .flow { padding: 10px 12px; border-left: 3px solid var(--sky); background: var(--skyw); border-radius: 6px; color: var(--sky); font-size: 14.5px; }
+  .dg .note { font: 500 12.5px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #7a5200; background: #fbf0d9;
+    border: 1px solid #ecd9ae; border-radius: 10px; padding: 8px 10px; }
+  .dg .kicker { font: 600 11px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; }
+  .dg .feat { padding: 12px 14px; border: 1px solid var(--rule); border-radius: 14px; background: var(--card); }
+  .dg .feat h2 { font: 500 19px/1.2 Georgia, serif; margin: 0 0 6px; }
+  .dg .feat p { margin: 0 0 8px; font-size: 14.5px; }
+  .dg .feat ul { margin: 0; padding-left: 18px; font-size: 14px; color: var(--muted); }
+  .dg .btn { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px;
+    border-radius: 999px; cursor: pointer; font: 500 15px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .dg .btn.primary { background: var(--ink); color: var(--paper); }
+  .dg .btn.ghost { border: 1px solid var(--rule); background: #fff8; color: var(--ink); }
+  .dg .btn:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
+  .dg .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .dg .steps { font: 500 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--muted); margin-bottom: 8px; }
+  .dg .bar { height: 4px; border-radius: 4px; background: var(--rule); overflow: hidden; margin-bottom: 14px; }
+  .dg .bar span { display: block; height: 100%; background: var(--sky); transition: width .4s cubic-bezier(.23,1,.32,1); }
+  .dg .jump { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .dg .jump button { all: unset; box-sizing: border-box; cursor: pointer; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--rule); background: var(--card); }
+  .dg .jump button[aria-current="true"] { border-color: var(--sky); background: var(--skyw); }
+  .dg .jump b { display: block; font: 500 14.5px/1.2 Georgia, serif; }
+  .dg .jump small { display: block; color: var(--muted); font-size: 12px; line-height: 1.3; }
+  .dg .jump button:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
+  /* Spotlight over the phone: dims everything but the target; taps pass through to the design. */
+  .dg-clip { position: fixed; z-index: 2147483100; pointer-events: none; overflow: hidden; border-radius: 44px; }
+  .dg-spot { position: absolute; pointer-events: none; border-radius: 14px; box-shadow: 0 0 0 9999px rgba(27,26,23,.42);
+    outline: 2px solid #f6d77a; transition: left .25s, top .25s, width .25s, height .25s; }
+  .dg-spot::after { content: ""; position: absolute; inset: -8px; border-radius: 18px; border: 2px solid #f6d77a; animation: dgPulse 1.6s cubic-bezier(.23,1,.32,1) infinite; }
+  @keyframes dgPulse { from { opacity: .9; transform: scale(.96); } to { opacity: 0; transform: scale(1.12); } }
+  .dg-bubble { position: fixed; z-index: 2147483200; max-width: 260px; padding: 10px 12px; border-radius: 12px; background: var(--paper);
+    border: 1px solid var(--rule); box-shadow: 0 8px 24px rgba(27,26,23,.18); font: 500 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .dg-bubble .mobile-only { display: none; }
+  .dg-fab { display: none; position: fixed; z-index: 2147483000; left: 12px; bottom: max(14px, env(safe-area-inset-bottom)); }
+  .dg-sheet { display: none; position: fixed; z-index: 2147483300; left: 0; right: 0; bottom: 0; max-height: 78vh; overflow-y: auto; padding: 18px 18px 26px;
+    background: var(--paper); border-top: 1px solid var(--rule); border-radius: 18px 18px 0 0; box-shadow: 0 -10px 30px rgba(27,26,23,.18); }
+  .dg-sheet.open { display: block; }
+  @media (max-width: 1099px) {
+    .dg-panel { display: none; }
+    .dg-fab { display: inline-flex; }
+    .dg-bubble .mobile-only { display: block; }
+  }
+  @media (prefers-reduced-motion: reduce) { .dg-spot::after { animation: none; } .dg-spot { transition: none; } }
+</style>
+
+<aside class="dg dg-panel dg-left" aria-label="About dor">
+  <div data-dg="about"></div>
+  <div class="kicker">You're looking at</div>
+  <div class="feat" data-dg="feature" aria-live="polite"></div>
+</aside>
+<aside class="dg dg-panel dg-right" aria-label="Guide">
+  <div data-dg="guide"></div>
+</aside>
+<div class="dg dg-fab"><button class="btn primary" type="button" data-dg="fab">Guide</button></div>
+<div class="dg dg-sheet" role="dialog" aria-label="Guide" data-dg="sheet">
+  <div class="row" style="justify-content:space-between;margin:0 0 10px"><strong>Guide</strong><button class="btn ghost" type="button" data-dg="close">Close</button></div>
+  <div data-dg="about"></div>
+  <div class="kicker">You're looking at</div>
+  <div class="feat" data-dg="feature"></div>
+  <div class="kicker">Tour</div>
+  <div data-dg="guide"></div>
+</div>
+
+<script>
+(function () {
+  // ---- Content (from the README's opening and the Room UI spec) ----
+  var ABOUT = '<h1>dor</h1><p class="tag">AI that helps people build connection through life’s transitions</p>' +
+    '<p>When someone starts college, moves to a new city, begins a job or graduates, dor helps them build a human support network. ' +
+    'Meeting new people and finding real things to do nearby is the main path; keeping up with the people you already know is a supporting one.</p>' +
+    '<p>It’s for making real human connection easier, not for replacing it with a chatbot. Every share is your own visible choice, and the AI never decides who you meet or writes messages as you.</p>' +
+    '<p class="flow">Choose a new chapter → discover people and real things to do → make the first human connection.</p>' +
+    '<p class="note">Demo with sample data: nothing you do here is saved or sent, and no real people are shown. The whole app is one room on your phone; every “page” is a place in it.</p>';
+  var PLACES = {
+    door:     { t: 'The door', l: 'Sign in and pick your new chapter', d: 'Where you come in. In the real app you sign in and choose your new chapter: starting college, a new city, a new job or just graduated.', b: ['Your chapter stays on your phone unless you put it on your pinboard.'] },
+    home:     { t: 'Your room', l: 'The whole room', d: 'The app is one room. Tap any place to glide to it; back always zooms out one level. Things that are new show up as real objects (an envelope on the mat, a flyer in the window) instead of red badges.', b: ['Pulsing markers show where to tap.', 'The room colours in as your new life settles in.'] },
+    boxes:    { t: 'Moving boxes', l: 'First-time setup', d: 'Unpack your setup: where you’ve landed (coarsened to a broad area on your phone), a few quick questions, and the people from home you want to keep close.', b: ['Answers only shape suggestions; they never share anything.', 'People from home become books on your shelf.'] },
+    pinboard: { t: 'The pinboard', l: 'Your public profile', d: 'Pin exactly what people nearby may see: your first name, your chapter, interests and what you’re open to. Flipping the sign from “Just for me” to “Visible nearby” is the consent; flip it back and you disappear everywhere at once.', b: ['You preview precisely what a stranger would see first.', 'Claude can suggest a card, but never pins or publishes.'] },
+    window:   { t: 'The window', l: 'Real things to do nearby', d: 'Flyers for real local events from a public events feed, each stamped with where it came from and how fresh it is. Mark one as interesting privately, or separately choose to show your interest to people nearby.', b: ['A listing never reveals who else is going.', 'Sample events are labelled as samples.'] },
+    sill:     { t: 'The windowsill', l: 'People nearby', d: 'Postcards from people nearby who also chose to be found. Flip one to see their pinned cards and why they’re here (“you both pinned climbing”), then send an introduction with a reason from a fixed list.', b: ['You see exactly what they’ll receive first.', 'Claude may suggest the reason; it never writes a message or sends anything.'] },
+    mat:      { t: 'The door mat', l: 'Introductions for you, and settings', d: 'Introductions from people nearby slide in under the door. Accept, say not now, or block. Not now and block are silent: the sender is never told.', b: ['Accepting puts a new loose page on your shelf.'] },
+    shelf:    { t: 'The shelf', l: 'Your people', d: 'Everyone you’re connected to: loose pages for people you’ve just met, books for people you’ve met in person or brought from home. Open a book to see your history, plan something, pause them, or set up a standing rule.', b: ['A paused book turns spine-in; only you see that.', 'A ribbon means you said “always okay to send” to that one person.'] },
+    calendar: { t: 'The desk calendar', l: 'Plans you’ve both agreed to', d: 'A plan only lands here once both people accept the exact same version; any edit needs both again. Afterwards it asks “Did you meet up?”, and a new connection turns into a book.', b: [] },
+    notebook: { t: 'The notebook', l: 'An optional private journal', d: 'Write or speak an entry (voice through Cartesia, or type). Claude reflects privately and asks at most two gentle questions. Nothing here is shared, and you never need it to meet people.', b: ['Locking the notebook locks only the notebook.'] },
+    tray:     { t: 'The tray', l: 'Notes about people you already know', d: 'Paper planes are small nudges: “Maybe check in with Mom this week.” Before anything goes to someone, you see the exact note and hold the stamp to approve it.', b: ['Automatic sending happens only for one named person, under a rule you set and can untie any time.'] },
+    drawer:   { t: 'The drawer', l: 'Privacy and controls', d: 'Every control in one place: your pinboard’s visibility, pauses, standing rules, blocked people, your area, events you showed interest in, a plain list view of the room, and sign out.', b: [] }
+  };
+  var ORDER = ['boxes', 'pinboard', 'window', 'sill', 'mat', 'shelf', 'calendar', 'notebook', 'tray', 'drawer'];
+  var HOT = { window: 'The window · events', sill: 'Windowsill · people nearby', pinboard: 'Pinboard · your profile', shelf: 'Shelf · your people',
+    boxes: 'Moving boxes · setup', calendar: 'Desk calendar · plans', notebook: 'Notebook · journal', tray: 'Tray · paper planes',
+    drawer: 'Drawer · privacy', mat: 'Door mat · settings and introductions' };
+
+  // ---- The design's component: found through React's fiber links, then read (place) and driven (go). ----
+  var L = null;
+  function find() {
+    var isL = function (o) { return o && typeof o === 'object' && typeof o.go === 'function' && typeof o.skipDoor === 'function' && o.state; };
+    function scan(v, d) {
+      if (!v || typeof v !== 'object' || d > 3) return null;
+      if (isL(v)) return v;
+      var keys = ['current', 'memoizedState', 'stateNode', 'logic', 'instance', 'ref'];
+      for (var i = 0; i < keys.length; i++) { try { var r = scan(v[keys[i]], d + 1); if (r) return r; } catch (e) {} }
+      return null;
+    }
+    var nodes = document.querySelectorAll('button, div');
+    for (var n = 0; n < nodes.length; n++) {
+      var k = Object.keys(nodes[n]).find(function (x) { return x.indexOf('__reactFiber$') === 0; });
+      if (!k) continue;
+      for (var f = nodes[n][k]; f; f = f.return) { var r = scan(f.stateNode, 0); if (r) return r; }
+    }
+    return null;
+  }
+  function where() {
+    if (!L) return null;
+    var s = L.state || {};
+    return s.doorOn ? 'door' : (s.place || 'home');
+  }
+
+  // ---- Rendering ----
+  var all = function (sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); };
+  function featureHtml(id) {
+    var p = PLACES[id] || PLACES.home;
+    return '<h2>' + p.t + '</h2><p>' + p.d + '</p>' + (p.b.length ? '<ul>' + p.b.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul>' : '');
+  }
+  all('[data-dg="about"]').forEach(function (el) { el.innerHTML = ABOUT; });
+
+  var mode = 'choose';   // choose | tour | explore
+  var step = 0;          // index into TOUR
+  var TOUR = [{ id: 'door' }, { id: 'home' }].concat(ORDER.map(function (id) { return { id: id }; }));
+
+  function guideHtml(here) {
+    if (mode === 'choose') {
+      return '<div class="kicker" style="margin-top:0">Welcome</div><p>There’s a lot in this room. Want a quick tour? It points at each place on the phone and explains what it does, about a minute.</p>' +
+        '<div class="row"><button class="btn primary" data-act="start">Take the tour</button><button class="btn ghost" data-act="skip">Skip, let me explore</button></div>';
+    }
+    if (mode === 'tour') {
+      var s = TOUR[step], p = PLACES[s.id], opened = here === s.id;
+      var lead = s.id === 'door' ? 'This is the front door. In the real app you sign in here and pick your new chapter. For the demo, we’ll walk straight in.'
+        : s.id === 'home' ? 'This is your whole room. Each object is one part of dor. Next, we’ll visit them one at a time.'
+        : opened ? (window.innerWidth < 1100 ? p.d + ' Look around, then press Next.' : 'You’re in ' + p.t.toLowerCase() + '. The left side explains it. Look around, then press Next.')
+        : 'Tap the highlighted ' + p.t.replace(/^The /, '').toLowerCase() + ' on the phone (' + p.l.toLowerCase() + ').';
+      var nextLabel = step === TOUR.length - 1 ? 'Finish' : s.id === 'door' ? 'Walk in' : 'Next';
+      return '<div class="steps">Tour · ' + (step + 1) + ' of ' + TOUR.length + '</div><div class="bar"><span style="width:' + ((step + 1) / TOUR.length * 100) + '%"></span></div>' +
+        '<h2 style="font:500 22px/1.2 Georgia,serif;margin:0 0 6px">' + p.t + '</h2><p>' + lead + '</p>' +
+        '<div class="row">' + (step > 0 ? '<button class="btn ghost" data-act="prev">Back</button>' : '') +
+        (!opened && HOT[s.id] ? '<button class="btn ghost" data-act="open">Open it for me</button>' : '') +
+        '<button class="btn primary" data-act="next">' + nextLabel + '</button></div>' +
+        '<div class="row"><button class="btn ghost" data-act="skip">End tour, explore</button></div>';
+    }
+    var list = ['home'].concat(ORDER).map(function (id) {
+      var p = PLACES[id];
+      return '<button type="button" data-go="' + id + '" aria-current="' + (here === id) + '"><b>' + p.t + '</b><small>' + p.l + '</small></button>';
+    }).join('');
+    var sims = SIMS.filter(function (t) { return reviewButton(t); }).map(function (t) {
+      return '<button class="btn ghost" data-act="sim:' + t + '">' + t + '</button>';
+    }).join('');
+    return '<div class="kicker" style="margin-top:0">Jump to</div><div class="jump">' + list + '</div>' +
+      (sims ? '<div class="kicker">Pretend you’re the other person</div><p style="font-size:14px;color:var(--muted);margin:0 0 4px">See what arrives when someone else acts.</p><div class="row" style="margin-top:4px">' + sims + '</div>' : '') +
+      '<div class="row"><button class="btn ghost" data-act="start">Restart tour</button><button class="btn ghost" data-act="reset">Reset demo</button></div>';
+  }
+
+  // ---- Spotlight + prompt on the phone ----
+  // The dimming is clipped to the phone, so the side panels stay readable during the tour.
+  var clip = document.createElement('div'); clip.className = 'dg-clip'; clip.hidden = true;
+  var spot = document.createElement('div'); spot.className = 'dg-spot'; clip.appendChild(spot);
+  var bubble = document.createElement('div'); bubble.className = 'dg dg-bubble'; bubble.hidden = true;
+  document.body.appendChild(clip); document.body.appendChild(bubble);
+  function target() {
+    if (mode !== 'tour') return null;
+    var s = TOUR[step], here = where();
+    if (s.id === 'door' && here === 'door') {
+      // The tag: the smallest visible element whose text contains the tag's words (markup may split or wrap them).
+      var tag = all('div').filter(function (d) {
+        return /sign in to come\s*in/i.test(d.textContent.replace(/\s+/g, ' ')) && d.getClientRects().length;
+      }).sort(function (a, b) { var ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); return ra.width * ra.height - rb.width * rb.height; })[0];
+      return tag ? { el: tag, text: 'This is the door. Press “Walk in” to enter the room.' } : null;
+    }
+    if (HOT[s.id] && here === 'home') {
+      var b = document.querySelector('button[aria-label="' + HOT[s.id] + '"]');
+      return b ? { el: b, text: 'Tap here: ' + PLACES[s.id].t.replace(/^The /, 'the ') } : null;
+    }
+    return null;
+  }
+  // Only touch the bubble when its content changes: it is re-placed every 200 ms, and rewriting it would eat taps.
+  function setBubble(html) { if (bubble._html !== html) { bubble._html = html; bubble.innerHTML = html; } }
+  function placeSpot() {
+    var t = target();
+    var narrow = window.innerWidth < 1100;
+    if (!t) {
+      clip.hidden = true;
+      // Phones have no side panel, so tour steps with nothing to point at get the tour card at the bottom instead.
+      if (mode === 'tour' && narrow) {
+        var here = where(), st = TOUR[step];
+        bubble.hidden = false;
+        setBubble(guideHtml(here));
+        bubble.style.left = '12px'; bubble.style.right = '12px'; bubble.style.maxWidth = 'none';
+        // Inside an open place the design's own controls sit at the bottom, so the card moves to the top there.
+        if (here === st.id && here !== 'home' && here !== 'door') { bubble.style.top = 'max(64px, calc(env(safe-area-inset-top) + 56px))'; bubble.style.bottom = 'auto'; }
+        else { bubble.style.top = 'auto'; bubble.style.bottom = 'max(70px, calc(env(safe-area-inset-bottom) + 70px))'; }
+      } else bubble.hidden = true;
+      return;
+    }
+    bubble.style.right = 'auto'; bubble.style.bottom = 'auto'; bubble.style.maxWidth = '';
+    // On a phone the design is the whole screen (its controls column isn't there), so clip to the viewport.
+    var r = t.el.getBoundingClientRect(), pad = 6,
+      ph = PHONE ? PHONE.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+    clip.style.borderRadius = PHONE ? '44px' : '0';
+    clip.hidden = false;
+    clip.style.left = ph.left + 'px'; clip.style.top = ph.top + 'px'; clip.style.width = ph.width + 'px'; clip.style.height = ph.height + 'px';
+    spot.style.left = (r.left - ph.left - pad) + 'px'; spot.style.top = (r.top - ph.top - pad) + 'px';
+    spot.style.width = (r.width + pad * 2) + 'px'; spot.style.height = (r.height + pad * 2) + 'px';
+    bubble.hidden = false;
+    var s = TOUR[step];
+    setBubble('<div>' + t.text + '</div><div class="mobile-only" style="margin-top:8px"><div class="row" style="margin-top:0">' +
+      (HOT[s.id] ? '<button class="btn ghost" data-act="open">Open it</button>' : '') +
+      '<button class="btn primary" data-act="next">' + (s.id === 'door' ? 'Walk in' : 'Next') + '</button><button class="btn ghost" data-act="skip">End tour</button></div></div>');
+    var bw = Math.min(260, window.innerWidth - 24), below = r.bottom + 14 + 90 < window.innerHeight;
+    bubble.style.left = Math.max(12, Math.min(window.innerWidth - bw - 12, r.left + r.width / 2 - bw / 2)) + 'px';
+    bubble.style.top = (below ? r.bottom + 14 : Math.max(12, r.top - 14 - bubble.offsetHeight)) + 'px';
+  }
+
+  // ---- Actions ----
+  function goHome() { if (L && L.state.place) L.go(null); }
+  function act(a) {
+    if (!L) return;
+    if (a === 'start') { mode = 'tour'; step = 0; if (!L.state.doorOn && typeof L.init === 'function') { goHome(); } }
+    else if (a === 'skip') { mode = 'explore'; if (L.state.doorOn) L.skipDoor(); }
+    else if (a === 'reset') { if (!proxy('Reset demo')) { L.setState(L.init()); if (L.fit) L.fit(); } mode = 'choose'; }
+    else if (a.indexOf('sim:') === 0) { proxy(a.slice(4)); }
+    else if (a === 'open') { var s = TOUR[step]; if (L.state.doorOn) L.skipDoor(); setTimeout(function () { L.go(s.id); }, L.state.doorOn ? 1600 : 0); }
+    else if (a === 'prev') { step = Math.max(0, step - 1); goHome(); }
+    else if (a === 'next') {
+      if (TOUR[step].id === 'door' && L.state.doorOn) L.skipDoor();
+      if (step === TOUR.length - 1) { mode = 'explore'; goHome(); }
+      else { step++; goHome(); }
+    }
+    render(true);
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-act], [data-go], [data-dg="fab"], [data-dg="close"]');
+    if (!b || !b.closest('.dg')) return;
+    // On a phone the sheet covers the room: close it when the action happens on the phone (tour, jump, simulate).
+    var sheet = b.closest('[data-dg="sheet"]');
+    if (sheet && (b.dataset.act || b.dataset.go)) sheet.classList.remove('open');
+    if (b.dataset.act) act(b.dataset.act);
+    else if (b.dataset.go) { if (L.state.doorOn) L.skipDoor(); var id = b.dataset.go; setTimeout(function () { L.go(id === 'home' ? null : id); render(true); }, L.state.doorOn ? 1600 : 0); }
+    else if (b.dataset.dg === 'fab') document.querySelector('[data-dg="sheet"]').classList.add('open');
+    else if (b.dataset.dg === 'close') document.querySelector('[data-dg="sheet"]').classList.remove('open');
+  });
+
+  // ---- Follow the design: re-render when the open place changes; keep the spotlight on its target ----
+  var last = '';
+  function render(force) {
+    var here = where() || 'door';
+    var key = here + '|' + mode + '|' + step;
+    if (force || key !== last) {
+      last = key;
+      all('[data-dg="feature"]').forEach(function (el) { el.innerHTML = featureHtml(here); });
+      all('[data-dg="guide"]').forEach(function (el) { el.innerHTML = guideHtml(here); });
+    }
+    placeSpot();
+  }
+  // The design ships its own reviewer controls ("dor · the room") beside the phone. The guide takes over that role:
+  // hide the column (which centres the phone) and proxy its "simulate" and "Reset demo" buttons by clicking them.
+  var SIMS = ['Envelope under the door', 'Paper plane lands', 'Priya accepts'];
+  var REVIEW = null, PHONE = null;
+  function locate() {
+    if (!REVIEW || !REVIEW.isConnected) {
+      var h = all('div').find(function (d) { return d.childElementCount === 0 && d.textContent.trim() === 'dor · the room'; });
+      REVIEW = h && h.parentElement && h.parentElement.parentElement;
+      if (REVIEW) REVIEW.style.display = 'none';
+    }
+    if (REVIEW && (!PHONE || !PHONE.isConnected)) {
+      PHONE = Array.prototype.find.call(REVIEW.parentElement.children, function (c) { return c !== REVIEW; }) || null;
+    }
+  }
+  function reviewButton(text) {
+    return REVIEW && Array.prototype.find.call(REVIEW.querySelectorAll('button'), function (b) { return b.textContent.trim() === text; });
+  }
+  function proxy(text) { var b = reviewButton(text); if (b) { b.click(); return true; } return false; }
+  function frame() {
+    locate();
+    if (PHONE) document.documentElement.style.setProperty('--dg-phone', Math.round(PHONE.getBoundingClientRect().width) + 'px');
+  }
+  (function boot(tries) {
+    L = find();
+    if (!L) { if (tries < 80) setTimeout(function () { boot(tries + 1); }, 150); return; }
+    frame(); render(true);
+    setInterval(function () { frame(); render(false); }, 200);
+    window.addEventListener('resize', function () { frame(); render(true); });
+  })(0);
+})();
+</script>
