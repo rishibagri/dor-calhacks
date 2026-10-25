@@ -1,4 +1,4 @@
-# Live notebook (D055)
+# Live notebook (D056)
 
 The notebook in the live room (`src/components/live`, built from the Claude Design room by `scripts/build-live-ui.mjs`). It's a private journal you can talk to. Nothing in it is stored, and nothing reaches another person unless you tap **Send** and dor's Reasoning then decides a note fits (D054).
 

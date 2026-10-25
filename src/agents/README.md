@@ -38,7 +38,7 @@ Read root AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md and your 
 - Both use Clerk `auth()`. With no Clerk publishable key they return **503**, never anonymous access; with no user, 401.
 - Bodies are strict: unknown fields return 422. Limits are 12 reflections and 10 voice sessions per user per minute, in memory per instance.
 - Errors return `{error:{code,message,requestId}}` with codes `unauthenticated`, `invalid`, `rate_limited` or `unavailable`. Provider messages and input are never echoed, and responses are `no-store`.
-- `POST /api/journal/followup` (D055, `src/app/api/journal/followup/route.ts`) takes `{entry ≤ 8000, asked ≤ 8}` and returns `{question, distress}`: one short open question about the writer's own entry for the live notebook's **Keep talking**. Same rules as `/api/reasoning`: Clerk session, 20 per user per minute, strict body, Opus 5.5 at low effort with structured output and the server-side refusal fallback, metadata-only logs (`followup_call`). Nothing is stored, and nothing reaches another person.
+- `POST /api/journal/followup` (D056, `src/app/api/journal/followup/route.ts`) takes `{entry ≤ 8000, asked ≤ 8}` and returns `{question, distress}`: one short open question about the writer's own entry for the live notebook's **Keep talking**. Same rules as `/api/reasoning`: Clerk session, 20 per user per minute, strict body, Opus 5.5 at low effort with structured output and the server-side refusal fallback, metadata-only logs (`followup_call`). Nothing is stored, and nothing reaches another person.
 - Root `predev`, `prebuild:app` and `typecheck` now build `@dor/agents` before Next.
 
 ### Browser (`@dor/agents/client`; no provider SDKs, keys or Node APIs)
