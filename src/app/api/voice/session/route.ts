@@ -1,6 +1,7 @@
 // AI-owned route (claimed in docs/updates/ai.md; CS owns session middleware and app wiring).
 // Mints a short-lived scoped Cartesia token for the signed-in browser; the master key never leaves the server.
 import { auth } from '@clerk/nextjs/server';
+import { tracked } from '@/server/activity';
 import { CartesiaVoiceAdapter, RateLimiter, handleVoiceSessionRequest, type RouteSession } from '@dor/agents';
 
 const voice = new CartesiaVoiceAdapter();
@@ -14,5 +15,7 @@ async function session(): Promise<RouteSession> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  return handleVoiceSessionRequest(request, { session: await session(), voice, limiter });
+  const s = await session();
+  // D060 backstage activity (metadata only).
+  return tracked('cartesia', 'voice session', s.userId, () => handleVoiceSessionRequest(request, { session: s, voice, limiter }));
 }

@@ -528,7 +528,7 @@ export class LiveBridge {
     if (i.state.justMe || !text.trim()) return;
     const input = textToReflect(text);
     if (!input.ok) return i.toast(input.reason === 'too_long' ? 'That entry is too long to reflect on.' : 'Write something first.');
-    this.live = { ...this.live, thinking: true };
+    this.live = { ...this.live, thinking: true, nbPhase: 'claude is reading your entry, privately…' };
     i.setState({ margin: null });
     i.toast('Claude is reading it, privately…');
     try {
@@ -543,7 +543,7 @@ export class LiveBridge {
     } catch (e) {
       i.toast(reflectFailureCopy(e instanceof Error && 'code' in e ? String((e as { code: unknown }).code) : 'unavailable'));
     } finally {
-      this.live = { ...this.live, thinking: false };
+      this.live = { ...this.live, thinking: false, nbPhase: '' };
       i.forceUpdate();
     }
   }
@@ -584,7 +584,9 @@ export class LiveBridge {
     const memory = readMemory(store, now);
     const ctx: LiveContext = { now: now.toISOString(), episodeId: `ep-${crypto.randomUUID()}`, candidate: last.candidate,
       assessment: last.assessment, people: people.map(({ name: _n, ...p }) => p), memoryIds: memory.map((m) => m.id) };
+    if (!reassessing) this.setPhase('dor’s agent is deciding what, if anything, to do…');
     const { decision, actions, memory: update, source } = await reasonLive(ctx, this.modelPort(last.text, memory));
+    if (!reassessing && decision.mode === 'act' && actions.length > 0) this.setPhase('handing it to the agents…');
     // D056: remember across entries (on this device only), even when nothing is sent this time.
     if (!reassessing) saveMemory(store, applyMemoryUpdate(memory, update, now, () => crypto.randomUUID().slice(0, 12), new Set(people.map((p) => p.ref))));
     const named = (ref: string | undefined) => (ref ? people.find((p) => p.ref === ref)?.name ?? null : null);
@@ -835,6 +837,10 @@ export class LiveBridge {
       nbMore: () => void this.keepTalking(),
       nbReset: () => this.resetEntry(),
       feedAge: this.feedAge(),
+      // D060: the window's own live Apify refresh button.
+      refreshTap: () => void this.startRefresh(),
+      refreshBusy: this.refresh?.status === 'running',
+      refreshLabel: this.refreshLabel(),
       // The event's own public page (host-allowlisted at ingest, D039); opened in a new tab, nothing is sent.
       openListing: () => {
         const id = i.state.flyerOpen;
@@ -942,11 +948,61 @@ export class LiveBridge {
       placeholder: !s.nbEditing && words.length === 0 };
   }
 
+  /** D060: notebook banner text while the entry is with Claude and the agents. */
+  private setPhase(text: string) {
+    if (!this.live.thinking) return;
+    this.live = { ...this.live, nbPhase: text };
+    this.inst?.forceUpdate();
+  }
+
+  // ---------- D060 window refresh (live Apify scrape on the server) ----------
+  private refresh: { status: 'running' | 'done' | 'failed'; phase: string; runsDone: number; runsTotal: number;
+    saved: { events: number; places: number }; errors: string[] } | null = null;
+  private refreshTimer: ReturnType<typeof setInterval> | null = null;
+
+  private refreshLabel(): string {
+    const r = this.refresh;
+    if (!r) return '↻ Refresh nearby';
+    if (r.status === 'running') return r.phase === 'scraping' ? `Looking live… ${r.runsDone}/${r.runsTotal}` : 'Saving what we found…';
+    if (r.status === 'failed') return '↻ Couldn’t refresh · try again';
+    return `↻ Refreshed · ${r.saved.events} events · ${r.saved.places} places`;
+  }
+
+  private async startRefresh() {
+    if (this.refresh?.status === 'running') return;
+    try {
+      const res = await fetch('/api/catalogue/refresh', { method: 'POST' });
+      const j = await res.json().catch(() => null);
+      if (!res.ok || !j?.state) { this.inst?.toast('Refresh isn’t available right now.'); return; }
+      this.refresh = j.state;
+      this.inst?.toast('Looking for new things to do nearby…');
+      this.pollRefresh();
+    } catch { this.inst?.toast('Refresh isn’t available right now.'); }
+    this.sync();
+  }
+
+  private pollRefresh() {
+    if (this.refreshTimer) return;
+    this.refreshTimer = setInterval(async () => {
+      try {
+        const j = await (await fetch('/api/catalogue/refresh', { cache: 'no-store' })).json();
+        this.refresh = j?.state ?? null;
+      } catch { /* keep the last state */ }
+      if (this.refresh?.status !== 'running') {
+        if (this.refreshTimer) clearInterval(this.refreshTimer);
+        this.refreshTimer = null;
+        if (this.refresh?.status === 'done') this.inst?.toast(`Found ${this.refresh.saved.events} events and ${this.refresh.saved.places} places nearby.`);
+      }
+      this.sync();
+    }, 2500);
+  }
+
   private notebookLive(i: Inst) {
     const s = i.state;
     const busy = this.live.thinking || this.live.nbAsking || s.nbMode === 'recording' || s.nbMode === 'transcribing';
     const hasText = !!(s.nbText ?? '').trim();
-    return { ...this.live, nbActions: hasText && !busy && !s.nbEditing, nbAskOn: !!this.live.nbAsk && !this.live.thinking,
+    return { ...this.live, nbBusyOn: !!this.live.thinking, nbBusyText: this.live.nbPhase || 'sending to dor’s agent…',
+      nbActions: hasText && !busy && !s.nbEditing, nbAskOn: !!this.live.nbAsk && !this.live.thinking,
       nbCanReset: hasText || !!this.live.nbAsk || s.nbMode === 'recording' };
   }
 

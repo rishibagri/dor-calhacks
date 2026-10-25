@@ -43,7 +43,7 @@ edit('frame size', 'frameW:Math.round(410*s.zoom), frameH:Math.round(864*s.zoom)
 // Fit the whole 390×844 screen (nothing cropped: the door mat and bottom sheets sit at the very bottom).
 edit('fit', 'Math.min(1, (window.innerHeight-48)/864, (window.innerWidth-32)/410)', 'Math.min(window.innerHeight/844, window.innerWidth/390)');
 // Any side margin left on a short viewport (browser toolbars) is painted the drawing's wall colour, so it reads as wall.
-html = html.replace('</head>', '<style>#__claude_design_branding{display:none!important}html,body{margin:0;overscroll-behavior:none;background:#F2F0EA!important}</style>\n</head>');
+html = html.replace('</head>', '<style>#__claude_design_branding{display:none!important}html,body{margin:0;overscroll-behavior:none;background:#F2F0EA!important}@keyframes dorSpin{to{transform:rotate(360deg)}}</style>\n</head>');
 
 // 2. Bridge hook: the parent page (same origin) adopts the component instance before anything else runs.
 edit('bridge hook', '  componentDidMount(){\n',
@@ -104,6 +104,18 @@ edit('notebook actions', `<div style="font:400 15px 'Spectral',serif;white-space
   `<button sc-camel-on-click="{{ live.nbMore }}" style="height:42px;padding:0 16px;border:1px solid #1B1A17;border-radius:21px;background:#FAF7F0;color:#1B1A17;font:400 15px 'Spectral',serif;cursor:pointer">Keep talking</button>` +
   `<button sc-camel-on-click="{{ live.nbSend }}" style="height:42px;padding:0 20px;border:none;border-radius:21px;background:#1B1A17;color:#FAF7F0;font:500 15px 'Spectral',serif;cursor:pointer">Send</button></div></sc-if>` +
   `<div style="font:400 15px 'Spectral',serif;white-space:nowrap">{{ nb.micLabel }}</div>`);
+
+// 6. D060: the window's own refresh button (live Apify scrape) in the feed sheet, and a visible "sending to dor's agent"
+//    banner on the notebook page while the private reflection and the reasoning run.
+const WINDOW_NOTE = `<div style="margin-top:4px;font:400 20px/1.15 'Reenie Beanie';color:#6B665D">listings never show who else is going</div>`;
+edit('window refresh', WINDOW_NOTE, WINDOW_NOTE +
+  `<button sc-camel-on-click="{{ live.refreshTap }}" aria-label="Refresh nearby events and places" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;width:100%;height:44px;border-radius:22px;border:1px solid #1B1A17;background:#FAF7F0;color:#1B1A17;font:500 15px 'Spectral',serif;cursor:pointer">` +
+  `<sc-if value="{{ live.refreshBusy }}" hint-placeholder-val="{{ false }}"><span style="width:12px;height:12px;border-radius:50%;border:2px solid #C9C2B2;border-top-color:#1B1A17;animation:dorSpin .8s linear infinite;flex:none"></span></sc-if>` +
+  `<span>{{ live.refreshLabel }}</span></button>`);
+const NB_STATE = `<div style="margin-top:6px;font-size:13px;font-variant:small-caps;letter-spacing:.06em;color:#6B665D">{{ nb.stateLabel }}</div>`;
+edit('notebook busy', NB_STATE, NB_STATE +
+  `<sc-if value="{{ live.nbBusyOn }}" hint-placeholder-val="{{ false }}"><div role="status" aria-live="polite" style="position:relative;z-index:3;margin-top:8px;display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:14px;background:#EAF1FA;color:#2F5C91;font:400 13px/1.25 'Spectral',serif">` +
+  `<span style="width:12px;height:12px;border-radius:50%;border:2px solid #A9C3E3;border-top-color:#2F5C91;animation:dorSpin .8s linear infinite;flex:none"></span><span>{{ live.nbBusyText }}</span></div></sc-if>`);
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
