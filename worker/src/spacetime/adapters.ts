@@ -35,6 +35,10 @@ export interface WorkerStateSource {
   commitPlanProposal?(args: CommitPlanArgs): Promise<void>;
   /** Calls commit_introduction_proposal (D038); rejects with the reducer's `code: reason` message on refusal. */
   commitIntroductionProposal?(args: CommitIntroductionArgs): Promise<void>;
+  /** Current rows of the worker_introduction_requests view (D048). A source without it makes no suggestions. */
+  introductionRequests?(): Promise<Iterable<unknown>>;
+  /** Calls close_introduction_suggestion_request (D048); rejects with the reducer's `code: reason` message. */
+  closeIntroductionRequest?(requestId: string): Promise<void>;
 }
 
 /** commit_introduction_proposal reducer arguments (spacetimedb/src/reducers/introductions.ts, D033/D038). */

@@ -62,7 +62,16 @@ Rows are mapped by `src/spacetime/rows.ts`, which accepts snake_case harness row
 D034's `PlanParticipant.intentVersion` is per person, while the module versions intents per event. Participants are therefore positional (`participant_a`/`participant_b`, as the view orders intents) with a constant version, and the exact per-event binding is done by the adapter recheck plus the reducer. The plan path is enabled only when the bindings carry both `worker_plan_candidates` and `commit_plan_proposal`; the current generated bindings predate D039, so CS must regenerate them.
 
 ## Introductions (AI-R2, D033/D038) — `src/introductions.ts`
-`runIntroductionJob(shortlist, { source, runner, eligibility, clock })` runs `IntroductionCoordinator` and commits through `commit_introduction_proposal` into the viewer's private suggestions. A refusal is recorded as `stale`; `worker only` throws. While the D038 commit accepts `shared_interest` only, event overlap is stripped before any model call (`sameEventSupported: false`). **Not wired into `main.ts`:** the module has no worker-readable source of discovery shortlists and current eligibility yet (open ask to Cyber/CS).
+`runIntroductionJob(shortlist, { source, runner, eligibility, clock })` runs `IntroductionCoordinator` and commits through `commit_introduction_proposal` into the viewer's private suggestions. A refusal is recorded as `stale`; `worker only` throws. While the D038 commit accepts `shared_interest` only, event overlap is stripped before any model call (`sameEventSupported: false`).
+
+**Viewer-initiated requests (D048, PROPOSED), wired into `main.ts`:**
+- The viewer taps "Suggest someone for me" on Discover, which calls `request_introduction_suggestion` (rate-limited, needs a current publication and area; one open request at a time).
+- `IntroductionRequestWatcher` reads `worker_introduction_requests`. Each row is an open request plus one candidate the viewer can see now and shares at least one published tag with: opaque refs, current revisions and overlap only. People the viewer is connected to, has a pending request with, or already has a suggestion for are left out.
+- `runIntroductionRequest` builds the shortlist (≤ 3; interim rank `rankByOverlap` until DS packages one; a `rank` option may reorder or drop, never add) and runs `runIntroductionJob`. Eligibility is rechecked against the live view (`SpacetimeIntroEligibility`).
+- The request is then closed (`close_introduction_suggestion_request`) whatever the outcome, so it yields at most one suggestion. A request that already ran never runs again; only its close is retried. Lapsed requests (10 min) and requests that fail 3 times are closed without a suggestion.
+- **Mode:** `DOR_WORKER_INTRODUCTIONS=deterministic` (default) makes zero model calls. `agent` lets Droid choose among 2–3 candidates (≤ 1 call + 1 repair; 0 calls for 0–1 candidates). `off` disables the watcher. Unknown values fall back to `deterministic`.
+- Log lines: `introductions` (enabled, mode), `intro_outcome` (outcome, shortlisted, eligible, rounds, modelCalls, decidedBy), `intro_lapsed`, `intro_error`.
+- Enabled only when the bindings include the view and both reducers, so a worker built from these bindings still runs against a module without D048.
 
 ## SDK transport (default) — `src/droid-sdk.ts`
 The worker uses `@factory/droid-sdk` sessions by default; `DOR_DROID_TRANSPORT=cli` restores the per-call `droid exec` spawn. Without `FACTORY_API_KEY` the worker refuses to start rather than silently switching transport. `DroidRunner` keeps the slots, queue, job deadline and usage reporting. Only the call itself moves to `DroidSdkTransport`.
@@ -94,7 +103,7 @@ How it runs:
 - Asserted on every run: no story words, names or reflection text in the Droid prompt; Sam's row is exactly `id, pair_id, template_id, visible_until`; Carol sees 0 nudges; revoke removes Sam's nudge.
 
 ## Process (`src/main.ts`, `npm start -w @dor/worker`)
-- **Event-driven (`src/loop.ts`, `WorkerLoop`):** a new row in `worker_signal_context` or `worker_plan_candidates` triggers a debounced sweep (200 ms) right away. A fallback sweep runs every `DOR_WORKER_SWEEP_MS` (default 15 s) in case an event is missed.
+- **Event-driven (`src/loop.ts`, `WorkerLoop`):** a new row in `worker_signal_context`, `worker_plan_candidates` or `worker_introduction_requests` triggers a debounced sweep (200 ms) right away. A fallback sweep runs every `DOR_WORKER_SWEEP_MS` (default 15 s) in case an event is missed.
 - **Connection failures (Core 3 audit HIGH, fixed):**
   - The connection uses the SDK's automatic reconnect (`withAutomaticReconnect`).
   - From a drop until the replayed subscription applies again, every read and commit throws `unavailable: disconnected`, so the stale cache is never used, and no sweep runs.
@@ -103,8 +112,10 @@ How it runs:
   - `GET /healthz` returns 503 `{"ok":false}` while disconnected.
 - One SpacetimeDB connection as the worker identity, plus `SignalWatcher`: each sweep starts one job per newly visible approved signal, with `requestId = signalId`. Nudge IDs are therefore stable across restarts, `commit_nudge` dedupes them, and the cooldown pre-check skips Droid for a pair it already nudged.
 - `PlanWatcher` in the same loop when the bindings include the plan view and reducer (`plans` log line says whether it is enabled).
+- `IntroductionRequestWatcher` (D048) in the same loop when the bindings include the request view and reducers (`introductions` log line).
+
 - `POST /jobs` (above) and `GET /healthz`. Logs are JSON codes and counts only: `connected`, `droid_transport`, `disconnected`, `reconnected`, `fatal_connection`, `droid_call`, `outcome`, `job_error`.
-- Env: `DOR_WORKER_AUTH_TOKEN`, `DOR_SPACETIME_URI`, `DOR_SPACETIME_MODULE`, `DOR_SPACETIME_WORKER_TOKEN`, `PORT`, `DOR_WORKER_SWEEP_MS`, `DOR_WORKER_MAX_OFFLINE_MS`, `DOR_DROID_{MODEL,PATH,TIMEOUT_MS,CONCURRENCY,TRANSPORT}`, `FACTORY_API_KEY`.
+- Env: `DOR_WORKER_AUTH_TOKEN`, `DOR_SPACETIME_URI`, `DOR_SPACETIME_MODULE`, `DOR_SPACETIME_WORKER_TOKEN`, `PORT`, `DOR_WORKER_SWEEP_MS`, `DOR_WORKER_MAX_OFFLINE_MS`, `DOR_WORKER_INTRODUCTIONS`, `DOR_DROID_{MODEL,PATH,TIMEOUT_MS,CONCURRENCY,TRANSPORT}`, `FACTORY_API_KEY`.
 - **D041 pause:** the worker needs no change. Paused pairs leave `worker_signal_context`, the coordinator rechecks policy after generation (before any fallback commit), and `commit_nudge` refuses a late pause. Five integration cases in `integration/dry-run.test.ts` cover this.
 - **Refuses to start** until the module is published and bindings are generated into `src/module_bindings` (`spacetime generate --lang typescript --out-dir worker/src/module_bindings --module-path spacetimedb`). The admin then runs `set_worker_identity` for the worker token's identity.
 

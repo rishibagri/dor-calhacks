@@ -199,6 +199,8 @@ export class SpacetimeSharedState implements SharedStateController {
   cancelPlan = (planId: string) => this.call('cancel_plan', () => ({ planId }));
   dismissIntroductionProposal = (id: string) =>
     this.call('dismiss_introduction_proposal', () => ({ proposalId: id }));
+  requestIntroductionSuggestion = (id: string) =>
+    this.call('request_introduction_suggestion', () => ({ clientRequestId: id }));
   reportDiscoveryUser: SharedStatePort['reportDiscoveryUser'] = (t, reason) =>
     this.call('report_discovery_user', () => A.reportDiscoveryUser(t, reason));
 

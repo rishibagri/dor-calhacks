@@ -51,8 +51,11 @@ export const DISCONNECTED = 'unavailable: disconnected';
 export const isDisconnected = (error: unknown) => error instanceof Error && error.message === DISCONNECTED;
 
 export const WORKER_VIEWS = ['worker_signal_context', 'worker_delivery', 'worker_support_preferences'] as const;
-/** Subscribed only when the generated bindings include them (D039 plans); without them the worker proposes no plans. */
-export const OPTIONAL_WORKER_VIEWS = ['worker_plan_candidates'] as const;
+/**
+ * Subscribed only when the generated bindings include them (D039 plans, D048 suggestion requests); without them the
+ * worker proposes no plans or suggestions.
+ */
+export const OPTIONAL_WORKER_VIEWS = ['worker_plan_candidates', 'worker_introduction_requests'] as const;
 
 const camel = (snake: string) => snake.replace(/_([a-z])/g, (_m, c: string) => c.toUpperCase());
 const hasTable = (conn: LooseConnection, name: string) => Boolean(conn.db[camel(name)] ?? conn.db[name]);
@@ -75,7 +78,7 @@ export interface SpacetimeWorkerOptions {
 }
 
 /** Views whose new rows can mean new work; a callback on them triggers an immediate sweep. */
-const TRIGGER_VIEWS = ['worker_signal_context', 'worker_plan_candidates'] as const;
+const TRIGGER_VIEWS = ['worker_signal_context', 'worker_plan_candidates', 'worker_introduction_requests'] as const;
 
 /**
  * Live WorkerStateSource: one connection subscribed to the worker-only views. Reads come from the
@@ -89,7 +92,7 @@ export class SpacetimeWorkerConnection implements WorkerStateSource {
   private alive = true;
   private readonly listeners = new Set<(event: WorkerConnectionEvent) => void>();
 
-  private constructor(private readonly conn: LooseConnection, readonly identityHex: string) {
+  private constructor(private readonly conn: LooseConnection, readonly identityHex: string, missing: ReadonlySet<string> = new Set()) {
     // Only advertise the plan path when both its view and its reducer are in the bindings.
     if (!hasTable(conn, 'worker_plan_candidates') || !(conn.reducers.commitPlanProposal ?? conn.reducers.commit_plan_proposal)) {
       this.planCandidates = undefined;
@@ -98,6 +101,13 @@ export class SpacetimeWorkerConnection implements WorkerStateSource {
     if (!(conn.reducers.commitIntroductionProposal ?? conn.reducers.commit_introduction_proposal)) {
       this.commitIntroductionProposal = undefined;
     }
+    // Suggestion requests (D048) need the view, its close reducer and the proposal commit.
+    if (!hasTable(conn, 'worker_introduction_requests') || !this.commitIntroductionProposal ||
+      !(conn.reducers.closeIntroductionSuggestionRequest ?? conn.reducers.close_introduction_suggestion_request)) {
+      this.introductionRequests = undefined;
+      this.closeIntroductionRequest = undefined;
+    }
+    for (const view of missing) this.disableView(view);
     // Event-driven triggers. Registered once: the SDK keeps table handles and callbacks across reconnects.
     for (const name of TRIGGER_VIEWS) {
       const t = conn.db[camel(name)] ?? conn.db[name];
@@ -117,23 +127,49 @@ export class SpacetimeWorkerConnection implements WorkerStateSource {
       let b = options.builder().withUri(options.uri).withDatabaseName(options.database).withToken(options.token);
       if (options.autoReconnect !== false && b.withAutomaticReconnect) b = b.withAutomaticReconnect();
       b.onConnect((conn, identity) => {
+        // Optional views each get their own subscription: bindings newer than the published module (a view the server
+        // does not have yet) then disable only that path instead of failing the whole connection.
+        const optional = OPTIONAL_WORKER_VIEWS.filter(v => hasTable(conn, v));
+        const missing = new Set<string>();
+        let mainApplied = false, settled = 0;
+        const maybeResolve = () => {
+          if (instance || !mainApplied || settled < optional.length) return;
+          clearTimeout(timer);
+          instance = new SpacetimeWorkerConnection(conn, identity.toHexString(), missing);
+          resolve(instance);
+        };
         conn.subscriptionBuilder()
           // Fires for the first subscription and again when the SDK replays it after an automatic reconnect.
           .onApplied(() => {
-            if (!instance) {
-              clearTimeout(timer);
-              instance = new SpacetimeWorkerConnection(conn, identity.toHexString());
-              resolve(instance);
-            } else instance.markReady();
+            if (!instance) { mainApplied = true; maybeResolve(); } else instance.markReady();
           })
           .onError(() => (instance ? instance.markLost(false) : fail(new Error('unavailable: subscription rejected'))))
-          .subscribe([...WORKER_VIEWS, ...OPTIONAL_WORKER_VIEWS.filter(v => hasTable(conn, v))].map(v => `SELECT * FROM ${v}`));
+          .subscribe(WORKER_VIEWS.map(v => `SELECT * FROM ${v}`));
+        for (const view of optional) {
+          let done = false;
+          const settle = () => { if (!done) { done = true; settled++; maybeResolve(); } };
+          conn.subscriptionBuilder()
+            .onApplied(settle)
+            .onError(() => { if (instance) instance.disableView(view); else missing.add(view); settle(); })
+            .subscribe([`SELECT * FROM ${view}`]);
+        }
       })
         // A failed reconnect attempt arrives here too; before the first connect it is the initial failure.
         .onConnectError((_ctx, error, next, delay) => (instance ? lost(next, delay) : fail(error)))
         .onDisconnect((_ctx, _error, next, delay) => lost(next, delay))
         .build();
     });
+  }
+
+  /** The server lacks an optional view (or rejected it): turn off only the path that depends on it. */
+  private disableView(view: string): void {
+    if (view === 'worker_plan_candidates') {
+      this.planCandidates = undefined;
+      this.commitPlanProposal = undefined;
+    } else if (view === 'worker_introduction_requests') {
+      this.introductionRequests = undefined;
+      this.closeIntroductionRequest = undefined;
+    }
   }
 
   /** False from a drop until the replayed subscription applies again. */
@@ -209,6 +245,15 @@ export class SpacetimeWorkerConnection implements WorkerStateSource {
       viewerPublicationVersion: args.viewer_publication_version, candidatePublicationVersion: args.candidate_publication_version,
       reasonCode: args.reason_code, sharedTags: args.shared_tags, eventId: args.event_id, openerId: args.opener_id,
       decidedBy: args.decided_by, expiresAt: args.expires_at });
+  };
+
+  introductionRequests?: () => Promise<unknown[]> = async () => [...table(this.live(), 'worker_introduction_requests').iter()];
+
+  closeIntroductionRequest?: (requestId: string) => Promise<void> = async requestId => {
+    const conn = this.live();
+    const reducer = conn.reducers.closeIntroductionSuggestionRequest ?? conn.reducers.close_introduction_suggestion_request;
+    if (!reducer) throw new Error('unavailable: bindings lack close_introduction_suggestion_request');
+    await reducer({ requestId });
   };
 
   close(): void {

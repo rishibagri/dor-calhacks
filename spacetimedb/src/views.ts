@@ -3,8 +3,8 @@ import { t } from 'spacetimedb/server';
 import { Timestamp, type Identity } from 'spacetimedb';
 import {
   catalogueEventUsable, currentPlanStatus, intentStands,
-  DISCOVERY_CARD_LIMIT, guardDiscoveryVisibility, guardPreferenceStanding, guardSignalStanding, projectDiscoveryCard,
-  templateForSignal,
+  DISCOVERY_CARD_LIMIT, discoveryParticipantDenial, guardDiscoveryVisibility, guardPreferenceStanding, guardSignalStanding,
+  projectDiscoveryCard, templateForSignal, WORKER_INTRODUCTION_CANDIDATE_LIMIT,
 } from '@dor/contracts/policy';
 import { spacetimedb, account, approved_signal, nudge, disclosure_receipt, nudge_delivery, support_preference } from './schema';
 import {
@@ -650,4 +650,76 @@ export const my_standing_consents = spacetimedb.view(
     return { pair_id: r.pair_id, categories: r.categories, version: r.version, expires_at: r.expires_at, created_at: r.created_at,
       active: st.revokedAtMs === null && !st.expiredMarked };
   })
+);
+
+// ---- D048 viewer-initiated AI introduction suggestions (PROPOSED, AI; Cyber review requested) ----
+
+const WORKER_INTRO_ROW_LIMIT = 200;
+
+const workerIntroRequestRow = t.row('WorkerIntroductionRequestRow', {
+  request_id: t.string(), viewer_ref: t.string(), viewer_revision: t.u32(), expires_at: t.timestamp(),
+  candidate_ref: t.option(t.string()), candidate_revision: t.u32(), shared_tags: t.array(t.string()),
+});
+
+/**
+ * Worker-only suggestion inputs: one row per (open request, candidate the viewer can see now and shares at least
+ * one published tag with), at most WORKER_INTRODUCTION_CANDIDATE_LIMIT per request in card-ref order; or a single
+ * row without a candidate, so the worker closes an empty request (or one whose viewer stopped participating)
+ * without a model call. People the viewer is connected to, has a pending request with, or already has a
+ * suggestion for are left out (commit_introduction_proposal would refuse them). Opaque refs, current revisions
+ * and the published overlap only: no names, identities, area keys or other tags. Empty for every non-worker
+ * caller. Clockless: the worker skips requests past expires_at.
+ */
+export const worker_introduction_requests = spacetimedb.view(
+  { name: 'worker_introduction_requests', public: true }, t.array(workerIntroRequestRow),
+  ctx => {
+    if (!ctx.db.worker_identity.identity.find(ctx.sender) || !discoveryEnabled(ctx.db)) return [];
+    const out = [];
+    for (const r of ctx.db.introduction_suggestion_request.status.filter('open')) {
+      if (out.length >= WORKER_INTRO_ROW_LIMIT) break;
+      const viewer = loadDiscoveryParty(ctx.db, r.viewer);
+      const head = { request_id: r.request_id, viewer_ref: viewer.publication?.publicationId ?? '',
+        viewer_revision: viewer.publication?.revision ?? 0, expires_at: r.expires_at };
+      const none = { ...head, candidate_ref: undefined, candidate_revision: 0, shared_tags: [] as string[] };
+      if (discoveryParticipantDenial(viewer, null)) { out.push(none); continue; }
+      const skip = connectedCounterparts(ctx.db, r.viewer);
+      for (const i of ctx.db.introduction.sender.filter(r.viewer)) if (i.status === 'pending') skip.add(hex(i.recipient));
+      for (const i of ctx.db.introduction.recipient.filter(r.viewer)) if (i.status === 'pending') skip.add(hex(i.sender));
+      for (const p of ctx.db.introduction_proposal.viewer.filter(r.viewer)) skip.add(hex(p.candidate));
+      const cards = [];
+      for (const a of ctx.db.area_participation.area_key.filter(viewer.area!.areaKey)) {
+        if (a.owner.isEqual(r.viewer) || skip.has(hex(a.owner))) continue;
+        const target = loadDiscoveryParty(ctx.db, a.owner);
+        if (!target.publication) continue;
+        if (!guardDiscoveryVisibility(viewer, target, blockedEitherWay(ctx.db, r.viewer, a.owner), true, null).ok) continue;
+        const card = projectDiscoveryCard(target.publication, viewer.publication!.interestTags);
+        if (card.sharedTags.length > 0) cards.push(card);
+      }
+      if (cards.length === 0) { out.push(none); continue; }
+      cards.sort((x, y) => (x.cardRef < y.cardRef ? -1 : x.cardRef > y.cardRef ? 1 : 0));
+      for (const c of cards.slice(0, WORKER_INTRODUCTION_CANDIDATE_LIMIT)) {
+        out.push({ ...head, candidate_ref: c.cardRef, candidate_revision: c.revision, shared_tags: c.sharedTags });
+      }
+    }
+    return out;
+  }
+);
+
+const mySuggestionRequestRow = t.row('MyIntroductionSuggestionRequestRow', {
+  request_id: t.string(), status: t.string(), created_at: t.timestamp(), expires_at: t.timestamp(),
+});
+
+/**
+ * The caller's own most recent suggestion request, so the app can say "looking" (open, before expires_at) or
+ * "nothing right now" (done without a new suggestion). Status only: never why, or how many people were considered.
+ */
+export const my_introduction_suggestion_request = spacetimedb.view(
+  { name: 'my_introduction_suggestion_request', public: true }, t.array(mySuggestionRequestRow),
+  ctx => {
+    let latest;
+    for (const r of ctx.db.introduction_suggestion_request.viewer.filter(ctx.sender)) {
+      if (!latest || r.created_at.microsSinceUnixEpoch > latest.created_at.microsSinceUnixEpoch) latest = r;
+    }
+    return latest ? [{ request_id: latest.request_id, status: latest.status, created_at: latest.created_at, expires_at: latest.expires_at }] : [];
+  }
 );

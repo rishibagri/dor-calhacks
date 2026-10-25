@@ -305,6 +305,8 @@ export interface SharedStatePort {
   respondPlan(planId: string, revision: number, accept: boolean): Promise<ReducerResult>; // respond_plan
   cancelPlan(planId: string): Promise<ReducerResult>; // cancel_plan
   dismissIntroductionProposal(proposalId: string): Promise<ReducerResult>; // dismiss_introduction_proposal
+  /** D048: ask the worker for at most one suggestion now. Grants nothing; nobody is contacted. Fresh id per tap. */
+  requestIntroductionSuggestion(clientRequestId: string): Promise<ReducerResult>; // request_introduction_suggestion
   reportDiscoveryUser(target: { kind: 'card' | 'introduction'; ref: string }, reason: ReportReason): Promise<ReducerResult>; // report_discovery_user
 
   // caller-filtered views

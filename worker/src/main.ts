@@ -5,6 +5,7 @@ import { SpacetimeWorkerConnection, type LooseBuilder } from './spacetime/connec
 import { spacetimeWorkerPorts } from './spacetime/adapters.js';
 import { SignalWatcher } from './watcher.js';
 import { PlanWatcher, runPlanJob } from './plans.js';
+import { IntroductionRequestWatcher, runIntroductionRequest } from './introductions.js';
 import { WorkerLoop } from './loop.js';
 import { droidEnv, type DroidTransport } from './droid-proposer.js';
 import { DroidSdkTransport, type CreateSdkSession } from './droid-sdk.js';
@@ -17,7 +18,8 @@ import { DroidSdkTransport, type CreateSdkSession } from './droid-sdk.js';
  *
  * Env: DOR_WORKER_AUTH_TOKEN, DOR_SPACETIME_URI, DOR_SPACETIME_MODULE (default dor),
  * DOR_SPACETIME_WORKER_TOKEN, PORT (default 8787), DOR_WORKER_SWEEP_MS (fallback sweep, default 15000),
- * DOR_WORKER_MAX_OFFLINE_MS (default 120000),
+ * DOR_WORKER_MAX_OFFLINE_MS (default 120000), DOR_WORKER_INTRODUCTIONS (D048 suggestion requests: deterministic
+ * default, zero model calls; agent lets Droid pick among 2–3 candidates; off),
  * DOR_DROID_MODEL / _PATH / _TIMEOUT_MS / _CONCURRENCY / _TRANSPORT (sdk default, cli). FACTORY_API_KEY for the
  * SDK transport and for droid on a deployed host.
  */
@@ -56,6 +58,11 @@ async function droidTransport(): Promise<DroidTransport | undefined> {
   });
 }
 
+/** Unknown values fall back to the zero-call default rather than silently enabling paid calls. */
+function introductionMode(value: string | undefined): 'off' | 'deterministic' | 'agent' {
+  return value === 'off' || value === 'agent' ? value : 'deterministic';
+}
+
 async function main(): Promise<void> {
   const generated = (await loadBindings()) as unknown as { DbConnection?: { builder(): LooseBuilder } };
   if (typeof generated.DbConnection?.builder !== 'function') {
@@ -91,10 +98,21 @@ async function main(): Promise<void> {
     onError: error => log('plan_error', { code: error instanceof Error ? error.message.split(':')[0]!.slice(0, 40) : 'unknown' }),
   }) : null;
   log('plans', { enabled: plans ? 1 : 0 });
+  // Viewer-initiated introduction suggestions (D048) run only when the bindings carry the request view and reducers.
+  const introMode = introductionMode(process.env.DOR_WORKER_INTRODUCTIONS);
+  const intros = introMode !== 'off' && connection.introductionRequests ? new IntroductionRequestWatcher(connection, {
+    clock,
+    run: req => runIntroductionRequest(req, { source: connection, runner: worker.runner, clock, deterministicOnly: introMode === 'deterministic' }),
+    onOutcome: o => log('intro_outcome', { outcome: o.outcome, shortlisted: o.shortlisted, eligible: o.eligible, rounds: o.rounds,
+      modelCalls: o.modelCalls, decidedBy: o.decidedBy }),
+    onLapsed: () => log('intro_lapsed'),
+    onError: error => log('intro_error', { code: error instanceof Error ? error.message.split(':')[0]!.slice(0, 40) : 'unknown' }),
+  }) : null;
+  log('introductions', { enabled: intros ? 1 : 0, mode: intros ? introMode : 'off' });
   // Event-driven: new worker-view rows trigger a sweep at once; the interval is only a safety net. Nothing runs
   // while the connection is down, and a lost connection that will not come back exits so the supervisor restarts.
   const loop = new WorkerLoop(connection, {
-    sweeps: [() => watcher.sweep(), ...(plans ? [() => plans.sweep()] : [])],
+    sweeps: [() => watcher.sweep(), ...(plans ? [() => plans.sweep()] : []), ...(intros ? [() => intros.sweep()] : [])],
     fallbackIntervalMs: numberEnv('DOR_WORKER_SWEEP_MS', 15_000),
     maxOfflineMs: numberEnv('DOR_WORKER_MAX_OFFLINE_MS', 120_000),
     onFatal: () => shutdown(1),

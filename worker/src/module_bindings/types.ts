@@ -292,6 +292,17 @@ export const IntroductionRow = __t.object("IntroductionRow", {
 });
 export type IntroductionRow = __Infer<typeof IntroductionRow>;
 
+export const IntroductionSuggestionRequest = __t.object("IntroductionSuggestionRequest", {
+  requestId: __t.string(),
+  viewer: __t.identity(),
+  clientRequestId: __t.string(),
+  viewerRevision: __t.u32(),
+  status: __t.string(),
+  createdAt: __t.timestamp(),
+  expiresAt: __t.timestamp(),
+});
+export type IntroductionSuggestionRequest = __Infer<typeof IntroductionSuggestionRequest>;
+
 export const Invite = __t.object("Invite", {
   token: __t.string(),
   pairId: __t.string(),
@@ -360,6 +371,17 @@ export type MyEventIntents = __Infer<typeof MyEventIntents>;
 
 export const MyIntroductionProposals = __t.object("MyIntroductionProposals", {});
 export type MyIntroductionProposals = __Infer<typeof MyIntroductionProposals>;
+
+export const MyIntroductionSuggestionRequest = __t.object("MyIntroductionSuggestionRequest", {});
+export type MyIntroductionSuggestionRequest = __Infer<typeof MyIntroductionSuggestionRequest>;
+
+export const MyIntroductionSuggestionRequestRow = __t.object("MyIntroductionSuggestionRequestRow", {
+  requestId: __t.string(),
+  status: __t.string(),
+  createdAt: __t.timestamp(),
+  expiresAt: __t.timestamp(),
+});
+export type MyIntroductionSuggestionRequestRow = __Infer<typeof MyIntroductionSuggestionRequestRow>;
 
 export const MyIntroductions = __t.object("MyIntroductions", {});
 export type MyIntroductions = __Infer<typeof MyIntroductions>;
@@ -628,6 +650,20 @@ export const WorkerIdentity = __t.object("WorkerIdentity", {
   identity: __t.identity(),
 });
 export type WorkerIdentity = __Infer<typeof WorkerIdentity>;
+
+export const WorkerIntroductionRequestRow = __t.object("WorkerIntroductionRequestRow", {
+  requestId: __t.string(),
+  viewerRef: __t.string(),
+  viewerRevision: __t.u32(),
+  expiresAt: __t.timestamp(),
+  candidateRef: __t.option(__t.string()),
+  candidateRevision: __t.u32(),
+  sharedTags: __t.array(__t.string()),
+});
+export type WorkerIntroductionRequestRow = __Infer<typeof WorkerIntroductionRequestRow>;
+
+export const WorkerIntroductionRequests = __t.object("WorkerIntroductionRequests", {});
+export type WorkerIntroductionRequests = __Infer<typeof WorkerIntroductionRequests>;
 
 export const WorkerPlanCandidateRow = __t.object("WorkerPlanCandidateRow", {
   basisKind: __t.string(),

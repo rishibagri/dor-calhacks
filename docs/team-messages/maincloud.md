@@ -66,5 +66,9 @@ Every standing approved signal becomes a paid Droid call while the worker runs. 
 
 ## What the D045 pivot changes here
 - Discovery is now the core journey, but the module's discovery flag stays **off** on Maincloud until Cyber's live verification run (`src/privacy/LIVE_VERIFICATION.md`). The app's Discover/Events UI is on by default since main `3bf3e25` (`NEXT_PUBLIC_DOR_DISCOVERY=off` hides it; `NEXT_PUBLIC_DOR_EXTENSIONS` is gone). The module flag is the authority, so with it off those pages render but the module refuses discovery actions.
-- Discovery makes zero model calls (README AI Phase 1). The worker serves only the existing-pair nudge path and plans. Introductions (`runIntroductionJob`) are still not wired into `main.ts`, because no worker-readable shortlist source exists.
+- Discovery makes zero model calls (README AI Phase 1). The worker serves the existing-pair nudge path and plans.
+- **D048 (on `role/ai-voice`, not yet published):** viewer-initiated introduction suggestions. It adds one table (`introduction_suggestion_request`), two reducers (`request_introduction_suggestion`, `close_introduction_suggestion_request`) and two views (`worker_introduction_requests`, `my_introduction_suggestion_request`). The migration is additive; existing tables are unchanged.
+  - After merge, the owner (Nimisha) republishes from main without `--delete-data`, then confirms `spacetime describe` lists the new views.
+  - Until then, the new "Suggest someone for me" button returns an error and the worker logs `introductions enabled 0` against the old module. Nothing else changes.
+  - The worker default `DOR_WORKER_INTRODUCTIONS=deterministic` makes zero Droid calls.
 - The core-path regression (LIVE_VERIFICATION §6: pause, narrow `my_nudges`, sender-only receipts) can already run against this database.
