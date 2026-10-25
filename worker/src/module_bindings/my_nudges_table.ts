@@ -15,4 +15,5 @@ export default __t.row({
   pairId: __t.string().name("pair_id"),
   templateId: __t.string().name("template_id"),
   visibleUntil: __t.timestamp().name("visible_until"),
+  hook: __t.option(__t.string()),
 });

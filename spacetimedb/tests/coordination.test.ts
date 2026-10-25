@@ -105,7 +105,7 @@ describe('F5 recipient gate (accepted-pair default on with recipient opt-out; D0
     commit(w, worker, commitArgs(pairId, sig));
     const [n] = view<any>(w, w.bob, mod.my_nudges);
     expect(n.template_id).toBe('offer_short_call');
-    expect(Object.keys(n).sort()).toEqual(['id', 'pair_id', 'template_id', 'visible_until']); // audit item 2
+    expect(Object.keys(n).sort()).toEqual(['hook', 'id', 'pair_id', 'template_id', 'visible_until']); // audit item 2
     expect(view<any>(w, w.alice, mod.my_receipts).map(r => [r.action, r.categories]))
       .toEqual([['approved', ['support_preference', 'coarse_availability']]]); // audit item 3: no 'used'
     const table = w.h.withReducerTx(w.admin, ctx => [...ctx.db.disclosure_receipt.iter()].map(r => r.action));

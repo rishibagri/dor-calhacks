@@ -12,6 +12,7 @@ import {
   type CandidateAction, type Level, type ReasonCode,
 } from '../core/vocabulary.ts';
 import type { CandidateProposal, ContextWindow, ReasoningDecision, ReasoningEpisodeInput } from '../core/types.ts';
+import type { MemoryKind, MemoryUpdate } from './memory.ts';
 
 /** One accepted connection as the owner's device sees it. `ref` is the pair id; names never leave the device. */
 export interface LivePerson {
@@ -29,6 +30,8 @@ export interface LiveContext {
   candidate: SignalCandidate | null;
   assessment: PrivateAssessment | null;
   people: LivePerson[];
+  /** D056: ids of remembered facts the model was shown; it may cite them as `memory:<id>`. */
+  memoryIds?: string[];
 }
 
 export const EVENT_KINDS = ['academic_setback', 'work_stress', 'busy_period', 'major_good_news', 'milestone', 'homesick',
@@ -59,12 +62,20 @@ export interface ModelReasoning {
     reassessCondition: (typeof REASSESS_CONDITIONS)[number] | null;
     rationale: ReasonCode[];
     evidence: string[];
+    /** D056: what the friend should bring up when they reach out ("ask how the exam went"), or null. */
+    talkingPoint?: string | null;
   }[];
+  /** D056: facts worth remembering for later entries, and remembered facts this entry makes stale. */
+  memory?: { add: { kind: MemoryKind; text: string; ref: string | null; ttlDays: number }[]; expire: string[] };
 }
 
 /** The model port. Returns null when unavailable; the runtime then uses the deterministic fallback. */
 export type ReasoningModelPort = (request: { people: { ref: string; mentionedAs: string | null; excluded: boolean; paused: boolean }[] }) =>
   Promise<ModelReasoning | null>;
+
+/** At most this many friends are nudged from one entry. */
+export const MAX_AUTO_TARGETS = 3;
+export const MAX_TALKING_POINT = 140;
 
 const FALLBACK_WINDOW_MINUTES = 180;
 const slug = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
@@ -72,7 +83,7 @@ const isIn = <T extends string>(xs: readonly T[], v: unknown): v is T => typeof 
 
 export function evidenceFor(ctx: LiveContext): string[] {
   return ['entry:text', 'assessment:intent', 'assessment:names', ...(ctx.candidate ? ['candidate:mode'] : []),
-    ...ctx.people.map(p => `person:${p.ref}`)];
+    ...(ctx.memoryIds ?? []).map(id => `memory:${id}`), ...ctx.people.map(p => `person:${p.ref}`)];
 }
 
 export function buildLiveEpisode(ctx: LiveContext, model: ModelReasoning | null): ReasoningEpisodeInput {
@@ -137,7 +148,7 @@ const ACTION_FOR_MODE: Record<SupportMode, CandidateAction> = {
 
 /**
  * Deterministic fallback proposer: used when the model is unavailable. Conservative: it acts only toward one
- * uniquely named connection (as D050 does today), otherwise asks or abstains. Never proactive toward unnamed people.
+ * named connection (as D050 does today), otherwise abstains. Never proactive toward unnamed people.
  */
 export function fallbackProposals(ctx: LiveContext): CandidateProposal[] {
   const abstain: CandidateProposal = { rank: 3, action: 'ABSTAIN', requestedMode: 'abstain', evidenceRefs: [], judgments: {},
@@ -152,11 +163,47 @@ export function fallbackProposals(ctx: LiveContext): CandidateProposal[] {
     timing: { kind: 'now' }, confidence: a.intent === 'wants_connection' ? 'high' : 'medium', rationale: [],
   });
   if (named.length === 1) return [base(named[0]!, 1, 'act'), abstain];
-  if (named.length > 1) return [...named.map(p => base(p, 2, 'ask')), { ...abstain, rank: 2 }];
+  // D056: several named people are all nudged (capped later); the fallback is still never proactive toward unnamed ones.
+  if (named.length > 1) return [...named.map((p, n) => base(p, n + 1, 'act')), { ...abstain, rank: named.length + 1 }];
   return [abstain];
 }
 
-export interface LiveDecision { decision: ReasoningDecision; source: 'model' | 'fallback'; input: ReasoningEpisodeInput }
+export interface LiveDecision {
+  decision: ReasoningDecision;
+  /** D056: every friend to nudge (≤ MAX_AUTO_TARGETS), primary first; empty unless `decision.mode` is act. */
+  actions: { decision: ReasoningDecision; talkingPoint: string | null }[];
+  memory: MemoryUpdate | null;
+  source: 'model' | 'fallback';
+  input: ReasoningEpisodeInput;
+}
+
+export function cleanTalkingPoint(raw: string | null | undefined): string | null {
+  const v = (raw ?? '').replace(/\s+/g, ' ').trim();
+  if (!v || /(https?:\/\/|www\.)/i.test(v)) return null;
+  return v.length > MAX_TALKING_POINT ? `${v.slice(0, MAX_TALKING_POINT - 1).trimEnd()}…` : v;
+}
+
+/**
+ * D056: one decision per distinct target the model wants to act toward. Each runs through finalize() on its own (with
+ * the shared ABSTAIN), so every gate and cap applies per person; only `act` results are kept.
+ */
+function autonomousActions(input: ReasoningEpisodeInput, proposals: CandidateProposal[], model: ModelReasoning | null,
+  primary: ReasoningDecision): LiveDecision['actions'] {
+  if (primary.mode !== 'act' || !primary.targetRef) return [];
+  const hooks = new Map<string, string | null>();
+  for (const m of model?.proposals ?? []) if (m.targetRef && !hooks.has(m.targetRef)) hooks.set(m.targetRef, cleanTalkingPoint(m.talkingPoint));
+  const abstain = proposals.filter(p => p.action === 'ABSTAIN');
+  const out: LiveDecision['actions'] = [{ decision: primary, talkingPoint: hooks.get(primary.targetRef) ?? null }];
+  const seen = new Set([primary.targetRef]);
+  for (const p of [...proposals].sort((a, b) => a.rank - b.rank)) {
+    if (out.length >= MAX_AUTO_TARGETS) break;
+    if (!p.targetRef || seen.has(p.targetRef) || p.requestedMode !== 'act') continue;
+    seen.add(p.targetRef);
+    const d = finalize(input, [{ ...p, rank: 0 }, ...abstain], { allowUnnamedTargets: true, autonomous: true });
+    if (d.mode === 'act' && d.targetRef === p.targetRef) out.push({ decision: d, talkingPoint: hooks.get(p.targetRef) ?? null });
+  }
+  return out;
+}
 
 export async function reasonLive(ctx: LiveContext, model: ReasoningModelPort | null): Promise<LiveDecision> {
   let out: ModelReasoning | null = null;
@@ -168,7 +215,8 @@ export async function reasonLive(ctx: LiveContext, model: ReasoningModelPort | n
   }
   const input = buildLiveEpisode(ctx, out);
   const proposals = out ? proposalsFromModel(out, ctx) : fallbackProposals(ctx);
-  // Owner chose proactive behavior (REASONING.md §9 C1b): unnamed targets may act when evidence and every gate allow it.
-  const decision = finalize(input, proposals, { allowUnnamedTargets: out !== null });
-  return { decision, source: out ? 'model' : 'fallback', input };
+  // Owner chose proactive behavior (REASONING.md §9 C1b) and, with D056, autonomous delivery: no "ask" outcome.
+  const decision = finalize(input, proposals, { allowUnnamedTargets: out !== null, autonomous: true });
+  const memory = out?.memory ? { add: out.memory.add ?? [], expire: out.memory.expire ?? [] } : null;
+  return { decision, actions: autonomousActions(input, proposals, out, decision), memory, source: out ? 'model' : 'fallback', input };
 }

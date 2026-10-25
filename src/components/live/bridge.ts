@@ -10,6 +10,7 @@
 import { NUDGE_TEMPLATE_COPY, DEFAULT_RECIPIENT_DELIVERY, type PrivateAssessment, type SignalCandidate } from '@dor/contracts';
 import type { PairView, ReducerResult, SharedStatePort, ReflectionPort } from '@/lib/backend/ports';
 import { reasonLive, type LiveContext, type LivePerson, type ModelReasoning } from '@/reasoning/runtime/live';
+import { applyMemoryUpdate, memoryForModel, readMemory, saveMemory, type MemoryItem, type MemoryStore } from '@/reasoning/runtime/memory';
 import { ACTION_SUPPORT_MODES, ACTION_SURFACE, type CandidateAction } from '@/reasoning/core/vocabulary';
 import type { ReasoningDecision } from '@/reasoning/core/types';
 import { prepareShare, requestIdFor, shareRecipients, describeNotReady, type ApprovalDraft } from '@/components/feature/share-review-model';
@@ -71,12 +72,21 @@ const listTags = (tags: readonly string[]) => tags.map(tagLabel).join(', ');
 // The quiz's interest question offers only tags the server publishes (the design's "studying" is not one).
 const QUIZ_TAGS = ['board-games', 'hiking', 'coffee', 'live-music', 'cooking', 'running', 'books', 'climbing'].filter((t) => DISCOVERY_TAGS.includes(t));
 const SENT_KEY = 'dor-live-sent';
+/** D056 cross-entry memory: distilled facts only, on this device (localStorage), keyed by the signed-in account. */
+const MEMORY_KEY = 'dor-reasoning-memory';
+function memoryStore(owner: string | null): MemoryStore {
+  const key = `${MEMORY_KEY}:${owner ?? 'anon'}`;
+  return {
+    read: () => { try { return localStorage.getItem(key); } catch { return null; } },
+    write: (v) => { try { localStorage.setItem(key, v); } catch { /* storage blocked: memory lasts this session */ } },
+  };
+}
 const PLACE_WHY: Record<CataloguePlaceView['kind'], string> = { food: 'well reviewed · food', coffee: 'well reviewed · coffee', dessert: 'well reviewed · dessert', study: 'good for studying' };
 const FLYER_SLOTS = [{ l: 14, t: 118, rot: -5, pin: '#F2A7B8' }, { l: 246, t: 196, rot: 4, pin: '#A8DCC4' },
   { l: 26, t: 356, rot: -2, pin: '#C3B1E1' }, { l: 236, t: 392, rot: 3, pin: '#F6D77A' }];
 
 /** What Reasoning left for the owner: a note it will send on "yes" (`send`), or a moment that is theirs (`owner`). */
-interface PendingNudge { kind: 'send' | 'owner'; approval: ApprovalDraft | null; pairId: string; name: string; copy: string; question: string }
+interface PendingNudge { kind: 'send' | 'owner'; approval: ApprovalDraft | null; pairId: string; name: string; copy: string; question: string; hook: string | null }
 /** The last reflection, kept in memory only so a deferred decision can be reassessed from scratch this session. */
 interface LastReflection { text: string; candidate: SignalCandidate | null; assessment: PrivateAssessment | null }
 
@@ -537,10 +547,10 @@ export class LiveBridge {
   }
 
   /** The model port: one Claude call through /api/reasoning; null on any failure (the runtime then falls back). */
-  private modelPort(text: string) {
+  private modelPort(text: string, memory: readonly MemoryItem[]) {
     return async (req: { people: { ref: string; mentionedAs: string | null; excluded: boolean; paused: boolean }[] }): Promise<ModelReasoning | null> => {
       const res = await fetch('/api/reasoning', { method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ text, localTime: new Date().toString().slice(0, 33), people: req.people }) });
+        body: JSON.stringify({ text, localTime: new Date().toString().slice(0, 33), people: req.people, memory: memoryForModel(memory, new Date()) }) });
       if (!res.ok) return null;
       const out = await res.json() as ModelReasoning;
       return out && out.situation && Array.isArray(out.proposals) ? out : null;
@@ -550,11 +560,25 @@ export class LiveBridge {
   private async decideAndAct(reassessing: boolean) {
     const i = this.inst; const last = this.last; if (!i || !last) return;
     const people = this.livePeople(last.assessment);
-    const ctx: LiveContext = { now: new Date().toISOString(), episodeId: `ep-${crypto.randomUUID()}`, candidate: last.candidate,
-      assessment: last.assessment, people: people.map(({ name: _n, ...p }) => p) };
-    const { decision, source } = await reasonLive(ctx, this.modelPort(last.text));
-    const person = decision.targetRef ? people.find((p) => p.ref === decision.targetRef) : undefined;
-    const outcome = await this.applyDecision(decision, person?.name ?? null, reassessing);
+    const store = memoryStore(this.ownerHex());
+    const now = new Date();
+    const memory = readMemory(store, now);
+    const ctx: LiveContext = { now: now.toISOString(), episodeId: `ep-${crypto.randomUUID()}`, candidate: last.candidate,
+      assessment: last.assessment, people: people.map(({ name: _n, ...p }) => p), memoryIds: memory.map((m) => m.id) };
+    const { decision, actions, memory: update, source } = await reasonLive(ctx, this.modelPort(last.text, memory));
+    // D056: remember across entries (on this device only), even when nothing is sent this time.
+    if (!reassessing) saveMemory(store, applyMemoryUpdate(memory, update, now, () => crypto.randomUUID().slice(0, 12), new Set(people.map((p) => p.ref))));
+    const named = (ref: string | undefined) => (ref ? people.find((p) => p.ref === ref)?.name ?? null : null);
+    let outcome: string;
+    if (decision.mode === 'act' && actions.length > 0) {
+      const results: string[] = [];
+      for (const a of actions) results.push(await this.applyDecision(a.decision, named(a.decision.targetRef), reassessing, a.talkingPoint));
+      const sent = actions.filter((_, n) => results[n] === 'sent').map((a) => named(a.decision.targetRef)).filter(Boolean) as string[];
+      if (sent.length > 1) this.inst?.toast(`dor nudged ${sent.slice(0, -1).join(', ')} and ${sent.at(-1)} to reach out. They'll know what to ask about.`);
+      outcome = results.includes('sent') ? 'sent' : results[0] ?? 'failed';
+    } else {
+      outcome = await this.applyDecision(decision, named(decision.targetRef), reassessing, null);
+    }
     void this.shared.recordReasoningDecision({
       episodeId: decision.episodeId, pairId: decision.targetRef ?? null, mode: decision.mode, action: decision.action ?? null,
       surface: decision.surface ?? null, reasons: decision.reasons.slice(0, 8),
@@ -564,7 +588,7 @@ export class LiveBridge {
   }
 
   /** Turns the core's decision into the room's behavior. Returns a content-free outcome code for the decision log. */
-  private async applyDecision(d: ReasoningDecision, name: string | null, reassessing: boolean): Promise<string> {
+  private async applyDecision(d: ReasoningDecision, name: string | null, reassessing: boolean, hook: string | null): Promise<string> {
     const i = this.inst!;
     const why = d.capped ? REASON_WORDS[d.capped.by] : undefined;
     if (d.mode === 'abstain') {
@@ -584,29 +608,25 @@ export class LiveBridge {
       i.toast('dor wasn’t sure who you meant, so it did nothing. You can send a note from their book.');
       return 'quiet';
     }
+    // D056: nothing is put to the owner as a question. A moment that must be theirs is noted on the book, quietly.
     if (ACTION_SURFACE[d.action] === 'owner') {
-      this.pending = { kind: 'owner', approval: null, pairId: d.targetRef, name, copy: '',
-        question: `${name.toLowerCase()} would want to hear this from you. tell them yourself?` };
-      i.setState({ margin: 'ask' });
-      return 'owner_prompt';
+      i.setState({ margin: 'done' });
+      i.log(d.targetRef, { k: 'nudge', t: `This one is yours to tell ${name}`, note: 'dor kept this moment for you · nothing was sent' });
+      if (!reassessing) i.toast(`This is something ${name} should hear from you. dor didn’t send anything.`);
+      return 'owner_note';
     }
     const mode = d.deliveryMapping?.supportMode ?? ACTION_SUPPORT_MODES[d.action]?.[0];
-    if (!mode) {
-      this.pending = { kind: 'owner', approval: null, pairId: d.targetRef, name, copy: '',
-        question: `maybe reach out to ${name.toLowerCase()} for ${ACTION_WORDS[d.action] ?? 'this'}? ${why ? `(${why})` : ''}`.trim() };
-      i.setState({ margin: 'ask' });
-      return 'owner_prompt';
-    }
+    if (!mode) { i.setState({ margin: 'done' }); return 'quiet'; }
     const pair = this.shared.myPairs().find((p) => p.pairId === d.targetRef);
     const owner = this.ownerHex();
     if (!pair || !owner) { i.setState({ margin: 'done' }); return 'failed'; }
     const prepared = prepareShare({ candidate: { supportMode: mode, availability: this.last?.candidate?.availability ?? 'no_preference' },
       ownerHex: owner, pair, presets: this.shared.myPresets(), assignments: this.shared.myPresetAssignments(), now: new Date() }, name);
     if (prepared.kind !== 'ready') { i.setState({ margin: 'done' }); i.toast(describeNotReady(prepared)); return 'failed'; }
-    this.pending = { kind: 'send', approval: prepared.approval, pairId: pair.pairId, name,
+    this.pending = { kind: 'send', approval: prepared.approval, pairId: pair.pairId, name, hook,
       copy: prepared.preview.recipientCopy ?? NUDGE_TEMPLATE_COPY.offer_note,
       question: `want dor to send ${name.toLowerCase()} ${ACTION_WORDS[d.action] ?? 'a note'}?${why ? ` ${why}.` : ''}` };
-    if (d.mode === 'ask') { i.setState({ margin: 'ask' }); return 'asked'; }
+    // D056: autonomous. An `ask` that still reaches here (older core options) sends too; every gate already passed.
     return (await this.send(true)) ? 'sent' : 'failed';
   }
 
@@ -616,15 +636,18 @@ export class LiveBridge {
     if (!i || !p || p.kind !== 'send' || !p.approval) { i?.setState({ nudge: null }); return false; }
     i.setState({ margin: 'done', nudge: 'stamped', holding: false });
     navigator.vibrate?.(14);
-    const r = await this.shared.approveSignal({ ...p.approval, clientRequestId: requestIdFor(p.approval, null).id });
+    const requestId = requestIdFor(p.approval, null).id;
+    const r = await this.shared.approveSignal({ ...p.approval, clientRequestId: requestId });
+    // D056: the friend's nudge says what to bring up. A failed hook never blocks the nudge itself.
+    if (r.ok && p.hook) await this.shared.attachSignalHook(requestId, p.hook).catch(() => undefined);
     this.pending = null;
     await i.wait(500);
     await i.anim('nudgeEnv', [{ transform: 'none', opacity: 1 }, { transform: 'translate(0,-16px) rotate(2deg)', opacity: 1, offset: .2 }, { transform: 'translate(90px,-620px) rotate(-16deg) scale(.4)', opacity: 0 }], { duration: 900, easing: i.EZ.exit, fill: 'forwards' });
     i.setState({ nudge: null });
     if (!r.ok) { i.toast(`No nudge was started: ${failText(r)}`); return false; }
-    i.log(p.pairId, { k: 'nudge', t: auto ? `dor sent ${p.name} a note on its own` : `A note for ${p.name} went to dor’s agents`, q: p.copy,
-      note: auto ? 'dor’s reasoning was confident · their agent still checks it fits' : 'they decide if it fits' });
-    i.toast(auto ? `dor decided this one on its own: a note is on its way to ${p.name} if it fits.` : `Sent to dor’s agents. ${p.name} gets a note if it fits.`);
+    i.log(p.pairId, { k: 'nudge', t: auto ? `dor nudged ${p.name} to reach out` : `A note for ${p.name} went to dor’s agents`, q: p.copy,
+      note: p.hook ? `they’ll be prompted: “${p.hook}”` : 'their agent still checks it fits' });
+    i.toast(`dor nudged ${p.name} to reach out${p.hook ? ` (“${p.hook}”)` : ''}.`);
     return true;
   }
 
@@ -760,7 +783,7 @@ export class LiveBridge {
       ...this.live,
       myName: this.myName(),
       plate: this.myName().toLowerCase(),
-      planeText: first ? NUDGE_TEMPLATE_COPY[first.templateId] : '',
+      planeText: first ? (first.hook ? `${NUDGE_TEMPLATE_COPY[first.templateId]} ${first.hook}` : NUDGE_TEMPLATE_COPY[first.templateId]) : '',
       planeName: first ? this.nameOf(first.pairId) : '',
       planeWho: first ? this.nameOf(first.pairId).toLowerCase() : '',
       nudgeName: this.pending?.name ?? '',

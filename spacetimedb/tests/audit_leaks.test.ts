@@ -36,7 +36,7 @@ describe('audit item 2: my_nudges carries no sender timing or internal ids', () 
     const x = world();
     const sig = approveAndCommit(x);
     const [n] = view<any>(x.w, x.w.bob, mod.my_nudges);
-    expect(Object.keys(n).sort()).toEqual(['id', 'pair_id', 'template_id', 'visible_until']);
+    expect(Object.keys(n).sort()).toEqual(['hook', 'id', 'pair_id', 'template_id', 'visible_until']);
     expect(json(n)).not.toContain(sig.signal_id);
     expect(json(n)).not.toContain(x.pref.consent_id);
   });

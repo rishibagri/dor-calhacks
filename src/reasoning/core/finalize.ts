@@ -60,6 +60,7 @@ export function finalize(input: unknown, proposals: readonly unknown[], opts: Fi
     const reason = gateProposal(p, input, freshness === 'expired');
     if (reason) { rejected.push({ action: p.action, ...(p.targetRef ? { targetRef: p.targetRef } : {}), reason }); continue; }
     const cap = capProposal(p, input, opts);
+    if (cap.reject) { rejected.push({ action: p.action, ...(p.targetRef ? { targetRef: p.targetRef } : {}), reason: cap.reject }); continue; }
     if (cap.by) caps.set(p, cap.by);
     survivors.push({ proposal: p, mode: cap.mode });
   }
