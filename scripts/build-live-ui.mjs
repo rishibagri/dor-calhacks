@@ -66,6 +66,8 @@ edit('mat body', 'Noor is new in Berkeley too. You were both open to coffee.', '
 edit('postcard name', `<span style="position:relative;font:600 38px/1 'Caveat'">Maya</span>`, `<span style="position:relative;font:600 38px/1 'Caveat'">{{ live.myName }}</span>`);
 edit('interest share', '>Maya is interested in<br>', '>{{ live.myName }} is interested in<br>');
 edit('feed age', '">checked 2 h ago</span>', '">{{ live.feedAge }}</span>');
+edit('open listing', `<button style="border:none;background:none;padding:12px 2px;font:400 15px 'Spectral',serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer;white-space:nowrap">Open listing ↗</button>`,
+  `<button sc-camel-on-click="{{ live.openListing }}" style="border:none;background:none;padding:12px 2px;font:400 15px 'Spectral',serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer;white-space:nowrap">Open listing ↗</button>`);
 edit('door nameplate', 'animation:popIn .5s cubic-bezier(0.19,1.51,0.29,0.99) both">maya</div>',
   'animation:popIn .5s cubic-bezier(0.19,1.51,0.29,0.99) both">{{ live.plate }}</div>');
 edit('room caption', 'moving in · watercolour, maya’s room', 'moving in · watercolour, your room');
