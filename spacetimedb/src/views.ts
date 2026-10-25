@@ -127,7 +127,7 @@ function nudgeSourcesStand(db: ReadDb, n: { pair_id: string; source_signal_ids: 
   if (n.source_signal_ids.length === 0 || n.source_signal_ids.length !== n.source_consent_versions.length) return false;
   return n.source_signal_ids.every((id, i) => {
     const s = db.approved_signal.signal_id.find(id);
-    if (!s || s.pair_id !== n.pair_id || s.consent_version !== n.source_consent_versions[i]) return false;
+    if (!s || s.pair_id !== n.pair_id) return false;
     if (signalExpiredMarked(db, id)) return false;
     if (pauseInForce(db, s.sender_id, s.pair_id, null)) return false; // D041: the sender is pausing this person
     if (!standingApprovalStands(db, id, null)) return false; // D044: the approving rule no longer stands
@@ -135,12 +135,9 @@ function nudgeSourcesStand(db: ReadDb, n: { pair_id: string; source_signal_ids: 
   });
 }
 
-/** The recipient's consent the nudge was bound to is still the same record, standing, and still covers its mode. */
-function nudgeConsentStands(db: ReadDb, n: { pair_id: string; template_id: string; recipient_consent_id: string }, viewer: Identity): boolean {
-  const p = loadPreference(db, viewer, n.pair_id);
-  if (!p || p.consentId !== n.recipient_consent_id) return false;
-  if (!guardPreferenceStanding(p, hex(viewer), n.pair_id, null).allowed || p.expiresAtMs === 0) return false;
-  return p.supportModes.some(m => templateForSignal({ supportMode: m }) === n.template_id);
+/** The recipient has not turned nudges off for this pair (support-style settings personalize, they do not hide). */
+function nudgeConsentStands(db: ReadDb, n: { pair_id: string }, viewer: Identity): boolean {
+  return loadPreference(db, viewer, n.pair_id) !== null;
 }
 
 const HOUR_MICROS = 3_600_000_000n;
@@ -595,7 +592,7 @@ const planCandidateRow = t.row('WorkerPlanCandidateRow', {
 
 /**
  * Worker-only plan inputs: for each current basis, events both participants currently intend, with the exact
- * intent (and C7 approval) ids and versions commit_plan_proposal binds. Opaque ids, topics and times only: no
+ * intent ids and versions commit_plan_proposal binds (plus standing C7 approval ids when both exist). Opaque ids, topics and times only: no
  * names, identities, titles or source text. Empty for every non-worker caller.
  */
 export const worker_plan_candidates = spacetimedb.view(
@@ -615,14 +612,14 @@ export const worker_plan_candidates = spacetimedb.view(
         if (!ib || !intentStands(toIntentState(ctx.db, ib), hex(base.b), ia.event_id, null, null)) continue;
         const e = ctx.db.catalogue_event.event_id.find(ia.event_id);
         if (!e || catalogueEventUsable(toCatalogueState(ctx.db, e), null)) continue;
+        // Both people already intend this event; existing pairs no longer need separate activity approvals.
         let approvals: string[] = [];
         if (base.kind === 'existing_connection') {
           const pick = (owner: Identity, other: Identity) => [...ctx.db.activity_approval.owner.filter(owner)].find(x => x.pair_id === base.ref &&
             x.recipient.isEqual(other) && !x.revoked_at && !toApprovalState(ctx.db, x).expiredMarked &&
             x.topics.some(t => e.topics.includes(t)))?.approval_id;
           const pa = pick(base.a, base.b), pb = pick(base.b, base.a);
-          if (!pa || !pb || !approvalsStand(ctx.db, base.ref, base.a, base.b, pa, pb, e.topics, null)) continue;
-          approvals = [pa, pb];
+          if (pa && pb && approvalsStand(ctx.db, base.ref, base.a, base.b, pa, pb, e.topics, null)) approvals = [pa, pb];
         }
         out.push({ basis_kind: base.kind, basis_ref: base.ref, event_id: e.event_id, intent_ids: [ia.intent_id, ib.intent_id],
           intent_versions: [ia.version, ib.version], approval_ids: approvals, event_starts_at: e.starts_at, fetched_at: e.fetched_at,

@@ -36,7 +36,7 @@ describe('catalogue_status (CS-R3)', () => {
   it('hidden while discovery is off', () => {
     const w = world();
     run(w, true);
-    w.h.withReducerTx(w.admin, ctx => mod.set_discovery_config(ctx, { key: 'enabled', values: [] }));
+    w.h.withReducerTx(w.admin, ctx => mod.set_discovery_config(ctx, { key: 'enabled', values: ['false'] }));
     expect(view<any>(w, w.alice, mod.catalogue_status)).toEqual([]);
   });
 });

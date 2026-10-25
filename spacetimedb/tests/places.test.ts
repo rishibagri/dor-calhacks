@@ -10,7 +10,8 @@ function world(enabled = true) {
   const admin = (fn: Parameters<typeof w.h.withReducerTx>[1]) => w.h.withReducerTx(w.admin, fn);
   admin(ctx => mod.set_discovery_config(ctx, { key: 'areas', values: ['berkeley-campus'] }));
   admin(ctx => mod.set_discovery_config(ctx, { key: 'source_hosts', values: ['google.com'] }));
-  if (enabled) admin(ctx => mod.set_discovery_config(ctx, { key: 'enabled', values: ['true'] }));
+  // Discovery is on unless the owner turns it off (main #74), so the off case is explicit.
+  admin(ctx => mod.set_discovery_config(ctx, { key: 'enabled', values: [enabled ? 'true' : 'false'] }));
   const worker = jwtAuth('dor-worker', 50n, 'https://worker.spacetimedb.example');
   const workerId = w.h.withReducerTx(worker, ctx => ctx.sender);
   admin(ctx => mod.set_worker_identity(ctx, { worker: workerId, enabled: true }));

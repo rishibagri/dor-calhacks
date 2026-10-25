@@ -67,7 +67,7 @@ describe('discovery opt-in never authorizes pair sharing', () => {
     expect(view(w, w.alice, mod.my_pairs)).toHaveLength(0);
   });
 
-  it('event intent alone never authorizes a plan; a pair basis also needs both C7 approvals', () => {
+  it('an accepted pair with both intents for the same event yields a plan candidate without activity approvals', () => {
     const w = world();
     const { pairId } = pairUp(w);
     w.h.withReducerTx(w.admin, ctx => mod.upsert_catalogue_event(ctx, {
@@ -78,8 +78,8 @@ describe('discovery opt-in never authorizes pair sharing', () => {
     const worker = jwtAuth('dor-worker', 50n, 'https://worker.spacetimedb.example');
     const workerId = w.h.withReducerTx(worker, ctx => ctx.sender);
     w.h.withReducerTx(w.admin, ctx => mod.set_worker_identity(ctx, { worker: workerId, enabled: true }));
-    expect(view(w, worker, mod.worker_plan_candidates)).toHaveLength(0); // intents + pair, but no C7 approvals
-    expect(pairId).toBeTruthy();
+    const rows = view<any>(w, worker, mod.worker_plan_candidates);
+    expect(rows.map(r => [r.basis_ref, r.approval_ids])).toEqual([[pairId, []]]);
   });
 });
 

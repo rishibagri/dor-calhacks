@@ -1,6 +1,6 @@
 import { t } from 'spacetimedb/server';
 import { Timestamp } from 'spacetimedb';
-import { DISCLOSURE_PURPOSE, guardApproval, policyErrorCode } from '@dor/contracts/policy';
+import { DISCLOSURE_CONSENT_VERSION, DISCLOSURE_PURPOSE, guardApproval, policyErrorCode } from '@dor/contracts/policy';
 import { spacetimedb } from '../schema';
 import { fail } from '../errors';
 import { otherMember, requireAccount } from '../guards';
@@ -10,8 +10,8 @@ import { fromMs, hex, loadStanding, toMs, pauseInForce } from '../policy_state';
 /**
  * C3 approval. Authoritative: a direct reducer call gets exactly the same checks as the API.
  * Sender is always ctx.sender; recipient, policy id and expiry come from server state, never args.
- * Guard: accepted pair ∩ caller's assignment to this recipient ∩ confirmed preset (version,
- * categories, expiry, not revoked) ∩ current consent notice ∩ exact previewed payload revision.
+ * Guard: accepted pair ∩ effective preset (the assigned one, or the standard default when none is assigned).
+ * Fields outside the preset are dropped; the server's current versions are recorded, not the client's.
  */
 export const approve_signal = spacetimedb.reducer(
   {
@@ -32,11 +32,7 @@ export const approve_signal = spacetimedb.reducer(
     // Idempotent retry (scoped to caller): never re-approve and never resurrect a revoked signal.
     const prior = [...ctx.db.approved_signal.sender_id.filter(ctx.sender)].find(s => s.client_request_id === args.client_request_id);
     if (prior) {
-      const same = prior.pair_id === args.pair_id && prior.support_mode === args.support_mode &&
-        prior.availability === args.availability && prior.consent_version === args.consent_version &&
-        prior.recipient_policy_version === args.recipient_policy_version &&
-        prior.preset_assignment_version === args.preset_assignment_version;
-      if (same) return;
+      if (prior.pair_id === args.pair_id) return;
       fail('invalid', 'client_request_id reused');
     }
 
@@ -53,18 +49,18 @@ export const approve_signal = spacetimedb.reducer(
     const signalId = newId(ctx);
     ctx.db.approved_signal.insert({
       signal_id: signalId, pair_id: args.pair_id, sender_id: ctx.sender, recipient_id: recipient,
-      purpose: DISCLOSURE_PURPOSE, support_mode: args.support_mode, availability: args.availability,
-      consent_version: args.consent_version, recipient_policy_id: d.recipientPolicyId,
-      recipient_policy_version: args.recipient_policy_version,
-      preset_assignment_version: args.preset_assignment_version,
+      purpose: DISCLOSURE_PURPOSE, support_mode: d.payload.supportMode, availability: d.payload.availability,
+      consent_version: DISCLOSURE_CONSENT_VERSION, recipient_policy_id: d.recipientPolicyId,
+      recipient_policy_version: d.recipientPolicyVersion,
+      preset_assignment_version: d.presetAssignmentVersion,
       expires_at: new Timestamp(fromMs(d.expiresAtMs)), revoked_at: undefined,
       client_request_id: args.client_request_id,
     });
     ctx.db.disclosure_receipt.insert({
       receipt_id: newId(ctx), signal_id: signalId, sender_id: ctx.sender, recipient_id: recipient,
-      categories: d.categories, consent_version: args.consent_version,
-      recipient_policy_version: args.recipient_policy_version,
-      preset_assignment_version: args.preset_assignment_version, action: 'approved', created_at: ctx.timestamp,
+      categories: d.categories, consent_version: DISCLOSURE_CONSENT_VERSION,
+      recipient_policy_version: d.recipientPolicyVersion,
+      preset_assignment_version: d.presetAssignmentVersion, action: 'approved', created_at: ctx.timestamp,
     });
   }
 );

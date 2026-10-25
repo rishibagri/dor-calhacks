@@ -92,7 +92,10 @@ export function basisCurrent(db: ReadDb, p: PlanRow, eventTopics: readonly strin
   const people = basisParticipants(db, p.basis_kind, p.basis_ref);
   if (!people || !samePeople(people[0], people[1], p.participant_a, p.participant_b)) return false;
   if (p.basis_kind === 'introduction') return !p.approval_a && !p.approval_b;
-  return approvalsStand(db, p.basis_ref, p.participant_a, p.participant_b, p.approval_a, p.approval_b, eventTopics, nowMs);
+  // Existing pair: the accepted pair and both current intents carry the plan; approvals are optional. Only an
+  // explicit revoke of a bound approval stops it (expiry or preset edits do not).
+  const revoked = (id: string | undefined) => Boolean(id && db.activity_approval.approval_id.find(id)?.revoked_at);
+  return !revoked(p.approval_a) && !revoked(p.approval_b);
 }
 
 export function intentsCurrent(db: ReadDb, p: PlanRow, nowMs: number | null): boolean {

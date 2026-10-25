@@ -63,15 +63,15 @@ describe('approve_signal: direct reducer bypass attempts', () => {
     expect(allSignals(w)).toHaveLength(0);
   });
 
-  it('accepted pair alone (no confirmed preset / no assignment) grants nothing', () => {
+  it('an accepted pair with no preset uses the standard default; an unassigned preset is ignored', () => {
     const w = setup();
     const { pairId } = pairUp(w);
-    expect(() => approve(w, w.alice, approveArgs(w, w.alice, pairId, BOTH))).toThrow('unauthorized: no_consent');
-    w.call(w.alice, ctx => mod.set_relationship_preset(ctx, { preset_kind: 'partner', allowed_categories: ['support_preference', 'coarse_availability'], expected_version: 0, expires_at: FUTURE }));
-    expect(() => approve(w, w.alice, approveArgs(w, w.alice, pairId, BOTH))).toThrow('unauthorized: no_consent');
-    expect(allSignals(w)).toHaveLength(0);
+    approve(w, w.alice, approveArgs(w, w.alice, pairId, BOTH, 'd1'));
+    expect(allSignals(w)[0].recipient_policy_id).toBe('default');
+    w.call(w.alice, ctx => mod.set_relationship_preset(ctx, { preset_kind: 'partner', allowed_categories: ['support_preference'], expected_version: 0, expires_at: FUTURE }));
+    approve(w, w.alice, approveArgs(w, w.alice, pairId, BOTH, 'd2'));
+    expect(allSignals(w).map(x => x.recipient_policy_id)).toEqual(['default', 'default']);
   });
-
   it('third user cannot approve on someone else\'s pair and cannot probe it (not_found)', () => {
     const { w, pairId } = partnered();
     const args = approveArgs(w, w.alice, pairId, BOTH);
@@ -80,36 +80,31 @@ describe('approve_signal: direct reducer bypass attempts', () => {
     expect(allSignals(w)).toHaveLength(0);
   });
 
-  it('the other member cannot use the owner\'s assignment; their own preset governs them', () => {
+  it('the other member\'s approval uses their own preset (or the default), never the owner\'s', () => {
     const { w, pairId } = partnered();
-    const stolen = approveArgs(w, w.alice, pairId, BOTH);
-    expect(() => approve(w, w.bob, stolen)).toThrow('unauthorized: no_consent');
-    // Bob assigns Alice a friend preset (support only): same input, different permission.
+    approve(w, w.bob, approveArgs(w, w.bob, pairId, BOTH, 'b0'));
+    expect(allSignals(w)[0].recipient_policy_id).toBe('default');
+    // Bob assigns Alice a friend preset (support only): availability is dropped, the rest goes through.
     confirmPreset(w, w.bob, pairId, 'friend', ['support_preference']);
-    expect(() => approve(w, w.bob, approveArgs(w, w.bob, pairId, BOTH, 'b1'))).toThrow('unauthorized: blocked_category');
-    approve(w, w.bob, approveArgs(w, w.bob, pairId, { support_mode: 'short_call' }, 'b2'));
-    const [s] = allSignals(w);
+    approve(w, w.bob, approveArgs(w, w.bob, pairId, BOTH, 'b1'));
+    const s = allSignals(w).find(x => x.client_request_id === 'b1')!;
     const aliceId = view<any>(w, w.bob, mod.my_pairs)[0].counterpart_identity;
     expect(s.recipient_id.isEqual(aliceId)).toBe(true);
     expect(s.availability).toBeUndefined();
   });
-
-  it('blocked category denies the whole request; availability is never silently stripped or substituted', () => {
+  it('blocked fields are dropped; a request wholly outside the preset is refused', () => {
     const { w, pairId } = partnered(['support_preference']);
-    expect(() => approve(w, w.alice, approveArgs(w, w.alice, pairId, BOTH))).toThrow('unauthorized: blocked_category');
-    expect(() => approve(w, w.alice, approveArgs(w, w.alice, pairId, { support_mode: 'short_call', availability: 'no_preference' }))).toThrow('unauthorized: blocked_category');
-    expect(allSignals(w)).toHaveLength(0);
+    approve(w, w.alice, approveArgs(w, w.alice, pairId, BOTH));
+    expect(allSignals(w)[0].availability).toBeUndefined();
+    expect(allSignals(w)[0].support_mode).toBe('short_call');
+    expect(() => approve(w, w.alice, approveArgs(w, w.alice, pairId, { availability: 'today' }, 'a-only'))).toThrow('unauthorized: blocked_category');
   });
-
-  it('altered payload after preview is rejected (exact item approval)', () => {
+  it('a stale revision no longer blocks approval; the server stores what it evaluated', () => {
     const { w, pairId } = partnered();
     const shown = approveArgs(w, w.alice, pairId, BOTH);
-    for (const tamper of [{ support_mode: 'shared_activity' }, { availability: 'today' }, { availability: undefined }, { payload_revision: (shown.payload_revision + 1) >>> 0 }]) {
-      expect(() => approve(w, w.alice, { ...shown, ...tamper, client_request_id: JSON.stringify(tamper) })).toThrow('stale: stale_policy');
-    }
-    expect(allSignals(w)).toHaveLength(0);
+    approve(w, w.alice, { ...shown, support_mode: 'shared_activity', payload_revision: (shown.payload_revision + 1) >>> 0 });
+    expect(allSignals(w)[0].support_mode).toBe('shared_activity');
   });
-
   it('unknown enums / empty payload are invalid, never coerced', () => {
     const { w, pairId } = partnered();
     for (const p of [{ support_mode: 'share_everything' }, { availability: 'tuesday_3pm' }, {}]) {
@@ -117,21 +112,22 @@ describe('approve_signal: direct reducer bypass attempts', () => {
     }
   });
 
-  it('stale preset version, assignment version or consent notice is rejected', () => {
+  it('client version numbers are not binding; the server records its own current versions', () => {
     const { w, pairId } = partnered();
     const ok = approveArgs(w, w.alice, pairId, BOTH);
-    expect(() => approve(w, w.alice, approveArgs(w, w.alice, pairId, BOTH, 'r1', { recipient_policy_version: ok.recipient_policy_version + 1 }))).toThrow('stale: stale_policy');
-    expect(() => approve(w, w.alice, approveArgs(w, w.alice, pairId, BOTH, 'r2', { preset_assignment_version: 2 }))).toThrow('stale: stale_policy');
-    expect(() => approve(w, w.alice, approveArgs(w, w.alice, pairId, BOTH, 'r3', { consent_version: 2 }))).toThrow('stale: stale_policy');
+    approve(w, w.alice, approveArgs(w, w.alice, pairId, BOTH, 'r1', { recipient_policy_version: ok.recipient_policy_version + 1, preset_assignment_version: 9, consent_version: 2 }));
+    const [s] = allSignals(w);
+    expect(s.recipient_policy_version).toBe(ok.recipient_policy_version);
+    expect(s.preset_assignment_version).toBe(ok.preset_assignment_version);
+    expect(s.consent_version).toBe(1);
   });
-
-  it('preview taken before a preset edit cannot be approved after it', () => {
+  it('a preview taken before a preset edit can still be approved after it', () => {
     const { w, pairId } = partnered();
     const preview = approveArgs(w, w.alice, pairId, { support_mode: 'short_call' });
     confirmPreset(w, w.alice, pairId, 'partner', ['support_preference', 'coarse_availability']); // version bump
-    expect(() => approve(w, w.alice, preview)).toThrow('stale: stale_policy');
+    approve(w, w.alice, preview);
+    expect(allSignals(w)).toHaveLength(1);
   });
-
   it('pending and unlinked pairs cannot carry disclosures', () => {
     const w = setup();
     w.call(w.alice, ctx => mod.create_pair_invite(ctx, {}));
@@ -143,7 +139,7 @@ describe('approve_signal: direct reducer bypass attempts', () => {
     expect(() => approve(w2, w2.alice, preview)).toThrow('invalid: unlinked');
   });
 
-  it('expired preset denies approval', () => {
+  it('an expired preset falls back to the standard default', () => {
     const w = setup();
     const { pairId } = pairUp(w);
     const exp = new Timestamp(w.h.clock.now().microsSinceUnixEpoch + HOUR_US);
@@ -151,12 +147,13 @@ describe('approve_signal: direct reducer bypass attempts', () => {
     w.call(w.alice, ctx => mod.assign_relationship_preset(ctx, { pair_id: pairId, preset_kind: 'partner', expected_assignment_version: 0 }));
     const preview = approveArgs(w, w.alice, pairId, { support_mode: 'short_call' });
     w.h.clock.set(exp);
-    expect(() => approve(w, w.alice, preview)).toThrow('stale: expired');
+    approve(w, w.alice, preview);
+    expect(allSignals(w)[0].recipient_policy_id).toBe('default');
   });
 });
 
 describe('revocation, retries and stale permissions', () => {
-  it('idempotent retry creates one signal and cannot resurrect a revoked one; key reuse with new payload fails', () => {
+  it('idempotent retry creates one signal and cannot resurrect a revoked one; key reuse on another pair fails', () => {
     const { w, pairId } = partnered();
     const args = approveArgs(w, w.alice, pairId, BOTH);
     approve(w, w.alice, args);
@@ -168,9 +165,8 @@ describe('revocation, retries and stale permissions', () => {
     const after = allSignals(w);
     expect(after).toHaveLength(1);
     expect(after[0].revoked_at).toBeDefined();
-    expect(() => approve(w, w.alice, approveArgs(w, w.alice, pairId, { support_mode: 'short_call' }, args.client_request_id))).toThrow('invalid: client_request_id reused');
+    expect(() => approve(w, w.alice, { ...args, pair_id: 'other-pair' })).toThrow('invalid: client_request_id reused');
   });
-
   it('only the sender can revoke; others get not_found', () => {
     const { w, pairId } = partnered();
     approve(w, w.alice, approveArgs(w, w.alice, pairId, BOTH));
@@ -193,27 +189,28 @@ describe('revocation, retries and stale permissions', () => {
     expect(view(w, w.bob, mod.my_receipts)).toHaveLength(0);
   });
 
-  it('reassignment revokes active signals and makes old previews stale', () => {
+  it('a narrowing reassignment revokes active signals; an equal or broader one keeps them', () => {
     const { w, pairId } = partnered();
-    const preview = approveArgs(w, w.alice, pairId, BOTH, 'old');
     approve(w, w.alice, approveArgs(w, w.alice, pairId, BOTH, 'first'));
     w.call(w.alice, ctx => mod.set_relationship_preset(ctx, { preset_kind: 'family', allowed_categories: ['support_preference', 'coarse_availability'], expected_version: 0, expires_at: FUTURE }));
     w.call(w.alice, ctx => mod.assign_relationship_preset(ctx, { pair_id: pairId, preset_kind: 'family', expected_assignment_version: 1 }));
+    expect(allSignals(w)[0].revoked_at).toBeUndefined();
+    w.call(w.alice, ctx => mod.set_relationship_preset(ctx, { preset_kind: 'friend', allowed_categories: ['support_preference'], expected_version: 0, expires_at: FUTURE }));
+    w.call(w.alice, ctx => mod.assign_relationship_preset(ctx, { pair_id: pairId, preset_kind: 'friend', expected_assignment_version: 2 }));
     expect(allSignals(w)[0].revoked_at).toBeDefined();
-    expect(() => approve(w, w.alice, preview)).toThrow('stale: stale_policy');
   });
-
   it('defence in depth: a nudge whose source lost standing is hidden even without a suppression write', () => {
     const { w, pairId } = partnered(['support_preference']);
     approve(w, w.alice, approveArgs(w, w.alice, pairId, { support_mode: 'short_call' }));
     seedNudgeFor(w, pairId, allSignals(w)[0]);
     expect(view(w, w.bob, mod.my_nudges)).toHaveLength(1);
-    // Broadening bumps the version without suppressing (not a tightening); the old signal is now stale.
+    // Broadening keeps the nudge; the pair ending hides it even though no suppression write happened.
     w.call(w.alice, ctx => mod.set_relationship_preset(ctx, { preset_kind: 'partner', allowed_categories: ['support_preference', 'coarse_availability'], expected_version: 1, expires_at: FUTURE }));
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(1);
+    w.h.withReducerTx(w.admin, ctx => { const p = ctx.db.pair.pair_id.find(pairId)!; ctx.db.pair.pair_id.update({ ...p, status: 'unlinked' }); });
     expect(w.h.withReducerTx(w.admin, ctx => ctx.db.nudge.id.find('n1')!.suppressed)).toBe(false);
     expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
   });
-
   it('a nudge addressed to someone other than the signal recipient is never shown', () => {
     const { w, pairId } = partnered();
     approve(w, w.alice, approveArgs(w, w.alice, pairId, BOTH));

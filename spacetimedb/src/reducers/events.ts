@@ -10,7 +10,7 @@ import { spacetimedb } from '../schema';
 import { fail, type Ctx } from '../errors';
 import { requireAcceptedPair, requireAccount, otherMember, isDatabaseInternal } from '../guards';
 import { newId } from '../ids';
-import { blockedEitherWay, discoveryList, findAssignment, fromMs, hex, toMs } from '../policy_state';
+import { blockedEitherWay, discoveryEnabled, discoveryList, findAssignment, fromMs, hex, toMs } from '../policy_state';
 import { consumeRate, requireDiscovery } from '../discovery_effects';
 import {
   approvalsStand, basisParticipants, findIntentRow, loadActivityPreset, loadCatalogueEvent, loadIntent, loadPlanCheck,
@@ -241,12 +241,13 @@ export const commit_plan_proposal = spacetimedb.reducer(
     }
     const event = loadCatalogueEvent(ctx.db, a.event_id);
     let approvalA: string | undefined, approvalB: string | undefined;
-    if (a.basis_kind === 'existing_connection') {
-      if (a.approval_ids.length !== 2) refuse('approval_not_current');
+    if (a.basis_kind === 'existing_connection' && a.approval_ids.length > 0) {
+      // Optional for existing pairs: both intents already bind the event. Approvals passed must still stand.
+      if (a.approval_ids.length !== 2) refuse('invalid_schema');
       const owned = (who: Identity) => a.approval_ids.find(id => ctx.db.activity_approval.approval_id.find(id)?.owner.isEqual(who));
       approvalA = owned(pa); approvalB = owned(pb);
       if (!approvalsStand(ctx.db, a.basis_ref, pa, pb, approvalA, approvalB, event?.topics ?? [], nowMs)) refuse('approval_not_current');
-    } else if (a.approval_ids.length !== 0) refuse('invalid_schema');
+    } else if (a.basis_kind !== 'existing_connection' && a.approval_ids.length !== 0) refuse('invalid_schema');
     const timing = guardPlanTiming(event, Date.parse(a.expires_at), nowMs);
     if (!timing.ok) refuse(timing.reason);
     const dup = [...ctx.db.shared_plan.participant_a.filter(pa)].some(p => p.event_id === a.event_id && LIVE.has(p.status) &&
@@ -263,7 +264,7 @@ export const commit_plan_proposal = spacetimedb.reducer(
 );
 
 function requireDiscoveryFlag(ctx: Ctx): void {
-  if (discoveryList(ctx.db, 'enabled')[0] !== 'true') fail('unavailable', 'disabled');
+  if (!discoveryEnabled(ctx.db)) fail('unavailable', 'disabled');
 }
 
 /**
@@ -302,7 +303,7 @@ function act(ctx: Ctx, planId: string, action: { kind: 'accept' | 'decline'; rev
   const p: PlanRow | undefined = ctx.db.shared_plan.plan_id.find(planId) ?? undefined;
   if (!p || !(p.participant_a.isEqual(ctx.sender) || p.participant_b.isEqual(ctx.sender))) fail('not_found', 'plan');
   const check = loadPlanCheck(ctx.db, p, toMs(ctx.timestamp));
-  if (action.kind === 'accept' && discoveryList(ctx.db, 'enabled')[0] !== 'true') fail('unavailable', 'disabled');
+  if (action.kind === 'accept' && !discoveryEnabled(ctx.db)) fail('unavailable', 'disabled');
   const r = applyPlanAction(toPlanState(p), { ...action, actor: hex(ctx.sender) }, check);
   if (!r.ok) fail(PLAN_REFUSAL_CODE[r.reason], r.reason);
   const acc = r.state.acceptedBy;

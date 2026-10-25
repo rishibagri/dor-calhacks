@@ -149,25 +149,47 @@ export interface DisclosureInput {
 export type DisclosureEvaluation =
   | { kind: 'denied'; reason: DenyReason }
   | { kind: 'nothing_to_share' }
-  | { kind: 'shareable'; payload: DisclosurePayload; shared: SharingCategory[]; blocked: SharingCategory[] };
+  | { kind: 'shareable'; payload: DisclosurePayload; shared: SharingCategory[]; blocked: SharingCategory[];
+      preset: PresetState; assignment: AssignmentState };
+
+/** Categories an accepted pair may use when the owner never assigned a preset (or it lapsed). */
+export const DEFAULT_PRESET_ID = 'default';
+export const DEFAULT_ALLOWED_CATEGORIES: readonly SharingCategory[] = ['support_preference', 'coarse_availability'];
+const FAR_FUTURE_MS = Date.UTC(9999, 11, 31, 23, 59, 59, 999);
+
+/** Standard preset + assignment for an accepted pair with no usable owner-assigned preset. */
+export function defaultPairPolicy(ownerId: string, recipientId: string, pairId: string): { preset: PresetState; assignment: AssignmentState } {
+  return {
+    preset: { policyId: DEFAULT_PRESET_ID, ownerId, allowedCategories: DEFAULT_ALLOWED_CATEGORIES, version: 1, expiresAtMs: FAR_FUTURE_MS, revokedAtMs: null },
+    assignment: { ownerId, recipientId, pairId, presetId: DEFAULT_PRESET_ID, assignmentVersion: 1 },
+  };
+}
 
 /**
- * F3 core (FLOWS.md): effective disclosure = accepted relationship ∩ preset assigned to this named
- * recipient ∩ preset unrevoked/unexpired ∩ allowed categories. Blocked fields are omitted from the
- * payload, never substituted; a candidate wholly outside the preset is denied, never downgraded.
- * The check order fixes which reason the owner sees and is pinned by flows.test.mjs.
+ * The preset that applies: the owner's assigned one when it is consistent and current, otherwise the standard
+ * default. Only an explicit owner revocation stops sharing; a missing, mismatched or expired preset falls back.
+ */
+function effectivePolicy(i: Pick<DisclosureInput, 'ownerId' | 'recipientId' | 'pairId' | 'preset' | 'assignment' | 'nowMs'>):
+  { preset: PresetState; assignment: AssignmentState } | null {
+  const { preset, assignment } = i;
+  const usable = preset && assignment && assignment.ownerId === i.ownerId && assignment.recipientId === i.recipientId &&
+    assignment.pairId === i.pairId && preset.ownerId === i.ownerId && assignment.presetId === preset.policyId;
+  if (usable && preset.revokedAtMs !== null) return null;
+  if (usable && (i.nowMs === null || preset.expiresAtMs > i.nowMs)) return { preset, assignment };
+  return defaultPairPolicy(i.ownerId, i.recipientId, i.pairId);
+}
+
+/**
+ * F3 core (FLOWS.md): effective disclosure = accepted relationship ∩ effective preset ∩ allowed categories.
+ * Blocked fields are dropped from the payload; only a candidate wholly outside the preset is denied.
  */
 export function evaluateDisclosure(i: DisclosureInput): DisclosureEvaluation {
   const no = (reason: DenyReason): DisclosureEvaluation => ({ kind: 'denied', reason });
   if (i.pairStatus === 'unlinked') return no('unlinked');
   if (i.pairStatus !== 'accepted') return no('no_consent');
-  const { preset, assignment } = i;
-  if (!preset || !assignment) return no('no_consent');
-  if (assignment.ownerId !== i.ownerId || assignment.recipientId !== i.recipientId ||
-    assignment.pairId !== i.pairId || preset.ownerId !== i.ownerId) return no('wrong_recipient');
-  if (assignment.presetId !== preset.policyId) return no('stale_policy');
-  if (preset.revokedAtMs !== null) return no('revoked');
-  if (i.nowMs !== null && preset.expiresAtMs <= i.nowMs) return no('expired');
+  const policy = effectivePolicy(i);
+  if (!policy) return no('revoked');
+  const { preset, assignment } = policy;
 
   const present = FIELDS.filter(f => i.candidate[f] !== undefined);
   if (present.length === 0) return { kind: 'nothing_to_share' };
@@ -178,7 +200,7 @@ export function evaluateDisclosure(i: DisclosureInput): DisclosureEvaluation {
   if (allowed.includes('availability')) payload.availability = i.candidate.availability;
   return {
     kind: 'shareable', payload, shared: allowed.map(f => FIELD_CATEGORY[f]),
-    blocked: present.filter(f => !allowed.includes(f)).map(f => FIELD_CATEGORY[f]),
+    blocked: present.filter(f => !allowed.includes(f)).map(f => FIELD_CATEGORY[f]), preset, assignment,
   };
 }
 
@@ -232,20 +254,18 @@ export interface ApprovalRequest {
 }
 
 export type ApprovalDecision =
-  | (Allow & { recipientId: string; recipientPolicyId: string; expiresAtMs: number; categories: SharingCategory[] })
+  | (Allow & { recipientId: string; recipientPolicyId: string; recipientPolicyVersion: number; presetAssignmentVersion: number;
+      payload: DisclosurePayload; expiresAtMs: number; categories: SharingCategory[] })
   | Deny;
 
 /**
- * F4 guard (approve_signal). Re-runs the F3 evaluation on authoritative rows and requires the request
- * to be exactly the shareable preview payload: a request still carrying a blocked field is denied
- * (`blocked_category`), never silently stripped. Then binds versions, consent notice and revision.
+ * F4 guard (approve_signal). Re-runs the F3 evaluation on authoritative rows. Fields the effective preset does not
+ * allow are dropped; the server records its own current versions, so a client with older version numbers or an
+ * older revision is not refused. The payload revision and version fields are accepted for compatibility only.
  */
 export function guardApproval(req: ApprovalRequest, s: PolicySnapshot): ApprovalDecision {
   if (!isId(req.callerId) || !isId(req.pairId) || !isId(req.clientRequestId)) return deny('invalid_schema');
-  if (!payloadShapeOk(req)) return deny('invalid_schema');
-  if (!isVersion(req.recipientPolicyVersion) || !isVersion(req.presetAssignmentVersion) ||
-    !isVersion(req.consentVersion) || !Number.isSafeInteger(req.payloadRevision) ||
-    req.payloadRevision < 0 || !Number.isFinite(s.nowMs)) return deny('invalid_schema');
+  if (!payloadShapeOk(req) || !Number.isFinite(s.nowMs)) return deny('invalid_schema');
   if (s.pair && s.pair.pairId !== req.pairId) return deny('wrong_recipient');
 
   const cp = counterpart(req.callerId, s.pair);
@@ -256,31 +276,18 @@ export function guardApproval(req: ApprovalRequest, s: PolicySnapshot): Approval
     pairStatus: cp.recipientId ? s.pair!.status : 'pending', preset: s.preset, assignment: s.assignment, nowMs: s.nowMs,
   });
   if (ev.kind === 'denied') return deny(ev.reason);
-  if (ev.kind !== 'shareable' || !matchesPreviewPayload(ev.payload, candidate)) return deny('blocked_category');
-  const { preset, assignment } = s as { preset: PresetState; assignment: AssignmentState };
-  if (assignment.assignmentVersion !== req.presetAssignmentVersion ||
-    preset.version !== req.recipientPolicyVersion) return deny('stale_policy');
-  if (req.consentVersion !== DISCLOSURE_CONSENT_VERSION) return deny('stale_policy');
-  const recipientId = cp.recipientId!;
-  const expected = payloadRevision({
-    pairId: req.pairId, recipientId, supportMode: req.supportMode, availability: req.availability,
-    recipientPolicyVersion: req.recipientPolicyVersion, presetAssignmentVersion: req.presetAssignmentVersion,
-    consentVersion: req.consentVersion,
-  });
-  // Versions were already checked above. A revision mismatch here means the payload or recipient differs from what the
-  // owner previewed. Refused as stale_policy (CS #40, Cyber ACK): the approval no longer matches its preview, so the
-  // owner must preview again. Either label refuses; DS asserts stale_policy for both changed versions and altered payloads.
-  if (req.payloadRevision !== expected) return deny('stale_policy');
+  if (ev.kind !== 'shareable') return deny('blocked_category');
   return {
-    ...ALLOW, recipientId, recipientPolicyId: preset.policyId, categories: ev.shared,
-    expiresAtMs: Math.min(s.nowMs + SIGNAL_LIFETIME_MS, preset.expiresAtMs),
+    ...ALLOW, recipientId: cp.recipientId!, recipientPolicyId: ev.preset.policyId, recipientPolicyVersion: ev.preset.version,
+    presetAssignmentVersion: ev.assignment.assignmentVersion, payload: ev.payload, categories: ev.shared,
+    expiresAtMs: Math.min(s.nowMs + SIGNAL_LIFETIME_MS, ev.preset.expiresAtMs),
   };
 }
 
 /**
- * Non-temporal standing of a stored signal: not revoked, relationship still accepted, F3 evaluation of
- * its own payload still shareable with nothing blocked, same assignment/preset versions and policy,
- * current consent notice. Use directly ONLY where no trustworthy clock exists (SpacetimeDB views);
+ * Non-temporal standing of a stored signal: not revoked, relationship still accepted with the same recipient, and the
+ * current effective preset still allows at least one of its categories. Preset or notice version changes after
+ * approval do not invalidate it. Use directly ONLY where no trustworthy clock exists (SpacetimeDB views);
  * everywhere else call guardSignalUse.
  */
 export function guardSignalStanding(sig: StoredSignal, s: Omit<PolicySnapshot, 'nowMs'>,
@@ -298,17 +305,13 @@ function standing(sig: StoredSignal, s: Omit<PolicySnapshot, 'nowMs'>, nowMs: nu
   const cp = counterpart(sig.senderId, s.pair);
   if ('allowed' in cp) return cp;
   if (cp.recipientId !== null && cp.recipientId !== sig.recipientId) return deny('wrong_recipient');
-  const payload: DisclosurePayload = { supportMode: sig.supportMode, availability: sig.availability };
   const ev = evaluateDisclosure({
-    candidate: payload, ownerId: sig.senderId, recipientId: sig.recipientId, pairId: sig.pairId,
-    pairStatus: cp.recipientId ? s.pair!.status : 'pending', preset: s.preset, assignment: s.assignment, nowMs,
+    candidate: { supportMode: sig.supportMode, availability: sig.availability }, ownerId: sig.senderId,
+    recipientId: sig.recipientId, pairId: sig.pairId, pairStatus: cp.recipientId ? s.pair!.status : 'pending',
+    preset: s.preset, assignment: s.assignment, nowMs,
   });
   if (ev.kind === 'denied') return deny(ev.reason);
-  if (ev.kind !== 'shareable' || !matchesPreviewPayload(ev.payload, payload)) return deny('blocked_category');
-  const { preset, assignment } = s as { preset: PresetState; assignment: AssignmentState };
-  if (preset.policyId !== sig.recipientPolicyId || assignment.assignmentVersion !== sig.presetAssignmentVersion ||
-    preset.version !== sig.recipientPolicyVersion) return deny('stale_policy');
-  if (sig.consentVersion !== DISCLOSURE_CONSENT_VERSION) return deny('stale_policy');
+  if (ev.kind !== 'shareable') return deny('blocked_category');
   return ALLOW;
 }
 
@@ -429,9 +432,6 @@ export function guardPreferenceStanding(p: SupportPreferenceState | null, recipi
   return ALLOW;
 }
 
-const modeForTemplate = (templateId: string): string =>
-  (Object.keys(TEMPLATE_FOR_MODE) as SupportMode[]).find(m => TEMPLATE_FOR_MODE[m] === templateId) ?? '';
-
 export interface NudgeCommitRequest {
   pairId: string;
   recipientId: string;
@@ -458,43 +458,27 @@ export type NudgeDecision =
   | { allowed: false; reason: DenyReason | DeliveryDenyReason };
 
 /**
- * F7 guard for committing a coordinator-proposed nudge. Every source must pass guardSignalUse for this
- * pair and recipient; the template must be `templateForSignal` of an approved source (availability-only
- * sources justify nothing); recipient opt-out, cooldown and any configured quiet hours are rechecked at commit.
- * Expiry is clamped to the earliest source and to one cooldown window.
- * Model/coordinator output is input to this check, never authority.
+ * F7 guard for committing a coordinator-proposed nudge. Every source must still stand for this pair and recipient;
+ * then the recipient's delivery controls (opt-out, cooldown, configured quiet hours) apply. Support-style settings
+ * and consent ids/versions personalize the coordinator; they are not rechecked here. Expiry is clamped to the
+ * earliest source and to one cooldown window. Model/coordinator output is input to this check, never authority.
  */
 export function guardNudgeCommit(req: NudgeCommitRequest, sources: ReadonlyMap<string, NudgeSource>,
   gate: DeliveryGate): NudgeDecision {
   if (!isId(req.pairId) || !isId(req.recipientId) || !Number.isFinite(gate.nowMs)) return deny('invalid_schema');
   if (!isIn(Object.values(TEMPLATE_FOR_MODE), req.templateId)) return deny('invalid_schema');
   const ids = req.sourceSignalIds;
-  if (ids.length === 0 || ids.length > 4 || ids.length !== req.sourceConsentVersions.length ||
-    new Set(ids).size !== ids.length) return deny('invalid_schema');
+  if (ids.length === 0 || ids.length > 4 || new Set(ids).size !== ids.length) return deny('invalid_schema');
   let expiresAtMs = gate.nowMs + NUDGE_COOLDOWN_MS;
-  let templateApproved = false;
-  for (let i = 0; i < ids.length; i++) {
-    const src = sources.get(ids[i]);
+  for (const id of ids) {
+    const src = sources.get(id);
     if (!src) return deny('no_consent');
     const { signal, snapshot } = src;
-    if (signal.signalId !== ids[i] || signal.pairId !== req.pairId) return deny('wrong_recipient');
-    if (signal.consentVersion !== req.sourceConsentVersions[i]) return deny('stale_policy');
+    if (signal.signalId !== id || signal.pairId !== req.pairId) return deny('wrong_recipient');
     const d = guardSignalUse(signal, { ...snapshot, nowMs: gate.nowMs }, req.recipientId);
     if (!d.allowed) return d;
-    if (templateForSignal(signal) === req.templateId) templateApproved = true;
     expiresAtMs = Math.min(expiresAtMs, signal.expiresAtMs);
   }
-  if (!templateApproved) return deny('blocked_category');
-  // Recipient consent: the exact current version the coordinator used, still standing, covering this mode.
-  if (!isId(req.recipientConsentId) || !isVersion(req.recipientConsentVersion)) return deny('invalid_schema');
-  // Missing customization means standard styles for this already-validated accepted pair. The worker binds this
-  // deterministic identity; it does not represent a separate recipient authorization grant.
-  const prefs = gate.preferences ?? defaultSupportPreferences(req.pairId, req.recipientId);
-  const p = guardPreferenceStanding(prefs, req.recipientId, req.pairId, gate.nowMs);
-  if (!p.allowed) return p;
-  if (prefs!.consentId !== req.recipientConsentId || prefs!.consentVersion !== req.recipientConsentVersion) return deny('stale_policy');
-  if (!prefs!.supportModes.includes(modeForTemplate(req.templateId))) return deny('blocked_category');
-  expiresAtMs = Math.min(expiresAtMs, prefs!.expiresAtMs);
   const delivery = nudgeDelivery(gate.pref ?? DEFAULT_RECIPIENT_DELIVERY,
     gate.lastNudgeAtMs === null ? null : new Date(gate.lastNudgeAtMs), new Date(gate.nowMs));
   if (!delivery.deliver) return { allowed: false, reason: delivery.reason };

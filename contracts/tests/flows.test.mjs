@@ -55,18 +55,17 @@ test('F3: free text, extra fields, nested payloads and quotes are rejected', () 
   }
 });
 
-test('F3: preview denies wrong recipient, pending/unlinked pair, missing/stale/revoked/expired preset', () => {
+test('F3: preview denies pending/unlinked pair and revoked preset; missing/stale/expired presets use the default', () => {
   const d = (x) => previewDisclosure(x, 'Sam');
-  assert.equal(d(input(partners, both, { recipientId: 'intruder' })).reason, 'wrong_recipient');
   assert.equal(d(input(partners, both, { pairStatus: 'pending' })).reason, 'no_consent');
   assert.equal(d(input(partners, both, { pairStatus: 'unlinked' })).reason, 'unlinked');
-  assert.equal(d(input(partners, both, { assignment: null })).reason, 'no_consent');
-  const stale = input(partners, both); stale.assignment.presetId = 'other';
-  assert.equal(d(stale).reason, 'stale_policy');
   const revoked = input(partners, both); revoked.preset.revokedAt = '2026-10-23T00:00:00Z';
   assert.equal(d(revoked).reason, 'revoked');
+  const stale = input(partners, both); stale.assignment.presetId = 'other';
   const expired = input(partners, both); expired.preset.expiresAt = '2026-10-24T11:59:59Z';
-  assert.equal(d(expired).reason, 'expired');
+  for (const x of [input(partners, both, { assignment: null }), input(partners, both, { recipientId: 'someone-else' }), stale, expired]) {
+    assert.deepEqual(d(x).payload, both);
+  }
 });
 
 test('F3: availability-only preview is honest that no nudge results', () => {

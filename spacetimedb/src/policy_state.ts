@@ -106,8 +106,8 @@ export type DiscoveryConfigKey = 'enabled' | 'tags' | 'areas' | 'source_hosts';
 export function discoveryList(db: ReadDb, key: DiscoveryConfigKey): string[] {
   return db.discovery_config.key.find(key)?.values ?? [];
 }
-/** Off unless the module owner explicitly enabled it after the C8 review (feature flag, default off). */
-export const discoveryEnabled = (db: ReadDb): boolean => discoveryList(db, 'enabled')[0] === 'true';
+/** On unless the module owner explicitly turned it off (feature flag, default on). */
+export const discoveryEnabled = (db: ReadDb): boolean => discoveryList(db, 'enabled')[0] !== 'false';
 
 type PublicationRow = NonNullable<ReturnType<Ctx['db']['discovery_publication']['publication_id']['find']>>;
 export function findPublicationRow(db: ReadDb, owner: Identity): PublicationRow | undefined {

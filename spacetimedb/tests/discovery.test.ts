@@ -12,7 +12,7 @@ function world({ enable = true } = {}) {
   const w = setup();
   w.h.withReducerTx(w.admin, ctx => mod.set_discovery_config(ctx, { key: 'tags', values: ['board-games', 'hiking', 'live-music'] }));
   w.h.withReducerTx(w.admin, ctx => mod.set_discovery_config(ctx, { key: 'areas', values: ['berkeley-campus', 'oakland-downtown'] }));
-  if (enable) w.h.withReducerTx(w.admin, ctx => mod.set_discovery_config(ctx, { key: 'enabled', values: ['true'] }));
+  w.h.withReducerTx(w.admin, ctx => mod.set_discovery_config(ctx, { key: 'enabled', values: enable ? ['true'] : ['false'] }));
   return w;
 }
 const mine = (w: W, who: Who) => view<any>(w, who, mod.my_discovery_profile)[0];
@@ -29,7 +29,11 @@ const cards = (w: W, who: Who) => view<any>(w, who, mod.discovery_cards);
 const refOf = (w: W, who: Who) => mine(w, who).publication_id as string;
 
 describe('C8 discovery is off by default and owner-configured', () => {
-  it('publishing and area participation are unavailable until the owner enables discovery', () => {
+  it('discovery is on by default; publishing and area participation stop when the owner turns it off', () => {
+    const unset = world();
+    unset.h.withReducerTx(unset.admin, ctx => mod.set_discovery_config(ctx, { key: 'enabled', values: [] }));
+    publish(unset, unset.alice); // no flag set at all: on
+    expect(mine(unset, unset.alice).discovery_enabled).toBe(true);
     const w = world({ enable: false });
     expect(() => publish(w, w.alice)).toThrow('unavailable: disabled');
     expect(() => join(w, w.alice)).toThrow('unavailable: disabled');
