@@ -7,8 +7,11 @@ import type { CatalogueFeed, SourceFieldMap } from './ingest.ts';
 
 export const SOURCE_KEY = 'apify';
 
-/** Hosts whose links may appear on event cards (also loaded into the module as 'source_hosts'). */
-export const SOURCE_HOSTS: readonly string[] = ['eventbrite.com', 'meetup.com', 'lu.ma'];
+/**
+ * Hosts whose links may appear on event cards (also loaded into the module as 'source_hosts'). Must cover every
+ * host the Apify normalizer emits (`SOURCE_HOST_FOR`): Luma serves events from both lu.ma and luma.com.
+ */
+export const SOURCE_HOSTS: readonly string[] = ['eventbrite.com', 'meetup.com', 'lu.ma', 'luma.com'];
 
 export const FEEDS: readonly CatalogueFeed[] = [
   { areaKey: 'berkeley-campus', topics: ['board-games', 'hiking', 'live-music', 'books'], format: 'in_person', limitPerTopic: 25, locale: 'en-US' },
