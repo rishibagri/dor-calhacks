@@ -4,7 +4,7 @@
  * A `shareable` preview is necessary, never sufficient: approve_signal re-runs guardApproval on authoritative rows.
  */
 import {
-  DISCLOSURE_CONSENT_VERSION, payloadRevision, previewDisclosure,
+  DISCLOSURE_CONSENT_VERSION, DISCLOSURE_PURPOSE, defaultPairPolicy, payloadRevision, previewDisclosure,
   type DisclosurePreview, type RecipientPresetAssignment, type RelationshipPreset, type SignalCandidate, type SharingCategory,
 } from '@dor/contracts';
 import type { PairView, SharedStatePort, StandingConsentView } from '@/lib/backend/ports';
@@ -69,12 +69,28 @@ export type PreparedShare =
   | { kind: 'not_ready'; preview: Exclude<DisclosurePreview, { kind: 'shareable' }> }
   | { kind: 'ready'; preview: Extract<DisclosurePreview, { kind: 'shareable' }>; approval: ApprovalDraft };
 
-/** The caller's own assignment to this pair's counterpart, and the preset it points at. */
+/**
+ * The caller's own assignment to this pair's counterpart, and the preset it points at. Mirrors the server since
+ * 7b3b695: with no usable assigned preset (none assigned, missing or expired) the standard default preset applies;
+ * only an explicit revocation stops sharing.
+ */
 function standing(input: PrepareShareInput): { preset: RelationshipPreset | null; assignment: RecipientPresetAssignment | null } {
   const assignment = input.assignments.find((a) =>
     a.pairId === input.pair.pairId && a.ownerId === input.ownerHex && a.recipientId === input.pair.counterpartIdentityHex) ?? null;
   const preset = assignment ? input.presets.find((p) => p.policyId === assignment.presetId) ?? null : null;
-  return { preset, assignment };
+  if (preset?.revokedAt) return { preset, assignment };
+  if (preset && assignment && Date.parse(preset.expiresAt) > input.now.getTime()) return { preset, assignment };
+  const counterpart = input.pair.counterpartIdentityHex;
+  if (!counterpart) return { preset: null, assignment: null };
+  const d = defaultPairPolicy(input.ownerHex, counterpart, input.pair.pairId);
+  return {
+    preset: {
+      schemaVersion: 1, policyId: d.preset.policyId, ownerId: input.ownerHex, presetKind: 'friend', purpose: DISCLOSURE_PURPOSE,
+      allowedCategories: [...d.preset.allowedCategories] as SharingCategory[], approvalMode: 'each_item', version: d.preset.version,
+      expiresAt: new Date(d.preset.expiresAtMs).toISOString(), revokedAt: null,
+    },
+    assignment: { schemaVersion: 1, ...d.assignment },
+  };
 }
 
 export function prepareShare(input: PrepareShareInput, recipientName: string): PreparedShare {

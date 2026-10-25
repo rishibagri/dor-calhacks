@@ -52,6 +52,22 @@ export const set_worker_identity = spacetimedb.reducer(
   }
 );
 
+/**
+ * Module-owner only (D053, demo backstage): allow-list (or remove) an identity that may read the observer_* views.
+ * Observers can read every user's shared state, never write it. Keep the list empty outside a supervised demo.
+ */
+export const set_observer_identity = spacetimedb.reducer(
+  { observer: t.identity(), enabled: t.bool() },
+  (ctx, { observer, enabled }) => {
+    requireOwner(ctx);
+    if (enabled) {
+      if (!ctx.db.observer_identity.identity.find(observer)) ctx.db.observer_identity.insert({ identity: observer });
+    } else {
+      ctx.db.observer_identity.identity.delete(observer);
+    }
+  }
+);
+
 /** Module-owner only: allow-list (or remove) a JWT `aud` value, e.g. the Clerk JWT template's audience (D035). */
 export const set_auth_audience = spacetimedb.reducer(
   { audience: t.string(), enabled: t.bool() },

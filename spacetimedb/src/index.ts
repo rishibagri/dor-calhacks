@@ -18,6 +18,8 @@ export * from './reducers/pause';
 export * from './reducers/standing';
 export * from './reducers/suggestions';
 export * from './reducers/network';
+export * from './reducers/reasoning';
 export * from './network_views';
 export * from './views';
+export * from './observer_views';
 export default spacetimedb;

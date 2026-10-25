@@ -43,6 +43,16 @@ export const DELIVERY_MAPPING: Partial<Record<CandidateAction, { supportMode: Su
   SHARED_ACTIVITY: { supportMode: 'shared_activity', intendedTemplate: 'offer_shared_activity' },
 };
 
+/** Which existing support modes each deliverable action may carry; the first is the default. */
+export const ACTION_SUPPORT_MODES: Partial<Record<CandidateAction, readonly SupportMode[]>> = {
+  DIRECT_CHECK_IN: ['short_call', 'encouraging_note'],
+  CASUAL_INVITE: ['shared_activity'],
+  SHARED_ACTIVITY: ['shared_activity'],
+};
+export const TEMPLATE_FOR_MODE: Record<SupportMode, Nudge['templateId']> = {
+  short_call: 'offer_short_call', encouraging_note: 'offer_note', shared_activity: 'offer_shared_activity',
+};
+
 /** Descriptive levels, never summed into a score. */
 export const LEVELS = ['none', 'low', 'medium', 'high', 'unknown'] as const;
 export type Level = (typeof LEVELS)[number];

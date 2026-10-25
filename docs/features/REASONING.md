@@ -1,6 +1,6 @@
 # Reasoning — relational decision layer
 
-**Status:** architecture and behavioral specification, PROPOSED (D052). No source exists under `src/reasoning/`. Nothing here is implemented, deployed or live. §2 is the owner-supplied behavior; §8–§12 reconcile it with current code (reviewed against main `6cc56f1`) and plan v1.
+**Status:** architecture and behavioral specification, PROPOSED (D052). **Update 2026-10-25 (D054):** the core, a provider-agnostic runtime (`src/reasoning/runtime/`) and `/api/reasoning` drive the live room's nudges (act sends without a tap; ask/defer/abstain as §2.6). Offline-verified; not yet live (needs merge, module republish for the decision log, and a live-session restart). Backstage visualizer: D053. No source exists under `src/reasoning/`. Nothing here is implemented, deployed or live. §2 is the owner-supplied behavior; §8–§12 reconcile it with current code (reviewed against main `6cc56f1`) and plan v1.
 
 **Owner:** Sumedh (Reasoning workstream, separate from Cyber). **Branch:** `role/reasoning`. **Plan:** [docs/roles/reasoning.md](../roles/reasoning.md).
 

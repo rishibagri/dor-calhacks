@@ -55,6 +55,7 @@ import PauseRecipientReducer from "./pause_recipient_reducer";
 import PublishDiscoveryProfileReducer from "./publish_discovery_profile_reducer";
 import PublishEventIntentReducer from "./publish_event_intent_reducer";
 import RecordCatalogueRunReducer from "./record_catalogue_run_reducer";
+import RecordReasoningDecisionReducer from "./record_reasoning_decision_reducer";
 import RegisterAccountReducer from "./register_account_reducer";
 import ReportDiscoveryUserReducer from "./report_discovery_user_reducer";
 import RequestIntroductionSuggestionReducer from "./request_introduction_suggestion_reducer";
@@ -76,6 +77,7 @@ import SetDiscoveryAreaReducer from "./set_discovery_area_reducer";
 import SetDiscoveryConfigReducer from "./set_discovery_config_reducer";
 import SetDiscoveryPageReducer from "./set_discovery_page_reducer";
 import SetNudgeDeliveryReducer from "./set_nudge_delivery_reducer";
+import SetObserverIdentityReducer from "./set_observer_identity_reducer";
 import SetProfileDetailReducer from "./set_profile_detail_reducer";
 import SetRelationshipPresetReducer from "./set_relationship_preset_reducer";
 import SetStandingConsentReducer from "./set_standing_consent_reducer";
@@ -113,11 +115,24 @@ import MyPlansRow from "./my_plans_table";
 import MyPresetAssignmentsRow from "./my_preset_assignments_table";
 import MyPresetsRow from "./my_presets_table";
 import MyProfileDetailRow from "./my_profile_detail_table";
+import MyReasoningDecisionsRow from "./my_reasoning_decisions_table";
 import MyReceiptsRow from "./my_receipts_table";
 import MyRecipientPausesRow from "./my_recipient_pauses_table";
 import MySignalsRow from "./my_signals_table";
 import MyStandingConsentsRow from "./my_standing_consents_table";
 import MySupportPreferencesRow from "./my_support_preferences_table";
+import ObserverAccountsRow from "./observer_accounts_table";
+import ObserverAssignmentsRow from "./observer_assignments_table";
+import ObserverDeliveryRow from "./observer_delivery_table";
+import ObserverIntroductionsRow from "./observer_introductions_table";
+import ObserverNudgeRequestsRow from "./observer_nudge_requests_table";
+import ObserverNudgesRow from "./observer_nudges_table";
+import ObserverPairsRow from "./observer_pairs_table";
+import ObserverPausesRow from "./observer_pauses_table";
+import ObserverReasoningRow from "./observer_reasoning_table";
+import ObserverSignalsRow from "./observer_signals_table";
+import ObserverStatusRow from "./observer_status_table";
+import ObserverSupportPreferencesRow from "./observer_support_preferences_table";
 import WorkerDeliveryRow from "./worker_delivery_table";
 import WorkerIntroductionRequestsRow from "./worker_introduction_requests_table";
 import WorkerPlanCandidatesRow from "./worker_plan_candidates_table";
@@ -289,6 +304,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyProfileDetailRow),
+  myReasoningDecisions: __table({
+    name: 'my_reasoning_decisions',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyReasoningDecisionsRow),
   myReceipts: __table({
     name: 'my_receipts',
     indexes: [
@@ -324,6 +346,90 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MySupportPreferencesRow),
+  observerAccounts: __table({
+    name: 'observer_accounts',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, ObserverAccountsRow),
+  observerAssignments: __table({
+    name: 'observer_assignments',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, ObserverAssignmentsRow),
+  observerDelivery: __table({
+    name: 'observer_delivery',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, ObserverDeliveryRow),
+  observerIntroductions: __table({
+    name: 'observer_introductions',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, ObserverIntroductionsRow),
+  observerNudgeRequests: __table({
+    name: 'observer_nudge_requests',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, ObserverNudgeRequestsRow),
+  observerNudges: __table({
+    name: 'observer_nudges',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, ObserverNudgesRow),
+  observerPairs: __table({
+    name: 'observer_pairs',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, ObserverPairsRow),
+  observerPauses: __table({
+    name: 'observer_pauses',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, ObserverPausesRow),
+  observerReasoning: __table({
+    name: 'observer_reasoning',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, ObserverReasoningRow),
+  observerSignals: __table({
+    name: 'observer_signals',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, ObserverSignalsRow),
+  observerStatus: __table({
+    name: 'observer_status',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, ObserverStatusRow),
+  observerSupportPreferences: __table({
+    name: 'observer_support_preferences',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, ObserverSupportPreferencesRow),
   workerDelivery: __table({
     name: 'worker_delivery',
     indexes: [
@@ -384,6 +490,7 @@ const reducersSchema = __reducers(
   __reducerSchema("publish_discovery_profile", PublishDiscoveryProfileReducer),
   __reducerSchema("publish_event_intent", PublishEventIntentReducer),
   __reducerSchema("record_catalogue_run", RecordCatalogueRunReducer),
+  __reducerSchema("record_reasoning_decision", RecordReasoningDecisionReducer),
   __reducerSchema("register_account", RegisterAccountReducer),
   __reducerSchema("report_discovery_user", ReportDiscoveryUserReducer),
   __reducerSchema("request_introduction_suggestion", RequestIntroductionSuggestionReducer),
@@ -405,6 +512,7 @@ const reducersSchema = __reducers(
   __reducerSchema("set_discovery_config", SetDiscoveryConfigReducer),
   __reducerSchema("set_discovery_page", SetDiscoveryPageReducer),
   __reducerSchema("set_nudge_delivery", SetNudgeDeliveryReducer),
+  __reducerSchema("set_observer_identity", SetObserverIdentityReducer),
   __reducerSchema("set_profile_detail", SetProfileDetailReducer),
   __reducerSchema("set_relationship_preset", SetRelationshipPresetReducer),
   __reducerSchema("set_standing_consent", SetStandingConsentReducer),
@@ -469,6 +577,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_presets": Omit<typeof tablesSchema.schemaType.tables["myPresets"], "accessorName"> & { readonly accessorName: "my_presets" };
     /** @deprecated Use `myProfileDetail` instead. This alias will be removed in the next major version. */
     readonly "my_profile_detail": Omit<typeof tablesSchema.schemaType.tables["myProfileDetail"], "accessorName"> & { readonly accessorName: "my_profile_detail" };
+    /** @deprecated Use `myReasoningDecisions` instead. This alias will be removed in the next major version. */
+    readonly "my_reasoning_decisions": Omit<typeof tablesSchema.schemaType.tables["myReasoningDecisions"], "accessorName"> & { readonly accessorName: "my_reasoning_decisions" };
     /** @deprecated Use `myReceipts` instead. This alias will be removed in the next major version. */
     readonly "my_receipts": Omit<typeof tablesSchema.schemaType.tables["myReceipts"], "accessorName"> & { readonly accessorName: "my_receipts" };
     /** @deprecated Use `myRecipientPauses` instead. This alias will be removed in the next major version. */
@@ -479,6 +589,30 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_standing_consents": Omit<typeof tablesSchema.schemaType.tables["myStandingConsents"], "accessorName"> & { readonly accessorName: "my_standing_consents" };
     /** @deprecated Use `mySupportPreferences` instead. This alias will be removed in the next major version. */
     readonly "my_support_preferences": Omit<typeof tablesSchema.schemaType.tables["mySupportPreferences"], "accessorName"> & { readonly accessorName: "my_support_preferences" };
+    /** @deprecated Use `observerAccounts` instead. This alias will be removed in the next major version. */
+    readonly "observer_accounts": Omit<typeof tablesSchema.schemaType.tables["observerAccounts"], "accessorName"> & { readonly accessorName: "observer_accounts" };
+    /** @deprecated Use `observerAssignments` instead. This alias will be removed in the next major version. */
+    readonly "observer_assignments": Omit<typeof tablesSchema.schemaType.tables["observerAssignments"], "accessorName"> & { readonly accessorName: "observer_assignments" };
+    /** @deprecated Use `observerDelivery` instead. This alias will be removed in the next major version. */
+    readonly "observer_delivery": Omit<typeof tablesSchema.schemaType.tables["observerDelivery"], "accessorName"> & { readonly accessorName: "observer_delivery" };
+    /** @deprecated Use `observerIntroductions` instead. This alias will be removed in the next major version. */
+    readonly "observer_introductions": Omit<typeof tablesSchema.schemaType.tables["observerIntroductions"], "accessorName"> & { readonly accessorName: "observer_introductions" };
+    /** @deprecated Use `observerNudgeRequests` instead. This alias will be removed in the next major version. */
+    readonly "observer_nudge_requests": Omit<typeof tablesSchema.schemaType.tables["observerNudgeRequests"], "accessorName"> & { readonly accessorName: "observer_nudge_requests" };
+    /** @deprecated Use `observerNudges` instead. This alias will be removed in the next major version. */
+    readonly "observer_nudges": Omit<typeof tablesSchema.schemaType.tables["observerNudges"], "accessorName"> & { readonly accessorName: "observer_nudges" };
+    /** @deprecated Use `observerPairs` instead. This alias will be removed in the next major version. */
+    readonly "observer_pairs": Omit<typeof tablesSchema.schemaType.tables["observerPairs"], "accessorName"> & { readonly accessorName: "observer_pairs" };
+    /** @deprecated Use `observerPauses` instead. This alias will be removed in the next major version. */
+    readonly "observer_pauses": Omit<typeof tablesSchema.schemaType.tables["observerPauses"], "accessorName"> & { readonly accessorName: "observer_pauses" };
+    /** @deprecated Use `observerReasoning` instead. This alias will be removed in the next major version. */
+    readonly "observer_reasoning": Omit<typeof tablesSchema.schemaType.tables["observerReasoning"], "accessorName"> & { readonly accessorName: "observer_reasoning" };
+    /** @deprecated Use `observerSignals` instead. This alias will be removed in the next major version. */
+    readonly "observer_signals": Omit<typeof tablesSchema.schemaType.tables["observerSignals"], "accessorName"> & { readonly accessorName: "observer_signals" };
+    /** @deprecated Use `observerStatus` instead. This alias will be removed in the next major version. */
+    readonly "observer_status": Omit<typeof tablesSchema.schemaType.tables["observerStatus"], "accessorName"> & { readonly accessorName: "observer_status" };
+    /** @deprecated Use `observerSupportPreferences` instead. This alias will be removed in the next major version. */
+    readonly "observer_support_preferences": Omit<typeof tablesSchema.schemaType.tables["observerSupportPreferences"], "accessorName"> & { readonly accessorName: "observer_support_preferences" };
     /** @deprecated Use `workerDelivery` instead. This alias will be removed in the next major version. */
     readonly "worker_delivery": Omit<typeof tablesSchema.schemaType.tables["workerDelivery"], "accessorName"> & { readonly accessorName: "worker_delivery" };
     /** @deprecated Use `workerIntroductionRequests` instead. This alias will be removed in the next major version. */
@@ -530,11 +664,24 @@ const tableAccessorAliases = {
   "my_preset_assignments": "myPresetAssignments",
   "my_presets": "myPresets",
   "my_profile_detail": "myProfileDetail",
+  "my_reasoning_decisions": "myReasoningDecisions",
   "my_receipts": "myReceipts",
   "my_recipient_pauses": "myRecipientPauses",
   "my_signals": "mySignals",
   "my_standing_consents": "myStandingConsents",
   "my_support_preferences": "mySupportPreferences",
+  "observer_accounts": "observerAccounts",
+  "observer_assignments": "observerAssignments",
+  "observer_delivery": "observerDelivery",
+  "observer_introductions": "observerIntroductions",
+  "observer_nudge_requests": "observerNudgeRequests",
+  "observer_nudges": "observerNudges",
+  "observer_pairs": "observerPairs",
+  "observer_pauses": "observerPauses",
+  "observer_reasoning": "observerReasoning",
+  "observer_signals": "observerSignals",
+  "observer_status": "observerStatus",
+  "observer_support_preferences": "observerSupportPreferences",
   "worker_delivery": "workerDelivery",
   "worker_introduction_requests": "workerIntroductionRequests",
   "worker_plan_candidates": "workerPlanCandidates",
@@ -606,6 +753,8 @@ export type DbView = __DbViewBase & {
   readonly "my_presets": __DbViewBase["myPresets"];
   /** @deprecated Use `myProfileDetail` instead. This alias will be removed in the next major version. */
   readonly "my_profile_detail": __DbViewBase["myProfileDetail"];
+  /** @deprecated Use `myReasoningDecisions` instead. This alias will be removed in the next major version. */
+  readonly "my_reasoning_decisions": __DbViewBase["myReasoningDecisions"];
   /** @deprecated Use `myReceipts` instead. This alias will be removed in the next major version. */
   readonly "my_receipts": __DbViewBase["myReceipts"];
   /** @deprecated Use `myRecipientPauses` instead. This alias will be removed in the next major version. */
@@ -616,6 +765,30 @@ export type DbView = __DbViewBase & {
   readonly "my_standing_consents": __DbViewBase["myStandingConsents"];
   /** @deprecated Use `mySupportPreferences` instead. This alias will be removed in the next major version. */
   readonly "my_support_preferences": __DbViewBase["mySupportPreferences"];
+  /** @deprecated Use `observerAccounts` instead. This alias will be removed in the next major version. */
+  readonly "observer_accounts": __DbViewBase["observerAccounts"];
+  /** @deprecated Use `observerAssignments` instead. This alias will be removed in the next major version. */
+  readonly "observer_assignments": __DbViewBase["observerAssignments"];
+  /** @deprecated Use `observerDelivery` instead. This alias will be removed in the next major version. */
+  readonly "observer_delivery": __DbViewBase["observerDelivery"];
+  /** @deprecated Use `observerIntroductions` instead. This alias will be removed in the next major version. */
+  readonly "observer_introductions": __DbViewBase["observerIntroductions"];
+  /** @deprecated Use `observerNudgeRequests` instead. This alias will be removed in the next major version. */
+  readonly "observer_nudge_requests": __DbViewBase["observerNudgeRequests"];
+  /** @deprecated Use `observerNudges` instead. This alias will be removed in the next major version. */
+  readonly "observer_nudges": __DbViewBase["observerNudges"];
+  /** @deprecated Use `observerPairs` instead. This alias will be removed in the next major version. */
+  readonly "observer_pairs": __DbViewBase["observerPairs"];
+  /** @deprecated Use `observerPauses` instead. This alias will be removed in the next major version. */
+  readonly "observer_pauses": __DbViewBase["observerPauses"];
+  /** @deprecated Use `observerReasoning` instead. This alias will be removed in the next major version. */
+  readonly "observer_reasoning": __DbViewBase["observerReasoning"];
+  /** @deprecated Use `observerSignals` instead. This alias will be removed in the next major version. */
+  readonly "observer_signals": __DbViewBase["observerSignals"];
+  /** @deprecated Use `observerStatus` instead. This alias will be removed in the next major version. */
+  readonly "observer_status": __DbViewBase["observerStatus"];
+  /** @deprecated Use `observerSupportPreferences` instead. This alias will be removed in the next major version. */
+  readonly "observer_support_preferences": __DbViewBase["observerSupportPreferences"];
   /** @deprecated Use `workerDelivery` instead. This alias will be removed in the next major version. */
   readonly "worker_delivery": __DbViewBase["workerDelivery"];
   /** @deprecated Use `workerIntroductionRequests` instead. This alias will be removed in the next major version. */
@@ -676,6 +849,8 @@ export type Tables = __TablesBase & {
   readonly "my_presets": __TablesBase["myPresets"];
   /** @deprecated Use `myProfileDetail` instead. This alias will be removed in the next major version. */
   readonly "my_profile_detail": __TablesBase["myProfileDetail"];
+  /** @deprecated Use `myReasoningDecisions` instead. This alias will be removed in the next major version. */
+  readonly "my_reasoning_decisions": __TablesBase["myReasoningDecisions"];
   /** @deprecated Use `myReceipts` instead. This alias will be removed in the next major version. */
   readonly "my_receipts": __TablesBase["myReceipts"];
   /** @deprecated Use `myRecipientPauses` instead. This alias will be removed in the next major version. */
@@ -686,6 +861,30 @@ export type Tables = __TablesBase & {
   readonly "my_standing_consents": __TablesBase["myStandingConsents"];
   /** @deprecated Use `mySupportPreferences` instead. This alias will be removed in the next major version. */
   readonly "my_support_preferences": __TablesBase["mySupportPreferences"];
+  /** @deprecated Use `observerAccounts` instead. This alias will be removed in the next major version. */
+  readonly "observer_accounts": __TablesBase["observerAccounts"];
+  /** @deprecated Use `observerAssignments` instead. This alias will be removed in the next major version. */
+  readonly "observer_assignments": __TablesBase["observerAssignments"];
+  /** @deprecated Use `observerDelivery` instead. This alias will be removed in the next major version. */
+  readonly "observer_delivery": __TablesBase["observerDelivery"];
+  /** @deprecated Use `observerIntroductions` instead. This alias will be removed in the next major version. */
+  readonly "observer_introductions": __TablesBase["observerIntroductions"];
+  /** @deprecated Use `observerNudgeRequests` instead. This alias will be removed in the next major version. */
+  readonly "observer_nudge_requests": __TablesBase["observerNudgeRequests"];
+  /** @deprecated Use `observerNudges` instead. This alias will be removed in the next major version. */
+  readonly "observer_nudges": __TablesBase["observerNudges"];
+  /** @deprecated Use `observerPairs` instead. This alias will be removed in the next major version. */
+  readonly "observer_pairs": __TablesBase["observerPairs"];
+  /** @deprecated Use `observerPauses` instead. This alias will be removed in the next major version. */
+  readonly "observer_pauses": __TablesBase["observerPauses"];
+  /** @deprecated Use `observerReasoning` instead. This alias will be removed in the next major version. */
+  readonly "observer_reasoning": __TablesBase["observerReasoning"];
+  /** @deprecated Use `observerSignals` instead. This alias will be removed in the next major version. */
+  readonly "observer_signals": __TablesBase["observerSignals"];
+  /** @deprecated Use `observerStatus` instead. This alias will be removed in the next major version. */
+  readonly "observer_status": __TablesBase["observerStatus"];
+  /** @deprecated Use `observerSupportPreferences` instead. This alias will be removed in the next major version. */
+  readonly "observer_support_preferences": __TablesBase["observerSupportPreferences"];
   /** @deprecated Use `workerDelivery` instead. This alias will be removed in the next major version. */
   readonly "worker_delivery": __TablesBase["workerDelivery"];
   /** @deprecated Use `workerIntroductionRequests` instead. This alias will be removed in the next major version. */

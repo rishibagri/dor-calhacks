@@ -7,13 +7,15 @@
  * The design component is a plain class instance (`inst`): its sample tables are instance fields, its handlers are
  * arrow-function fields and `renderVals()` builds every template value, so each is replaced on the instance.
  */
-import { NUDGE_TEMPLATE_COPY, DEFAULT_RECIPIENT_DELIVERY, type PrivateAssessment } from '@dor/contracts';
+import { NUDGE_TEMPLATE_COPY, DEFAULT_RECIPIENT_DELIVERY, type PrivateAssessment, type SignalCandidate } from '@dor/contracts';
 import type { PairView, ReducerResult, SharedStatePort, ReflectionPort } from '@/lib/backend/ports';
-import { applyUnnamedExclusionGuard, decide, failClosedWithoutAssessment } from '@/components/feature/decision-loop-model';
+import { reasonLive, type LiveContext, type LivePerson, type ModelReasoning } from '@/reasoning/runtime/live';
+import { ACTION_SUPPORT_MODES, ACTION_SURFACE, type CandidateAction } from '@/reasoning/core/vocabulary';
+import type { ReasoningDecision } from '@/reasoning/core/types';
 import { prepareShare, requestIdFor, shareRecipients, describeNotReady, type ApprovalDraft } from '@/components/feature/share-review-model';
-import { pauseFor, pauseVersion, isPauseInForce, withoutPaused } from '@/components/feature/pause-model';
+import { pauseFor, pauseVersion, isPauseInForce } from '@/components/feature/pause-model';
 import { readPref, sessionStore, writePref, TRANSITIONS, type TransitionId } from '@/components/feature/transition-model';
-import { assessedRecipients, initialLoopState, requiresImmediateSupport, uniquelyPreferredRecipient } from '@/features/voice/assessment';
+import { exclusionMatches, nameMatches, requiresImmediateSupport } from '@/features/voice/assessment';
 import { splitReflection, textToReflect, reflectFailureCopy, voiceFailureCopy } from '@/features/voice/model';
 import { isIntentActive, nextIntentVersion } from '@/components/feature/events-model';
 import { areaLabel, DISCOVERY_TAGS, LAUNCH_AREAS } from '@/lib/discovery/config';
@@ -67,7 +69,19 @@ const PLACE_WHY: Record<CataloguePlaceView['kind'], string> = { food: 'well revi
 const FLYER_SLOTS = [{ l: 14, t: 118, rot: -5, pin: '#F2A7B8' }, { l: 246, t: 196, rot: 4, pin: '#A8DCC4' },
   { l: 26, t: 356, rot: -2, pin: '#C3B1E1' }, { l: 236, t: 392, rot: 3, pin: '#F6D77A' }];
 
-interface PendingNudge { approval: ApprovalDraft; pairId: string; name: string; copy: string }
+/** What Reasoning left for the owner: a note it will send on "yes" (`send`), or a moment that is theirs (`owner`). */
+interface PendingNudge { kind: 'send' | 'owner'; approval: ApprovalDraft | null; pairId: string; name: string; copy: string; question: string }
+/** The last reflection, kept in memory only so a deferred decision can be reassessed from scratch this session. */
+interface LastReflection { text: string; candidate: SignalCandidate | null; assessment: PrivateAssessment | null }
+
+const ACTION_WORDS: Partial<Record<CandidateAction, string>> = {
+  DIRECT_CHECK_IN: 'a check-in', CASUAL_INVITE: 'a casual invite', SHARED_ACTIVITY: 'a plan together', CELEBRATE: 'a celebration',
+  PRACTICAL_HELP: 'some practical help', RECONNECT: 'a low-pressure hello',
+};
+const REASON_WORDS: Record<string, string> = {
+  high_reveal_value: 'this one is yours to share', sensitive_topic: 'that topic is sensitive with them', low_confidence: 'dor isn’t sure',
+  unnamed_target: 'you didn’t mention them', no_delivery_path: 'dor can’t send that kind of note yet',
+};
 /** One sill postcard: a discovery card (`c:`) or a friend-of-friend card (`f:`); the design keys everything by id. */
 type SillCard = { id: string; kind: 'discovery'; row: DiscoveryCardRow } | { id: string; kind: 'fof'; row: FofCard };
 /** What slid under the door: an incoming introduction or friend-of-friend request. */
@@ -236,21 +250,19 @@ export class LiveBridge {
       return o;
     };
     i.nbDone = () => { i.setState({ nbEditing: false }); void this.reflect(); };
-    i.marginYes = () => i.setState({ margin: 'done', nudge: this.pending ? 'ready' : null });
-    i.marginSkip = () => { this.pending = null; i.setState({ margin: 'done' }); toast('Okay. Nothing will happen.'); };
-    i.stampIt = async () => {
-      const p = this.pending; if (!p) return i.setState({ nudge: null });
-      i.setState({ nudge: 'stamped', holding: false });
-      navigator.vibrate?.(14);
-      const r = await this.shared.approveSignal({ ...p.approval, clientRequestId: requestIdFor(p.approval, null).id });
-      this.pending = null;
-      await i.wait(500);
-      await i.anim('nudgeEnv', [{ transform: 'none', opacity: 1 }, { transform: 'translate(0,-16px) rotate(2deg)', opacity: 1, offset: .2 }, { transform: 'translate(90px,-620px) rotate(-16deg) scale(.4)', opacity: 0 }], { duration: 900, easing: i.EZ.exit, fill: 'forwards' });
-      i.setState({ nudge: null });
-      if (!r.ok) return toast(`No nudge was started: ${failText(r)}`);
-      i.log(p.pairId, { k: 'nudge', t: `A check-in for ${p.name} went to dor’s agents`, q: p.copy, note: 'they decide if it fits' });
-      toast(`Sent to dor’s agents. ${p.name} gets a note if it fits.`);
+    // Reasoning asked only because it was unsure: "yes" sends right away (no stamp step); an owner moment sends nothing.
+    i.marginYes = () => {
+      const p = this.pending; i.setState({ margin: 'done' });
+      if (!p) return;
+      if (p.kind === 'owner') {
+        this.pending = null;
+        i.log(p.pairId, { k: 'nudge', t: `You’ll tell ${p.name} yourself`, note: 'dor kept this moment for you · nothing was sent' });
+        return toast(`It’s yours to tell. Nothing was sent to ${p.name}.`);
+      }
+      void this.send(false);
     };
+    i.marginSkip = () => { this.pending = null; i.setState({ margin: 'done' }); toast('Okay. Nothing will happen.'); };
+    i.stampIt = () => this.send(false);
 
     // tray: the recipient's real nudge (my_nudges); "done" dismisses it, the off switch is their own delivery setting.
     i.planeDone = async () => {
@@ -391,11 +403,15 @@ export class LiveBridge {
     this.inst?.setState((s: any) => ({ sent: { ...s.sent, [id]: on } }));
   }
 
-  // ---------- reflection → decision → prepared approval ----------
+  // ---------- reflection → Reasoning (D052) → act / ask / defer / abstain ----------
+  private last: LastReflection | null = null;
+  private reassessTimer: ReturnType<typeof setTimeout> | null = null;
+
   private async reflect() {
     const i = this.inst; if (!i || !this.deps) return;
     const text: string = i.state.nbText ?? '';
     this.pending = null;
+    if (this.reassessTimer) { clearTimeout(this.reassessTimer); this.reassessTimer = null; }
     if (i.state.justMe || !text.trim()) return;
     const input = textToReflect(text);
     if (!input.ok) return i.toast(input.reason === 'too_long' ? 'That entry is too long to reflect on.' : 'Write something first.');
@@ -409,31 +425,123 @@ export class LiveBridge {
       const assessment: PrivateAssessment | undefined = support
         ? { intent: 'wants_space', risk: 'urgent_support', mentionedNames: [], excludedNames: [], preferredNames: [] } : modelAssessment;
       if (assessment?.risk === 'urgent_support') { this.live = { ...this.live, support: true }; i.setState({ margin: 'done' }); return; }
-      const candidate = support ? null : memoryOnly;
-      const { eligible } = withoutPaused(shareRecipients(this.shared.myPairs()).map(({ pairId, name, unnamed }) => ({ pairId, name, unnamed })),
-        this.shared.myRecipientPauses(), new Date());
-      const { kept } = applyUnnamedExclusionGuard(eligible, (assessment?.excludedNames.length ?? 0) > 0);
-      const recipients = assessedRecipients(kept, assessment);
-      const direct = uniquelyPreferredRecipient(recipients, assessment);
-      const loop = failClosedWithoutAssessment(initialLoopState(candidate, assessment), assessment);
-      const outcome = decide(direct ? { ...loop, company: 'company', chosen: direct.pairId } : loop, recipients);
-      // Anything but one clear person (risk, ambiguity, space, nothing to share) ends quietly; nobody is contacted.
-      if (outcome.kind !== 'ready_for_preview') { i.setState({ margin: 'done' }); return; }
-      const pair = this.shared.myPairs().find((p) => p.pairId === outcome.recipient.pairId);
-      const owner = this.ownerHex();
-      if (!pair || !owner) { i.setState({ margin: 'done' }); return; }
-      const prepared = prepareShare({ candidate: outcome.candidate, ownerHex: owner, pair, presets: this.shared.myPresets(),
-        assignments: this.shared.myPresetAssignments(), now: new Date() }, outcome.recipient.name);
-      if (prepared.kind !== 'ready') { i.setState({ margin: 'done' }); i.toast(describeNotReady(prepared)); return; }
-      this.pending = { approval: prepared.approval, pairId: pair.pairId, name: outcome.recipient.name,
-        copy: prepared.preview.recipientCopy ?? NUDGE_TEMPLATE_COPY.offer_note };
-      i.setState({ margin: 'ask' });
+      this.last = { text: input.text, candidate: support ? null : memoryOnly, assessment: assessment ?? null };
+      await this.decideAndAct(false);
     } catch (e) {
       i.toast(reflectFailureCopy(e instanceof Error && 'code' in e ? String((e as { code: unknown }).code) : 'unavailable'));
     } finally {
       this.live = { ...this.live, thinking: false };
       i.forceUpdate();
     }
+  }
+
+  /** People as the owner's device sees them. Names are matched here and never sent; the model gets refs and flags. */
+  private livePeople(a: PrivateAssessment | null): (LivePerson & { name: string })[] {
+    const now = new Date();
+    const pairs = shareRecipients(this.shared.myPairs());
+    const hasExclusion = (a?.excludedNames.length ?? 0) > 0;
+    const said = a ? [...a.mentionedNames, ...a.preferredNames] : [];
+    return pairs.filter((p) => !(hasExclusion && p.unnamed)).map((p) => {
+      const literal = p.unnamed ? undefined : said.find((n) => nameMatches(n, p.name) && pairs.filter((q) => nameMatches(n, q.name)).length === 1);
+      return {
+        ref: p.pairId, name: p.name, mentionedAs: literal ?? null,
+        excluded: !p.unnamed && (a?.excludedNames.some((n) => exclusionMatches(n, p.name)) ?? false),
+        paused: isPauseInForce(pauseFor(this.shared.myRecipientPauses(), p.pairId), now),
+        presetRevoked: false,
+      };
+    });
+  }
+
+  /** The model port: one Claude call through /api/reasoning; null on any failure (the runtime then falls back). */
+  private modelPort(text: string) {
+    return async (req: { people: { ref: string; mentionedAs: string | null; excluded: boolean; paused: boolean }[] }): Promise<ModelReasoning | null> => {
+      const res = await fetch('/api/reasoning', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text, localTime: new Date().toString().slice(0, 33), people: req.people }) });
+      if (!res.ok) return null;
+      const out = await res.json() as ModelReasoning;
+      return out && out.situation && Array.isArray(out.proposals) ? out : null;
+    };
+  }
+
+  private async decideAndAct(reassessing: boolean) {
+    const i = this.inst; const last = this.last; if (!i || !last) return;
+    const people = this.livePeople(last.assessment);
+    const ctx: LiveContext = { now: new Date().toISOString(), episodeId: `ep-${crypto.randomUUID()}`, candidate: last.candidate,
+      assessment: last.assessment, people: people.map(({ name: _n, ...p }) => p) };
+    const { decision, source } = await reasonLive(ctx, this.modelPort(last.text));
+    const person = decision.targetRef ? people.find((p) => p.ref === decision.targetRef) : undefined;
+    const outcome = await this.applyDecision(decision, person?.name ?? null, reassessing);
+    void this.shared.recordReasoningDecision({
+      episodeId: decision.episodeId, pairId: decision.targetRef ?? null, mode: decision.mode, action: decision.action ?? null,
+      surface: decision.surface ?? null, reasons: decision.reasons.slice(0, 8),
+      rejected: decision.rejected.slice(0, 16).map((r) => `${r.action}:${r.reason}`), reassessAfterMinutes: decision.reassess?.afterMinutes ?? null,
+      source, outcome,
+    }).catch(() => undefined);
+  }
+
+  /** Turns the core's decision into the room's behavior. Returns a content-free outcome code for the decision log. */
+  private async applyDecision(d: ReasoningDecision, name: string | null, reassessing: boolean): Promise<string> {
+    const i = this.inst!;
+    const why = d.capped ? REASON_WORDS[d.capped.by] : undefined;
+    if (d.mode === 'abstain') {
+      i.setState({ margin: 'done' });
+      if (!reassessing) i.toast('dor looked and decided nothing needs doing. That’s a good outcome.');
+      return 'quiet';
+    }
+    if (d.mode === 'defer' && d.reassess) {
+      i.setState({ margin: 'done' });
+      const mins = d.reassess.afterMinutes;
+      i.toast(`Not the right moment. dor will look again in about ${mins >= 90 ? `${Math.round(mins / 60)} h` : `${mins} min`}, from scratch.`);
+      this.reassessTimer = setTimeout(() => { this.reassessTimer = null; void this.decideAndAct(true); }, mins * 60_000);
+      return 'deferred';
+    }
+    if (!d.targetRef || !name || !d.action) {
+      i.setState({ margin: 'done' });
+      i.toast('dor wasn’t sure who you meant, so it did nothing. You can send a note from their book.');
+      return 'quiet';
+    }
+    if (ACTION_SURFACE[d.action] === 'owner') {
+      this.pending = { kind: 'owner', approval: null, pairId: d.targetRef, name, copy: '',
+        question: `${name.toLowerCase()} would want to hear this from you. tell them yourself?` };
+      i.setState({ margin: 'ask' });
+      return 'owner_prompt';
+    }
+    const mode = d.deliveryMapping?.supportMode ?? ACTION_SUPPORT_MODES[d.action]?.[0];
+    if (!mode) {
+      this.pending = { kind: 'owner', approval: null, pairId: d.targetRef, name, copy: '',
+        question: `maybe reach out to ${name.toLowerCase()} for ${ACTION_WORDS[d.action] ?? 'this'}? ${why ? `(${why})` : ''}`.trim() };
+      i.setState({ margin: 'ask' });
+      return 'owner_prompt';
+    }
+    const pair = this.shared.myPairs().find((p) => p.pairId === d.targetRef);
+    const owner = this.ownerHex();
+    if (!pair || !owner) { i.setState({ margin: 'done' }); return 'failed'; }
+    const prepared = prepareShare({ candidate: { supportMode: mode, availability: this.last?.candidate?.availability ?? 'no_preference' },
+      ownerHex: owner, pair, presets: this.shared.myPresets(), assignments: this.shared.myPresetAssignments(), now: new Date() }, name);
+    if (prepared.kind !== 'ready') { i.setState({ margin: 'done' }); i.toast(describeNotReady(prepared)); return 'failed'; }
+    this.pending = { kind: 'send', approval: prepared.approval, pairId: pair.pairId, name,
+      copy: prepared.preview.recipientCopy ?? NUDGE_TEMPLATE_COPY.offer_note,
+      question: `want dor to send ${name.toLowerCase()} ${ACTION_WORDS[d.action] ?? 'a note'}?${why ? ` ${why}.` : ''}` };
+    if (d.mode === 'ask') { i.setState({ margin: 'ask' }); return 'asked'; }
+    return (await this.send(true)) ? 'sent' : 'failed';
+  }
+
+  /** Approve and hand to dor's agents. `auto` = Reasoning decided on its own (no tap). */
+  private async send(auto: boolean): Promise<boolean> {
+    const i = this.inst; const p = this.pending;
+    if (!i || !p || p.kind !== 'send' || !p.approval) { i?.setState({ nudge: null }); return false; }
+    i.setState({ margin: 'done', nudge: 'stamped', holding: false });
+    navigator.vibrate?.(14);
+    const r = await this.shared.approveSignal({ ...p.approval, clientRequestId: requestIdFor(p.approval, null).id });
+    this.pending = null;
+    await i.wait(500);
+    await i.anim('nudgeEnv', [{ transform: 'none', opacity: 1 }, { transform: 'translate(0,-16px) rotate(2deg)', opacity: 1, offset: .2 }, { transform: 'translate(90px,-620px) rotate(-16deg) scale(.4)', opacity: 0 }], { duration: 900, easing: i.EZ.exit, fill: 'forwards' });
+    i.setState({ nudge: null });
+    if (!r.ok) { i.toast(`No nudge was started: ${failText(r)}`); return false; }
+    i.log(p.pairId, { k: 'nudge', t: auto ? `dor sent ${p.name} a note on its own` : `A note for ${p.name} went to dor’s agents`, q: p.copy,
+      note: auto ? 'dor’s reasoning was confident · their agent still checks it fits' : 'they decide if it fits' });
+    i.toast(auto ? `dor decided this one on its own: a note is on its way to ${p.name} if it fits.` : `Sent to dor’s agents. ${p.name} gets a note if it fits.`);
+    return true;
   }
 
   // ---------- live data → design state ----------
@@ -573,7 +681,7 @@ export class LiveBridge {
       planeWho: first ? this.nameOf(first.pairId).toLowerCase() : '',
       nudgeName: this.pending?.name ?? '',
       nudgeText: this.pending?.copy ?? '',
-      nudgeHelp: this.pending ? `This is the kind of note ${this.pending.name} may get. Hold the stamp and dor’s agents decide whether it fits.` : '',
+      nudgeHelp: this.pending ? `This is the kind of note ${this.pending.name} may get. dor’s agents still decide whether it fits.` : '',
       supportClose: () => { this.live = { ...this.live, support: false }; i.forceUpdate(); },
       feedAge: this.feedAge(),
       // The event's own public page (host-allowlisted at ingest, D039); opened in a new tab, nothing is sent.
@@ -654,7 +762,7 @@ export class LiveBridge {
       boxHint: link ? 'tap the book to send your invite link · it links your accounts only' : 'making your invite…',
       bo: bookOpen ? { ...v.bo, note: s.paused[s.bookOpen] ? 'paused · 3 days · only you see this' : on ? 'notes from them can reach you' : 'notes from them are off',
         ruleOn: false, ruleLabel: on ? 'Turn off notes from them' : 'Turn notes from them back on' } : v.bo,
-      nb: { ...v.nb, marginQ: this.pending ? `${this.pending.name.toLowerCase()} came up. want a gentle check-in idea?` : '',
+      nb: { ...v.nb, marginQ: this.pending?.question ?? '',
         jmNote: v.nb.jmNote, stateLabel: this.live.thinking ? 'claude is reading · privately' : v.nb.stateLabel },
       feedLabel: i.FLY.length ? `events & places · ${i.FLY.length} nearby` : 'events & places',
       flyers: v.flyers.map((f: any) => ({ ...f, stamp: `${f.src} · ${this.age(f.id)}` })),

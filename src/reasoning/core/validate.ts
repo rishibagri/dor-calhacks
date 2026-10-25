@@ -3,7 +3,7 @@
  * an invalid proposal is rejected on its own; an invalid decision is replaced by `abstain` in finalize().
  */
 import {
-  ACTION_SURFACE, CANDIDATE_ACTIONS, DELIVERY_MAPPING, LEVELS, REASON_CODES, REASONING_MODES, REASSESS_CONDITIONS, RISKS,
+  ACTION_SUPPORT_MODES, ACTION_SURFACE, CANDIDATE_ACTIONS, DELIVERY_MAPPING, type CandidateAction, LEVELS, REASON_CODES, REASONING_MODES, REASSESS_CONDITIONS, RISKS,
   TARGETED_ACTIONS,
 } from './vocabulary.ts';
 import type { CandidateProposal, ReasoningDecision, ReasoningEpisodeInput } from './types.ts';
@@ -44,7 +44,7 @@ export function validateInput(x: unknown): x is ReasoningEpisodeInput {
   return true;
 }
 
-const PROPOSAL_KEYS = ['rank', 'action', 'targetRef', 'requestedMode', 'evidenceRefs', 'judgments', 'revealValue', 'topic',
+const PROPOSAL_KEYS = ['rank', 'action', 'targetRef', 'requestedMode', 'evidenceRefs', 'judgments', 'revealValue', 'supportMode', 'topic',
   'timing', 'reassess', 'alternativeInterpretation', 'confidence', 'rationale', 'dismissed'];
 
 /** Shape and internal consistency of one proposal (gates are applied separately). */
@@ -56,6 +56,7 @@ export function validateProposal(p: unknown): p is CandidateProposal {
   if (p.dismissed !== undefined && !isIn(REASON_CODES, p.dismissed)) return false;
   if (p.alternativeInterpretation !== undefined && !isIn(REASON_CODES, p.alternativeInterpretation)) return false;
   if (p.topic !== undefined && !isId(p.topic)) return false;
+  if (p.supportMode !== undefined && !(ACTION_SUPPORT_MODES[p.action as CandidateAction] ?? []).includes(p.supportMode as never)) return false;
   if (!isRec(p.judgments) || !Object.values(p.judgments).every(l => isIn(LEVELS, l))) return false;
   const t = p.timing;
   if (!isRec(t) || !onlyKeys(t, ['kind', 'delayMinutes']) || !isIn(['now', 'after_delay', 'not_now'] as const, t.kind) ||
@@ -84,7 +85,8 @@ export function validateDecision(d: ReasoningDecision): boolean {
   if (d.mode === 'abstain' && (d.action !== undefined || d.targetRef !== undefined || d.deliveryMapping)) return false;
   if (d.deliveryMapping && !(d.mode === 'act' && d.action && ACTION_SURFACE[d.action] === 'recipient')) return false;
   if (d.mode === 'act' && d.action && ACTION_SURFACE[d.action] === 'recipient' &&
-    (!d.deliveryMapping || DELIVERY_MAPPING[d.action]?.supportMode !== d.deliveryMapping.supportMode)) return false;
+    (!d.deliveryMapping || !DELIVERY_MAPPING[d.action] ||
+      !(ACTION_SUPPORT_MODES[d.action] ?? []).includes(d.deliveryMapping.supportMode))) return false;
   if (d.mode === 'act' && d.evidenceRefs.length === 0) return false;
   const actions = new Set([d.action, ...d.rejected.map(r => r.action)]);
   if (d.mode !== 'abstain' && !actions.has('ABSTAIN')) return false;

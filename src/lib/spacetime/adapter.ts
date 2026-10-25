@@ -187,6 +187,8 @@ export class SpacetimeSharedState implements SharedStateController {
   setNudgeDelivery: SharedStatePort['setNudgeDelivery'] = (i) => this.call('set_nudge_delivery', () => A.setNudgeDelivery(i));
   pauseRecipient = (pairId: string, expiresAt: string, v: number) => this.call('pause_recipient', () => A.pauseRecipient(pairId, expiresAt, v));
   resumeRecipient = (pairId: string, v: number) => this.call('resume_recipient', () => A.resumeRecipient(pairId, v));
+  recordReasoningDecision: SharedStatePort['recordReasoningDecision'] = (i) =>
+    this.call('record_reasoning_decision', () => A.recordReasoningDecision(i));
   setStandingConsent: SharedStatePort['setStandingConsent'] = (i) => this.call('set_standing_consent', () => A.setStandingConsent(i));
   revokeStandingConsent = (pairId: string) => this.call('revoke_standing_consent', () => A.revokeStandingConsent(pairId));
   approveSignalStanding: SharedStatePort['approveSignalStanding'] = (i) => this.call('approve_signal_standing', () => A.approveSignalStanding(i));

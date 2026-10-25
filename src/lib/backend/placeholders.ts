@@ -75,7 +75,7 @@ export function createOfflineSharedState(
     registerAccount: refuse, createPairInvite: refuse, acceptPairInvite: refuse, unlinkPair: refuse,
     setRelationshipPreset: refuse, assignRelationshipPreset: refuse, approveSignal: refuse,
     revokeSignal: refuse, dismissNudge: refuse, snoozeNudge: refuse,
-    setSupportPreferences: refuse, revokeSupportPreferences: refuse, setNudgeDelivery: refuse, pauseRecipient: refuse, resumeRecipient: refuse,
+    setSupportPreferences: refuse, revokeSupportPreferences: refuse, setNudgeDelivery: refuse, pauseRecipient: refuse, resumeRecipient: refuse, recordReasoningDecision: refuse,
     setStandingConsent: refuse, revokeStandingConsent: refuse, approveSignalStanding: refuse,
     publishDiscoveryProfile: refuse, withdrawDiscoveryProfile: refuse, setDiscoveryArea: refuse,
     blockDiscoveryUser: refuse, setDiscoveryPage: refuse, sendIntroductionRequest: refuse, respondIntroductionRequest: refuse,

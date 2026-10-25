@@ -10,7 +10,7 @@ import { episodeStop, gateProposal } from './gates.ts';
 import { selectSurvivor, type Survivor } from './select.ts';
 import { summarize } from './summary.ts';
 import { validateDecision, validateInput, validateProposal } from './validate.ts';
-import { ACTION_SURFACE, DELIVERY_MAPPING, SIGNAL_LIFETIME_MINUTES, type ReasonCode } from './vocabulary.ts';
+import { ACTION_SURFACE, DELIVERY_MAPPING, SIGNAL_LIFETIME_MINUTES, TEMPLATE_FOR_MODE, type ReasonCode } from './vocabulary.ts';
 import { contextExpiresAt, freshnessOf } from './window.ts';
 import type { CandidateProposal, FinalizeOptions, ReasoningDecision, ReasoningEpisodeInput, RejectedCandidate } from './types.ts';
 
@@ -76,7 +76,8 @@ export function finalize(input: unknown, proposals: readonly unknown[], opts: Fi
   const reasons: ReasonCode[] = [...(by ? [by] : []), ...p.rationale];
   const isTargeted = mode === 'act' || mode === 'ask';
   const surface = ACTION_SURFACE[p.action];
-  const mapping = mode === 'act' && surface === 'recipient' ? DELIVERY_MAPPING[p.action] : undefined;
+  const base = mode === 'act' && surface === 'recipient' ? DELIVERY_MAPPING[p.action] : undefined;
+  const mapping = base && p.supportMode ? { supportMode: p.supportMode, intendedTemplate: TEMPLATE_FOR_MODE[p.supportMode] } : base;
   const delay = p.timing.delayMinutes;
   const decision: ReasoningDecision = {
     schemaVersion: 1, episodeId: input.episodeId, mode,
