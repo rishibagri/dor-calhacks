@@ -38,6 +38,14 @@ export function isDatabaseInternal(ctx: Ctx): boolean {
   return ctx.connectionId === null && ctx.sender.isEqual(ctx.databaseIdentity);
 }
 
+/** Module owner only (the publisher recorded by init). */
+export function requireOwner(ctx: Ctx): void {
+  const row = ctx.db.module_owner.key.find('owner');
+  // The owner row is written by init. Without it (never live) only the database itself may act; fail closed otherwise.
+  const ok = row ? row.owner.isEqual(ctx.sender) : isDatabaseInternal(ctx);
+  if (!ok) fail('unauthorized', 'module owner only');
+}
+
 export function requireAccount(ctx: Ctx): Account {
   requireAuthenticated(ctx);
   const acct = ctx.db.account.identity.find(ctx.sender);

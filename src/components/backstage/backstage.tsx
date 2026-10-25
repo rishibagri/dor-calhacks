@@ -15,10 +15,11 @@ import { NUDGE_TEMPLATE_COPY } from '@dor/contracts';
 import { newBuilder } from '@/lib/spacetime/bindings';
 import { spacetimeConfig, isClerkConfigured } from '@/lib/config';
 import { RefreshButton } from './refresh-button';
+import { Playbook } from './playbook';
 
 const VIEWS = ['observer_status', 'observer_accounts', 'observer_pairs', 'observer_assignments', 'observer_signals', 'observer_nudges',
   'observer_delivery', 'observer_support_preferences', 'observer_pauses', 'observer_introductions', 'observer_nudge_requests',
-  'observer_reasoning', 'catalogue_events', 'catalogue_places'] as const;
+  'observer_reasoning', 'catalogue_events', 'catalogue_places', 'observer_signal_schedules', 'observer_demo_members', 'my_demo_round'] as const;
 type View = (typeof VIEWS)[number];
 type Rows = Record<View, any[]>;
 const EMPTY = Object.fromEntries(VIEWS.map((v) => [v, []])) as unknown as Rows;
@@ -72,7 +73,7 @@ function useObserverConnection(enabled: boolean) {
     }, 1200);
     return () => { stop = true; clearInterval(tick); conn.current?.disconnect(); conn.current = null; };
   }, [enabled, isSignedIn, getToken]);
-  return { state, error, me, rows };
+  return { state, error, me, rows, conn };
 }
 
 interface ActivityEvent { id: string; tool: string; action: string; who: string | null; startedAt: string; endedAt: string | null; status: 'running' | 'ok' | 'error'; durationMs: number | null }
@@ -101,9 +102,24 @@ const TOOL_LABEL: Record<string, string> = { claude: 'Claude', cartesia: 'Cartes
 
 function SignedInBackstage() {
   const { isSignedIn, isLoaded } = useAuth();
-  const { state, error, me, rows } = useObserverConnection(true);
+  const { state, error, me, rows, conn } = useObserverConnection(true);
   const activity = useActivity();
   const [resetNote, setResetNote] = useState('');
+  const [resetStep, setResetStep] = useState<'idle' | 'armed' | 'running'>('idle');
+  const round = rows.my_demo_round[0];
+  const operator = round?.operator === true;
+  // D061: two taps (arm, then confirm) so a stray click never wipes a judge's demo mid-way.
+  const reset = async () => {
+    if (resetStep === 'running') return;
+    if (resetStep === 'idle') { setResetStep('armed'); setResetNote('Tap again to reset all four phones to the starting board.'); setTimeout(() => setResetStep((s) => (s === 'armed' ? 'idle' : s)), 5000); return; }
+    setResetStep('running'); setResetNote('Resetting…');
+    try {
+      await conn.current.reducers.demoReset({});
+      setResetNote('Reset done. Phones clear their notebooks as soon as they sync.');
+    } catch (e: any) {
+      setResetNote(`Reset failed: ${String(e?.message ?? e)}`);
+    } finally { setResetStep('idle'); }
+  };
   const observer = rows.observer_status[0]?.observer === true;
   const worker = activity?.tools.factory.worker ?? 'checking';
 
@@ -114,6 +130,8 @@ function SignedInBackstage() {
     const p = pairs.get(pairId); if (!p) return null;
     return hex(p.memberA) === self ? hex(p.memberB) : hex(p.memberA);
   };
+
+  const schedules = useMemo(() => new Map(rows.observer_signal_schedules.map((s) => [s.signalId as string, ms(s.deliverAfter)])), [rows.observer_signal_schedules]);
 
   const timeline = useMemo<Item[]>(() => {
     const out: Item[] = [];
@@ -135,9 +153,13 @@ function SignedInBackstage() {
     for (const s of rows.observer_signals) {
       const exp = ms(s.expiresAt) ?? 0;
       const status = s.revokedAt ? 'revoked' : exp < Date.now() ? 'expired' : 'active';
-      out.push({ at: exp - DAY, kind: 'signal', tone: status === 'active' ? 'violet' : 'stone',
+      const due = schedules.get(s.signalId) ?? null;
+      const held = status === 'active' && due !== null && due > Date.now();
+      out.push({ at: exp - DAY, kind: held ? 'held signal' : 'signal', tone: held ? 'amber' : status === 'active' ? 'violet' : 'stone',
         title: `${who(s.senderId)} → ${who(s.recipientId)}: approved signal (${s.supportMode ?? 'availability only'}${s.availability ? `, ${s.availability}` : ''})`,
-        detail: `${status}${status === 'active' ? ` · expires ${ago(exp)}` : ''} · the Factory Droid agents decide if and how it lands` });
+        detail: held
+          ? `logged and held (bad news needs time) · deliverable ${new Date(due).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} (${ago(due)}) · the agents wait until then`
+          : `${status}${status === 'active' ? ` · expires ${ago(exp)}` : ''} · the Factory Droid agents decide if and how it lands` });
     }
     for (const n of rows.observer_nudges) {
       const status = n.suppressed ? 'suppressed' : n.dismissed ? 'seen & dismissed' : (ms(n.expiresAt) ?? 0) < Date.now() ? 'expired' : 'visible to recipient';
@@ -149,10 +171,10 @@ function SignedInBackstage() {
     for (const r of rows.observer_nudge_requests) out.push({ at: ms(r.createdAt) ?? 0, kind: 'friend-of-friend', tone: 'rose',
       title: `${who(r.sender)} → ${who(r.recipient)} via ${who(r.via)}`, detail: `${r.status} · ${r.hops} hops` });
     return out.sort((a, b) => Number(b.running ?? false) - Number(a.running ?? false) || b.at - a.at).slice(0, 100);
-  }, [rows, names, pairs, activity]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [rows, names, pairs, activity, schedules]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const paths = useMemo(() => {
-    const out: { key: string; from: string; to: string; blockers: string[]; notes: string[] }[] = [];
+    const out: { key: string; fromHex: string; toHex: string; from: string; to: string; blockers: string[]; notes: string[] }[] = [];
     const now = Date.now();
     for (const p of rows.observer_pairs) {
       if (p.status !== 'accepted' || !p.memberB) continue;
@@ -175,11 +197,13 @@ function SignedInBackstage() {
         // D059: no per-pair cooldown, so a recent nudge never blocks the next one.
         const asg = rows.observer_assignments.find((a) => a.pairId === p.pairId && hex(a.owner) === x);
         notes.push(asg ? `${who(x)} preset: ${asg.presetKind}` : `${who(x)}: default preset`);
-        out.push({ key: `${p.pairId}:${x}`, from: who(x), to: who(y), blockers, notes });
+        out.push({ key: `${p.pairId}:${x}`, fromHex: x, toHex: y, from: who(x), to: who(y), blockers, notes });
       }
     }
     return out.sort((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to));
   }, [rows, names]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const blockerMap = useMemo(() => new Map(paths.map((p) => [`${p.fromHex}>${p.toHex}`, p.blockers])), [paths]);
 
   const tools = useMemo(() => {
     if (!activity) return [];
@@ -234,14 +258,19 @@ function SignedInBackstage() {
         <Pill tone={observer ? 'emerald' : 'amber'}>{observer ? 'observer access' : 'not an observer yet'}</Pill>
         <span className="ml-auto flex flex-wrap items-center gap-2">
           <RefreshButton className="rounded-full bg-stone-900 px-3 py-1 text-xs font-medium text-white disabled:opacity-60" />
-          {/* Reset demo: placeholder only. Not wired to anything yet (the reset flow is still to be designed). */}
-          <button type="button" onClick={() => setResetNote('Reset demo isn’t hooked up yet. Nothing was changed.')}
-            className="rounded-full border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-medium text-rose-800">
-            ↺ Reset demo
+          {/* D061: demo_reset is refused unless this account is the demo operator on the module's demo roster. */}
+          {round && <Pill tone="stone">demo round {round.round}{round.resetAt ? ` · reset ${ago(ms(round.resetAt))}` : ''}</Pill>}
+          <button type="button" onClick={() => void reset()} disabled={!operator || resetStep === 'running'}
+            title={operator ? 'Put all four demo phones back on the starting board' : 'Only the demo operator account can reset'}
+            className={`rounded-full border px-3 py-1 text-xs font-medium disabled:opacity-50 ${resetStep === 'armed' ? 'border-rose-600 bg-rose-600 text-white' : 'border-rose-300 bg-rose-50 text-rose-800'}`}>
+            {resetStep === 'armed' ? '↺ Tap again to reset' : resetStep === 'running' ? 'Resetting…' : '↺ Reset demo'}
           </button>
         </span>
       </div>
       {resetNote && <p className="mt-2 text-xs text-rose-700">{resetNote}</p>}
+      {state === 'connected' && !operator && (
+        <p className="mt-2 text-xs text-stone-500">Reset demo needs this account on the demo roster as the operator (module owner: set_demo_member).</p>
+      )}
       {state === 'error' && <p className="mt-3 text-sm text-rose-700">{error}</p>}
       {state === 'connected' && !observer && (
         <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm">
@@ -278,6 +307,7 @@ function SignedInBackstage() {
           ))}
         </div>
       )}
+      {observer && <Playbook rows={rows} blockers={blockerMap} tools={activity?.tools ?? null} />}
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <section>
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-stone-500">Live activity</h2>

@@ -262,6 +262,7 @@ export class SpacetimeSharedState implements SharedStateController {
   fofCards = () => this.views.network.fofCards;
   myNudgeRequests = () => this.views.network.requests;
   myConnectionProfiles = () => this.views.network.connections;
+  myDemoRound = () => this.views.demoRound;
   unreadable = () => this.views.unreadable;
 }
 

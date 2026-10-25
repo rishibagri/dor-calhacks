@@ -20,6 +20,7 @@ export * from './reducers/suggestions';
 export * from './reducers/network';
 export * from './reducers/reasoning';
 export * from './reducers/hooks';
+export * from './reducers/demo';
 export * from './network_views';
 export * from './views';
 export * from './observer_views';

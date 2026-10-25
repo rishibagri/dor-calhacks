@@ -44,6 +44,9 @@ export type ConnectionState =
   | { phase: 'unconfigured'; reason: string };
 
 /** Pair as visible to the caller via the `my_pairs` view. No journal data. */
+/** D061 demo reset: the starting-board slot and the current round, for the team's demo accounts only. */
+export interface DemoRoundView { slot: string; round: number }
+
 export interface PairView {
   pairId: string;
   /** The other member's account handle; null until invite accepted. */
@@ -436,6 +439,7 @@ export interface SharedStatePort {
   fofCards(): FofCard[]; // fof_cards (friends of friends in the caller's area)
   myNudgeRequests(): NudgeRequestView[]; // my_nudge_requests
   myConnectionProfiles(): ConnectionProfile[]; // my_connection_profiles (linked people's full details)
+  myDemoRound(): DemoRoundView | null; // my_demo_round (D061: demo roster accounts only, else null)
   /** Rows present in a view but unreadable; see UnreadableRow. */
   unreadable(): Unreadable;
 

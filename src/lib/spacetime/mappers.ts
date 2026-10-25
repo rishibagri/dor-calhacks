@@ -69,6 +69,12 @@ export const mapInvite: Mapper<InviteView> = (row) => {
   return inviteToken && expiresAt ? { inviteToken, expiresAt } : null;
 };
 
+/** D061: the demo round row (demo roster accounts only). */
+export const mapDemoRound = (row: LooseRow): { slot: string; round: number } | null => {
+  const slot = str(row, 'slot'), round = num(row, 'round');
+  return slot && round !== null ? { slot, round } : null;
+};
+
 export const mapAccount = (row: LooseRow): { displayName: string } | null => {
   const displayName = str(row, 'display_name');
   return displayName ? { displayName } : null;

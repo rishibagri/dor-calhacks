@@ -74,6 +74,11 @@ const listTags = (tags: readonly string[]) => tags.map(tagLabel).join(', ');
 // The quiz's interest question offers only tags the server publishes (the design's "studying" is not one).
 const QUIZ_TAGS = ['board-games', 'hiking', 'coffee', 'live-music', 'cooking', 'running', 'books', 'climbing'].filter((t) => DISCOVERY_TAGS.includes(t));
 const SENT_KEY = 'dor-live-sent';
+/** D061: the last demo round this device saw, per account; a new round means the backstage reset the demo. */
+const DEMO_ROUND_KEY = 'dor-demo-round';
+// Design-local overlays that a demo reset puts back to the design's starting values (server data re-syncs by itself).
+const DEMO_LOCAL_STATE = ['sent', 'accepted', 'seen', 'cardGone', 'interested', 'shared', 'gone', 'paused', 'ribbons', 'loose', 'met', 'plans',
+  'envelope', 'envOpened', 'planeIn', 'planeStep', 'log'] as const;
 /**
  * D056 cross-entry memory: distilled facts only, on this device (localStorage), keyed by the signed-in account. D058:
  * signing out wipes every account's memory on this device, so a shared or borrowed phone never keeps them.
@@ -502,7 +507,7 @@ export class LiveBridge {
     this.speaking = null;
   }
 
-  private resetEntry() {
+  private resetEntry(quiet = false) {
     const i = this.inst; if (!i) return;
     this.deps?.voice.cancel();
     this.stopSpeaking();
@@ -513,7 +518,29 @@ export class LiveBridge {
     this.asks = [];
     this.live = { ...this.live, nbAsk: '', nbAsking: false, thinking: false };
     i.setState((st: any) => ({ nbMode: 'idle', nbText: '', nbEditing: false, nbSecs: 0, margin: null, nudge: null, wordsKey: st.wordsKey + 1 }));
-    i.toast('Cleared. Nothing was saved or sent.');
+    if (!quiet) i.toast('Cleared. Nothing was saved or sent.');
+  }
+
+  /**
+   * D061 demo reset: when the backstage starts a new demo round, this phone forgets what the last judge saw: the
+   * notebook, dor's device-only memory, sent marks and any open sheet. Runs once per round per account on this device.
+   */
+  private checkDemoRound(round: number) {
+    const i = this.inst, owner = this.ownerHex();
+    if (!i || !owner) return;
+    const key = `${DEMO_ROUND_KEY}:${owner}`;
+    let seen: string | null = null;
+    try { seen = localStorage.getItem(key); } catch { /* storage blocked: treat every load as a fresh round */ }
+    if (seen === String(round)) return;
+    try { localStorage.setItem(key, String(round)); } catch { /* storage blocked */ }
+    clearAllMemory();
+    try { sessionStorage.removeItem(SENT_KEY); } catch { /* session only */ }
+    this.seenNudges.clear();
+    this.resetEntry(true);
+    const start = i.init();
+    i.setState({ ...i.clearSubs(), ...Object.fromEntries(DEMO_LOCAL_STATE.map((k) => [k, start[k]])) });
+    if (i.state.place) i.go(null);
+    if (seen !== null) i.toast('Fresh demo. Everything from the last round is cleared.');
   }
 
   // ---------- reflection → Reasoning (D052) → act / ask / defer / abstain ----------
@@ -728,6 +755,9 @@ export class LiveBridge {
       }
     }
 
+    const demo = shared.myDemoRound();
+    if (connected && demo) this.checkDemoRound(demo.round);
+
     const pairs: PairView[] = shared.myPairs().filter((p) => p.status === 'accepted' && p.counterpartIdentityHex);
     const PEOPLE: Record<string, any> = {}, BOXSLOT: Record<string, any> = {}, SINCE: Record<string, string> = {};
     pairs.forEach((p, n) => {
@@ -742,7 +772,9 @@ export class LiveBridge {
     const visible = stage === 'ready' || stage === 'needs_area';
 
     // Sill: discovery cards (most shared interests first, no model) then friend-of-friend cards; the design holds three.
-    const discovery: SillCard[] = [...shared.discoveryCards()].sort((a, b) => b.sharedTags.length - a.sharedTags.length)
+    // One card per person (D061): someone reachable through a friend shows as that friend-of-friend card only.
+    const viaFriend = new Set(shared.fofCards().map((c) => c.candidateRef));
+    const discovery: SillCard[] = [...shared.discoveryCards()].filter((row) => !viaFriend.has(row.cardRef)).sort((a, b) => b.sharedTags.length - a.sharedTags.length)
       .map((row) => ({ id: `c:${row.cardRef}`, kind: 'discovery', row }));
     const fof: SillCard[] = shared.fofCards().filter((c) => c.requestStatus !== 'closed' && c.requestStatus !== 'incoming')
       .map((row) => ({ id: `f:${row.candidateRef}`, kind: 'fof', row }));

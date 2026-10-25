@@ -2,12 +2,12 @@
  * D053 demo backstage: read-only observer views across all users, empty unless the caller is in observer_identity
  * (module-owner managed, empty by default). Projections are shared state only: ids, enums, times and the public
  * display names users chose. No free-text fields (no nudge-request messages, no intro snapshots beyond names),
- * no journals (never on the server anyway). Plus the owner's own Reasoning decision log.
+ * no journals (never on the server anyway). Plus the owner's own Reasoning decision log and the D061 demo round.
  */
 import { t } from 'spacetimedb/server';
 import type { Identity } from 'spacetimedb';
 import { spacetimedb } from './schema';
-import type { ReadDb } from './policy_state';
+import { loadDiscoveryParty, type ReadDb } from './policy_state';
 
 const OBSERVER_LIMIT = 500;
 const isObserver = (db: ReadDb, who: Identity): boolean => Boolean(db.observer_identity.identity.find(who));
@@ -127,4 +127,41 @@ export const observer_nudge_requests = spacetimedb.view(
 export const observer_reasoning = spacetimedb.view(
   { name: 'observer_reasoning', public: true }, t.array(decisionRow),
   ctx => (isObserver(ctx.db, ctx.sender) ? newest([...ctx.db.reasoning_decision.iter()]) : [])
+);
+
+/** D059 timing for the backstage: when each held signal may be delivered (no row = as soon as possible). */
+export const observer_signal_schedules = spacetimedb.view(
+  { name: 'observer_signal_schedules', public: true },
+  t.array(t.row('ObserverScheduleRow', { signal_id: t.string(), deliver_after: t.timestamp() })),
+  ctx => (isObserver(ctx.db, ctx.sender)
+    ? [...ctx.db.signal_schedule.iter()].slice(0, OBSERVER_LIMIT).map(s => ({ signal_id: s.signal_id, deliver_after: s.deliver_after })) : [])
+);
+
+/** D061 demo reset: the starting-board roster and whether each person is currently published in an area. */
+export const observer_demo_members = spacetimedb.view(
+  { name: 'observer_demo_members', public: true },
+  t.array(t.row('ObserverDemoMemberRow', {
+    identity: t.identity(), slot: t.string(), operator: t.bool(), published: t.bool(), area_key: t.option(t.string()),
+  })),
+  ctx => (isObserver(ctx.db, ctx.sender)
+    ? [...ctx.db.demo_member.iter()].map(m => {
+      const p = loadDiscoveryParty(ctx.db, m.identity);
+      const area = p.area?.active && !p.area.expiredMarked ? p.area.areaKey : undefined;
+      return { identity: m.identity, slot: m.slot, operator: m.operator, published: Boolean(p.publication && !p.publication.withdrawnAtMs && !p.publication.expiredMarked), area_key: area };
+    }) : [])
+);
+
+/**
+ * D061 demo reset, for a demo member's own phone: the current round. A phone that sees the round change clears its
+ * device-only notebook and memory. Empty for everyone outside the demo roster.
+ */
+export const my_demo_round = spacetimedb.view(
+  { name: 'my_demo_round', public: true },
+  t.array(t.row('MyDemoRoundRow', { slot: t.string(), operator: t.bool(), round: t.u32(), reset_at: t.option(t.timestamp()) })),
+  ctx => {
+    const m = ctx.db.demo_member.identity.find(ctx.sender);
+    if (!m) return [];
+    const r = ctx.db.demo_round.key.find('round');
+    return [{ slot: m.slot, operator: m.operator, round: r?.round ?? 0, reset_at: r?.reset_at }];
+  }
 );
