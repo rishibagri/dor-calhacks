@@ -10,7 +10,7 @@
 
 **Docs:** README is a concise entry point; expanded product/phase/role/sponsor details moved to `INSTRUCTIONS.md`. `PROJECT_KNOWLEDGE.md` remains the current evidence ledger.
 
-**Review/next:** @Sumedh review D044 automatic eligibility/fail-closed behavior and Apify D028 input/source boundary before merge. @Rishi coordinate review and merge; no teammate GitHub handle was provided, so no reviewer identity was guessed. If the PR is accepted, run the planned two-account D044 verification only after owner authorization, and separately approve any paid Apify fetch.
+**Review/next:** Rishi withdrew the additional human privacy-review request. Use automated checks as the review gate for this change; existing D044 reducer enforcement remains in force. PR #60 is open for owner merge. Separately approve any paid Apify fetch before running it.
 
 ---
 
