@@ -1,8 +1,8 @@
 import { t } from 'spacetimedb/server';
 import { Timestamp } from 'spacetimedb';
-import { DISCLOSURE_CONSENT_VERSION, DISCLOSURE_PURPOSE, guardApproval, policyErrorCode } from '@dor/contracts/policy';
+import { DISCLOSURE_CONSENT_VERSION, DISCLOSURE_PURPOSE, MAX_NUDGE_DELAY_MINUTES, guardApproval, policyErrorCode } from '@dor/contracts/policy';
 import { spacetimedb } from '../schema';
-import { fail } from '../errors';
+import { fail, type Ctx } from '../errors';
 import { otherMember, requireAccount } from '../guards';
 import { newId } from '../ids';
 import { fromMs, hex, loadStanding, toMs, pauseInForce } from '../policy_state';
@@ -13,18 +13,38 @@ import { fromMs, hex, loadStanding, toMs, pauseInForce } from '../policy_state';
  * Guard: accepted pair ∩ effective preset (the assigned one, or the standard default when none is assigned).
  * Fields outside the preset are dropped; the server's current versions are recorded, not the client's.
  */
-export const approve_signal = spacetimedb.reducer(
-  {
-    pair_id: t.string(),
-    support_mode: t.option(t.string()),
-    availability: t.option(t.string()),
-    payload_revision: t.u32(),
-    recipient_policy_version: t.u32(),
-    preset_assignment_version: t.u32(),
-    consent_version: t.u32(),
-    client_request_id: t.string(),
-  },
-  (ctx, args) => {
+const approveArgs = {
+  pair_id: t.string(),
+  support_mode: t.option(t.string()),
+  availability: t.option(t.string()),
+  payload_revision: t.u32(),
+  recipient_policy_version: t.u32(),
+  preset_assignment_version: t.u32(),
+  consent_version: t.u32(),
+  client_request_id: t.string(),
+};
+type ApproveArgs = {
+  pair_id: string; support_mode?: string; availability?: string; payload_revision: number;
+  recipient_policy_version: number; preset_assignment_version: number; consent_version: number; client_request_id: string;
+};
+
+export const approve_signal = spacetimedb.reducer(approveArgs, (ctx, args) => { approve(ctx, args); });
+
+/**
+ * D059: the same approval, delivered no earlier than `delay_minutes` from now (1 to MAX_NUDGE_DELAY_MINUTES). The
+ * schedule is written in this transaction, so the worker never sees the signal without its time. Used when the
+ * owner's reasoning decides the news needs time to settle (bad news); good news uses approve_signal.
+ */
+export const approve_signal_delayed = spacetimedb.reducer({ ...approveArgs, delay_minutes: t.u32() }, (ctx, { delay_minutes, ...args }) => {
+  if (!Number.isInteger(delay_minutes) || delay_minutes < 1 || delay_minutes > MAX_NUDGE_DELAY_MINUTES) fail('invalid', 'delay_minutes');
+  const signalId = approve(ctx, args);
+  if (signalId && !ctx.db.signal_schedule.signal_id.find(signalId)) {
+    ctx.db.signal_schedule.insert({ signal_id: signalId, deliver_after: new Timestamp(fromMs(toMs(ctx.timestamp) + delay_minutes * 60_000)) });
+  }
+});
+
+/** Returns the new signal id, or null for an idempotent replay of the same request. */
+function approve(ctx: Ctx, args: ApproveArgs): string | null {
     requireAccount(ctx);
     // D041: nothing can be approved for a counterpart the owner is pausing, not even a replayed request.
     // Owner-only refusal: only the owner calls approve_signal, so this reveals nothing to the counterpart.
@@ -32,7 +52,7 @@ export const approve_signal = spacetimedb.reducer(
     // Idempotent retry (scoped to caller): never re-approve and never resurrect a revoked signal.
     const prior = [...ctx.db.approved_signal.sender_id.filter(ctx.sender)].find(s => s.client_request_id === args.client_request_id);
     if (prior) {
-      if (prior.pair_id === args.pair_id) return;
+      if (prior.pair_id === args.pair_id) return null;
       fail('invalid', 'client_request_id reused');
     }
 
@@ -62,8 +82,8 @@ export const approve_signal = spacetimedb.reducer(
       recipient_policy_version: d.recipientPolicyVersion,
       preset_assignment_version: d.presetAssignmentVersion, action: 'approved', created_at: ctx.timestamp,
     });
-  }
-);
+    return signalId;
+}
 
 export const revoke_signal = spacetimedb.reducer(
   { signal_id: t.string() },

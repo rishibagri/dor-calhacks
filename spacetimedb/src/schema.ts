@@ -590,6 +590,18 @@ export const nudge_request = table(
 );
 
 /**
+ * D059: when a reasoning-timed nudge may be delivered. Written only by approve_signal_delayed in the same transaction as
+ * the signal, so the worker never sees a timed signal without its time. No row = deliver as soon as possible.
+ */
+export const signal_schedule = table(
+  { name: 'signal_schedule' },
+  {
+    signal_id: t.string().primaryKey(),
+    deliver_after: t.timestamp(),
+  }
+);
+
+/**
  * D056: what the recipient's nudge suggests talking about ("ask how the exam went"). Written by the sender's device
  * right after approve_signal; shown to the recipient in my_nudges with the nudge built from that signal.
  */
@@ -643,6 +655,7 @@ export const spacetimedb = schema({
   profile_detail,
   nudge_request,
   signal_hook,
+  signal_schedule,
   observer_identity,
   reasoning_decision,
   catalogue_detail,

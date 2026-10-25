@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { RateLimiter } from '@dor/agents';
 import { TALKING_POINT_IDS, type TalkingPointId } from '@dor/contracts/policy';
 import { REASONING_SYSTEM_PROMPT } from '@/reasoning/runtime/prompt';
-import { EVENT_KINDS } from '@/reasoning/runtime/live';
+import { EVENT_KINDS, VALENCES } from '@/reasoning/runtime/live';
 import { MEMORY_KINDS } from '@/reasoning/runtime/memory';
 import { CANDIDATE_ACTIONS, LEVELS, REASON_CODES, REASONING_MODES, REASSESS_CONDITIONS } from '@/reasoning/core/vocabulary';
 
@@ -40,7 +40,7 @@ const RequestSchema = z.object({
 const ModelSchema = z.object({
   situation: z.object({
     eventKind: z.enum(EVENT_KINDS), topic: z.string().nullable(), windowMinutes: z.number().int(),
-    windowConfidence: z.enum(LEVELS), doesNotWantToTalk: z.boolean(),
+    windowConfidence: z.enum(LEVELS), doesNotWantToTalk: z.boolean(), valence: z.enum(VALENCES),
   }),
   people: z.array(z.object({ ref: z.string(), sensitiveTopics: z.array(z.string()) })),
   proposals: z.array(z.object({

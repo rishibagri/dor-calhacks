@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { AgentAckSchema, ApprovedSignalSchema, CoordinationOutcomeSchema, NUDGE_COOLDOWN_MS, NudgeSchema,
+import { AgentAckSchema, ApprovedSignalSchema, CoordinationOutcomeSchema, NUDGE_VISIBLE_MS, NudgeSchema,
   RecipientSupportPreferencesSchema, nudgeDelivery, templateForSignal, type AgentAck, type ApprovedSignal,
   type Availability, type Clock, type CoordinationOutcome, type CoordinationOutcomeCode, type CoordinationPort,
   type DisclosurePolicyPort, type Nudge, type RecipientDelivery, type RecipientSupportPreferences,
@@ -37,7 +37,7 @@ export interface CoordinatorDeps {
   preferences: RecipientPreferencesPort;
   proposer: AckProposerPort;
   clock: Clock;
-  /** Recipient's delivery settings and last nudge for this pair (FLOWS.md F5: opt-in, quiet hours, cooldown). */
+  /** Recipient's delivery settings and last nudge for this pair (FLOWS.md F5: opt-in, quiet hours; no cooldown since D059). */
   delivery: DeliveryStatePort;
   /** DS ranking hook. It may reorder or drop options; anything it adds is ignored. */
   rank?: (options: AckOption[], signal: ApprovedSignal) => AckOption[];
@@ -136,7 +136,7 @@ export class BoundedCoordinator implements CoordinationPort {
     const ack = AgentAckSchema.parse({ schemaVersion: 1, signalId: signal.signalId, recipientConsentId: fresh.consentId,
       recipientConsentVersion: fresh.consentVersion, decision: 'compatible', supportMode: choice.supportMode,
       ...(choice.availability ? { availability: choice.availability } : {}) });
-    const expiresAt = Math.min(Date.parse(signal.expiresAt), Date.parse(fresh.expiresAt), now.getTime() + NUDGE_COOLDOWN_MS);
+    const expiresAt = Math.min(Date.parse(signal.expiresAt), Date.parse(fresh.expiresAt), now.getTime() + NUDGE_VISIBLE_MS);
     const nudge = NudgeSchema.parse({ schemaVersion: 1, id: nudgeId(requestId, pairId, recipientId), pairId, recipientId,
       sourceSignalIds: [signal.signalId], sourceConsentVersions: [signal.consentVersion],
       templateId, createdAt: now.toISOString(),

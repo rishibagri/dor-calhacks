@@ -38,6 +38,7 @@ import AcceptPairInviteReducer from "./accept_pair_invite_reducer";
 import AdminPurgeAccountReducer from "./admin_purge_account_reducer";
 import ApproveActivityInterestReducer from "./approve_activity_interest_reducer";
 import ApproveSignalReducer from "./approve_signal_reducer";
+import ApproveSignalDelayedReducer from "./approve_signal_delayed_reducer";
 import ApproveSignalStandingReducer from "./approve_signal_standing_reducer";
 import AssignRelationshipPresetReducer from "./assign_relationship_preset_reducer";
 import AttachSignalHookReducer from "./attach_signal_hook_reducer";
@@ -484,6 +485,7 @@ const reducersSchema = __reducers(
   __reducerSchema("admin_purge_account", AdminPurgeAccountReducer),
   __reducerSchema("approve_activity_interest", ApproveActivityInterestReducer),
   __reducerSchema("approve_signal", ApproveSignalReducer),
+  __reducerSchema("approve_signal_delayed", ApproveSignalDelayedReducer),
   __reducerSchema("approve_signal_standing", ApproveSignalStandingReducer),
   __reducerSchema("assign_relationship_preset", AssignRelationshipPresetReducer),
   __reducerSchema("attach_signal_hook", AttachSignalHookReducer),

@@ -117,4 +117,9 @@
   - Still automatic: no confirm step (D056 unchanged). The model prompt no longer gives topic-specific examples.
   - Device-only memory (D056) is wiped for every account on this device at sign-out, along with the open notebook entry.
   - No schema change: `signal_hook.hook` stays a string, now restricted to the listed ids; old free-text rows are never displayed.
+- D059 (owner Adam, 2026-10-25; amends D018, D050, D054 and D056; offline-verified, needs the owner's republish): **no cooldown; the reasoning decides when a nudge goes out.**
+  - **Cooldown removed.** `nudgeDelivery` no longer has a per-pair cooldown (D018), at coordination or at commit. Opt-out, pause and quiet hours are unchanged. `NUDGE_VISIBLE_MS` (24 h) now sets how long a nudge stays in the tray. A signal produces at most one nudge: `worker_signal_context` drops signals a nudge already used, so a restarted worker spends no model call on them.
+  - **Timing.** The model labels each entry's news (`situation.valence`: good / bad / neutral). People-directed actions go out **now** by default. When the news is bad (a failed exam, a rejection, a loss), even if the writer wants to share it, the action is timed `after_delay`: the model picks the delay, clamped to 120–720 minutes (180 when it gives none). Missing valence (fallback proposer, older model output) means now.
+  - **Server-held.** `approve_signal_delayed` (= `approve_signal` + `delay_minutes` 1–720) writes `signal_schedule` in the same transaction; `worker_signal_context` exposes `deliver_after`; the worker skips the signal until a sweep after that time (no model call); `commit_nudge` refuses earlier with `stale: not_due`. Closing the app changes nothing.
+  - **Live room:** the toast and the book say "dor will nudge Rishi in about 3 h, once you've had some time"; good news says "dor nudged Rishi to reach out".
 

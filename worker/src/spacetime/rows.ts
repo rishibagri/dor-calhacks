@@ -62,6 +62,8 @@ function epochMs(value: unknown, name: string): number {
 export interface SignalContext {
   signal: StoredSignal;
   snapshot: Omit<PolicySnapshot, 'nowMs'>;
+  /** D059: not before this (a reasoning-timed nudge); null = as soon as possible. */
+  deliverAfterMs: number | null;
 }
 
 /**
@@ -111,7 +113,8 @@ export function toSignalContext(row: Row): SignalContext {
       revokedAtMs: field(row, 'preset_revoked') === true ? 0 : null,
     } : null,
   };
-  return { signal, snapshot };
+  const deliverAfter = optional(row, 'deliver_after');
+  return { signal, snapshot, deliverAfterMs: deliverAfter === undefined ? null : epochMs(deliverAfter, 'deliver_after') };
 }
 
 /** The approved envelope as the coordinator receives it (ApprovedSignal v2). */

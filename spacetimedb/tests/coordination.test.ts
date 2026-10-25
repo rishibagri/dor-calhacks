@@ -123,18 +123,12 @@ describe('F5 recipient gate (accepted-pair default on with recipient opt-out; D0
     expect(() => commit(w, worker, commitArgs(pairId, sig))).toThrow('rate_limited: quiet_hours');
   });
 
-  it('at most one nudge per pair per 24h, counting suppressed/dismissed nudges', () => {
+  it('no per-pair cooldown: back-to-back nudges for the same pair are both delivered (D059)', () => {
     const { w, pairId, worker } = world();
     optIn(w, w.bob, pairId);
-    const s1 = approve(w, BOTH, 'a');
-    commit(w, worker, commitArgs(pairId, s1));
-    w.call(w.alice, ctx => mod.revoke_signal(ctx, { signal_id: s1.signal_id })); // revoke-and-retry must not reset cooldown
-    const s2 = approve(w, BOTH, 'b');
-    expect(() => commit(w, worker, commitArgs(pairId, s2))).toThrow('rate_limited: cooldown');
-    w.h.clock.set(new Timestamp(w.h.clock.now().microsSinceUnixEpoch + 24n * HOUR_US));
-    const s3 = approve(w, BOTH, 'c');
-    commit(w, worker, commitArgs(pairId, s3));
-    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(1);
+    commit(w, worker, commitArgs(pairId, approve(w, BOTH, 'a')));
+    commit(w, worker, commitArgs(pairId, approve(w, BOTH, 'b')));
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(2);
   });
 
   it('opting out suppresses nudges already pending for that recipient', () => {
@@ -238,3 +232,40 @@ describe('F7 commit: worker replay, revocation during generation, stale approval
     expect(() => commit(w, worker, commitArgs(pairId, call, { template_id: 'Call them now, they are sad' }))).toThrow('invalid: invalid_schema');
   });
 });
+
+describe('D059 reasoning-timed nudges: approve_signal_delayed holds delivery on the server', () => {
+  const approveDelayed = (w: W, minutes: number, req = 'late-1') => {
+    const pairId = view<any>(w, w.alice, mod.my_pairs)[0].pair_id;
+    const args = { ...approveArgs(w, w.alice, pairId, BOTH, req), delay_minutes: minutes };
+    w.call(w.alice, ctx => mod.approve_signal_delayed(ctx, args));
+    return allSignals(w).find((s: any) => s.client_request_id === req)!;
+  };
+
+  it('the worker sees the due time; commit before it is refused, after it succeeds', () => {
+    const { w, pairId, worker } = world();
+    optIn(w, w.bob, pairId);
+    const sig = approveDelayed(w, 180);
+    const row = view<any>(w, worker, mod.worker_signal_context).find(r => r.signal_id === sig.signal_id);
+    const dueUs = row.deliver_after.microsSinceUnixEpoch - w.h.clock.now().microsSinceUnixEpoch;
+    expect(dueUs).toBe(180n * 60_000_000n);
+    expect(() => commit(w, worker, commitArgs(pairId, sig))).toThrow('stale: not_due');
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
+    w.h.clock.set(new Timestamp(w.h.clock.now().microsSinceUnixEpoch + 3n * HOUR_US));
+    commit(w, worker, commitArgs(pairId, sig));
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(1);
+  });
+
+  it('an immediate approval has no due time; delays outside 1–720 minutes are refused; replays keep the first time', () => {
+    const { w, pairId, worker } = world();
+    const now = approve(w, BOTH, 'now-1');
+    expect(view<any>(w, worker, mod.worker_signal_context).find(r => r.signal_id === now.signal_id).deliver_after).toBeUndefined();
+    expect(() => approveDelayed(w, 0, 'bad-0')).toThrow('invalid: delay_minutes');
+    expect(() => approveDelayed(w, 721, 'bad-1')).toThrow('invalid: delay_minutes');
+    const sig = approveDelayed(w, 120, 'late-2');
+    const first = view<any>(w, worker, mod.worker_signal_context).find(r => r.signal_id === sig.signal_id).deliver_after;
+    approveDelayed(w, 600, 'late-2'); // same request replayed with another delay: no new signal, time unchanged
+    expect(view<any>(w, worker, mod.worker_signal_context).filter(r => r.signal_id === sig.signal_id)[0].deliver_after).toEqual(first);
+    expect(pairId).toBeTruthy();
+  });
+});
+

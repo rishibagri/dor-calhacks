@@ -155,8 +155,7 @@ function SignedInBackstage() {
         if (pref && (pref.revokedAt || (ms(pref.expiresAt) ?? 0) <= now)) blockers.push(`${who(y)}'s support styles ${pref.revokedAt ? 'revoked' : 'expired'}`);
         else if (pref) notes.push(`${who(y)} accepts: ${pref.supportModes.join(', ') || 'nothing'}`);
         else notes.push(`${who(y)}: standard styles`);
-        const last = rows.observer_nudges.filter((n) => n.pairId === p.pairId && hex(n.recipientId) === y).map((n) => ms(n.createdAt) ?? 0).sort().pop();
-        if (last && now - last < DAY) blockers.push(`cooldown until ${new Date(last + DAY).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`);
+        // D059: no per-pair cooldown, so a recent nudge never blocks the next one.
         const asg = rows.observer_assignments.find((a) => a.pairId === p.pairId && hex(a.owner) === x);
         notes.push(asg ? `${who(x)} preset: ${asg.presetKind}` : `${who(x)}: default preset`);
         out.push({ key: `${p.pairId}:${x}`, from: who(x), to: who(y), blockers, notes });

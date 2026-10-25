@@ -296,11 +296,11 @@ test('commit: accepted-pair delivery defaults on; a persisted opt-out still bloc
   assert.equal(DEFAULT_RECIPIENT_DELIVERY.optedIn, true);
 });
 
-test('commit: quiet hours in recipient local time and 24h per-pair cooldown are rechecked at commit', () => {
+test('commit: quiet hours in recipient local time are rechecked at commit; a recent nudge never blocks (D059)', () => {
   const { sources, nudge } = commitFixture();
   const quiet = { ...OPEN, pref: { ...DEFAULT_RECIPIENT_DELIVERY, quietStartMinute: 22 * 60, quietEndMinute: 8 * 60 } }; // 22:00-08:00 UTC
   assert.equal(guardNudgeCommit(nudge, sources, quiet).reason, 'quiet_hours'); // NOW is 00:00Z
-  assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, lastNudgeAtMs: NOW - NUDGE_COOLDOWN_MS + 1 }).reason, 'cooldown');
+  assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, lastNudgeAtMs: NOW - 1 }).allowed, true);
   assert.equal(guardNudgeCommit(nudge, sources, { ...OPEN, lastNudgeAtMs: NOW - NUDGE_COOLDOWN_MS }).allowed, true);
 });
 

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildLiveEpisode, fallbackProposals, reasonLive, type LiveContext, type ModelReasoning } from '../live.ts';
+import { BAD_NEWS_MIN_DELAY_MINUTES, buildLiveEpisode, fallbackProposals, nudgeTiming, reasonLive, type LiveContext, type ModelReasoning } from '../live.ts';
 import { validateInput } from '../../core/validate.ts';
 
 const NOW = '2026-10-25T18:00:00Z';
@@ -125,3 +125,28 @@ test('a deferred model decision keeps only the reassessment condition', async ()
   assert.deepEqual(r.decision.reassess, { afterMinutes: 90, condition: 'distress_still_relevant' });
   assert.equal(r.decision.targetRef, undefined);
 });
+
+test('D059 timing: good or neutral news sends now; bad news is held 2–12 h even if the writer wants to share it', () => {
+  assert.deepEqual(nudgeTiming('good', 240), { kind: 'now' }); // a delay the model asked for on good news is ignored
+  assert.deepEqual(nudgeTiming('neutral', null), { kind: 'now' });
+  assert.deepEqual(nudgeTiming(undefined, 300), { kind: 'now' }); // no valence (old model, fallback): send now
+  assert.deepEqual(nudgeTiming('bad', 240), { kind: 'after_delay', delayMinutes: 240 });
+  assert.deepEqual(nudgeTiming('bad', 30), { kind: 'after_delay', delayMinutes: BAD_NEWS_MIN_DELAY_MINUTES });
+  assert.deepEqual(nudgeTiming('bad', 5000), { kind: 'after_delay', delayMinutes: 720 });
+  assert.deepEqual(nudgeTiming('bad', null), { kind: 'after_delay', delayMinutes: 180 });
+});
+
+test('D059 bad exam the writer wants to share: still acts, but the decision is timed after a processing delay', async () => {
+  const c = ctx({ assessment: { intent: 'wants_connection', risk: 'none', mentionedNames: ['Sam'], excludedNames: [], preferredNames: ['Sam'] } });
+  const bad = await reasonLive(c, async () => model([proposal({ action: 'DIRECT_CHECK_IN', supportMode: 'short_call', timing: 'now' })],
+    { eventKind: 'academic_setback', valence: 'bad' }));
+  assert.equal(bad.decision.mode, 'act');
+  assert.equal(bad.decision.timing, 'after_delay');
+  assert.equal(bad.decision.timingDelayMinutes, 180);
+  const good = await reasonLive(c, async () => model([proposal({ action: 'CELEBRATE', supportMode: 'encouraging_note', timing: 'after_delay', delayMinutes: 300 })],
+    { eventKind: 'major_good_news', valence: 'good' }));
+  assert.equal(good.decision.mode, 'act');
+  assert.equal(good.decision.timing, 'now');
+  assert.equal(good.decision.timingDelayMinutes, undefined);
+});
+

@@ -30,8 +30,15 @@ import type { ApprovedSignal, Nudge, SharingCategory, SupportMode } from './sche
 
 /** Default item-consent lifetime (PRIVACY.md). Approvals are clamped to min(now + this, preset expiry). */
 export const SIGNAL_LIFETIME_MS = 24 * 60 * 60 * 1000;
-/** At most one nudge per pair per 24h (D018). */
-export const NUDGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+/** How long a delivered nudge stays in the recipient's tray (clamped to its source signal's expiry). */
+export const NUDGE_VISIBLE_MS = 24 * 60 * 60 * 1000;
+/**
+ * D059: the per-pair cooldown (D018) is removed; every nudge the reasoning decides on can be delivered. Kept as an
+ * alias of the visibility window only so existing imports compile. Never used as a delivery gate.
+ */
+export const NUDGE_COOLDOWN_MS = NUDGE_VISIBLE_MS;
+/** D059: a reasoning-timed nudge waits at most this long (always under the signal lifetime). */
+export const MAX_NUDGE_DELAY_MINUTES = 12 * 60;
 
 /**
  * Version of the disclosure notice/preview wording the owner consents to (PRIVACY.md honest copy).
@@ -343,15 +350,18 @@ export const DEFAULT_RECIPIENT_DELIVERY: RecipientDelivery = {
   optedIn: true, quietStartMinute: null, quietEndMinute: null, utcOffsetMinutes: 0,
 };
 
+/** 'cooldown' is never produced since D059; it stays in the type for older stored outcomes. */
 export type DeliveryDenyReason = 'not_opted_in' | 'quiet_hours' | 'cooldown';
 export type DeliveryDecision =
   | { deliver: true; reason: 'ok' }
   | { deliver: false; reason: DeliveryDenyReason };
 
-/** F5/F7: whether a nudge may be delivered now. Checked at coordination and again at commit. */
-export function nudgeDelivery(pref: RecipientDelivery, lastNudgeAt: Date | null, now: Date): DeliveryDecision {
+/**
+ * F5/F7: whether a nudge may be delivered now. Checked at coordination and again at commit. D059: no per-pair cooldown;
+ * `lastNudgeAt` is still accepted so callers don't change, and is ignored.
+ */
+export function nudgeDelivery(pref: RecipientDelivery, _lastNudgeAt: Date | null, now: Date): DeliveryDecision {
   if (!pref.optedIn) return { deliver: false, reason: 'not_opted_in' };
-  if (lastNudgeAt && now.getTime() - lastNudgeAt.getTime() < NUDGE_COOLDOWN_MS) return { deliver: false, reason: 'cooldown' };
   if (inQuietHours(pref, now)) return { deliver: false, reason: 'quiet_hours' };
   return { deliver: true, reason: 'ok' };
 }
@@ -460,9 +470,9 @@ export type NudgeDecision =
 
 /**
  * F7 guard for committing a coordinator-proposed nudge. Every source must still stand for this pair and recipient;
- * then the recipient's delivery controls (opt-out, cooldown, configured quiet hours) apply. Support-style settings
+ * then the recipient's delivery controls (opt-out, configured quiet hours) apply. Support-style settings
  * and consent ids/versions personalize the coordinator; they are not rechecked here. Expiry is clamped to the
- * earliest source and to one cooldown window. Model/coordinator output is input to this check, never authority.
+ * earliest source and to the visibility window (NUDGE_VISIBLE_MS). Model/coordinator output is input to this check, never authority.
  */
 export function guardNudgeCommit(req: NudgeCommitRequest, sources: ReadonlyMap<string, NudgeSource>,
   gate: DeliveryGate): NudgeDecision {
@@ -470,7 +480,7 @@ export function guardNudgeCommit(req: NudgeCommitRequest, sources: ReadonlyMap<s
   if (!isIn(Object.values(TEMPLATE_FOR_MODE), req.templateId)) return deny('invalid_schema');
   const ids = req.sourceSignalIds;
   if (ids.length === 0 || ids.length > 4 || new Set(ids).size !== ids.length) return deny('invalid_schema');
-  let expiresAtMs = gate.nowMs + NUDGE_COOLDOWN_MS;
+  let expiresAtMs = gate.nowMs + NUDGE_VISIBLE_MS;
   for (const id of ids) {
     const src = sources.get(id);
     if (!src) return deny('no_consent');

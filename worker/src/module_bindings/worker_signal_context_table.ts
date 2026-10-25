@@ -33,4 +33,5 @@ export default __t.row({
   presetVersion: __t.option(__t.u32()).name("preset_version"),
   presetExpiresAt: __t.option(__t.timestamp()).name("preset_expires_at"),
   presetRevoked: __t.bool().name("preset_revoked"),
+  deliverAfter: __t.option(__t.timestamp()).name("deliver_after"),
 });

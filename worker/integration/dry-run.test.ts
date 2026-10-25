@@ -244,12 +244,13 @@ describe('watcher: approved signals become jobs exactly once', () => {
     expect(await watcher.sweep()).toBe(0);
     expect(seen).toEqual(['nudge_proposed']);
 
-    // Restart: fresh process, fresh ledger. The pair is inside its cooldown, so the pre-check stops it.
+    // Restart: fresh process, fresh ledger. D059: the delivered signal has left worker_signal_context (one signal,
+    // at most one nudge), so the restarted worker starts no job at all: no model call, nothing committed.
     const droid2 = scriptedDroid();
     const second = liveWorker(w, source, droid2);
     const again: string[] = [];
     await new SignalWatcher(source, { run: j => second.runJob(j), onOutcome: o => again.push(...o.map(x => x.outcome)) }).sweep();
-    expect(again).toEqual(['cooldown']);
+    expect(again).toEqual([]);
     expect(droid2.calls()).toBe(0);
     expect(view(w, w.bob, mod.my_nudges)).toHaveLength(1);
   });
@@ -395,8 +396,9 @@ describe('dropped database connection mid-job: no lost or duplicate nudge, no bu
     await watcher.sweep();
     await watcher.sweep();
     expect(view(w, w.bob, mod.my_nudges)).toHaveLength(1);
-    // The retry sees the committed nudge through the delivery gate: cooldown, before any model call.
-    expect(outcomes).toEqual(['cooldown']);
+    // D059: the committed nudge used the signal, so it leaves the worker view and the retry never runs: no second
+    // model call and no second nudge.
+    expect(outcomes).toEqual([]);
     expect(droid.calls()).toBe(1);
   });
 });
