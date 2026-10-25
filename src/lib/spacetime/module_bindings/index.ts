@@ -43,6 +43,7 @@ import BlockDiscoveryUserReducer from "./block_discovery_user_reducer";
 import BlockIntroductionParticipantReducer from "./block_introduction_participant_reducer";
 import CancelIntroductionRequestReducer from "./cancel_introduction_request_reducer";
 import CancelPlanReducer from "./cancel_plan_reducer";
+import CloseIntroductionSuggestionRequestReducer from "./close_introduction_suggestion_request_reducer";
 import CommitIntroductionProposalReducer from "./commit_introduction_proposal_reducer";
 import CommitNudgeReducer from "./commit_nudge_reducer";
 import CommitPlanProposalReducer from "./commit_plan_proposal_reducer";
@@ -55,6 +56,7 @@ import PublishEventIntentReducer from "./publish_event_intent_reducer";
 import RecordCatalogueRunReducer from "./record_catalogue_run_reducer";
 import RegisterAccountReducer from "./register_account_reducer";
 import ReportDiscoveryUserReducer from "./report_discovery_user_reducer";
+import RequestIntroductionSuggestionReducer from "./request_introduction_suggestion_reducer";
 import RespondIntroductionRequestReducer from "./respond_introduction_request_reducer";
 import RespondPlanReducer from "./respond_plan_reducer";
 import ResumeRecipientReducer from "./resume_recipient_reducer";
@@ -92,6 +94,7 @@ import MyActivityApprovalsRow from "./my_activity_approvals_table";
 import MyDiscoveryProfileRow from "./my_discovery_profile_table";
 import MyEventIntentsRow from "./my_event_intents_table";
 import MyIntroductionProposalsRow from "./my_introduction_proposals_table";
+import MyIntroductionSuggestionRequestRow from "./my_introduction_suggestion_request_table";
 import MyIntroductionsRow from "./my_introductions_table";
 import MyInvitesRow from "./my_invites_table";
 import MyNudgeDeliveryRow from "./my_nudge_delivery_table";
@@ -106,6 +109,7 @@ import MySignalsRow from "./my_signals_table";
 import MyStandingConsentsRow from "./my_standing_consents_table";
 import MySupportPreferencesRow from "./my_support_preferences_table";
 import WorkerDeliveryRow from "./worker_delivery_table";
+import WorkerIntroductionRequestsRow from "./worker_introduction_requests_table";
 import WorkerPlanCandidatesRow from "./worker_plan_candidates_table";
 import WorkerSignalContextRow from "./worker_signal_context_table";
 import WorkerSupportPreferencesRow from "./worker_support_preferences_table";
@@ -177,6 +181,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyIntroductionProposalsRow),
+  myIntroductionSuggestionRequest: __table({
+    name: 'my_introduction_suggestion_request',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyIntroductionSuggestionRequestRow),
   myIntroductions: __table({
     name: 'my_introductions',
     indexes: [
@@ -275,6 +286,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, WorkerDeliveryRow),
+  workerIntroductionRequests: __table({
+    name: 'worker_introduction_requests',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, WorkerIntroductionRequestsRow),
   workerPlanCandidates: __table({
     name: 'worker_plan_candidates',
     indexes: [
@@ -309,6 +327,7 @@ const reducersSchema = __reducers(
   __reducerSchema("block_introduction_participant", BlockIntroductionParticipantReducer),
   __reducerSchema("cancel_introduction_request", CancelIntroductionRequestReducer),
   __reducerSchema("cancel_plan", CancelPlanReducer),
+  __reducerSchema("close_introduction_suggestion_request", CloseIntroductionSuggestionRequestReducer),
   __reducerSchema("commit_introduction_proposal", CommitIntroductionProposalReducer),
   __reducerSchema("commit_nudge", CommitNudgeReducer),
   __reducerSchema("commit_plan_proposal", CommitPlanProposalReducer),
@@ -321,6 +340,7 @@ const reducersSchema = __reducers(
   __reducerSchema("record_catalogue_run", RecordCatalogueRunReducer),
   __reducerSchema("register_account", RegisterAccountReducer),
   __reducerSchema("report_discovery_user", ReportDiscoveryUserReducer),
+  __reducerSchema("request_introduction_suggestion", RequestIntroductionSuggestionReducer),
   __reducerSchema("respond_introduction_request", RespondIntroductionRequestReducer),
   __reducerSchema("respond_plan", RespondPlanReducer),
   __reducerSchema("resume_recipient", ResumeRecipientReducer),
@@ -371,6 +391,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_event_intents": Omit<typeof tablesSchema.schemaType.tables["myEventIntents"], "accessorName"> & { readonly accessorName: "my_event_intents" };
     /** @deprecated Use `myIntroductionProposals` instead. This alias will be removed in the next major version. */
     readonly "my_introduction_proposals": Omit<typeof tablesSchema.schemaType.tables["myIntroductionProposals"], "accessorName"> & { readonly accessorName: "my_introduction_proposals" };
+    /** @deprecated Use `myIntroductionSuggestionRequest` instead. This alias will be removed in the next major version. */
+    readonly "my_introduction_suggestion_request": Omit<typeof tablesSchema.schemaType.tables["myIntroductionSuggestionRequest"], "accessorName"> & { readonly accessorName: "my_introduction_suggestion_request" };
     /** @deprecated Use `myIntroductions` instead. This alias will be removed in the next major version. */
     readonly "my_introductions": Omit<typeof tablesSchema.schemaType.tables["myIntroductions"], "accessorName"> & { readonly accessorName: "my_introductions" };
     /** @deprecated Use `myInvites` instead. This alias will be removed in the next major version. */
@@ -399,6 +421,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_support_preferences": Omit<typeof tablesSchema.schemaType.tables["mySupportPreferences"], "accessorName"> & { readonly accessorName: "my_support_preferences" };
     /** @deprecated Use `workerDelivery` instead. This alias will be removed in the next major version. */
     readonly "worker_delivery": Omit<typeof tablesSchema.schemaType.tables["workerDelivery"], "accessorName"> & { readonly accessorName: "worker_delivery" };
+    /** @deprecated Use `workerIntroductionRequests` instead. This alias will be removed in the next major version. */
+    readonly "worker_introduction_requests": Omit<typeof tablesSchema.schemaType.tables["workerIntroductionRequests"], "accessorName"> & { readonly accessorName: "worker_introduction_requests" };
     /** @deprecated Use `workerPlanCandidates` instead. This alias will be removed in the next major version. */
     readonly "worker_plan_candidates": Omit<typeof tablesSchema.schemaType.tables["workerPlanCandidates"], "accessorName"> & { readonly accessorName: "worker_plan_candidates" };
     /** @deprecated Use `workerSignalContext` instead. This alias will be removed in the next major version. */
@@ -432,6 +456,7 @@ const tableAccessorAliases = {
   "my_discovery_profile": "myDiscoveryProfile",
   "my_event_intents": "myEventIntents",
   "my_introduction_proposals": "myIntroductionProposals",
+  "my_introduction_suggestion_request": "myIntroductionSuggestionRequest",
   "my_introductions": "myIntroductions",
   "my_invites": "myInvites",
   "my_nudge_delivery": "myNudgeDelivery",
@@ -446,6 +471,7 @@ const tableAccessorAliases = {
   "my_standing_consents": "myStandingConsents",
   "my_support_preferences": "mySupportPreferences",
   "worker_delivery": "workerDelivery",
+  "worker_introduction_requests": "workerIntroductionRequests",
   "worker_plan_candidates": "workerPlanCandidates",
   "worker_signal_context": "workerSignalContext",
   "worker_support_preferences": "workerSupportPreferences",
@@ -487,6 +513,8 @@ export type DbView = __DbViewBase & {
   readonly "my_event_intents": __DbViewBase["myEventIntents"];
   /** @deprecated Use `myIntroductionProposals` instead. This alias will be removed in the next major version. */
   readonly "my_introduction_proposals": __DbViewBase["myIntroductionProposals"];
+  /** @deprecated Use `myIntroductionSuggestionRequest` instead. This alias will be removed in the next major version. */
+  readonly "my_introduction_suggestion_request": __DbViewBase["myIntroductionSuggestionRequest"];
   /** @deprecated Use `myIntroductions` instead. This alias will be removed in the next major version. */
   readonly "my_introductions": __DbViewBase["myIntroductions"];
   /** @deprecated Use `myInvites` instead. This alias will be removed in the next major version. */
@@ -515,6 +543,8 @@ export type DbView = __DbViewBase & {
   readonly "my_support_preferences": __DbViewBase["mySupportPreferences"];
   /** @deprecated Use `workerDelivery` instead. This alias will be removed in the next major version. */
   readonly "worker_delivery": __DbViewBase["workerDelivery"];
+  /** @deprecated Use `workerIntroductionRequests` instead. This alias will be removed in the next major version. */
+  readonly "worker_introduction_requests": __DbViewBase["workerIntroductionRequests"];
   /** @deprecated Use `workerPlanCandidates` instead. This alias will be removed in the next major version. */
   readonly "worker_plan_candidates": __DbViewBase["workerPlanCandidates"];
   /** @deprecated Use `workerSignalContext` instead. This alias will be removed in the next major version. */
@@ -543,6 +573,8 @@ export type Tables = __TablesBase & {
   readonly "my_event_intents": __TablesBase["myEventIntents"];
   /** @deprecated Use `myIntroductionProposals` instead. This alias will be removed in the next major version. */
   readonly "my_introduction_proposals": __TablesBase["myIntroductionProposals"];
+  /** @deprecated Use `myIntroductionSuggestionRequest` instead. This alias will be removed in the next major version. */
+  readonly "my_introduction_suggestion_request": __TablesBase["myIntroductionSuggestionRequest"];
   /** @deprecated Use `myIntroductions` instead. This alias will be removed in the next major version. */
   readonly "my_introductions": __TablesBase["myIntroductions"];
   /** @deprecated Use `myInvites` instead. This alias will be removed in the next major version. */
@@ -571,6 +603,8 @@ export type Tables = __TablesBase & {
   readonly "my_support_preferences": __TablesBase["mySupportPreferences"];
   /** @deprecated Use `workerDelivery` instead. This alias will be removed in the next major version. */
   readonly "worker_delivery": __TablesBase["workerDelivery"];
+  /** @deprecated Use `workerIntroductionRequests` instead. This alias will be removed in the next major version. */
+  readonly "worker_introduction_requests": __TablesBase["workerIntroductionRequests"];
   /** @deprecated Use `workerPlanCandidates` instead. This alias will be removed in the next major version. */
   readonly "worker_plan_candidates": __TablesBase["workerPlanCandidates"];
   /** @deprecated Use `workerSignalContext` instead. This alias will be removed in the next major version. */

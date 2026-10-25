@@ -4,6 +4,33 @@ Read `docs/roles/ai.md` and README **R0–R6** for current assignments. The hist
 
 ---
 
+# AI handoff — D048 introduction suggestions wired (2026-10-25 ~01:10Z)
+
+- **What:** README D045 AI Phases 1–2. A viewer taps "Suggest someone for me" on Discover. The worker reads that open request with up to 10 visible, tag-overlapping candidates from `worker_introduction_requests` (opaque refs, revisions and overlap only) and runs the existing `IntroductionCoordinator`. It commits at most one suggestion through the unchanged `commit_introduction_proposal`, then closes the request. Nobody is contacted; the viewer still chooses whether to send a real request. Spec: DECISIONS D048; runbook: `worker/README.md` § Introductions.
+- **Cost:** `DOR_WORKER_INTRODUCTIONS=deterministic` (default) makes zero model calls. `agent` makes ≤ 1 Droid call + 1 repair, and only for 2–3 candidates. `off` disables it. Discovery itself still makes zero calls.
+- **Deploy order:**
+  1. Merge.
+  2. Nimisha republishes Maincloud (additive migration).
+  3. Restart the worker; the `introductions` log should show enabled 1.
+  - A worker built from these bindings against the old module now disables only the missing path; it no longer fails the whole subscription.
+- **Evidence:** offline only.
+  - module 222
+  - ai:check 69/50/53
+  - test:app 436 + 1 todo
+  - build OK
+  - 3/3 mutations caught
+- **E2E checklist (AI legs):**
+  1. Two published accounts in the demo area share a tag. A taps the button; within one sweep A sees one suggestion, and B sees nothing.
+  2. A sends the request from the suggestion; B accepts.
+  3. A asks again: B is never re-suggested.
+  4. With no overlap: the button gives no suggestion and the worker logs `intro_outcome no_candidates modelCalls 0`.
+  5. Third account: no access to anyone's request (the worker view is empty for non-workers).
+- **Open:**
+  - Cyber review of the module additions.
+  - The status view (`my_introduction_suggestion_request`) is not in the app subscription until after the republish; adding it is a one-line follow-up.
+  - DS ranker in place of `rankByOverlap`.
+  - D047 ACK (opaque signal IDs) still pending from AI.
+
 # AI handoff — backend lock-in (2026-10-24 ~20:10Z)
 
 - **Done (offline):**

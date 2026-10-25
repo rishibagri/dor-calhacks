@@ -109,3 +109,35 @@ test('live connection: plans are enabled only when the bindings carry both the v
   assert.deepEqual(Object.keys(fresh.calls[0]).sort(), ['approvalIds', 'basisKind', 'basisRef', 'decidedBy', 'eventId', 'expiresAt',
     'intentIds', 'intentVersions', 'planId']);
 });
+
+test('live connection: an optional view the server rejects (bindings newer than the module) disables only its path', async () => {
+  const { SpacetimeWorkerConnection } = await import('../dist/index.js');
+  const subscribed = [];
+  const table = rows => ({ iter: () => rows });
+  const conn = {
+    db: { workerSignalContext: table([]), workerDelivery: table([]), workerSupportPreferences: table([]),
+      workerPlanCandidates: table([row()]), workerIntroductionRequests: table([]) },
+    reducers: { commitNudge: async () => {}, commitPlanProposal: async () => {}, commitIntroductionProposal: async () => {},
+      closeIntroductionSuggestionRequest: async () => {} },
+    subscriptionBuilder() {
+      const b = { onApplied: cb => { b.applied = cb; return b; }, onError: cb => { b.error = cb; return b; },
+        subscribe: qs => {
+          subscribed.push(...qs);
+          // SYNTHETIC: the published module predates D048, so the server rejects that one view.
+          queueMicrotask(() => (qs.some(q => q.includes('worker_introduction_requests')) ? b.error() : b.applied()));
+        } };
+      return b;
+    },
+    disconnect() {},
+  };
+  const builder = { withUri: () => builder, withDatabaseName: () => builder, withToken: () => builder,
+    onConnect: cb => { builder.connect = cb; return builder; }, onConnectError: () => builder, onDisconnect: () => builder,
+    build: () => { builder.connect(conn, { toHexString: () => 'ab'.repeat(16) }); return conn; } };
+  const c = await SpacetimeWorkerConnection.connect({ uri: 'ws://x', database: 'dor', token: 't', builder: () => builder });
+  assert.ok(subscribed.includes('SELECT * FROM worker_introduction_requests'));
+  assert.equal(c.isAlive, true);
+  assert.equal(c.introductionRequests, undefined);
+  assert.equal(c.closeIntroductionRequest, undefined);
+  assert.equal(mapRows(await c.planCandidates(), toPlanCandidate).length, 1); // plans unaffected
+  assert.equal(typeof c.commitIntroductionProposal, 'function');
+});

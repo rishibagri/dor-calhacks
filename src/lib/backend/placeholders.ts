@@ -73,7 +73,7 @@ export function createOfflineSharedState(
     publishDiscoveryProfile: refuse, withdrawDiscoveryProfile: refuse, setDiscoveryArea: refuse,
     blockDiscoveryUser: refuse, setDiscoveryPage: refuse, sendIntroductionRequest: refuse, respondIntroductionRequest: refuse,
     cancelIntroductionRequest: refuse, blockIntroductionParticipant: refuse, reportDiscoveryUser: refuse,
-    dismissIntroductionProposal: refuse, publishEventIntent: refuse, revokeEventIntent: refuse,
+    dismissIntroductionProposal: refuse, requestIntroductionSuggestion: refuse, publishEventIntent: refuse, revokeEventIntent: refuse,
     revokeActivityInterest: refuse, respondPlan: refuse, cancelPlan: refuse,
     myAccount: () => null, myPairs: () => EMPTY, myInvites: () => EMPTY, myPresets: () => EMPTY,
     myPresetAssignments: () => EMPTY, myNudges: () => EMPTY, myReceipts: () => EMPTY,

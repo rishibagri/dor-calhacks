@@ -159,6 +159,11 @@ export function guardDiscoveryVisibility(viewer: DiscoveryParty, target: Discove
   return { ok: true };
 }
 
+/** Why `p` cannot take part in discovery right now (null = may): the same own-state check every card view makes. */
+export function discoveryParticipantDenial(p: DiscoveryParty, nowMs: number | null): DiscoveryDenyReason | null {
+  return active(p, nowMs);
+}
+
 export interface DiscoveryCardProjection {
   cardRef: string;
   displayName: string;
@@ -202,6 +207,13 @@ export const INTRODUCTION_PROPOSAL_LIFETIME_MS = 24 * 60 * 60 * 1000;
 /** After a decline or an unanswered lapse, the same sender cannot ask the same person again for this long. */
 export const INTRODUCTION_DECLINE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 export const MAX_PENDING_OUTGOING_INTRODUCTIONS = 5;
+/**
+ * Viewer-initiated AI suggestion requests (D048, PROPOSED). An open request the worker has not picked up lapses
+ * after this, so a suggestion never shows up long after the viewer asked. At most this many visible candidates
+ * per request reach the worker (opaque refs, revisions and published overlap only).
+ */
+export const INTRODUCTION_SUGGESTION_REQUEST_LIFETIME_MS = 10 * 60 * 1000;
+export const WORKER_INTRODUCTION_CANDIDATE_LIMIT = 10;
 export const MAX_CLIENT_REQUEST_ID = 64;
 /** Coarse report reasons only; free text could carry personal data and would reach moderators verbatim. */
 export const DISCOVERY_REPORT_REASONS = ['spam', 'harassment', 'impersonation', 'inappropriate_profile', 'other'] as const;
@@ -220,6 +232,7 @@ export const DISCOVERY_RATE_LIMITS = {
   publish: { windowMs: 24 * 60 * 60 * 1000, max: 20 },
   event_intent: { windowMs: 24 * 60 * 60 * 1000, max: 30 },
   activity_approval: { windowMs: 24 * 60 * 60 * 1000, max: 20 },
+  introduction_suggestion: { windowMs: 24 * 60 * 60 * 1000, max: 10 },
 } as const;
 export type DiscoveryRateAction = keyof typeof DISCOVERY_RATE_LIMITS;
 export interface RateWindow { windowStartMs: number; count: number }
