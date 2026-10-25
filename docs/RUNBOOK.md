@@ -75,16 +75,19 @@ Local only; nothing here is a hosted deploy. Evidence so far is the local smoke 
 
 **Worker safety:** any standing approved signal causes a paid Droid call once the worker runs. Revoke test signals first and never leave the worker running unattended.
 
-## Hosted deploy (not yet done)
-Nothing below has been done; hosting is pending an owner decision.
-- [ ] `spacetime login`; publish to maincloud
-- [ ] `npm run setup:module -- --server maincloud --run` and `npm run setup:worker -- --server maincloud --run`
+## Hosted deploy (partly done)
+Shared Maincloud database `dor`, owned by Nimisha's login, first published 2026-10-24 from main `53795c2` and republished from `3bf3e25` (data kept). It does not have D044 or other module changes on main after `3bf3e25` yet; republishing is an owner decision. Connection details and per-role setup: `docs/team-messages/maincloud.md`. Run every hosted admin call under that owner login, and never use `--reset` against it.
+- [x] `spacetime login`; publish to maincloud (`spacetime publish -s maincloud --module-path spacetimedb -y dor`, no `--delete-data`)
+- [x] `set_auth_issuer` / `set_auth_audience` (audience `dor-spacetimedb`; the old `kinetic-spacetimedb` entry is removed by the owner, check with `SELECT * FROM auth_audience`). `npm run setup:module -- --server maincloud --run` is safe to rerun: it republishes without deleting data and the config calls are idempotent.
+- [x] Discovery allow-lists loaded, extensions **off**
+- [x] Worker identity allow-listed by the owner (Adam's `0xc200188a…5ce5`; the unused `c200f05e…78c6` was removed and its token file deleted)
 - [ ] Set `NEXT_PUBLIC_SPACETIMEDB_URI=wss://maincloud.spacetimedb.com` (and `NEXT_PUBLIC_SPACETIMEDB_MODULE`, `DOR_SPACETIME_URI`, `DOR_SPACETIME_MODULE` to match)
 - [ ] Vercel (or another host) with the Clerk env vars (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_CLERK_SPACETIME_JWT_TEMPLATE`, `DOR_CLERK_ISSUER`, `DOR_AUTH_AUDIENCE`) and server-only keys (`CLERK_SECRET_KEY`, `ANTHROPIC_API_KEY`, `CARTESIA_API_KEY`, `DOR_WORKER_AUTH_TOKEN`); never use `NEXT_PUBLIC_` for secrets
 - [ ] Clerk allowed origins/redirects for the production domain
 - [ ] Worker host: a long-running Node process (not serverless) with `DOR_SPACETIME_WORKER_TOKEN`, `FACTORY_API_KEY`, `DOR_WORKER_AUTH_TOKEN` and the `DOR_SPACETIME_*` env
 - [ ] HTTPS on the app origin (required for the PWA and microphone)
-- [ ] Rerun `scripts/smoke-core3.ts` against hosted (`SMOKE_SERVER=maincloud`) and record revision and results
+- [x] `scripts/smoke-core3.ts` against hosted (`SMOKE_SERVER=maincloud`): 26/26 by a non-owner (Adam, worker stopped, no paid calls), after DS's 8/8 anonymous/worker denial checks (team message)
+- [ ] `--sweep` (owner run) and the D041/D043 live checks; rerun the smoke after any republish
 
 ## Extensions (optional, not core)
 Discover/Events UI is on by default (D045; hide with `NEXT_PUBLIC_DOR_DISCOVERY=off`). Bootstrap with `--extensions`, and load events with `node scripts/ingest-catalogue.ts --fixture src/lib/catalogue/fixtures/apify-sample.json --commit <db>` (synthetic) or `--fetch` after Cyber has reviewed the Apify task.
