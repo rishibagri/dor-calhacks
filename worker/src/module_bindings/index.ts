@@ -42,6 +42,7 @@ import AssignRelationshipPresetReducer from "./assign_relationship_preset_reduce
 import BlockDiscoveryUserReducer from "./block_discovery_user_reducer";
 import BlockIntroductionParticipantReducer from "./block_introduction_participant_reducer";
 import CancelIntroductionRequestReducer from "./cancel_introduction_request_reducer";
+import CancelNudgeRequestReducer from "./cancel_nudge_request_reducer";
 import CancelPlanReducer from "./cancel_plan_reducer";
 import CloseIntroductionSuggestionRequestReducer from "./close_introduction_suggestion_request_reducer";
 import CommitIntroductionProposalReducer from "./commit_introduction_proposal_reducer";
@@ -58,6 +59,7 @@ import RegisterAccountReducer from "./register_account_reducer";
 import ReportDiscoveryUserReducer from "./report_discovery_user_reducer";
 import RequestIntroductionSuggestionReducer from "./request_introduction_suggestion_reducer";
 import RespondIntroductionRequestReducer from "./respond_introduction_request_reducer";
+import RespondNudgeRequestReducer from "./respond_nudge_request_reducer";
 import RespondPlanReducer from "./respond_plan_reducer";
 import ResumeRecipientReducer from "./resume_recipient_reducer";
 import RevisePlanProposalReducer from "./revise_plan_proposal_reducer";
@@ -67,12 +69,14 @@ import RevokeSignalReducer from "./revoke_signal_reducer";
 import RevokeStandingConsentReducer from "./revoke_standing_consent_reducer";
 import RevokeSupportPreferencesReducer from "./revoke_support_preferences_reducer";
 import SendIntroductionRequestReducer from "./send_introduction_request_reducer";
+import SendNudgeRequestReducer from "./send_nudge_request_reducer";
 import SetAuthAudienceReducer from "./set_auth_audience_reducer";
 import SetAuthIssuerReducer from "./set_auth_issuer_reducer";
 import SetDiscoveryAreaReducer from "./set_discovery_area_reducer";
 import SetDiscoveryConfigReducer from "./set_discovery_config_reducer";
 import SetDiscoveryPageReducer from "./set_discovery_page_reducer";
 import SetNudgeDeliveryReducer from "./set_nudge_delivery_reducer";
+import SetProfileDetailReducer from "./set_profile_detail_reducer";
 import SetRelationshipPresetReducer from "./set_relationship_preset_reducer";
 import SetStandingConsentReducer from "./set_standing_consent_reducer";
 import SetSupportPreferencesReducer from "./set_support_preferences_reducer";
@@ -89,8 +93,10 @@ import CatalogueEventsRow from "./catalogue_events_table";
 import CatalogueStatusRow from "./catalogue_status_table";
 import DiscoveryCardsRow from "./discovery_cards_table";
 import EventCompanionsRow from "./event_companions_table";
+import FofCardsRow from "./fof_cards_table";
 import MyAccountRow from "./my_account_table";
 import MyActivityApprovalsRow from "./my_activity_approvals_table";
+import MyConnectionProfilesRow from "./my_connection_profiles_table";
 import MyDiscoveryProfileRow from "./my_discovery_profile_table";
 import MyEventIntentsRow from "./my_event_intents_table";
 import MyIntroductionProposalsRow from "./my_introduction_proposals_table";
@@ -98,11 +104,13 @@ import MyIntroductionSuggestionRequestRow from "./my_introduction_suggestion_req
 import MyIntroductionsRow from "./my_introductions_table";
 import MyInvitesRow from "./my_invites_table";
 import MyNudgeDeliveryRow from "./my_nudge_delivery_table";
+import MyNudgeRequestsRow from "./my_nudge_requests_table";
 import MyNudgesRow from "./my_nudges_table";
 import MyPairsRow from "./my_pairs_table";
 import MyPlansRow from "./my_plans_table";
 import MyPresetAssignmentsRow from "./my_preset_assignments_table";
 import MyPresetsRow from "./my_presets_table";
+import MyProfileDetailRow from "./my_profile_detail_table";
 import MyReceiptsRow from "./my_receipts_table";
 import MyRecipientPausesRow from "./my_recipient_pauses_table";
 import MySignalsRow from "./my_signals_table";
@@ -146,6 +154,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, EventCompanionsRow),
+  fofCards: __table({
+    name: 'fof_cards',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, FofCardsRow),
   myAccount: __table({
     name: 'my_account',
     indexes: [
@@ -160,6 +175,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyActivityApprovalsRow),
+  myConnectionProfiles: __table({
+    name: 'my_connection_profiles',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyConnectionProfilesRow),
   myDiscoveryProfile: __table({
     name: 'my_discovery_profile',
     indexes: [
@@ -209,6 +231,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyNudgeDeliveryRow),
+  myNudgeRequests: __table({
+    name: 'my_nudge_requests',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyNudgeRequestsRow),
   myNudges: __table({
     name: 'my_nudges',
     indexes: [
@@ -244,6 +273,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyPresetsRow),
+  myProfileDetail: __table({
+    name: 'my_profile_detail',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyProfileDetailRow),
   myReceipts: __table({
     name: 'my_receipts',
     indexes: [
@@ -326,6 +362,7 @@ const reducersSchema = __reducers(
   __reducerSchema("block_discovery_user", BlockDiscoveryUserReducer),
   __reducerSchema("block_introduction_participant", BlockIntroductionParticipantReducer),
   __reducerSchema("cancel_introduction_request", CancelIntroductionRequestReducer),
+  __reducerSchema("cancel_nudge_request", CancelNudgeRequestReducer),
   __reducerSchema("cancel_plan", CancelPlanReducer),
   __reducerSchema("close_introduction_suggestion_request", CloseIntroductionSuggestionRequestReducer),
   __reducerSchema("commit_introduction_proposal", CommitIntroductionProposalReducer),
@@ -342,6 +379,7 @@ const reducersSchema = __reducers(
   __reducerSchema("report_discovery_user", ReportDiscoveryUserReducer),
   __reducerSchema("request_introduction_suggestion", RequestIntroductionSuggestionReducer),
   __reducerSchema("respond_introduction_request", RespondIntroductionRequestReducer),
+  __reducerSchema("respond_nudge_request", RespondNudgeRequestReducer),
   __reducerSchema("respond_plan", RespondPlanReducer),
   __reducerSchema("resume_recipient", ResumeRecipientReducer),
   __reducerSchema("revise_plan_proposal", RevisePlanProposalReducer),
@@ -351,12 +389,14 @@ const reducersSchema = __reducers(
   __reducerSchema("revoke_standing_consent", RevokeStandingConsentReducer),
   __reducerSchema("revoke_support_preferences", RevokeSupportPreferencesReducer),
   __reducerSchema("send_introduction_request", SendIntroductionRequestReducer),
+  __reducerSchema("send_nudge_request", SendNudgeRequestReducer),
   __reducerSchema("set_auth_audience", SetAuthAudienceReducer),
   __reducerSchema("set_auth_issuer", SetAuthIssuerReducer),
   __reducerSchema("set_discovery_area", SetDiscoveryAreaReducer),
   __reducerSchema("set_discovery_config", SetDiscoveryConfigReducer),
   __reducerSchema("set_discovery_page", SetDiscoveryPageReducer),
   __reducerSchema("set_nudge_delivery", SetNudgeDeliveryReducer),
+  __reducerSchema("set_profile_detail", SetProfileDetailReducer),
   __reducerSchema("set_relationship_preset", SetRelationshipPresetReducer),
   __reducerSchema("set_standing_consent", SetStandingConsentReducer),
   __reducerSchema("set_support_preferences", SetSupportPreferencesReducer),
@@ -381,10 +421,14 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "discovery_cards": Omit<typeof tablesSchema.schemaType.tables["discoveryCards"], "accessorName"> & { readonly accessorName: "discovery_cards" };
     /** @deprecated Use `eventCompanions` instead. This alias will be removed in the next major version. */
     readonly "event_companions": Omit<typeof tablesSchema.schemaType.tables["eventCompanions"], "accessorName"> & { readonly accessorName: "event_companions" };
+    /** @deprecated Use `fofCards` instead. This alias will be removed in the next major version. */
+    readonly "fof_cards": Omit<typeof tablesSchema.schemaType.tables["fofCards"], "accessorName"> & { readonly accessorName: "fof_cards" };
     /** @deprecated Use `myAccount` instead. This alias will be removed in the next major version. */
     readonly "my_account": Omit<typeof tablesSchema.schemaType.tables["myAccount"], "accessorName"> & { readonly accessorName: "my_account" };
     /** @deprecated Use `myActivityApprovals` instead. This alias will be removed in the next major version. */
     readonly "my_activity_approvals": Omit<typeof tablesSchema.schemaType.tables["myActivityApprovals"], "accessorName"> & { readonly accessorName: "my_activity_approvals" };
+    /** @deprecated Use `myConnectionProfiles` instead. This alias will be removed in the next major version. */
+    readonly "my_connection_profiles": Omit<typeof tablesSchema.schemaType.tables["myConnectionProfiles"], "accessorName"> & { readonly accessorName: "my_connection_profiles" };
     /** @deprecated Use `myDiscoveryProfile` instead. This alias will be removed in the next major version. */
     readonly "my_discovery_profile": Omit<typeof tablesSchema.schemaType.tables["myDiscoveryProfile"], "accessorName"> & { readonly accessorName: "my_discovery_profile" };
     /** @deprecated Use `myEventIntents` instead. This alias will be removed in the next major version. */
@@ -399,6 +443,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_invites": Omit<typeof tablesSchema.schemaType.tables["myInvites"], "accessorName"> & { readonly accessorName: "my_invites" };
     /** @deprecated Use `myNudgeDelivery` instead. This alias will be removed in the next major version. */
     readonly "my_nudge_delivery": Omit<typeof tablesSchema.schemaType.tables["myNudgeDelivery"], "accessorName"> & { readonly accessorName: "my_nudge_delivery" };
+    /** @deprecated Use `myNudgeRequests` instead. This alias will be removed in the next major version. */
+    readonly "my_nudge_requests": Omit<typeof tablesSchema.schemaType.tables["myNudgeRequests"], "accessorName"> & { readonly accessorName: "my_nudge_requests" };
     /** @deprecated Use `myNudges` instead. This alias will be removed in the next major version. */
     readonly "my_nudges": Omit<typeof tablesSchema.schemaType.tables["myNudges"], "accessorName"> & { readonly accessorName: "my_nudges" };
     /** @deprecated Use `myPairs` instead. This alias will be removed in the next major version. */
@@ -409,6 +455,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_preset_assignments": Omit<typeof tablesSchema.schemaType.tables["myPresetAssignments"], "accessorName"> & { readonly accessorName: "my_preset_assignments" };
     /** @deprecated Use `myPresets` instead. This alias will be removed in the next major version. */
     readonly "my_presets": Omit<typeof tablesSchema.schemaType.tables["myPresets"], "accessorName"> & { readonly accessorName: "my_presets" };
+    /** @deprecated Use `myProfileDetail` instead. This alias will be removed in the next major version. */
+    readonly "my_profile_detail": Omit<typeof tablesSchema.schemaType.tables["myProfileDetail"], "accessorName"> & { readonly accessorName: "my_profile_detail" };
     /** @deprecated Use `myReceipts` instead. This alias will be removed in the next major version. */
     readonly "my_receipts": Omit<typeof tablesSchema.schemaType.tables["myReceipts"], "accessorName"> & { readonly accessorName: "my_receipts" };
     /** @deprecated Use `myRecipientPauses` instead. This alias will be removed in the next major version. */
@@ -451,8 +499,10 @@ const tableAccessorAliases = {
   "catalogue_status": "catalogueStatus",
   "discovery_cards": "discoveryCards",
   "event_companions": "eventCompanions",
+  "fof_cards": "fofCards",
   "my_account": "myAccount",
   "my_activity_approvals": "myActivityApprovals",
+  "my_connection_profiles": "myConnectionProfiles",
   "my_discovery_profile": "myDiscoveryProfile",
   "my_event_intents": "myEventIntents",
   "my_introduction_proposals": "myIntroductionProposals",
@@ -460,11 +510,13 @@ const tableAccessorAliases = {
   "my_introductions": "myIntroductions",
   "my_invites": "myInvites",
   "my_nudge_delivery": "myNudgeDelivery",
+  "my_nudge_requests": "myNudgeRequests",
   "my_nudges": "myNudges",
   "my_pairs": "myPairs",
   "my_plans": "myPlans",
   "my_preset_assignments": "myPresetAssignments",
   "my_presets": "myPresets",
+  "my_profile_detail": "myProfileDetail",
   "my_receipts": "myReceipts",
   "my_recipient_pauses": "myRecipientPauses",
   "my_signals": "mySignals",
@@ -503,10 +555,14 @@ export type DbView = __DbViewBase & {
   readonly "discovery_cards": __DbViewBase["discoveryCards"];
   /** @deprecated Use `eventCompanions` instead. This alias will be removed in the next major version. */
   readonly "event_companions": __DbViewBase["eventCompanions"];
+  /** @deprecated Use `fofCards` instead. This alias will be removed in the next major version. */
+  readonly "fof_cards": __DbViewBase["fofCards"];
   /** @deprecated Use `myAccount` instead. This alias will be removed in the next major version. */
   readonly "my_account": __DbViewBase["myAccount"];
   /** @deprecated Use `myActivityApprovals` instead. This alias will be removed in the next major version. */
   readonly "my_activity_approvals": __DbViewBase["myActivityApprovals"];
+  /** @deprecated Use `myConnectionProfiles` instead. This alias will be removed in the next major version. */
+  readonly "my_connection_profiles": __DbViewBase["myConnectionProfiles"];
   /** @deprecated Use `myDiscoveryProfile` instead. This alias will be removed in the next major version. */
   readonly "my_discovery_profile": __DbViewBase["myDiscoveryProfile"];
   /** @deprecated Use `myEventIntents` instead. This alias will be removed in the next major version. */
@@ -521,6 +577,8 @@ export type DbView = __DbViewBase & {
   readonly "my_invites": __DbViewBase["myInvites"];
   /** @deprecated Use `myNudgeDelivery` instead. This alias will be removed in the next major version. */
   readonly "my_nudge_delivery": __DbViewBase["myNudgeDelivery"];
+  /** @deprecated Use `myNudgeRequests` instead. This alias will be removed in the next major version. */
+  readonly "my_nudge_requests": __DbViewBase["myNudgeRequests"];
   /** @deprecated Use `myNudges` instead. This alias will be removed in the next major version. */
   readonly "my_nudges": __DbViewBase["myNudges"];
   /** @deprecated Use `myPairs` instead. This alias will be removed in the next major version. */
@@ -531,6 +589,8 @@ export type DbView = __DbViewBase & {
   readonly "my_preset_assignments": __DbViewBase["myPresetAssignments"];
   /** @deprecated Use `myPresets` instead. This alias will be removed in the next major version. */
   readonly "my_presets": __DbViewBase["myPresets"];
+  /** @deprecated Use `myProfileDetail` instead. This alias will be removed in the next major version. */
+  readonly "my_profile_detail": __DbViewBase["myProfileDetail"];
   /** @deprecated Use `myReceipts` instead. This alias will be removed in the next major version. */
   readonly "my_receipts": __DbViewBase["myReceipts"];
   /** @deprecated Use `myRecipientPauses` instead. This alias will be removed in the next major version. */
@@ -563,10 +623,14 @@ export type Tables = __TablesBase & {
   readonly "discovery_cards": __TablesBase["discoveryCards"];
   /** @deprecated Use `eventCompanions` instead. This alias will be removed in the next major version. */
   readonly "event_companions": __TablesBase["eventCompanions"];
+  /** @deprecated Use `fofCards` instead. This alias will be removed in the next major version. */
+  readonly "fof_cards": __TablesBase["fofCards"];
   /** @deprecated Use `myAccount` instead. This alias will be removed in the next major version. */
   readonly "my_account": __TablesBase["myAccount"];
   /** @deprecated Use `myActivityApprovals` instead. This alias will be removed in the next major version. */
   readonly "my_activity_approvals": __TablesBase["myActivityApprovals"];
+  /** @deprecated Use `myConnectionProfiles` instead. This alias will be removed in the next major version. */
+  readonly "my_connection_profiles": __TablesBase["myConnectionProfiles"];
   /** @deprecated Use `myDiscoveryProfile` instead. This alias will be removed in the next major version. */
   readonly "my_discovery_profile": __TablesBase["myDiscoveryProfile"];
   /** @deprecated Use `myEventIntents` instead. This alias will be removed in the next major version. */
@@ -581,6 +645,8 @@ export type Tables = __TablesBase & {
   readonly "my_invites": __TablesBase["myInvites"];
   /** @deprecated Use `myNudgeDelivery` instead. This alias will be removed in the next major version. */
   readonly "my_nudge_delivery": __TablesBase["myNudgeDelivery"];
+  /** @deprecated Use `myNudgeRequests` instead. This alias will be removed in the next major version. */
+  readonly "my_nudge_requests": __TablesBase["myNudgeRequests"];
   /** @deprecated Use `myNudges` instead. This alias will be removed in the next major version. */
   readonly "my_nudges": __TablesBase["myNudges"];
   /** @deprecated Use `myPairs` instead. This alias will be removed in the next major version. */
@@ -591,6 +657,8 @@ export type Tables = __TablesBase & {
   readonly "my_preset_assignments": __TablesBase["myPresetAssignments"];
   /** @deprecated Use `myPresets` instead. This alias will be removed in the next major version. */
   readonly "my_presets": __TablesBase["myPresets"];
+  /** @deprecated Use `myProfileDetail` instead. This alias will be removed in the next major version. */
+  readonly "my_profile_detail": __TablesBase["myProfileDetail"];
   /** @deprecated Use `myReceipts` instead. This alias will be removed in the next major version. */
   readonly "my_receipts": __TablesBase["myReceipts"];
   /** @deprecated Use `myRecipientPauses` instead. This alias will be removed in the next major version. */

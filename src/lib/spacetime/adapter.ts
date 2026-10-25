@@ -217,6 +217,14 @@ export class SpacetimeSharedState implements SharedStateController {
     this.call('request_introduction_suggestion', () => ({ clientRequestId: id }));
   reportDiscoveryUser: SharedStatePort['reportDiscoveryUser'] = (t, reason) =>
     this.call('report_discovery_user', () => A.reportDiscoveryUser(t, reason));
+  setProfileDetail: SharedStatePort['setProfileDetail'] = (d) => this.call('set_profile_detail', () => ({
+    bio: d.bio, homeArea: d.homeArea, availability: d.availability, upTo: d.upTo, interests: d.interests, answers: [],
+  }));
+  sendNudgeRequest = (candidateRef: string, message: string) =>
+    this.call('send_nudge_request', () => ({ candidateRef, message }));
+  respondNudgeRequest = (requestId: string, accept: boolean) =>
+    this.call('respond_nudge_request', () => ({ requestId, accept }));
+  cancelNudgeRequest = (requestId: string) => this.call('cancel_nudge_request', () => ({ requestId }));
 
   // ---- views ---------------------------------------------------------------
   myAccount = () => this.views.account;
@@ -242,6 +250,10 @@ export class SpacetimeSharedState implements SharedStateController {
   eventCompanions = () => this.views.companions;
   myActivityApprovals = () => this.views.activityApprovals;
   myPlans = () => this.views.plans;
+  myProfileDetail = () => this.views.network.profile;
+  fofCards = () => this.views.network.fofCards;
+  myNudgeRequests = () => this.views.network.requests;
+  myConnectionProfiles = () => this.views.network.connections;
   unreadable = () => this.views.unreadable;
 }
 

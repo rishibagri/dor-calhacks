@@ -1,19 +1,21 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Caveat, Courier_Prime, Newsreader, Reenie_Beanie } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
 import { BackendProvider } from '@/lib/backend';
 import { isClerkConfigured } from '@/lib/config';
 import { SwRegister } from '@/components/shell/sw-register';
-import { AppShell } from '@/components/shell/app-shell';
 import './globals.css';
 
-const sans = Geist({ subsets: ['latin'], variable: '--font-geist-sans', display: 'swap' });
-const mono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono', display: 'swap' });
+// Type tells you who wrote something: your hand in ink, a private suggestion in pencil, anything that goes out typed.
+const body = Newsreader({ subsets: ['latin'], variable: '--font-body', display: 'swap', style: ['normal', 'italic'] });
+const hand = Caveat({ subsets: ['latin'], variable: '--font-caveat', display: 'swap', weight: ['500', '600'] });
+const pencil = Reenie_Beanie({ subsets: ['latin'], variable: '--font-reenie', display: 'swap', weight: '400' });
+const typed = Courier_Prime({ subsets: ['latin'], variable: '--font-courier', display: 'swap', weight: '400' });
 
 export const metadata: Metadata = {
   title: 'dor',
-  description: 'A private voice journal with owner-approved, minimal signals.',
+  description: 'A room for your new chapter: meet people nearby, find real things to do, keep up with people from home.',
   applicationName: 'dor',
   icons: { apple: '/pwa-icon/apple-touch-icon.png' },
   appleWebApp: { capable: true, title: 'dor', statusBarStyle: 'default' },
@@ -24,29 +26,19 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#faf8f4' },
-    { media: '(prefers-color-scheme: dark)', color: '#1a1816' },
-  ],
+  themeColor: '#FAF7F0',
 };
 
-// Follows the system theme before first paint to avoid a flash.
-const THEME_SCRIPT = `try{if(matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.classList.add('dark')}catch(e){}`;
-
 export default function RootLayout({ children }: { children: ReactNode }) {
-  const body = (
-    <BackendProvider>
-      <AppShell>{children}</AppShell>
-    </BackendProvider>
-  );
+  const app = <BackendProvider>{children}</BackendProvider>;
   return (
-    <html lang="en" suppressHydrationWarning className={`${sans.variable} ${mono.variable}`}>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
-      </head>
+    <html lang="en" className={`${body.variable} ${hand.variable} ${pencil.variable} ${typed.variable}`}>
       <body className="min-h-dvh antialiased">
         <SwRegister />
-        {isClerkConfigured ? <ClerkProvider>{body}</ClerkProvider> : body}
+        {isClerkConfigured
+          // Every auth flow lands back in the room, never on Clerk's hosted pages.
+          ? <ClerkProvider signInFallbackRedirectUrl="/" signUpFallbackRedirectUrl="/" afterSignOutUrl="/">{app}</ClerkProvider>
+          : app}
       </body>
     </html>
   );

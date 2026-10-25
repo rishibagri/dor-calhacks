@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { RoomLink as Link } from '@/components/room/room-link';
 import type { ReactNode } from 'react';
 import { isDiscoveryUiEnabled } from '@/lib/config';
 

@@ -1,5 +1,5 @@
 // Private tables (public: false is the default and is never overridden here).
-// NOTHING in this module stores journal text, quiz answers, or transcripts.
+// Profile details and onboarding answers (profile_detail, D045) are stored; journal text and transcripts never are.
 import { schema, table, t } from 'spacetimedb/server';
 
 /** Singleton row recording the publisher (set in `init`); gates auth_config edits. */
@@ -479,6 +479,46 @@ export const disclosure_receipt = table(
   }
 );
 
+/**
+ * Network (D045): the owner's own richer profile. Shown to people they are linked with through my_connection_profiles,
+ * and its tags/area feed friend-of-friend matching. Written only by the owner (set_profile_detail).
+ */
+export const profile_detail = table(
+  { name: 'profile_detail' },
+  {
+    owner: t.identity().primaryKey(),
+    bio: t.string(),
+    home_area: t.string().index('btree'), // coarse area key the owner is settling into
+    availability: t.string(),
+    up_to: t.string(), // what they're up to lately
+    interests: t.array(t.string()),
+    answers: t.array(t.string()), // onboarding answers as "question_id:answer_id"
+    updated_at: t.timestamp(),
+  }
+);
+
+/**
+ * Network (D045): a nudge to someone a friend knows nearby. The recipient sees the sender and the mutual friend;
+ * the sender sees the recipient's name and details only after acceptance. Accepting links the two as a pair.
+ */
+export const nudge_request = table(
+  { name: 'nudge_request' },
+  {
+    request_id: t.string().primaryKey(),
+    sender: t.identity().index('btree'),
+    recipient: t.identity().index('btree'),
+    via: t.identity(), // the mutual friend closest to the sender
+    via_name: t.string(),
+    hops: t.u32(),
+    shared_tags: t.array(t.string()),
+    message: t.string(),
+    status: t.string(), // pending | accepted | declined | cancelled
+    pair_id: t.option(t.string()),
+    created_at: t.timestamp(),
+    responded_at: t.option(t.timestamp()),
+  }
+);
+
 export const spacetimedb = schema({
   module_owner,
   auth_config,
@@ -515,4 +555,6 @@ export const spacetimedb = schema({
   recipient_pause,
   standing_consent,
   standing_approval,
+  profile_detail,
+  nudge_request,
 });

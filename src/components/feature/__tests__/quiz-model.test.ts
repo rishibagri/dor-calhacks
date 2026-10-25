@@ -16,7 +16,7 @@ test('space alongside real modes keeps only contract modes in the profile', () =
   assert.deepEqual(profile.data?.preferredSupportModes, ['short_call']);
 });
 
-test('Q5/Q6/Q8 answers never enter the shared-schema profile', () => {
+test('all quiz answers and activity choices remain outside the shared profile', () => {
   const a = { ...EMPTY_ANSWERS, activities: ['games' as const, 'other' as const], activitiesNote: '  synthetic note  ',
     scheduleSuggestions: 'keep_private' as const, reviewComfort: 'quick_review' as const };
   const profile = buildProfile(a);

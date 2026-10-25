@@ -29,6 +29,19 @@ export function createReflectionClient(options: RouteClientOptions = {}) {
   };
 }
 
+export interface OpenerDraft { message: string; angle: string; suggestion: string }
+
+export function createOpenerClient(options: RouteClientOptions = {}) {
+  return {
+    /** Card fields the sender can already see plus their own profile; returns an editable draft. */
+    async draft(input: unknown, signal?: AbortSignal): Promise<OpenerDraft> {
+      const body = await post(options, '/api/network/opener', input, signal) as Partial<OpenerDraft> | null;
+      if (!body || typeof body.message !== 'string' || !body.message.trim()) throw new RouteError(502, 'invalid_response');
+      return { message: body.message, angle: String(body.angle ?? ''), suggestion: String(body.suggestion ?? '') };
+    },
+  };
+}
+
 export function createVoiceSessionClient(options: RouteClientOptions = {}) {
   return {
     async createSession(signal?: AbortSignal): Promise<VoiceSession> {

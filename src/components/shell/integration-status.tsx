@@ -25,7 +25,7 @@ function Row({ name, status }: { name: string; status: AdapterStatus }) {
           'justify-self-start font-normal',
           status.kind === 'live' && 'border-success/40 bg-success/10 text-success',
           status.kind === 'error' && 'border-destructive/40 bg-destructive/10 text-destructive',
-          (status.kind === 'unconfigured' || status.kind === 'not_implemented') && 'border-warning/50 bg-warning/15 text-warning-foreground',
+          (status.kind === 'unconfigured' || status.kind === 'not_implemented') && 'border-warning/50 bg-warning/10 text-warning',
         )}
       >
         {label}

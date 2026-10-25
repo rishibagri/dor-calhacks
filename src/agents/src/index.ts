@@ -2,6 +2,8 @@
 export { ClaudeReflectionAdapter, DEFAULT_REFLECTION_MODEL, MAX_SELECTED_TEXT_CHARS, toPrivateAssessment, type ClaudeReflectionOptions,
   type ReflectionUsage }
   from './reflection/claude.js';
+export { ClaudeOpenerAdapter, DEFAULT_OPENER_MODEL, MAX_OPENER_CHARS, OpenerRequestSchema, describeOpenerContext, toOpener,
+  type ClaudeOpenerOptions, type Opener, type OpenerPort, type OpenerRequest } from './network/opener.js';
 export { CartesiaVoiceAdapter, CARTESIA_API_VERSION, DEFAULT_VOICE, MAX_AUDIO_BYTES, MAX_SPOKEN_CHARS,
   sniffAudioExtension, type CartesiaVoiceOptions } from './voice/cartesia.js';
 export { BoundedCoordinator, AckProposalSchema, MAX_ROUNDS, type AckProposal, type AckProposalInput,
@@ -15,4 +17,4 @@ export { PlanCoordinator, PlanProposalReplySchema, InvalidPlanRequestError, PLAN
 export { eligibleOptions, intersectWindow, type AckOption } from './coordination/eligibility.js';
 export { ProviderError, httpStatusFor, toProviderError, type Provider, type ProviderErrorCode } from './errors.js';
 export { PROVIDER_PROCESSING } from './disclosure.js';
-export { handleReflectionRequest, handleVoiceSessionRequest, InFlightRequests, RateLimiter, type RouteSession } from './http/routes.js';
+export { handleOpenerRequest, handleReflectionRequest, handleVoiceSessionRequest, InFlightRequests, RateLimiter, type RouteSession } from './http/routes.js';

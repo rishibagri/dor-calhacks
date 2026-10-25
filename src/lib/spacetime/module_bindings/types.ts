@@ -134,6 +134,19 @@ export const CatalogueStatusRow = __t.object("CatalogueStatusRow", {
 });
 export type CatalogueStatusRow = __Infer<typeof CatalogueStatusRow>;
 
+export const ConnectionProfileRow = __t.object("ConnectionProfileRow", {
+  counterpartRef: __t.string(),
+  displayName: __t.string(),
+  bio: __t.string(),
+  homeArea: __t.string(),
+  availability: __t.string(),
+  upTo: __t.string(),
+  interests: __t.array(__t.string()),
+  answers: __t.array(__t.string()),
+  sharedTags: __t.array(__t.string()),
+});
+export type ConnectionProfileRow = __Infer<typeof ConnectionProfileRow>;
+
 export const DisclosureReceipt = __t.object("DisclosureReceipt", {
   receiptId: __t.string(),
   signalId: __t.string(),
@@ -237,6 +250,19 @@ export const ExpirySweep = __t.object("ExpirySweep", {
 });
 export type ExpirySweep = __Infer<typeof ExpirySweep>;
 
+export const FofCardRow = __t.object("FofCardRow", {
+  candidateRef: __t.string(),
+  viaName: __t.string(),
+  hops: __t.u32(),
+  mutualCount: __t.u32(),
+  sharedTags: __t.array(__t.string()),
+  requestStatus: __t.string(),
+});
+export type FofCardRow = __Infer<typeof FofCardRow>;
+
+export const FofCards = __t.object("FofCards", {});
+export type FofCards = __Infer<typeof FofCards>;
+
 export const Introduction = __t.object("Introduction", {
   introId: __t.string(),
   sender: __t.identity(),
@@ -339,6 +365,9 @@ export type MyActivityApprovalRow = __Infer<typeof MyActivityApprovalRow>;
 export const MyActivityApprovals = __t.object("MyActivityApprovals", {});
 export type MyActivityApprovals = __Infer<typeof MyActivityApprovals>;
 
+export const MyConnectionProfiles = __t.object("MyConnectionProfiles", {});
+export type MyConnectionProfiles = __Infer<typeof MyConnectionProfiles>;
+
 export const MyDiscoveryProfile = __t.object("MyDiscoveryProfile", {});
 export type MyDiscoveryProfile = __Infer<typeof MyDiscoveryProfile>;
 
@@ -392,6 +421,9 @@ export type MyInvites = __Infer<typeof MyInvites>;
 export const MyNudgeDelivery = __t.object("MyNudgeDelivery", {});
 export type MyNudgeDelivery = __Infer<typeof MyNudgeDelivery>;
 
+export const MyNudgeRequests = __t.object("MyNudgeRequests", {});
+export type MyNudgeRequests = __Infer<typeof MyNudgeRequests>;
+
 export const MyNudgeRow = __t.object("MyNudgeRow", {
   id: __t.string(),
   pairId: __t.string(),
@@ -414,6 +446,9 @@ export type MyPresetAssignments = __Infer<typeof MyPresetAssignments>;
 
 export const MyPresets = __t.object("MyPresets", {});
 export type MyPresets = __Infer<typeof MyPresets>;
+
+export const MyProfileDetail = __t.object("MyProfileDetail", {});
+export type MyProfileDetail = __Infer<typeof MyProfileDetail>;
 
 export const MyReceipts = __t.object("MyReceipts", {});
 export type MyReceipts = __Infer<typeof MyReceipts>;
@@ -478,6 +513,36 @@ export const NudgeDelivery = __t.object("NudgeDelivery", {
 });
 export type NudgeDelivery = __Infer<typeof NudgeDelivery>;
 
+export const NudgeRequest = __t.object("NudgeRequest", {
+  requestId: __t.string(),
+  sender: __t.identity(),
+  recipient: __t.identity(),
+  via: __t.identity(),
+  viaName: __t.string(),
+  hops: __t.u32(),
+  sharedTags: __t.array(__t.string()),
+  message: __t.string(),
+  status: __t.string(),
+  pairId: __t.option(__t.string()),
+  createdAt: __t.timestamp(),
+  respondedAt: __t.option(__t.timestamp()),
+});
+export type NudgeRequest = __Infer<typeof NudgeRequest>;
+
+export const NudgeRequestRow = __t.object("NudgeRequestRow", {
+  requestId: __t.string(),
+  direction: __t.string(),
+  status: __t.string(),
+  counterpartName: __t.option(__t.string()),
+  viaName: __t.string(),
+  hops: __t.u32(),
+  sharedTags: __t.array(__t.string()),
+  message: __t.string(),
+  pairId: __t.option(__t.string()),
+  createdAt: __t.timestamp(),
+});
+export type NudgeRequestRow = __Infer<typeof NudgeRequestRow>;
+
 export const Pair = __t.object("Pair", {
   pairId: __t.string(),
   memberA: __t.identity(),
@@ -523,6 +588,29 @@ export const PresetViewRow = __t.object("PresetViewRow", {
   revokedAt: __t.option(__t.timestamp()),
 });
 export type PresetViewRow = __Infer<typeof PresetViewRow>;
+
+export const ProfileDetail = __t.object("ProfileDetail", {
+  owner: __t.identity(),
+  bio: __t.string(),
+  homeArea: __t.string(),
+  availability: __t.string(),
+  upTo: __t.string(),
+  interests: __t.array(__t.string()),
+  answers: __t.array(__t.string()),
+  updatedAt: __t.timestamp(),
+});
+export type ProfileDetail = __Infer<typeof ProfileDetail>;
+
+export const ProfileDetailRow = __t.object("ProfileDetailRow", {
+  bio: __t.string(),
+  homeArea: __t.string(),
+  availability: __t.string(),
+  upTo: __t.string(),
+  interests: __t.array(__t.string()),
+  answers: __t.array(__t.string()),
+  updatedAt: __t.timestamp(),
+});
+export type ProfileDetailRow = __Infer<typeof ProfileDetailRow>;
 
 export const RateWindow = __t.object("RateWindow", {
   limitKey: __t.string(),
