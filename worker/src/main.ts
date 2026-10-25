@@ -9,6 +9,7 @@ import { IntroductionRequestWatcher, runIntroductionRequest } from './introducti
 import { WorkerLoop } from './loop.js';
 import { droidEnv, type DroidTransport } from './droid-proposer.js';
 import { DroidSdkTransport, type CreateSdkSession } from './droid-sdk.js';
+import { errorCode, fatalFields } from './log-fields.js';
 
 /**
  * Worker process: one SpacetimeDB connection as the allow-listed worker identity, the bounded coordinator over
@@ -25,7 +26,7 @@ import { DroidSdkTransport, type CreateSdkSession } from './droid-sdk.js';
  */
 function required(name: string): string {
   const value = process.env[name];
-  if (!value) throw new Error(`missing ${name}`);
+  if (!value) throw new Error(`not_configured: missing ${name}`);
   return value;
 }
 const numberEnv = (name: string, fallback: number) => {
@@ -66,7 +67,7 @@ function introductionMode(value: string | undefined): 'off' | 'deterministic' | 
 async function main(): Promise<void> {
   const generated = (await loadBindings()) as unknown as { DbConnection?: { builder(): LooseBuilder } };
   if (typeof generated.DbConnection?.builder !== 'function') {
-    throw new Error('worker bindings not generated: see worker/src/module_bindings/index.ts');
+    throw new Error('not_configured: worker bindings not generated (see worker/src/module_bindings/index.ts)');
   }
   const connection = await SpacetimeWorkerConnection.connect({
     uri: required('DOR_SPACETIME_URI'), database: process.env.DOR_SPACETIME_MODULE ?? 'dor',
@@ -88,14 +89,14 @@ async function main(): Promise<void> {
   const watcher = new SignalWatcher(connection, {
     run: job => worker.runJob(job),
     onOutcome: outcomes => { for (const o of outcomes) log('outcome', { outcome: o.outcome, rounds: o.rounds, decidedBy: o.decidedBy }); },
-    onError: error => log('job_error', { code: error instanceof Error ? error.message.split(':')[0]!.slice(0, 40) : 'unknown' }),
+    onError: error => log('job_error', { code: errorCode(error) }),
   });
   // Shared plans (D039) run only when the bindings carry worker_plan_candidates + commit_plan_proposal.
   const clock = { now: () => new Date() };
   const plans = connection.planCandidates ? new PlanWatcher(connection, {
     run: basis => runPlanJob(basis, { source: connection, runner: worker.runner, clock }),
     onOutcome: o => log('plan_outcome', { outcome: o.outcome, rounds: o.rounds, modelCalls: o.modelCalls, decidedBy: o.decidedBy }),
-    onError: error => log('plan_error', { code: error instanceof Error ? error.message.split(':')[0]!.slice(0, 40) : 'unknown' }),
+    onError: error => log('plan_error', { code: errorCode(error) }),
   }) : null;
   log('plans', { enabled: plans ? 1 : 0 });
   // Viewer-initiated introduction suggestions (D048) run only when the bindings carry the request view and reducers.
@@ -106,7 +107,7 @@ async function main(): Promise<void> {
     onOutcome: o => log('intro_outcome', { outcome: o.outcome, shortlisted: o.shortlisted, eligible: o.eligible, rounds: o.rounds,
       modelCalls: o.modelCalls, decidedBy: o.decidedBy }),
     onLapsed: () => log('intro_lapsed'),
-    onError: error => log('intro_error', { code: error instanceof Error ? error.message.split(':')[0]!.slice(0, 40) : 'unknown' }),
+    onError: error => log('intro_error', { code: errorCode(error) }),
   }) : null;
   log('introductions', { enabled: intros ? 1 : 0, mode: intros ? introMode : 'off' });
   // Event-driven: new worker-view rows trigger a sweep at once; the interval is only a safety net. Nothing runs
@@ -144,6 +145,6 @@ async function main(): Promise<void> {
 }
 
 main().catch(error => {
-  log('fatal', { code: error instanceof Error ? error.message.slice(0, 80) : 'unknown' });
+  log('fatal', fatalFields(error));
   process.exit(1);
 });

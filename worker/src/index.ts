@@ -20,3 +20,4 @@ export { toApprovedSignal, toDeliveryContext, toIntroductionRequestRow, toPlanCa
   RowShapeError, type IntroductionRequestRow, type PlanCandidate } from './spacetime/rows.js';
 export { SignalWatcher, type SignalWatcherOptions } from './watcher.js';
 export { WorkerLoop, type LoopConnection, type WorkerLoopOptions } from './loop.js';
+export { errorCode, fatalFields } from './log-fields.js';
