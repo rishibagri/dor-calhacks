@@ -1,7 +1,8 @@
 import type { PolicyStateReader } from '@dor/contracts';
+import { defaultSupportPreferences as makeDefaultSupportPreferences } from '@dor/contracts/policy';
 import type { DeliveryStatePort, RecipientPreferencesPort } from '@dor/agents';
 import type { ApprovedSignalSource, CommitRejection, CoordinationCommitPort, CoordinationResult } from '../jobs.js';
-import { mapRows, NOT_OPTED_IN, toApprovedSignal, toDeliveryContext, toSignalContext, toSupportPreferences } from './rows.js';
+import { DEFAULT_DELIVERY, mapRows, toApprovedSignal, toDeliveryContext, toSignalContext, toSupportPreferences } from './rows.js';
 
 /** commit_nudge reducer arguments (spacetimedb/src/reducers/coordination.ts). */
 export interface CommitNudgeArgs {
@@ -35,6 +36,10 @@ export interface WorkerStateSource {
   commitPlanProposal?(args: CommitPlanArgs): Promise<void>;
   /** Calls commit_introduction_proposal (D038); rejects with the reducer's `code: reason` message on refusal. */
   commitIntroductionProposal?(args: CommitIntroductionArgs): Promise<void>;
+  /** Current rows of the worker_introduction_requests view (D048). A source without it makes no suggestions. */
+  introductionRequests?(): Promise<Iterable<unknown>>;
+  /** Calls close_introduction_suggestion_request (D048); rejects with the reducer's `code: reason` message. */
+  closeIntroductionRequest?(requestId: string): Promise<void>;
 }
 
 /** commit_introduction_proposal reducer arguments (spacetimedb/src/reducers/introductions.ts, D033/D038). */
@@ -87,26 +92,35 @@ export class SpacetimeSignalSource implements ApprovedSignalSource {
   }
 }
 
-/** F5 pre-check state. No row means never opted in (D017), which the coordinator treats as no nudge. */
+/** Accepted pairs default to in-app nudges; a persisted recipient opt-out remains an explicit false row. */
 export class SpacetimeDeliveryState implements DeliveryStatePort {
   constructor(private readonly source: WorkerStateSource) {}
 
   async current(pairId: string, recipientId: string) {
-    const row = mapRows(await this.source.delivery(), toDeliveryContext)
+    // A malformed explicit row could be a recipient's opt-out. Do not drop it and then mistake it for the default-on case.
+    const rows = [...await this.source.delivery()].map(row => toDeliveryContext(row as Parameters<typeof toDeliveryContext>[0]));
+    const row = rows
       .find(d => d.pairId === pairId && d.recipientId === recipientId);
-    return row ? { delivery: row.delivery, lastNudgeAt: row.lastNudgeAt } : { delivery: NOT_OPTED_IN, lastNudgeAt: null };
+    return row ? { delivery: row.delivery, lastNudgeAt: row.lastNudgeAt } : { delivery: DEFAULT_DELIVERY, lastNudgeAt: null };
   }
 }
 
-/** The recipient's own consent from worker_support_preferences (D035). No row, or no view, means none (fail closed). */
+/** Recipient support styles personalize proposals; accepted pairs use the standard styles until customized. */
 export class SpacetimeRecipientPreferences implements RecipientPreferencesPort {
   constructor(private readonly source: WorkerStateSource) {}
 
   async current(pairId: string, recipientId: string) {
-    if (!this.source.supportPreferences) return null;
+    if (!this.source.supportPreferences) return defaultSupportPreferences(pairId, recipientId);
     return mapRows(await this.source.supportPreferences(), toSupportPreferences)
-      .find(p => p.pairId === pairId && p.recipientId === recipientId) ?? null;
+      .find(p => p.pairId === pairId && p.recipientId === recipientId) ?? defaultSupportPreferences(pairId, recipientId);
   }
+}
+
+function defaultSupportPreferences(pairId: string, recipientId: string) {
+  const pref = makeDefaultSupportPreferences(pairId, recipientId);
+  return { schemaVersion: 1 as const, consentId: pref.consentId, consentVersion: pref.consentVersion,
+    pairId, recipientId, purpose: 'support_nudge' as const, supportModes: [...pref.supportModes], availability: [...pref.availability],
+    expiresAt: new Date(pref.expiresAtMs).toISOString(), revokedAt: null };
 }
 
 /** Always "no consent record": proposes no nudge. Kept for callers that must run without the preferences view. */

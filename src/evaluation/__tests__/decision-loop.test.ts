@@ -4,6 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { NUDGE_TEMPLATE_COPY } from '@dor/contracts';
+import { PrivateAssessmentSchema } from '@dor/contracts';
 import { SIGNAL_LIFETIME_MS } from '@dor/contracts/policy';
 import { buildNudge, matchSignal, recipientNudgeRow } from '../matching.ts';
 import type { RecipientNudgeView } from '../../lib/backend/ports.ts';
@@ -17,8 +18,8 @@ const raw = await json('../fixtures/decision-cases.json');
 const reflections = await json('../../agents/fixtures/reflection.synthetic.json');
 const file = resolveCases(raw, reflections);
 const byId = (id: string) => file.cases.find((c) => c.id === id)!;
-/** The neutral D040 assessment: the loop asks its normal questions (what a missing assessment meant before D042). */
-const NEUTRAL = { intent: 'unclear', excludedNames: [], preferredNames: [] };
+/** Neutral D050 assessment: no mention, no risk and no preference, so the loop asks its ordinary questions. */
+const NEUTRAL = { intent: 'unclear', risk: 'none', mentionedNames: [], excludedNames: [], preferredNames: [] };
 
 test('fixture: labels use the README vocabulary and every case covers a pair', () => {
   const kinds = new Set(['no_action', 'needs_clarification', 'ready_for_preview']);
@@ -118,9 +119,14 @@ test('no private story without approval: no screen of any case shows a story ter
   }
 });
 
-test('D040 never chooses: with no "who" step, no case reaches ready_for_preview', () => {
-  for (const c of file.cases) if (!c.steps.some((s) => 'who' in s))
-    assert.notEqual(scoreCase(file, c).outcome.kind, 'ready_for_preview', c.id);
+test('D050 auto-resolves only a uniquely mentioned connection; all other no-tap cases stay non-ready', () => {
+  for (const c of file.cases) if (!c.steps.some((s) => 'who' in s)) {
+    const parsed = PrivateAssessmentSchema.safeParse(c.assessment);
+    const mentioned = parsed.success && parsed.data.risk === 'none' && parsed.data.mentionedNames.length === 1;
+    const outcome = scoreCase(file, c).outcome;
+    if (mentioned && c.expected.kind === 'ready_for_preview') assert.equal(outcome.kind, 'ready_for_preview', c.id);
+    else assert.notEqual(outcome.kind, 'ready_for_preview', c.id);
+  }
 });
 
 test('noninterference: varying only the private story changes nothing visible or scheduled', () => {
@@ -272,8 +278,9 @@ test('D042: a candidate without an assessment never reaches a question or a prev
 });
 
 test('D042 neutral assessment reproduces the old "ask normally" path exactly', () => {
-  const neutral = file.cases.filter((c) => JSON.stringify(c.assessment) === JSON.stringify(NEUTRAL));
-  assert.ok(neutral.length >= 25, `${neutral.length}`); // 25 DS cases + AI reference cases that carry the same assessment
+  const neutral = file.cases.filter((c) => c.assessment !== null && PrivateAssessmentSchema.safeParse(c.assessment).success
+    && JSON.stringify(PrivateAssessmentSchema.parse(c.assessment)) === JSON.stringify(NEUTRAL));
+  assert.ok(neutral.length >= 25, `${neutral.length}`); // DS cases + AI references with no name/risk assessment
   for (const c of neutral) {
     const withNeutral = replay(file, c.story, c.candidate, c.recipients, c.steps, NEUTRAL, c.pauses).outcome;
     const oldMissing = replay(file, c.story, c.candidate, c.recipients, c.steps, null, c.pauses, false).outcome;

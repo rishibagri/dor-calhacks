@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { describeCandidate, insertTranscript, reflectFailureCopy, speakableText, splitReflection, textToReflect,
   voiceFailureCopy, type Selection } from './model';
 import { useDictation, type UseDictationOptions } from './use-dictation';
-import { suggestsNothing } from './assessment';
+import { requiresImmediateSupport, suggestsNothing } from './assessment';
 
 export interface VoiceReflectionProps {
   /** The owner's LocalVault (CS composes the per-account instance). Saving is disabled unless unlocked. */
@@ -22,10 +22,9 @@ export interface VoiceReflectionProps {
   /** Defaults to the authenticated /api/voice/session client. Pass null to hide voice (typed only). */
   getVoiceSession?: ((signal?: AbortSignal) => Promise<VoiceSession>) | null;
   /**
-   * The reflection's suggested share, held in memory only. CS routes it into the device-only preview and
-   * per-item approval; nothing is shared until the owner approves there. Called with null when cleared. The third
-   * argument is Claude's owner-only private assessment (D040), also in memory only and never persisted: it may only
-   * narrow the private decision loop (docs/features/PRIVATE_ASSESSMENT.md).
+   * The reflection's coarse candidate, held in memory only. A unique literal person mention enters the automatic
+   * two-agent flow; risk/ambiguity can suppress it or ask the owner. The third argument is Claude's private
+   * assessment (D040/D050), never persisted or shared.
    */
   onCandidate?: (candidate: SignalCandidate | null, entryLocalId: string, assessment?: PrivateAssessment) => void;
   /** Test seams for the dictation hook. */
@@ -103,8 +102,15 @@ export function VoiceReflection({ vault, reflect, getVoiceSession, onCandidate, 
     try {
       const reply = await reflectFn(toSend.text, crypto.randomUUID(), abort.signal);
       if (abort.signal.aborted) return;
-      const { persist, memoryOnly, assessment } = splitReflection(reply);
-      setResult({ phase: 'done', reflection: persist.reflection, candidate: memoryOnly, assessment, scope: toSend.scope });
+      const { persist, memoryOnly, assessment: modelAssessment } = splitReflection(reply);
+      const supportFallback = requiresImmediateSupport(toSend.text);
+      const assessment = supportFallback ? {
+        intent: 'wants_space' as const, risk: 'urgent_support' as const, mentionedNames: [], excludedNames: [], preferredNames: [],
+      } : modelAssessment;
+      const candidate = supportFallback ? null : memoryOnly;
+      setResult({ phase: 'done', reflection: persist.reflection, candidate, assessment, scope: toSend.scope });
+      // A completed private assessment immediately starts the automatic decision path; no extra review tap.
+      onCandidate?.(candidate, entryId, assessment);
     } catch (e) {
       setResult(errorCode(e) === 'aborted' ? { phase: 'idle' } : { phase: 'failed', message: reflectFailureCopy(errorCode(e)) });
     }
@@ -205,6 +211,18 @@ export function VoiceReflection({ vault, reflect, getVoiceSession, onCandidate, 
           <CardHeader><CardTitle>Reflection</CardTitle></CardHeader>
           <CardContent className="space-y-4 leading-relaxed">
             <p className="whitespace-pre-line">{result.reflection}</p>
+            {result.assessment?.risk === 'urgent_support' && (
+              <Alert role="alert" className="border-amber-700/30 bg-amber-50/60 text-amber-950">
+                <AlertTitle>Support is available now</AlertTitle>
+                <AlertDescription>
+                  <p>You deserve support. If you’re in the United States, you can call <a className="underline font-medium" href="tel:988">988</a> or text <a className="underline font-medium" href="sms:988">988</a>, or use <a className="underline" href="https://988lifeline.org/chat" target="_blank" rel="noreferrer">988 Lifeline chat</a>.</p>
+                  <p>No one in your connections will be contacted from this entry.</p>
+                </AlertDescription>
+              </Alert>
+            )}
+            {result.assessment?.risk === 'interpersonal_conflict' && (
+              <p className="rounded-md border p-3 text-sm" role="status">I’m holding back connection nudges from this reflection because reaching out could create unwanted friction. Your journal details stay private.</p>
+            )}
             {suggestion && (
               <div className="rounded-md border p-3 text-sm">
                 <p className="font-medium">{suggestion}</p>
@@ -214,9 +232,6 @@ export function VoiceReflection({ vault, reflect, getVoiceSession, onCandidate, 
           </CardContent>
           <CardFooter className="flex flex-wrap gap-2">
             {sessionFn && <Button variant="outline" onClick={() => void readAloud(result.reflection)}>{speaking ? 'Stop reading' : 'Read aloud'}</Button>}
-            {suggestion && onCandidate && (
-              <Button variant="secondary" onClick={() => onCandidate(result.candidate, entryId, result.assessment)}>Review what to share</Button>
-            )}
           </CardFooter>
         </Card>
       )}
@@ -224,8 +239,8 @@ export function VoiceReflection({ vault, reflect, getVoiceSession, onCandidate, 
       <Alert>
         <AlertTitle>Provider processing notice</AlertTitle>
         <AlertDescription className="text-pretty">
-          Your entry stays on this device. When you ask for a reflection, only the text you selected is sent transiently to
-          Claude to write it; when you record, audio streams to Cartesia for transcription, and read-aloud sends the reflection
+          Your entry stays on this device. When you ask for a reflection, only the text you selected is sent to
+          Claude to write it under their data policy; when you record, audio streams to Cartesia for transcription, and read-aloud sends the reflection
           to Cartesia. Your connections never see any of it.
         </AlertDescription>
       </Alert>

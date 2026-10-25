@@ -128,7 +128,7 @@ export const nudge = table(
 );
 
 /**
- * Recipient-owned F5 delivery settings per pair (D017 opt-in default off, D018 quiet hours).
+ * Recipient-owned F5 delivery settings per pair (D050 accepted-pair default on; persisted opt-out wins; D018 quiet hours).
  * No row = never opted in. Written only by the recipient via set_nudge_delivery.
  */
 export const nudge_delivery = table(
@@ -272,6 +272,23 @@ export const introduction_proposal = table(
     shared_tags: t.array(t.string()),
     opener_id: t.string(),
     decided_by: t.string(),
+    created_at: t.timestamp(),
+    expires_at: t.timestamp(),
+  }
+);
+
+/**
+ * Viewer-initiated requests for one AI introduction suggestion (D048, PROPOSED; AI). The worker sees open requests
+ * only through worker_introduction_requests and closes each one; nobody else sees them, and no candidate is told.
+ */
+export const introduction_suggestion_request = table(
+  { name: 'introduction_suggestion_request' },
+  {
+    request_id: t.string().primaryKey(),
+    viewer: t.identity().index('btree'),
+    client_request_id: t.string(), // viewer-scoped idempotency key
+    viewer_revision: t.u32(), // publication revision the request was made from
+    status: t.string().index('btree'), // open | done
     created_at: t.timestamp(),
     expires_at: t.timestamp(),
   }
@@ -487,6 +504,7 @@ export const spacetimedb = schema({
   discovery_page,
   introduction,
   introduction_proposal,
+  introduction_suggestion_request,
   discovery_report,
   rate_window,
   catalogue_source,

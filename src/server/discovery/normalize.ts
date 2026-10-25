@@ -104,6 +104,6 @@ export function normalizeCatalogue(raw: RawCatalogue, ctx: NormalizeCtx): Normal
 }
 
 /** Provenance stamp for logs/run records: where the rows came from and when. Hosts only, never URLs with queries. */
-export function provenance(config: DiscoveryConfig, fetchedAtMs: number): { sourceHost: string; source: SourceKind; actor: string; fetchedAt: string } {
-  return { sourceHost: SOURCE_HOST_FOR[config.source][0]!, source: config.source, actor: config.actorId, fetchedAt: new Date(fetchedAtMs).toISOString() };
+export function provenance(config: DiscoveryConfig, fetchedAtMs: number): { sourceHost: string; source: SourceKind; actor: string; build: string; fetchedAt: string } {
+  return { sourceHost: SOURCE_HOST_FOR[config.source][0]!, source: config.source, actor: config.actorId, build: config.build, fetchedAt: new Date(fetchedAtMs).toISOString() };
 }

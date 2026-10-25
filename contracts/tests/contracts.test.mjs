@@ -97,6 +97,8 @@ test('D040/D042 private assessment: required with a candidate, bounded, names on
   assert.equal(PrivateReflectionSchema.safeParse({ ...base, candidate: null }).success, true, 'nothing to share: assessment optional');
   assert.equal(PrivateReflectionSchema.safeParse({ ...base, candidate: null, assessment: a({ intent: 'wants_space' }) }).success, true);
   assert.equal(PrivateReflectionSchema.safeParse({ ...base, assessment: a({ excludedNames: ['Alex'], preferredNames: ['Sam'] }) }).success, true);
+  assert.equal(PrivateAssessmentSchema.safeParse(a({ risk: 'urgent_support' })).success, true);
+  assert.equal(PrivateAssessmentSchema.safeParse(a({ risk: 'interpersonal_conflict' })).success, true);
   for (const bad of [
     a({ intent: 'send_now' }), a({ excludedNames: ['A', 'B', 'C', 'D', 'E', 'F'] }), a({ preferredNames: ['A', 'B', 'C', 'D'] }),
     a({ excludedNames: ['Alex', 'alex'] }), a({ excludedNames: ['Alex'], preferredNames: ['ALEX'] }),

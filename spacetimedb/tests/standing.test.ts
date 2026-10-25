@@ -15,7 +15,7 @@ function world({ optIn = true } = {}) {
   const { pairId } = pairUp(w);
   confirmPreset(w, w.alice, pairId, 'partner', ['support_preference', 'coarse_availability']);
   const pref = grantPrefs(w, w.bob, pairId);
-  if (optIn) w.call(w.bob, ctx => mod.set_nudge_delivery(ctx, { pair_id: pairId, opted_in: true, quiet_start_minute: undefined, quiet_end_minute: undefined, utc_offset_minutes: 0 }));
+  w.call(w.bob, ctx => mod.set_nudge_delivery(ctx, { pair_id: pairId, opted_in: optIn, quiet_start_minute: undefined, quiet_end_minute: undefined, utc_offset_minutes: 0 }));
   const worker = jwtAuth('dor-worker', 50n, 'https://worker.spacetimedb.example');
   const workerId = w.h.withReducerTx(worker, ctx => ctx.sender);
   w.h.withReducerTx(w.admin, ctx => mod.set_worker_identity(ctx, { worker: workerId, enabled: true }));
@@ -86,7 +86,7 @@ describe('off by default; only an explicit owner action enables it', () => {
 });
 
 describe('automatic approval keeps every check', () => {
-  it('a matching candidate is approved without a preview and delivered once the recipient opted in', () => {
+  it('a matching candidate is approved without a preview and delivered under default-on recipient settings', () => {
     const x = world();
     enable(x);
     const sig = autoApprove(x);
@@ -180,6 +180,59 @@ describe('revocation, expiry and pause kill queued work and never resurrect it',
     const x = world();
     x.w.call(x.w.alice, ctx => mod.pause_recipient(ctx, { pair_id: x.pairId, expires_at: inDays(x.w, 0.5), expected_version: 0 }));
     expect(() => enable(x)).toThrow('unauthorized: paused');
+  });
+});
+
+describe('my_standing_consents.active matches what the reducers accept', () => {
+  const active = (x: X) => rules(x.w, x.w.alice).find(r => r.pair_id === x.pairId)?.active;
+
+  it('a valid rule reads active and approves automatically', () => {
+    const x = world();
+    enable(x);
+    expect(active(x)).toBe(true);
+    expect(autoApprove(x, 'auto-act-01')).toBeDefined();
+  });
+
+  it('re-saving the preset (same categories, later expiry) makes the rule read inactive, and approval is refused', () => {
+    const x = world();
+    enable(x);
+    const cur = view<any>(x.w, x.w.alice, mod.my_presets).find(p => p.preset_kind === 'partner');
+    x.w.call(x.w.alice, ctx => mod.set_relationship_preset(ctx, { preset_kind: 'partner',
+      allowed_categories: ['support_preference', 'coarse_availability'], expected_version: cur.version, expires_at: inDays(x.w, 60) }));
+    expect(active(x)).toBe(false);
+    expect(() => autoApprove(x, 'auto-act-02')).toThrow('stale: stale_policy');
+    enable(x); // a new rule bound to the new preset version stands again
+    expect(active(x)).toBe(true);
+    expect(autoApprove(x, 'auto-act-03')).toBeDefined();
+  });
+
+  it('reassigning the pair to another preset makes the rule read inactive, and approval is refused', () => {
+    const x = world();
+    enable(x);
+    confirmPreset(x.w, x.w.alice, x.pairId, 'friend', ['support_preference']);
+    expect(active(x)).toBe(false);
+    expect(() => autoApprove(x, 'auto-act-04')).toThrow(/^stale:/);
+  });
+
+  it('revoked and paused rules read inactive', () => {
+    const x = world();
+    enable(x);
+    x.w.call(x.w.alice, ctx => mod.revoke_standing_consent(ctx, { pair_id: x.pairId }));
+    expect(active(x)).toBe(false);
+    enable(x);
+    expect(active(x)).toBe(true);
+    x.w.call(x.w.alice, ctx => mod.pause_recipient(ctx, { pair_id: x.pairId, expires_at: inDays(x.w, 0.5), expected_version: 0 }));
+    expect(active(x)).toBe(false);
+  });
+
+  it('views are clockless: a just-expired rule reads active until the sweep, while the reducer already refuses', () => {
+    const x = world();
+    enable(x, { expires_at: inDays(x.w, 2 / 24) });
+    advance(x.w, 2 * HOUR_MS + 1);
+    expect(active(x)).toBe(true); // the client compares expires_at with its own clock (standingRuleCovers, settings list)
+    expect(() => autoApprove(x, 'auto-act-05')).toThrow('stale: expired');
+    sweep(x.w);
+    expect(active(x)).toBe(false);
   });
 });
 

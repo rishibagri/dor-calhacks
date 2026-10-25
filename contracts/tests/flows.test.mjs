@@ -83,12 +83,13 @@ test('F4: approval must carry exactly the previewed payload', () => {
   assert.equal(matchesPreviewPayload({ supportMode: 'short_call' }, s), false);
 });
 
-test('F5: delivery defaults deny until recipient opts in', () => {
-  assert.deepEqual(nudgeDelivery(DEFAULT_RECIPIENT_DELIVERY, null, NOW), { deliver: false, reason: 'not_opted_in' });
+test('F5: accepted-pair default is on; recipient opt-out remains authoritative', () => {
+  assert.deepEqual(nudgeDelivery(DEFAULT_RECIPIENT_DELIVERY, null, NOW), { deliver: true, reason: 'ok' });
+  assert.deepEqual(nudgeDelivery({ ...DEFAULT_RECIPIENT_DELIVERY, optedIn: false }, null, NOW), { deliver: false, reason: 'not_opted_in' });
 });
 
-test('F5: quiet hours wrap midnight in recipient local time; cooldown is 24h per pair', () => {
-  const pst = { ...DEFAULT_RECIPIENT_DELIVERY, optedIn: true, utcOffsetMinutes: -7 * 60 };
+test('F5: configured quiet hours wrap midnight in recipient local time; cooldown is 24h per pair', () => {
+  const pst = { ...DEFAULT_RECIPIENT_DELIVERY, optedIn: true, quietStartMinute: 22 * 60, quietEndMinute: 8 * 60, utcOffsetMinutes: -7 * 60 };
   assert.equal(nudgeDelivery(pst, null, new Date('2026-10-24T06:00:00Z')).reason, 'quiet_hours'); // 23:00 local
   assert.equal(nudgeDelivery(pst, null, new Date('2026-10-24T14:30:00Z')).reason, 'quiet_hours'); // 07:30 local
   assert.equal(nudgeDelivery(pst, null, new Date('2026-10-24T15:00:00Z')).deliver, true);       // 08:00 local

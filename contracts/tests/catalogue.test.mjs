@@ -53,3 +53,34 @@ test('catalogue links: https + allowlisted host only; credentials, ports, other 
     assert.equal(safeCatalogueUrl(bad, hosts), null, String(bad));
   }
 });
+
+test('safeCatalogueUrl works without a URL global (the SpacetimeDB module runtime has none)', () => {
+  const hosts = ['meetup.com', 'lu.ma', 'events.example.org'];
+  const saved = globalThis.URL;
+  try {
+    delete globalThis.URL; // as in the module runtime: typeof URL === 'undefined'
+    assert.equal(typeof globalThis.URL, 'undefined');
+    assert.equal(safeCatalogueUrl('https://www.meetup.com/synthetic-games/events/1', hosts), 'https://www.meetup.com/synthetic-games/events/1');
+    assert.equal(safeCatalogueUrl('https://lu.ma/hike?ref=x#frag', hosts), 'https://lu.ma/hike?ref=x');
+    assert.equal(safeCatalogueUrl('HTTPS://LU.MA/Hike', hosts), 'https://lu.ma/Hike');
+    assert.equal(safeCatalogueUrl('https://lu.ma', hosts), 'https://lu.ma/');
+    assert.equal(safeCatalogueUrl('https://lu.ma?x=1', hosts), 'https://lu.ma/?x=1');
+    for (const bad of ['http://lu.ma/x', 'https://lu.ma:8443/x', 'https://user:pw@lu.ma/x', 'https://lu.ma@evil.com/x',
+      'https://lu.ma.evil.com/x', 'https://evil.com/lu.ma', 'https://evil.com#lu.ma', 'https://127.0.0.1/x', 'https://[::1]/x',
+      'https://lu.ma\\@evil.com/x', 'https://lu.ma/a/../b', 'https://lu.ma/./x', 'https://lu.ma/café', 'https://lu.ma/x y',
+      'https://lu.ma/%zz', 'https://lu.ma./x', 'https://-lu.ma/x', '//lu.ma/x', 'javascript:alert(1)', 'not a url']) {
+      assert.equal(safeCatalogueUrl(bad, hosts), null, bad);
+    }
+  } finally {
+    globalThis.URL = saved;
+  }
+});
+
+test('safeCatalogueUrl gives the same answer as WHATWG URL for every case URL accepts unchanged', () => {
+  const hosts = ['meetup.com', 'lu.ma', 'eventbrite.com'];
+  for (const u of ['https://www.meetup.com/g/1', 'https://lu.ma/hike?ref=x', 'https://www.eventbrite.com/e/synthetic-hike-7',
+    'https://sub.lu.ma/a/b/c?x=1&y=2', 'https://lu.ma/x#f']) {
+    const viaUrl = (() => { const p = new URL(u); p.hash = ''; return p.toString(); })();
+    assert.equal(safeCatalogueUrl(u, hosts), viaUrl, u);
+  }
+});

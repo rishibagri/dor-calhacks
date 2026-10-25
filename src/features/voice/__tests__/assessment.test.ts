@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fixtures from '../../../agents/fixtures/reflection.synthetic.json' with { type: 'json' };
 import { answerCompany, answerWho, decide, excludeForNow, type LoopState, type Recipient }
   from '../../../components/feature/decision-loop-model.ts';
-import { assessedRecipients, exclusionMatches, initialLoopState, leftOutByAssessment, nameMatches, suggestsNothing, unmatchedExclusions }
+import { assessedRecipients, exclusionMatches, initialLoopState, leftOutByAssessment, nameMatches, requiresImmediateSupport, suggestsNothing, uniquelyPreferredRecipient, unmatchedExclusions }
   from '../assessment.ts';
 
 // SYNTHETIC connections. Two Alexes exercise the ambiguous-exclusion rule.
@@ -13,7 +13,7 @@ const ALEX2 = { pairId: 'p-alex2', name: 'Alex Moreno' };
 const JO = { pairId: 'p-jo', name: 'José-Luis' };
 const PEOPLE: Recipient[] = [ALEX, SAM, ALEX2, JO];
 const CALL = { supportMode: 'short_call' as const };
-const A = (intent: string, excludedNames: string[] = [], preferredNames: string[] = []) => ({ intent, excludedNames, preferredNames });
+const A = (intent: string, excludedNames: string[] = [], preferredNames: string[] = []) => ({ intent, risk: 'none', mentionedNames: [], excludedNames, preferredNames });
 
 /** One render of the loop as DecisionLoop does it: assessed recipients, then CS's decide(). */
 const view = (s: LoopState, assessment: unknown, people: readonly Recipient[] = PEOPLE) =>
@@ -34,9 +34,10 @@ test('no assessment: the loop is exactly CS behavior (asks company first, offers
   assert.deepEqual(view(s, undefined), { kind: 'needs_clarification', question: 'company', options: PEOPLE });
 });
 
-test('wants_space and invalid assessments end in no action and hide the share step', () => {
+test('wants_space, unsafe-risk and invalid assessments end in no action and hide the share step', () => {
   for (const bad of [A('wants_space'), A('send_now'), { intent: 'wants_connection' }, A('unclear', ['x'.repeat(41)]),
-    A('wants_connection', ['Alex'], ['alex'])]) {
+    A('wants_connection', ['Alex'], ['alex']), { ...A('wants_connection'), risk: 'interpersonal_conflict' },
+    { ...A('wants_connection'), risk: 'urgent_support' }]) {
     assert.equal(suggestsNothing(CALL, bad), true, JSON.stringify(bad));
     assert.deepEqual(view(initialLoopState(CALL, bad), bad), { kind: 'no_action', reason: 'nothing_to_share' });
   }
@@ -60,6 +61,19 @@ test('positive Sam: Sam is listed first but not chosen; preview only after the o
   assert.equal(out.kind === 'needs_clarification' && out.options[0]?.pairId, SAM.pairId);
   const picked = view(answerWho(s, SAM.pairId), a);
   assert.deepEqual(picked, { kind: 'ready_for_preview', recipient: SAM, candidate: CALL });
+});
+
+test('one uniquely mentioned connection routes automatically; multiple or unsafe mentions do not', () => {
+  assert.equal(uniquelyPreferredRecipient(PEOPLE, { ...A('unclear'), mentionedNames: ['Sam'] })?.pairId, SAM.pairId);
+  assert.equal(uniquelyPreferredRecipient(PEOPLE, { ...A('unclear'), mentionedNames: ['Sam', 'Alex'] }), null);
+  assert.equal(uniquelyPreferredRecipient(PEOPLE, { ...A('unclear'), mentionedNames: ['Sam'], risk: 'interpersonal_conflict' }), null);
+});
+
+test('local serious-distress terms trigger resources even if model risk assessment misses them', () => {
+  for (const text of ['I have depression', 'I feel suicidal', 'I want to hurt myself', 'I do not want to live', 'I don’t want to live', 'I feel unsafe']) {
+    assert.equal(requiresImmediateSupport(text), true, text);
+  }
+  assert.equal(requiresImmediateSupport('I had a difficult day and want to call Sam'), false);
 });
 
 test('"not Alex tonight": every Alex is left out (ambiguous → exclude all), never replaced automatically', () => {

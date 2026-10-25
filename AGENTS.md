@@ -38,14 +38,14 @@ Update format: UTC timestamp | owner | task | status | branch/commit | files/int
 | Role / person | Current status | Next handoff |
 |---|---|---|
 | CS — you | **CS core work complete on role/cs-app** (offline-verified unless noted): decision loop + D040 narrowing + D041 pause controls; fail closed on missing assessment (r4m), malformed candidate (i2), unnamed connections under exclusions; installable PWA (static-only service worker, no push); README status + RUNBOOK demo/reset + hosted-deploy checklist. Live: local smoke 26/26, sweep 30/30. Not verified: worker nudge delivery, browser/phone, hosted deploy | Owner: hosted deploy decision (maincloud + Vercel?). Sumedh: narrow `my_nudges`, sender-only receipts, reason code. Adam: required assessment with candidate, worker reconnect, nicknames, paid Stage C. Nimisha: eval replay + r4m fixtures (docs/team-messages/core3-audit.md) |
-| DS — Nimisha | On main: Core 1–3 decision-loop evaluation (PR #36 @ 44fbc8c): 55 labeled cases 55/55, silence 23/23, missed 0/9, unsafe 0, forbidden 0; baselines + blinded two-rater workflow (114 items, ratings NOT collected). PR #41 (open): **Core 4** summary `src/evaluation/results/core4.md`: 19 existing synthetic cases by reference (14 decision-loop, 5 support-signal; partners 6, friends 10, family 3; incl. the private-party no-action case), 19/19 expected, 56/56 privacy checks, each check with a negative control; plus a D043 `my_nudges` row mirror (`recipientNudgeRow`): it reveals the approval hour at most (Option A residual, approval reported by the DS owner), never the minute or second; timing todo closed; offline only | Team: 2 raters (not DS) fill `src/evaluation/results/ratings/rater-{a,b}.md`. Sumedh: a3 (the only DS todo left); optionally record the Option A timing residual in D043. DS next: score ratings |
+| DS — Nimisha | **Hosted DB owner:** Maincloud `dor` (owner = Nimisha's login), republished from `3bf3e25`; issuer/audience set; hosted smoke 26/26 (Adam); **hosted module predates D044/D048, discovery off**. Branch (PR open, on main `5ec8c5a`): **D045 transition evaluation**: Berkeley newcomer personas (17 synthetic people), discovery 9/9 (false matches 0, honest no-action 5/5) and paired new-vs-reconnect 7/7 over Cyber's real guards + CS's real normalizer and `shortlistFor` call; `source-replay.ts` ready for an approved Actor dataset; privacy scan of all evaluation outputs; 27 tests, mutations 9/9; offline only. On main: Core 1–4 decision-loop evaluation 55/55; D044 consumer check (#55); blinded two-rater workflow (ratings NOT collected) | Owner (Nimisha): approve one capped Apify run, then `node src/evaluation/source-replay.ts --dataset <file> --write`; `auth_audience` check; republish decision; `--sweep`. Rishi: transition tags in DISCOVERY_TAGS? (D046 allows ordinary ones). Adam: D048 interim rank stays. Sumedh + Adam: D047 still PROPOSED; DS migration (28 ids) waits for ACKs. Team: 2 raters. DS next: ratings, deployed replay |
 | Cyber — Sumedh | On main: D041 durable recipient pause (#34), live scheduler-auth fix `isDatabaseInternal` (#34), D043 Core 3 audit leaks closed (#39: narrow `my_nudges` `{id, pair_id, template_id, visible_until}`, sender-own-only `my_receipts`); reviews: #30 ACK, D040 ACK-with-conditions, #40 reason code ACK. Offline-verified; live only via CS's local smoke | Sumedh next: a3 (opaque signal IDs; heads-up to DS/AI first), DS forbidden-disclosure labels vs D041, Core 3 live attacks once Stage C runs, Core 4 privacy copy/controls + account-switch review |
 | AI — Adam | On main: Droid SDK worker default (#27), D040 private assessment (#31). role/ai-voice (PR pending): worker **auto-reconnect + event-driven sweeps, fail closed while disconnected**, exit-for-restart, `/healthz` 503 (audit HIGH); 5 D041 pause + 2 mid-job disconnect integration cases; nickname exclusions + `unmatchedExclusions` (audit MEDIUM). Stage A live: Claude 10/10 safety on Opus 5.5 (~$0.01/call), Cartesia token/TTS/STT pass. Offline otherwise | CS: optional `unmatchedExclusions` note/question. D042 (r4m) done: contract requires assessment with a candidate. Adam next: Stage B browser voice; Stage C paid nudge delivery with the published DB |
 
-R0–R6 replace the old P-phase schedule without resetting code or the original deadline. Detailed shared phases are in README.md; per-owner phases in docs/roles/*.md; exact producer/consumer dependencies in docs/PLAN.md. These are current planning assignments, not completion evidence. Merge main into your active role branch; do not reset or force-update other roles.
+R0–R6 replace the old P-phase schedule without resetting code or the original deadline. Detailed shared phases and role ownership are in INSTRUCTIONS.md; per-owner phases in docs/roles/*.md; exact producer/consumer dependencies in docs/PLAN.md. These are current planning assignments, not completion evidence. Merge main into your active role branch; do not reset or force-update other roles.
 
 ## Ownership and handoffs
-Use the ownership table in README.md. CS owns SpacetimeDB module plumbing; Cyber owns reusable authorization semantics and reviews the boundary. Shared contract edits need affected producer/consumer review. Before pausing or handing off, update docs/handoffs/<role>.md and your role log with branch/commit, exact interface, evidence, next consumer action and blocker. Refresh PROJECT_KNOWLEDGE.md after significant merges.
+Use the ownership table in README.md and detailed responsibility phases in INSTRUCTIONS.md. CS owns SpacetimeDB module plumbing; Cyber owns reusable authorization semantics and reviews the boundary. Shared contract edits need affected producer/consumer review. Before pausing or handing off, update docs/handoffs/<role>.md and your role log with branch/commit, exact interface, evidence, next consumer action and blocker. Refresh PROJECT_KNOWLEDGE.md after significant merges.
 
 ## Completion checklist
 Contract compatibility, meaningful checks, privacy review for boundary changes, updated role log, reproducible verification instructions. Never mark a stub, replay, or mocked provider as live integration.
@@ -566,3 +566,40 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - Team: ratings.
   - Optional (Cyber): record the Option A residual in D043.
 
+### 2026-10-24T21:51Z | DS → CS, AI, Cyber | Shared Maincloud SpacetimeDB `dor` (deployed, fail closed)
+- **What:** module from main `53795c2` published to Maincloud as `dor` (database identity `c200c206…dc14`) under Nimisha's `spacetime login`, which is now `module_owner`; no `--delete-data`, and the name was unclaimed before publishing. Discovery allow-lists are loaded with extensions **off**. Worker identity `c200f05e…78c6` is allow-listed; its token stays in the owner's `.cache/worker-token` and is shared only through a secret channel.
+- **Status:** deployed; **not usable by signed-in users yet**, because the Clerk issuer/audience allow-lists are empty (fail closed). No code or interface change; committed bindings match (`bindings:check` ok).
+- **Evidence:** module check 184/184. Live 8/8 with an anonymous identity and the worker identity: unauthenticated register is rejected; non-owner admin reducers are rejected; anonymous sees 0 rows in 12 user/worker views; the worker cannot run owner reducers; no rows written; no sweep errors in the logs.
+- **Next:**
+  - Rishi: send the issuer + audience values and the dev `CLERK_SECRET_KEY` (secret channel); point the app env at `wss://maincloud.spacetimedb.com` / `dor`; ACK adding D041 pause + D043 row checks to `scripts/smoke-core3.ts`.
+  - Adam: worker env per `docs/team-messages/maincloud.md`; no paid run without the owner's OK.
+  - Sumedh: review the hosted owner/fail-closed setup; owner-side inspection goes through Nimisha.
+  - Nimisha: `setup:module -- --server maincloud --run`, then the hosted smoke with `--sweep`.
+- **Not verified:** Clerk auth, the two-account journey, denied third account, consent, revocation, reconnect, positive sweep, D041/D043 live, worker, hosted app.
+
+### 2026-10-24T23:45Z | DS → Cyber, CS, Team | Main 1b65c9e integrated; D044 DS consumer check; hosted status corrected
+- **Branch/commit:** `role/ds-context` fast-forwarded to main `1b65c9e` (no conflicts); uncommitted, awaiting owner review.
+- **Status:** implemented and offline-verified, synthetic only, NOT live. DS-owned files only; no contract, module, CS or AI file changed.
+- **Interface (DS, evaluation only):** `src/evaluation/__tests__/standing-consent.test.ts` checks D044 against the 55 decision cases and 8 quiz profiles with `guardStandingRule` / `standingRuleStands` from `@dor/contracts/policy`.
+- **Evidence:** `check:all` exit 0 (contracts 131, module 211, app 443 pass / 0 fail / 1 todo, a3); new suite 7/7; mutations 5/5 caught and restored; `core4 --check` current.
+- **Hosted correction:** the 21:51Z entry's "fail closed" and `c200f05e…` worker are superseded (main's `docs/team-messages/maincloud.md`): republished from `3bf3e25`, issuer/audience set, Adam's worker only, hosted smoke 26/26. The hosted module does not have D044 yet.
+- **Next:** Sumedh: D044 DS consumer ACK (offline). Rishi: call `approve_signal_standing` only for a loop-resolved preview recipient. Owner/team: republish decision; `--sweep` owner run.
+
+### 2026-10-25T02:30Z | DS → CS, AI, Cyber, Team | D045 transition evaluation: Berkeley newcomers, new vs reconnect, source replay
+- **Branch/commit:** `role/ds-context` fast-forwarded to main `5ec8c5a`; PR to main open (not merged).
+- **Status:** implemented and offline-verified, synthetic only, NOT live. DS-owned files only.
+- **Interfaces (DS, evaluation only):**
+  - `src/evaluation/transition.ts`: `buildWorld`, `serverViews`, `discover`, `scoreDiscovery`, `scorePaired`, `renderTransition`.
+  - `src/evaluation/source-replay.ts`: `replayCatalogue(dataset, nowMs)`, which accepts a raw Actor dataset or `ingest-catalogue.ts --fetch` output, and `renderReplay`.
+  - Fixtures: `berkeley-newcomers.json`, `berkeley-luma.synthetic.json`.
+- **Evidence:**
+  - discovery 9/9; paired 7/7;
+  - source replay: 5 rows, 5 exact drops;
+  - 27 tests; mutations 9/9 caught;
+  - `check:all` exit 0 (contracts 131, module 223, app 470 pass / 0 fail / 1 todo, a3); `next build --webpack` ok.
+- **Next:**
+  - Rishi: decide on transition tags in `DISCOVERY_TAGS`.
+  - Adam: D048 rank unchanged.
+  - Sumedh + Adam: D047 ACKs before DS migrates its 28 IDs.
+  - Owner: approve a capped Actor run, then replay it.
+  - Team: ratings.

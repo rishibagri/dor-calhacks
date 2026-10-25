@@ -4,7 +4,56 @@ Read `docs/roles/ds.md` and README **R0–R6** for current assignments. The hist
 
 ---
 
-# DS handoff — Day 2, D039 compatibility + card report; core-first next (latest)
+# DS handoff — D045 transition evaluation: Berkeley newcomers, new vs reconnect, source replay (2026-10-25, latest)
+**Branch:** `role/ds-context` fast-forwarded to main `5ec8c5a` (#54 unlink ends D044 rules, #56 D048). PR to main open (not merged). DS-owned files only; no contract, module, CS, AI or Cyber file changed.
+
+**Done (code + offline tests):**
+- `fixtures/berkeley-newcomers.json`: 17 synthetic people for the frozen demo (new student arriving in Berkeley), 9 discovery cases (4 positive, 5 no-action) and 7 paired cases. Interest tags come from the real `DISCOVERY_TAGS`; transitions stay device-local (CS `transition-model.ts`).
+- `transition.ts`: a server stand-in built on Cyber's real `guardPublicationDraft` / `guardDiscoveryVisibility` / `projectDiscoveryCard` / `guardEventIntent`; accepted pairs come from `decision-cases.json`. Ranking is the shipped `rankDiscoveryCards` (exactly as CS's `shortlistFor` calls it) and `rankEventCompanions`; reconnect episodes replay decision cases by reference.
+- `source-replay.ts` + `fixtures/berkeley-luma.synthetic.json`: Luma-shaped dataset → CS `normalizeCatalogue` → `catalogue_events` view rule → `eligibleEvents`. It also accepts `ingest-catalogue.ts --fetch` output, so a real approved run can be replayed with `--dataset`.
+- Results: `results/transition.md`, discovery 9/9 (nearby top-1 relevant 2/2, false matches 0, correct no-action 5/5). Paired 7/7: new path useful 5/7, reconnect preview 3/7, clarify 1, both silent 1. `results/source-replay.md`: 5 rows served; 5 normalizer drops with exact reasons; the too-soon event withheld.
+- `__tests__/transition.test.ts`: 27 tests, mutations 9/9 caught (all restored).
+
+**Findings for teammates:**
+- **Rishi:** `DISCOVERY_TAGS` has no transition tags. D046 would allow ordinary ones (e.g. starting college), but adding them is a CS product decision. A profile needs ≥ 1 interest (`guardPublicationDraft`), so the "Add a few interests" empty state can't be reached from nearby discovery; the cold start shows "Discovery is off".
+- **Adam (D048):** `rankByOverlap` stays the interim worker rank. DS has not replaced it, because the ranker isn't worker-importable; the order matches DS nearby (overlap count, then card ref).
+- **Sumedh / Adam (D047):** still PROPOSED. DS has 28 readable signal IDs in `evaluation-cases.json` plus the `sig-${id}` template in `decision-loop.ts`, not migrated. Migration waits for the DS owner's ACK and Adam's ACK; the a3 case keeps its semantic ID because it is the attack.
+
+**Not done / unverified:** no real Actor dataset (owner spend approval pending); no teammate ratings (0/2); nothing hosted (the hosted `dor` is at `3bf3e25` without D044/D048, and discovery is off there); the stand-in is not the deployed module.
+
+---
+
+# DS handoff — D044 consumer check + hosted `dor` status (2026-10-24)
+**Branch:** `role/ds-context` fast-forwarded to main `1b65c9e` (Cyber #52 D044 automatic nudges, AI #53 env/audience docs). Uncommitted, awaiting owner review.
+
+**D044 (DS consumer item from `docs/features/AUTOMATIC_NUDGES.md`):** NEW `src/evaluation/__tests__/standing-consent.test.ts`, 7 tests over the 55 decision cases and 8 quiz profiles, using only `@dor/contracts` guards (`guardStandingRule`, `standingRuleStands`) and the pure DS/CS models:
+- no loop, assessment or quiz output carries a rule;
+- rule-granting fields are rejected by the strict schemas and never preview;
+- quiz drafts can't satisfy the setup guard;
+- a rule covers only its own pair, recipient and categories;
+- revoke, replacement, expiry, preset change and pause-then-resume all stop a queued automatic approval;
+- paused people never reach a preview.
+
+Mutations 5/5 caught (revoke check, pause guard, recipient check, non-strict assessment, loop keeping an invalid candidate; all restored). Offline only: reducers, sweep and worker are Cyber's module tests. This is the DS ACK of D044 as a consumer; no DS fixture or label changed, and Core 1–4 still assume manual approval.
+
+**Hosted `dor` (Nimisha owns the login; current facts in `docs/team-messages/maincloud.md`):** republished from main `3bf3e25`; issuer and audience (`dor-spacetimedb`) set; the only worker is Adam's `0xc200188a…`; hosted smoke 26/26 (Adam, non-owner). Owner steps left:
+1. Confirm `SELECT * FROM auth_audience` shows only `dor-spacetimedb` (remove `kinetic-spacetimedb` if it's still there).
+2. Decide with the team whether to republish from main (adds D044 tables and reducers; `npm run setup:module -- --server maincloud --run`, never `--reset` or `--delete-data`), then rerun the smoke.
+3. `SMOKE_SERVER=maincloud node --env-file=.env.local --experimental-strip-types scripts/smoke-core3.ts --sweep` (owner run); record the results.
+4. D041/D043 live checks once CS ACKs the smoke extension.
+
+---
+
+# DS handoff — shared Maincloud database `dor` (2026-10-24T21:51Z, superseded by the entry above)
+Deployed from main `53795c2` under Nimisha's `spacetime login` (owner of every admin reducer and module update). Fail closed until the Clerk issuer/audience are allow-listed. Connection details, per-role setup, live evidence (8/8 anonymous/worker denial checks) and what is still unverified: `docs/team-messages/maincloud.md`. Next owner steps, in order:
+1. Put Rishi's `DOR_CLERK_ISSUER`, `DOR_AUTH_AUDIENCE`, `CLERK_SECRET_KEY` and `NEXT_PUBLIC_CLERK_SPACETIME_JWT_TEMPLATE` in `.env.local`, plus `NEXT_PUBLIC_SPACETIMEDB_URI=wss://maincloud.spacetimedb.com` and `NEXT_PUBLIC_SPACETIMEDB_MODULE=dor`.
+2. `npm run setup:module -- --server maincloud --run` (no `--reset`).
+3. `SMOKE_SERVER=maincloud node --env-file=.env.local --experimental-strip-types scripts/smoke-core3.ts --sweep`; record the results.
+4. D041/D043 live checks once CS ACKs the smoke extension. Share the worker token with Adam through a secret channel.
+
+---
+
+# DS handoff — Day 2, D039 compatibility + card report; core-first next
 Status: PR #25 (open), `role/ds-context` merged with main `71c3b6a` (README core-first, CS Events page). **Under the new README, discovery and events are preserved extensions, not core gates: this PR is maintenance only** (a D039 disclosure fix, server alignment, keeping CS's `/events` working, Report). DS code runs inside `/discover` and `/events`, offline and on synthetic data only. The first DS-R3 cut (`90d789a`) is on main via PR #17; this PR replaces its event logic.
 
 ## Integrated vs synthetic (as of main 6093b2a)

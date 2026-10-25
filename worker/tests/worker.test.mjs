@@ -72,6 +72,20 @@ test('droid usage is reported as numbers only', async () => {
   assert.deepEqual(rest, { model: 'claude-opus-5-5', factoryCredits: 14, cacheReadTokens: 2253, cacheCreationTokens: 0 });
 });
 
+test('droid CLI failures are reported too (missing binary, bad output), with a code and no credits', async () => {
+  for (const [opts, code] of [[{ error: Object.assign(new Error('spawn droid ENOENT'), { code: 'ENOENT' }) }, 'not_configured'],
+    [{ stdout: 'not json at all' }, 'invalid_output']]) {
+    const usage = [];
+    const { spawn } = fakeSpawn(opts);
+    const proposer = new DroidAckProposer({ spawn, env: {}, onUsage: (u) => usage.push(u) });
+    await assert.rejects(proposer.propose(input, 'req'));
+    await proposer.close();
+    assert.equal(usage.length, 1, `${code}: exactly one droid_call record`);
+    assert.equal(usage[0].outcome, code);
+    assert.equal(usage[0].factoryCredits, null);
+  }
+});
+
 test('droid subprocess inherits no Claude, Cartesia or worker secrets', async () => {
   const { calls, spawn } = fakeSpawn({ stdout: envelope('{"decision":"decline"}') });
   const env = { PATH: '/usr/bin', HOME: '/home/synthetic', FACTORY_API_KEY: 'fk-synthetic', ANTHROPIC_API_KEY: 'sk-ant-synthetic',
@@ -236,4 +250,19 @@ test('live worker uses the real DisclosurePolicy over authoritative state: revok
   } finally {
     await worker.close();
   }
+});
+
+test('worker log fields carry codes only, never raw error text', async () => {
+  const { errorCode, fatalFields } = await import('../dist/index.js');
+  assert.equal(errorCode(new Error('stale: revoked')), 'stale');
+  assert.equal(errorCode(new Error('unavailable: disconnected')), 'unavailable');
+  assert.equal(errorCode(new Error('invalid_job')), 'invalid_job');
+  // Free text (an SDK message, a URI, a value) is never logged, even before the first colon.
+  assert.equal(errorCode(new Error('Error connecting to wss://host/db?token=SYNTHETIC')), 'unknown');
+  assert.equal(errorCode(new Error('Alex said no: synthetic')), 'unknown');
+  assert.equal(errorCode('not an error'), 'unknown');
+  assert.deepEqual(fatalFields(new Error('not_configured: missing DOR_SPACETIME_WORKER_TOKEN')),
+    { code: 'not_configured', missing: 'DOR_SPACETIME_WORKER_TOKEN' });
+  assert.deepEqual(fatalFields(new Error('not_configured: FACTORY_API_KEY (or set DOR_DROID_TRANSPORT=cli)')), { code: 'not_configured' });
+  assert.deepEqual(fatalFields(new Error('unexpected token sk-SYNTHETIC in config')), { code: 'unknown' });
 });

@@ -50,13 +50,19 @@ test('rows: schema drift drops the row (fail closed) instead of guessing', async
   assert.deepEqual(await new SpacetimeSignalSource(source([camelRow])).approvedSignals('other-pair', ['sig-1']), []);
 });
 
-test('delivery: no row means not opted in; a row maps quiet hours and last nudge', async () => {
+test('delivery: no row uses accepted-pair default; explicit rows preserve recipient settings', async () => {
   const port = new SpacetimeDeliveryState(source([], [{ pair_id: 'pair-1', recipient: ident('bb'), opted_in: true,
     quiet_start_minute: 1320, quiet_end_minute: undefined, utc_offset_minutes: -420, last_nudge_at: ts('2026-10-24T00:00:00Z') }]));
-  assert.equal((await port.current('pair-1', 'cc')).delivery.optedIn, false);
+  assert.equal((await port.current('pair-1', 'cc')).delivery.optedIn, true);
   const row = await port.current('pair-1', 'bb');
   assert.deepEqual(row.delivery, { optedIn: true, quietStartMinute: 1320, quietEndMinute: null, utcOffsetMinutes: -420 });
   assert.equal(row.lastNudgeAt.toISOString(), '2026-10-24T00:00:00.000Z');
+});
+
+test('delivery: malformed explicit settings fail closed instead of falling back to default-on', async () => {
+  const port = new SpacetimeDeliveryState(source([], [{ pair_id: 'pair-1', recipient: ident('bb'), opted_in: false,
+    quiet_start_minute: undefined, quiet_end_minute: undefined, utc_offset_minutes: 'bad' }]));
+  await assert.rejects(port.current('pair-1', 'bb'));
 });
 
 // ---- D035 recipient preference consent ----
@@ -64,18 +70,19 @@ test('delivery: no row means not opted in; a row maps quiet hours and last nudge
 const prefRow = { consentId: 'consent-1', pairId: 'pair-1', recipient: ident('bb'), supportModes: ['short_call'],
   availability: ['today'], consentVersion: 2n, expiresAt: ts('2099-01-01T00:00:00Z') };
 
-test('preferences: view row maps to RecipientSupportPreferences; wrong pair/recipient or drift means none', async () => {
+test('preferences: view rows map; missing rows use standard support styles until customized', async () => {
   const p = toSupportPreferences(prefRow);
   assert.deepEqual(p, { schemaVersion: 1, consentId: 'consent-1', consentVersion: 2, pairId: 'pair-1', recipientId: 'bb',
     purpose: 'support_nudge', supportModes: ['short_call'], availability: ['today'], expiresAt: '2099-01-01T00:00:00.000Z', revokedAt: null });
   const reader = new SpacetimeRecipientPreferences({ ...source([]), supportPreferences: async () => [prefRow, { ...prefRow, supportModes: 'x' }] });
   assert.equal((await reader.current('pair-1', 'bb')).consentId, 'consent-1');
-  assert.equal(await reader.current('pair-1', 'cc'), null);
-  assert.equal(await reader.current('pair-2', 'bb'), null);
+  assert.deepEqual((await reader.current('pair-1', 'cc')).supportModes, ['short_call', 'encouraging_note', 'shared_activity']);
+  assert.deepEqual((await reader.current('pair-2', 'bb')).supportModes, ['short_call', 'encouraging_note', 'shared_activity']);
 });
 
-test('preferences: a source without the view (older adapter) has no consent: fail closed; ports default to the view', async () => {
-  assert.equal(await new SpacetimeRecipientPreferences(source([])).current('pair-1', 'bb'), null);
+test('preferences: a source without the view uses standard styles; ports default to the view', async () => {
+  assert.deepEqual((await new SpacetimeRecipientPreferences(source([])).current('pair-1', 'bb')).supportModes,
+    ['short_call', 'encouraging_note', 'shared_activity']);
   assert.ok(spacetimeWorkerPorts(source([])).preferences instanceof SpacetimeRecipientPreferences);
   assert.ok(WORKER_VIEWS.includes('worker_support_preferences'));
 });

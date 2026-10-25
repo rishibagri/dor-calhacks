@@ -1,6 +1,6 @@
 # Core 4 evaluation summary (DS)
 
-Fixture hash `0f5652402f06496a`, decision clock `2026-10-24T18:00:00Z`, support clock `2026-10-24T00:00:00Z`. Deterministic and offline: no provider, worker, reducer or live database ran, and policy decisions come from the C6 fake (not security evidence). Regenerate with `node src/evaluation/core4.ts --write`; `--check` fails if this file is stale.
+Fixture hash `df0ddee38e19d06e`, decision clock `2026-10-24T18:00:00Z`, support clock `2026-10-24T00:00:00Z`. Deterministic and offline: no provider, worker, reducer or live database ran, and policy decisions come from the C6 fake (not security evidence). Regenerate with `node src/evaluation/core4.ts --write`; `--check` fails if this file is stale.
 
 ## Sample size (real counts)
 
@@ -16,7 +16,7 @@ Fixture hash `0f5652402f06496a`, decision clock `2026-10-24T18:00:00Z`, support 
 
 ## Results
 
-Expected outcome reproduced: **19/19**. Privacy checks held: **51/51**. Known gaps among the examples: none.
+Expected outcome reproduced: **19/19**. Privacy checks held: **50/50**. Known gaps among the examples: none.
 
 | Case | Suite | Relationship | Covers | Expected (source label) | Actual | Privacy checks | Recipient would see |
 |---|---|---|---|---|---|---|---|
@@ -32,8 +32,8 @@ Expected outcome reproduced: **19/19**. Privacy checks held: **51/51**. Known ga
 | a19-family-tiring-week-seed | decision | family | positive | ready_for_preview: p-robin | ready_for_preview: p-robin | 4/4 | "Someone you are connected with would welcome a kind note. Want to send one?" |
 | s1-skip-first-question | decision | family | uncertainty, correct_silence | no_action: skipped | no_action: skipped | 3/3 | nothing |
 | a9-private-party-no-candidate | decision | friends | private_party, correct_silence | no_action: nothing_to_share | no_action: nothing_to_share | 3/3 | nothing |
-| pp1-private-party-no-hint | decision | friends | private_party, uncertainty | needs_clarification: company [p-jordan, p-sam] | needs_clarification: company [p-jordan, p-sam] | 3/3 | nothing |
-| pp2-private-party-exclude-jordan | decision | friends | private_party, explicit_refusal, recipient_specific_permission | ready_for_preview: p-sam | ready_for_preview: p-sam | 4/4 | "Someone you are connected with would welcome a short call. Want to offer one?" |
+| pp1-private-party-no-hint | decision | friends | private_party, uncertainty | no_action: nothing_to_share | no_action: nothing_to_share | 3/3 | nothing |
+| pp2-private-party-exclude-jordan | decision | friends | private_party, explicit_refusal, recipient_specific_permission | no_action: nothing_to_share | no_action: nothing_to_share | 3/3 | nothing |
 | p1-partners-call-this-week | support | partners | positive | nudge: offer_short_call | nudge: offer_short_call | 1/1 | "Someone you are connected with would welcome a short call. Want to offer one?" |
 | p4-partners-recipient-declines | support | partners | recipient_specific_permission, correct_silence | no_nudge: recipient_declined | no_nudge: recipient_declined | 1/1 | nothing |
 | f6-friends-new-recipient-no-inherited-access | support | friends | recipient_specific_permission, correct_silence | no_nudge: wrong_recipient | no_nudge: wrong_recipient | 1/1 | nothing |

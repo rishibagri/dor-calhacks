@@ -13,8 +13,8 @@ function fakeSdk({ autoReconnect = true } = {}) {
   const table = (name, rows) => ({ iter: () => rows, onInsert: cb => { inserts[name] = cb; } });
   const commits = [];
   const conn = {
-    db: { workerSignalContext: table('worker_signal_context', [{ id: 'row' }]), workerDelivery: table('d', []),
-      workerSupportPreferences: table('p', []) },
+    db: { workerSignalContext: table('worker_signal_context', [{ id: 'row' }]), workerDelivery: table('worker_delivery', []),
+      workerSupportPreferences: table('worker_support_preferences', []) },
     reducers: { commitNudge: async a => { commits.push(a); } },
     subscriptionBuilder() {
       const sb = { onApplied: cb => { sb.applied = cb; return sb; }, onError: cb => { sb.error = cb; return sb; },
@@ -90,6 +90,10 @@ test('connection: rows inserted into worker views emit change events (event-driv
   c.on(e => events.push(e.kind));
   sdk.insert('worker_signal_context');
   assert.deepEqual(events, ['change']);
+  // A recipient's later opt-in or consent must retry deferred signals at once, not only on the fallback interval.
+  sdk.insert('worker_delivery');
+  sdk.insert('worker_support_preferences');
+  assert.deepEqual(events, ['change', 'change', 'change']);
 });
 
 test('a disconnect is a transient fault: never classified as a policy refusal', () => {

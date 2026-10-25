@@ -12,7 +12,7 @@ import { SyntheticReflectionAdapter } from '@dor/agents/testing';
 import { VoiceDictation, speak } from '@dor/agents/client';
 import { DroidSdkTransport, SignalWatcher, createLiveWorker, droidEnv, spacetimeWorkerPorts, type DroidTransport,
   type WorkerStateSource } from '../dist/index.js';
-import { assessedRecipients, initialLoopState } from '../../src/features/voice/assessment.ts';
+import { assessedRecipients, initialLoopState, uniquelyPreferredRecipient } from '../../src/features/voice/assessment.ts';
 import { QUESTION_COPY, answerCompany, answerWho, decide } from '../../src/components/feature/decision-loop-model.ts';
 import { allSignals, approveArgs, confirmPreset, grantPrefs, jwtAuth, mod, pairUp, setup, view }
   from '../../spacetimedb/tests/helpers';
@@ -38,7 +38,7 @@ const ENTRY = 'I just finished a brutal lab. I am exhausted, but I really miss S
 const SYNTHETIC_REPLY = { schemaVersion: 1,
   reflection: 'That lab sounds like it took a lot out of you. Missing Sam makes sense after a day like that; a short, easy call could be a soft landing.',
   candidate: { supportMode: 'short_call', availability: 'this_week' },
-  assessment: { intent: 'wants_connection', excludedNames: [], preferredNames: ['Sam'] } } as const;
+  assessment: { intent: 'wants_connection', risk: 'none', mentionedNames: ['Sam'], excludedNames: [], preferredNames: [] } } as const;
 
 /** Cartesia live: speech for the entry (stand-in for a microphone) streamed through the real browser dictation. */
 async function dictate(): Promise<{ transcript: string; detail: Record<string, unknown> }> {
@@ -130,13 +130,15 @@ describe('backend demo: Alex → Sam', () => {
       return;
     }
 
-    // 3. Human in the loop: the decision loop narrows with the assessment; Alex chooses; nothing is sent yet.
+    // 3. A unique literal mention routes directly; only unclear identity requires an owner clarification.
     const connections = [{ pairId, name: 'Sam' }, { pairId: 'pair-jordan-synthetic', name: 'Jordan' }];
     const options = () => assessedRecipients(connections, reflection.assessment);
     let loop = initialLoopState(reflection.candidate, reflection.assessment);
     const asked: { question: string; answer: string }[] = [];
+    const direct = uniquelyPreferredRecipient(options(), reflection.assessment);
+    if (direct) loop = { ...loop, company: 'company', chosen: direct.pairId };
     let out = decide(loop, options());
-    // Walk the real loop the way Alex would: answer each private question until the exact preview (≤ 2 questions).
+    // Only exercise neutral questions when the mentioned recipient cannot be uniquely resolved.
     while (out.kind === 'needs_clarification') {
       if (out.question === 'company') { loop = answerCompany(loop, 'company'); asked.push({ question: QUESTION_COPY.company, answer: 'Company would be nice' }); }
       else { asked.push({ question: QUESTION_COPY.who, answer: `Sam (offered: ${out.options.map(o => o.name).join(', ')})` }); loop = answerWho(loop, pairId); }
@@ -144,9 +146,10 @@ describe('backend demo: Alex → Sam', () => {
     }
     expect(out.kind).toBe('ready_for_preview');
     const template = templateForSignal(reflection.candidate)!;
-    show('Human-in-the-loop', 'Alex', 'answers private, neutral questions (never pre-picked), taps Sam, and sees the exact preview',
+    show('Meta', 'dor', direct ? 'uniquely matches Sam and starts the two-agent flow automatically' : 'asks Alex privately to resolve the unclear person',
       { assessmentIntent: reflection.assessment?.intent, privateQuestions: asked,
-        samWouldSee: NUDGE_TEMPLATE_COPY[template], sharedFields: reflection.candidate }, 'real decision loop (CS) + D040 helpers');
+        recipient: out.kind === 'ready_for_preview' ? out.recipient.name : null,
+        samWouldSee: NUDGE_TEMPLATE_COPY[template], sharedFields: reflection.candidate }, 'real decision loop (CS) + D050 routing');
 
     // 4. Explicit approval → SpacetimeDB (enums only).
     const args = approveArgs(w, alex, pairId, { support_mode: reflection.candidate.supportMode,
@@ -154,7 +157,7 @@ describe('backend demo: Alex → Sam', () => {
     w.call(alex, ctx => mod.approve_signal(ctx, args));
     const signal = allSignals(w).find(s => s.client_request_id === 'demo-approve')!;
     const workerRow = view<Record<string, unknown>>(w, worker, mod.worker_signal_context)[0]!;
-    show('SpacetimeDB', 'Alex', 'approves; the reducer re-checks consent and stores an enum-only approved signal',
+    show('SpacetimeDB', 'dor', 'automatically submits the enum candidate; the reducer re-checks pair and preset before storing it',
       { stored: { support_mode: signal.support_mode, availability: signal.availability, consent_version: signal.consent_version },
         textStored: 'none', workerViewColumns: Object.keys(workerRow).length, carolSeesSignals: view(w, carol, mod.my_signals).length },
       'real module in-process');

@@ -19,7 +19,7 @@ type Props = { pairId: string; name: string };
 
 /**
  * The caller's OWN recipient settings for one accepted pair: whether nudges may reach them at all
- * (default off) and which kinds of support they accept from this person. Nobody else can set these.
+ * (default on, with an immediate opt-out) and which kinds of support they prefer from this person. Nobody else can set these.
  */
 export function RecipientSettings({ pairId, name }: Props) {
   return (
@@ -61,7 +61,7 @@ function DeliveryFields({ pairId }: { pairId: string }) {
   const [quietEnd, setQuietEnd] = useState<string | null>(null);
   const [result, setResult] = useState<ReducerResult | null>(null);
   const draft = {
-    optedIn: optedIn ?? current?.optedIn ?? false,
+    optedIn: optedIn ?? current?.optedIn ?? true,
     quietStart: quietStart ?? formatClock(current?.quietStartMinute ?? null),
     quietEnd: quietEnd ?? formatClock(current?.quietEndMinute ?? null),
   };
@@ -79,7 +79,7 @@ function DeliveryFields({ pairId }: { pairId: string }) {
         <Checkbox id={`opt-${pairId}`} checked={draft.optedIn} onCheckedChange={(v) => setOptedIn(v === true)} />
         <Label htmlFor={`opt-${pairId}`}>Let in-app nudges from this connection reach me</Label>
       </div>
-      <p className="text-xs text-muted-foreground">Off until you turn it on. Turning it off hides anything pending.</p>
+      <p className="text-xs text-muted-foreground">On for accepted connections by default. Turn it off any time; pending nudges will be hidden.</p>
       <p className="text-xs text-muted-foreground">{offsetNote(current?.utcOffsetMinutes ?? null, localUtcOffsetMinutes())}</p>
       <div className="flex flex-wrap items-end gap-2">
         <div className="space-y-1">
@@ -113,7 +113,7 @@ function PreferencesFields({ pairId }: { pairId: string }) {
   const [windows, setWindows] = useState<Availability[] | null>(null);
   const [days, setDays] = useState<ConsentDurationDays>(14);
   const [result, setResult] = useState<ReducerResult | null>(null);
-  const draftModes = modes ?? (active ? current!.supportModes : []);
+  const draftModes = modes ?? (active ? current!.supportModes : [...SUPPORT_MODES]);
   const draftWindows = windows ?? (active ? current!.availability : []);
 
   const handleSave = () => {
@@ -133,7 +133,7 @@ function PreferencesFields({ pairId }: { pairId: string }) {
     <fieldset className="space-y-2">
       <legend className="text-sm font-medium">Kinds of support I accept</legend>
       <p className="text-xs text-muted-foreground">
-        {active ? `Active until ${new Date(current!.expiresAt).toLocaleDateString()}.` : 'Nothing accepted: no nudge can be prepared for you.'}
+        {active ? `Customized until ${new Date(current!.expiresAt).toLocaleDateString()}.` : 'Standard support styles are active unless you customize them here.'}
       </p>
       <div className="flex flex-wrap gap-x-4 gap-y-2">
         {SUPPORT_MODES.map((m) => (
@@ -158,7 +158,7 @@ function PreferencesFields({ pairId }: { pairId: string }) {
           {CONSENT_DURATION_DAYS.map((d) => <option key={d} value={d}>{d} days</option>)}
         </select>
         <Button size="sm" variant="outline" onClick={handleSave}>Save</Button>
-        {active && <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={handleRevoke}>Revoke</Button>}
+        {active && <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={handleRevoke}>Reset to standard styles</Button>}
       </div>
       <ResultNotice result={result} />
     </fieldset>

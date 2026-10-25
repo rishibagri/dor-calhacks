@@ -24,7 +24,8 @@ export function ShelfPlace() {
         <h2 className="place-title">Connections</h2>
         <p className="max-w-[65ch] text-sm text-muted-foreground">
           Presets are per relationship type, not per person. You assign a confirmed preset to each named connection;
-          assigning never shares anything automatically.
+          presets limit which gentle in-app nudges dor may offer automatically. Your journal stays private, and each
+          person can turn nudges off for a connection at any time.
         </p>
         <ol className="max-w-[65ch] list-decimal space-y-1 pl-5 text-sm text-foreground/80 marker:text-muted-foreground">
           {STEPS.map((s) => <li key={s}>{s}</li>)}

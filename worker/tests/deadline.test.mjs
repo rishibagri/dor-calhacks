@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 import { ProviderError } from '@dor/agents';
-import { DroidPlanProposer, DroidRunner, MIN_CALL_BUDGET_MS } from '../dist/index.js';
+import { DroidPlanProposer, DroidRunner, MIN_CALL_BUDGET_MS, noModelTransport } from '../dist/index.js';
 
 /** SYNTHETIC droid: replies after `delayMs`, or never when delayMs is Infinity. Counts spawns. */
 function fakeDroid(delayMs = 0) {
@@ -69,5 +69,17 @@ test('deadline: a sliver of budget (timers can fire ~1 ms early) never starts a 
   const runner = new DroidRunner({ spawn: droid.spawn, env: {} });
   await assert.rejects(runner.run('p', { deadlineAt: Date.now() + MIN_CALL_BUDGET_MS - 50 }), isTimeout);
   assert.equal(droid.spawns(), 0);
+  await runner.close();
+});
+
+test('no-model mode (DOR_DROID_TRANSPORT=off): every call fails not_configured at once, never spawns, reports usage', async () => {
+  const droid = fakeDroid();
+  const usage = [];
+  const runner = new DroidRunner({ spawn: droid.spawn, env: {}, transport: noModelTransport, onUsage: u => usage.push(u) });
+  await assert.rejects(runner.run('p'), e => e instanceof ProviderError && e.code === 'not_configured');
+  await assert.rejects(runner.run('q', { deadlineAt: Date.now() + 5_000 }), e => e instanceof ProviderError && e.code === 'not_configured');
+  assert.equal(droid.spawns(), 0);
+  assert.deepEqual(usage.map(u => u.outcome), ['not_configured', 'not_configured']);
+  assert.equal(usage[0].factoryCredits, null);
   await runner.close();
 });

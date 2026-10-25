@@ -6,7 +6,7 @@
 import type { DiscoveryConfig } from './config.ts';
 
 export function cacheKey(c: DiscoveryConfig): string {
-  return [c.source, c.actorId, c.region.key, `${c.windowDays}d`, c.topics.join('+'), c.maxItems].join('|');
+  return [c.source, c.actorId, c.build, c.region.key, `${c.windowDays}d`, c.topics.join('+'), c.maxItems].join('|');
 }
 
 export class CatalogueCache<T> {

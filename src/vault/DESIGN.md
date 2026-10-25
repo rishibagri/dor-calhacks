@@ -18,7 +18,9 @@ Implementation differences from the original proposal:
 This is encryption at rest for one device. It is not end-to-end encrypted inference, not secure erase, and not a guarantee against a compromised browser.
 
 ## Contents
-Vault-only data: journal text and transcripts, private reflections and signal candidates, `LocalConnectionProfile`, `LocalQuizExtras`, detailed calendar entries. None of it is uploaded, synced or escrowed, and none of it is ever an authorization input.
+Vault-only data: journal text and transcripts, private reflections and signal candidates, `LocalConnectionProfile`, `LocalQuizExtras`, detailed calendar entries, and relationship-book photos/interaction notes. None of it is uploaded, synced or escrowed, and none of it is ever an authorization input.
+
+Relationship-book photos are selected by the owner from a local file picker (JPEG, PNG or WebP; 1.5 MB maximum each; 24 per pair). Captions are optional and limited to 160 characters. The local book can record a call, feedback on a visible nudge, or an introduction the owner explicitly links to the book. Optional notes are limited to 320 characters. These records remain encrypted in the owner's vault; photos are not scraped through Apify and call logs are not imported from the phone. The UI must clear decrypted photos/notes when the vault locks. These are local-only app types in `src/vault/book-types.ts`, not shared contracts.
 
 ## Key hierarchy
 ```
@@ -32,9 +34,9 @@ DEK: random AES-GCM-256, unwrapped as NON-extractable, memory only ──► enc
 - **KEK_rec**: HKDF-SHA-256 over a 160-bit random recovery code, with salt = vault salt and info = `dor-vault/v1/recovery`. The code is shown once as 8 groups of 4 base32 characters. It has full entropy, so it needs no stretching.
 - **Wrapping**: AES-GCM `wrapKey`/`unwrapKey` with a fresh 12-byte IV and AAD `dor-vault/v1/<vaultId>/wrap/<passphrase|recovery>`. A wrong passphrase fails GCM authentication, so no passphrase hash or verifier is stored.
 
-## Stored layout (IndexedDB database `dor-vault`)
+## Stored layout (IndexedDB database `dor-vault`, schema version 2)
 - `meta` (single plaintext row, contains no secrets): `{schemaVersion:1, vaultId, kdf:{name:'PBKDF2', hash:'SHA-256', iterations, salt}, wraps:{passphrase:{iv,ct}, recovery:{iv,ct}}, encryptions}`.
-- `records` stores `journal`, `profile`, `quizExtras`, `reflection`. Each row is `{v:1, id, iv, ct}`.
+- Object stores keep `journal`, `profile`, `quizExtras`, `reflection`, `relationshipPhoto` and `bookInteraction` records. Each encrypted row is `{v:1, id, iv, ct}`. Upgrade from version 1 adds the two book stores while preserving existing rows.
   - `id`: a random UUID. The UI's `localId` is that UUID, never derived from content.
   - Plaintext JSON, including `createdAt`, lives inside `ct`. No titles, dates or lengths are stored in clear beyond what ciphertext size reveals.
   - AAD is `dor-vault/v1/<vaultId>/<store>/<id>`, so a record moved to another id, store or vault fails to decrypt.

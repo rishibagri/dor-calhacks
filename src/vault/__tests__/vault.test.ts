@@ -228,6 +228,90 @@ test('errors carry only a constant code, never content', async () => {
   catch (e) { assert.equal((e as Error).message, 'invalid_input'); assert.equal(String(e).includes(MARK), false); }
 });
 
+test('relationship-book photos and interactions round-trip encrypted, stay pair-scoped, and lock with the vault', async () => {
+  const { vault, store } = fresh();
+  await vault.create(PASS);
+  const pairId = 'pair-11111111-1111-4111-8111-111111111111';
+  const photoId = 'photo-11111111-1111-4111-8111-111111111111';
+  const interactionId = 'interaction-11111111-1111-4111-8111-111111111111';
+  const nudgeInteractionId = 'nudge-local-11111111-1111-4111-8111-111111111111';
+  const nudgeSourceId = 'nudge-source-22222222-2222-4222-8222-222222222222';
+  const firstSeenAt = '2026-10-24T12:00:00.000Z';
+  const photoMarker = 'BOOK-PHOTO-PRIVATE-MARKER';
+  const noteMarker = 'BOOK-CALL-PRIVATE-MARKER';
+  const dataUrl = `data:image/jpeg;base64,${Buffer.from(photoMarker).toString('base64')}`;
+
+  await vault.saveRelationshipPhoto({ photoId, pairId, mimeType: 'image/jpeg', dataUrl, caption: photoMarker });
+  await vault.saveBookInteraction({ interactionId, pairId, kind: 'call', outcome: 'positive', note: noteMarker });
+  await vault.saveBookInteraction({ interactionId: nudgeInteractionId, pairId, kind: 'nudge_received',
+    sourceId: nudgeSourceId, templateId: 'offer_short_call', createdAt: firstSeenAt });
+  await vault.saveBookInteraction({ interactionId: 'nudge-local-33333333-3333-4333-8333-333333333333', pairId,
+    kind: 'nudge_received', sourceId: nudgeSourceId, templateId: 'offer_short_call', outcome: 'negative',
+    createdAt: '2026-10-25T12:00:00.000Z' });
+
+  assert.equal((await vault.listRelationshipPhotos(pairId)).length, 1);
+  assert.equal((await vault.listRelationshipPhotos('pair-33333333-3333-4333-8333-333333333333')).length, 0);
+  assert.equal((await vault.listBookInteractions(pairId)).length, 2);
+  const nudgeInteraction = (await vault.listBookInteractions(pairId)).find((i) => i.kind === 'nudge_received');
+  assert.equal(nudgeInteraction?.interactionId, nudgeInteractionId);
+  assert.equal(nudgeInteraction?.createdAt, firstSeenAt);
+  assert.equal(nudgeInteraction?.outcome, 'negative');
+  const raw: unknown[] = [...await store.list('relationshipPhoto'), ...await store.list('bookInteraction')];
+  const dump = JSON.stringify(raw, (_key, value) => value instanceof Uint8Array ? Buffer.from(value).toString('latin1') : value);
+  for (const marker of [photoMarker, noteMarker, 'image/jpeg', 'offer_short_call', 'positive', 'negative']) assert.equal(dump.includes(marker), false);
+
+  vault.lock();
+  assert.equal(await code(vault.listRelationshipPhotos(pairId)), 'vault_locked');
+  assert.equal(await code(vault.listBookInteractions(pairId)), 'vault_locked');
+  await vault.unlock(PASS);
+  assert.equal((await vault.listRelationshipPhotos(pairId))[0]?.caption, photoMarker);
+  assert.equal((await vault.listBookInteractions(pairId)).find((i) => i.interactionId === interactionId)?.note, noteMarker);
+  await vault.deleteRelationshipPhoto(pairId, photoId);
+  await vault.deleteBookInteraction(pairId, interactionId);
+  assert.equal((await vault.listRelationshipPhotos(pairId)).length, 0);
+  assert.equal((await vault.listBookInteractions(pairId)).length, 1);
+});
+
+test('relationship-book vault rejects remote URLs, oversized photos, malformed records and unknown fields', async () => {
+  const { vault } = fresh();
+  await vault.create(PASS);
+  const base = { photoId: 'p1', pairId: 'pair1', mimeType: 'image/jpeg' as const, dataUrl: 'data:image/jpeg;base64,YQ==', caption: '' };
+  assert.equal(await code(vault.saveRelationshipPhoto({ ...base, dataUrl: 'https://example.test/photo.jpg' })), 'invalid_input');
+  const oversized = `data:image/jpeg;base64,${'A'.repeat(2_000_004)}`;
+  assert.equal(await code(vault.saveRelationshipPhoto({ ...base, dataUrl: oversized })), 'invalid_input');
+  assert.equal(await code(vault.saveRelationshipPhoto({ ...base, caption: 'x'.repeat(161) })), 'invalid_input');
+  assert.equal(await code(vault.saveRelationshipPhoto({ ...base, unsupported: true } as never)), 'invalid_input');
+  assert.equal(await code(vault.saveBookInteraction({ interactionId: 'i1', pairId: 'pair1', kind: 'nudge_received', sourceId: 'nudge1' })), 'invalid_input');
+  assert.equal(await code(vault.saveBookInteraction({ interactionId: 'i4', pairId: 'pair1', kind: 'nudge_received', sourceId: 'nudge1', templateId: 'unknown_template' } as never)), 'invalid_input');
+  assert.equal(await code(vault.saveBookInteraction({ interactionId: 'i2', pairId: 'pair1', kind: 'call', note: 'x'.repeat(321) })), 'invalid_input');
+  assert.equal(await code(vault.saveBookInteraction({ interactionId: 'i3', pairId: 'pair1', kind: 'call', privateField: 'x' } as never)), 'invalid_input');
+});
+
+test('IndexedDB v1 vaults migrate by adding relationship stores without deleting existing records', async () => {
+  const factory = new IDBFactory();
+  const name = 'dor-vault-migration-test';
+  const request = factory.open(name, 1);
+  await new Promise<void>((resolve, reject) => {
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      db.createObjectStore('meta');
+      for (const name of ['journal', 'reflection', 'profile', 'quizExtras']) db.createObjectStore(name, { keyPath: 'id' });
+    };
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction('journal', 'readwrite');
+      tx.objectStore('journal').put({ v: 1, id: 'existing', iv: new Uint8Array(12), ct: new Uint8Array(16) });
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    };
+    request.onerror = () => reject(request.error);
+  });
+  const upgraded = new IndexedDbVaultStore(factory, name);
+  assert.equal((await upgraded.get('journal', 'existing'))?.id, 'existing');
+  assert.deepEqual(await upgraded.list('relationshipPhoto'), []);
+  assert.deepEqual(await upgraded.list('bookInteraction'), []);
+});
+
 test('production default uses 600k PBKDF2 iterations', async () => {
   const store = new IndexedDbVaultStore(new IDBFactory());
   const vault = new LocalVault({ store, idleLockMs: 0 });

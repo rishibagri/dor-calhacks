@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { PrivateAssessment, SignalCandidate } from '@dor/contracts';
-import { assessedRecipients, initialLoopState, leftOutByAssessment } from '@/features/voice/assessment';
+import { assessedRecipients, initialLoopState, leftOutByAssessment, uniquelyPreferredRecipient } from '@/features/voice/assessment';
 import { useLiveShared } from '@/components/shell/use-live';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,13 +15,13 @@ import { shareRecipients } from './share-review-model';
 import { ShareReview } from './share-review';
 
 /**
- * Owner-only private decision step between a reflection and any sharing preview (Core 2). Neutral questions about
- * the owner's own wishes; skip and "space" are first-class and end in silence. Choosing a person only opens the
- * existing exact-recipient preview, which still needs its own approval. Nothing here is stored or sent; the parent
+ * Owner-only private decision step between a reflection and the agent exchange. Neutral questions about
+ * the owner's own wishes; skip and "space" are first-class and end in silence. A unique literal name match proceeds
+ * automatically; ambiguous matches get a clarifying choice. Nothing here is stored or sent; the parent
  * unmounts it on lock, pagehide, sign-out and account switch.
  *
- * Claude's optional private assessment (AI, D040, docs/features/PRIVATE_ASSESSMENT.md) can only narrow this loop:
- * stop, skip the company question, leave named people out, or list preferred people first. It never chooses a person.
+ * Claude's private assessment (AI, D040/D050, docs/features/PRIVATE_ASSESSMENT.md) can stop for risk, resolve a unique
+ * literal name, leave excluded people out, or order candidates.
  * Recipients are re-filtered on every render, so a connection that loads later is still left out.
  */
 export function DecisionLoop({ candidate, assessment, onDone }: {
@@ -29,21 +29,23 @@ export function DecisionLoop({ candidate, assessment, onDone }: {
 }) {
   const shared = useLiveShared();
   const [s, setS] = useState<LoopState>(() => failClosedWithoutAssessment(initialLoopState(candidate, assessment), assessment));
+  const [automaticPending, setAutomaticPending] = useState(false);
   const { eligible: unpaused, pausedCount } = withoutPaused(
     shareRecipients(shared.myPairs()).map(({ pairId, name, unnamed }) => ({ pairId, name, unnamed })),
     shared.myRecipientPauses(), new Date());
   const { kept, leftOutUnnamed } = applyUnnamedExclusionGuard(unpaused, (assessment?.excludedNames.length ?? 0) > 0);
   const recipients = assessedRecipients(kept, assessment);
   const leftOut = leftOutByAssessment(kept, assessment);
-  const outcome = decide(s, recipients);
+  const direct = uniquelyPreferredRecipient(recipients, assessment);
+  const outcome = decide(direct ? { ...s, company: 'company', chosen: direct.pairId } : s, recipients);
 
   if (outcome.kind === 'ready_for_preview') {
     return (
       <div className="space-y-3">
-        <ShareReview candidate={outcome.candidate} recipientPairId={outcome.recipient.pairId} onClose={onDone} />
+        <ShareReview candidate={outcome.candidate} recipientPairId={outcome.recipient.pairId} onClose={onDone} onAutomaticPendingChange={setAutomaticPending} />
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="ghost" onClick={() => setS(answerWho(s, 'none'))}>Actually, no one right now</Button>
-          <Button size="sm" variant="ghost" onClick={() => setS(excludeForNow(s, outcome.recipient.pairId))}>
+          <Button size="sm" variant="ghost" disabled={automaticPending} onClick={() => setS(answerWho(s, 'none'))}>Actually, no one right now</Button>
+          <Button size="sm" variant="ghost" disabled={automaticPending} onClick={() => setS(excludeForNow(s, outcome.recipient.pairId))}>
             Not {outcome.recipient.name} this time
           </Button>
         </div>

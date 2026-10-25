@@ -134,7 +134,7 @@ export interface DeliveryContext {
   lastNudgeAt: Date | null;
 }
 
-/** One worker_delivery row (only opted-in rows are listed by the view). */
+/** One explicit worker_delivery setting; absent rows use the accepted-pair default. */
 export function toDeliveryContext(row: Row): DeliveryContext {
   const quietStart = optional(row, 'quiet_start_minute');
   const quietEnd = optional(row, 'quiet_end_minute');
@@ -216,8 +216,35 @@ export function toPlanCandidate(row: Row): PlanCandidate {
   };
 }
 
-/** No row means the recipient never opted in (D017 default off). */
-export const NOT_OPTED_IN: RecipientDelivery = { ...DEFAULT_RECIPIENT_DELIVERY, optedIn: false };
+/**
+ * One worker_introduction_requests row (D048): an open viewer request plus one candidate the viewer can see now and
+ * shares at least one published tag with, or no candidate (nothing to suggest, or the viewer stopped taking part).
+ */
+export interface IntroductionRequestRow {
+  requestId: string;
+  /** '' when the viewer is no longer published; such a row never has a candidate. */
+  viewerRef: string;
+  viewerRevision: number;
+  expiresAtMs: number;
+  candidate: { ref: string; revision: number; sharedTags: string[] } | null;
+}
+
+export function toIntroductionRequestRow(row: Row): IntroductionRequestRow {
+  const viewerRef = field(row, 'viewer_ref');
+  if (typeof viewerRef !== 'string') throw new RowShapeError('viewer_ref');
+  const ref = optStr(row, 'candidate_ref');
+  const sharedTags = strings(row, 'shared_tags');
+  if (sharedTags.some(t => !DiscoveryTagSchema.safeParse(t).success)) throw new RowShapeError('shared_tags');
+  if (ref !== undefined && (viewerRef === '' || sharedTags.length === 0)) throw new RowShapeError('candidate_ref');
+  return {
+    requestId: str(row, 'request_id'), viewerRef, viewerRevision: int(field(row, 'viewer_revision'), 'viewer_revision'),
+    expiresAtMs: epochMs(field(row, 'expires_at'), 'expires_at'),
+    candidate: ref === undefined ? null : { ref, revision: int(field(row, 'candidate_revision'), 'candidate_revision'), sharedTags },
+  };
+}
+
+/** Compatibility fallback name: accepted-pair default is on; persisted false rows still opt out. */
+export const DEFAULT_DELIVERY: RecipientDelivery = DEFAULT_RECIPIENT_DELIVERY;
 
 /** Maps rows, dropping any that fail to map (fail closed on drift). */
 export function mapRows<T>(rows: Iterable<unknown>, map: (row: Row) => T): T[] {

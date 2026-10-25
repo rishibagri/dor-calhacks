@@ -1,40 +1,30 @@
-# Automatic nudges: owner standing consent (D044)
+# Automatic connection nudges (D050; supersedes D044 product behavior)
 
-**Status:** backend implemented and offline-tested by Cyber (`spacetimedb/src/reducers/standing.ts`, `contracts/src/standing-consent.ts`, `spacetimedb/tests/standing.test.ts`). **Off by default.** CS app wiring, AI/DS consumer ACKs, deployment and a live two-account run are still open. Manual per-item preview remains the default and is unchanged for any pair without a valid rule.
+**Current product rule:** nudges for accepted connections are automatic by default. There is no standing-consent setup and no sender approval for each nudge. The recipient can turn nudges off per connection. Current relationship presets, account/pair checks, server validation, pause, quiet-hour and cooldown controls remain enforced. Delivery stays inside dor; the app never sends a personal message as the user.
 
-## The rule (README D044)
-Per-nudge sender preview is optional **only** for a pair where the owner explicitly enabled a revocable, expiring, category-limited standing rule. It is never granted by onboarding answers, a relationship preset, a journal entry, an assessment, model confidence, a provider or the recipient. The recipient must still opt in independently. It is separate from discovery and cannot grant public profile or event consent.
+The D044 reducers and views remain in the module for compatibility and history, but this product flow does not call `approve_signal_standing` or require a D044 rule. D050 supersedes D044's opt-in and manual-review product requirements; it does not erase the old implementation record.
 
-## Owner setup (explicit, before any journal-derived candidate)
-`set_standing_consent({pair_id, categories, expires_at, expected_version, expected_policy_version, expected_assignment_version, notice_version})`
-- **One named pair**; the caller must be a member and the pair accepted. The recipient is derived server-side.
-- **Categories:** non-empty, from `support_preference` / `coarse_availability`, and only ones the owner's current preset for this pair already allows. A preset is a ceiling, never broadened.
-- **Versions:** the preset/assignment versions and `STANDING_CONSENT_VERSION` notice the owner was shown; anything else is `stale: stale_policy`.
-- **Expiry:** 1 h to 30 days, capped by the preset's expiry. `expected_version` is the current rule version (0 for none).
-- **Refused while the owner is pausing that person** (D041).
-- Replacing a rule ends the old one's unused approvals first.
+## Trigger and recipient resolution
 
-**Owner copy (CS):** "Let dor send {name} matching nudges without asking you each time, for {categories}, until {date}. You can turn this off any time. {name} still controls whether they receive nudges." Show it on its own setup screen, never inside the journal flow, with a clear revoke control.
+- A private reflection may identify names literally mentioned by the writer (`mentionedNames`, max 5). Those names stay in browser memory and never enter SpacetimeDB, Factory, Droid, shared prompts, logs or analytics.
+- If exactly one mentioned name matches exactly one accepted connection on-device, the app automatically sends only the allowed enum signal through `approve_signal`. If there are multiple names, an ambiguous match, or no accepted match, ask the writer to choose or take no action.
+- The signal is limited to the category and fields already allowed by the current relationship preset. Never send journal text, transcript, inferred sensitive fact, reason, event, location or private assessment.
+- The agents consider the approved signal together with current relationship state and delivery constraints. They may return no nudge. They cannot expand the audience or add facts from the journal.
 
-## Automatic approval
-`approve_signal_standing({pair_id, support_mode?, availability?, client_request_id, rule_version})`, from the owner's own client, with no preview.
-- The server runs every manual check (`guardApproval`: pair, assignment, preset categories, expiry, notice), with the payload revision computed server-side from the rule-bound versions, so the client can't influence it.
-- Plus the rule check (`standingRuleStands`: same owner/recipient/pair, current `rule_version`, unrevoked, unexpired, unchanged preset, categories covering the payload) and the D041 pause.
-- **No per-event sender alert or receipt** (receipt action `approved_standing` is never projected). The approval is listed in `my_signals` for revocation.
+## Conflict and urgent-support stops
 
-## Delivery (unchanged gates)
-The worker and `commit_nudge` still require recipient opt-in, D035 support consent, quiet hours and cooldown, plus the exact rule version that approved each signal (`standingApprovalStands` in `commit_nudge`, `worker_signal_context`, `my_nudges`). Recipient copy stays the fixed template. Suppression is silent to the recipient.
+The owner-only assessment adds `risk: none | interpersonal_conflict | urgent_support`. Any non-`none` risk suppresses the entire connection workflow for that reflection, even if the model also returned a candidate. Examples for `interpersonal_conflict` include a hidden activity, an excuse, a declined invitation followed by another plan, or any likely disclosure that could create friction. The app does not tell a connection why it held back.
 
-## Revocation and no resurrection
-`revoke_standing_consent({pair_id})`, rule replacement, a D041 pause, or unlinking the pair (CS, either member's rule) ends the rule now and revokes its unused approvals and their nudges. Resuming a pause never re-enables a rule; the owner sets a new one. Expiry goes through `sweep_expired`.
+`urgent_support` covers serious mental-health distress, including depression, hopelessness, self-harm thoughts or immediate danger. Show the support-resource card immediately after reflection; do not contact friends, family or any other connection. A browser-local high-recall term check can show the card even if the model misses a term; this is not a diagnosis and may show resources for quoted or negated terms. The current card offers U.S. 988 phone, text and chat resources; localization is not implemented. The assessment and journal remain private. Provider/model failure must never enable a nudge that was otherwise held.
 
-## Owner view
-`my_standing_consents → {pair_id, categories, version, expires_at, active, created_at}[]`. Join `pair_id` to `my_pairs` for the name. No one else, including the recipient, has a view of rules.
+## Recipient controls and server gates
 
-## Errors (owner)
-`unauthorized: no_rule | blocked_category | no_preset | paused | recipient_paused`, `stale: stale_policy | revoked | expired | standing rule version changed`, `invalid: too_long | too_short | invalid_schema | pair_not_accepted`, `not_found: pair | standing rule`.
+- Accepted pairs use dor's standard in-app nudge types by default. Missing support-style settings mean the standard types; those settings personalize the offer, they do not authorize journal disclosure.
+- Each recipient can disable in-app nudges for an individual connection. A persisted `opted_in: false` is authoritative; missing delivery rows use `DEFAULT_RECIPIENT_DELIVERY` (on). Quiet hours and 24-hour per-pair cooldown apply when configured.
+- `pause_recipient` remains a durable sender-side no-contact boundary; an active pause suppresses pending work. Explicit exclusions and risk flags also stop the current reflection. No pause/exclusion reason is sent to the other person.
+- `approve_signal` checks accepted-pair membership, current preset/assignment, category, payload and idempotency. `commit_nudge` rechecks current source validity, recipient opt-out, recipient support styles, pause, quiet hours and cooldown. A failure means no nudge; never fall back to manual sender approval.
+- Recipient controls include clear per-connection off/on and pause/resume actions. Turning nudges off hides pending work; unlinking revokes pair work.
 
-## Consumer checklist
-- **CS:** regenerate bindings; build the setup/revoke screen with the copy above; only call `approve_signal_standing` for a candidate the owner's decision loop resolved to that pair (a uniquely chosen recipient, never auto-chosen); keep manual preview as the default.
-- **AI:** no worker change (automatic approvals are ordinary signals in `worker_signal_context` while the rule stands).
-- **DS:** evaluate that the assessment, quiz or journal can never create a rule, and that a pause or revoke stops queued automatic nudges.
+## Required validation
+
+Test the unique-name automatic path, ambiguous/multiple names, recipient opt-out, current-preset denial, conflict risk, serious-distress resource card, provider failure, pause/revoke races, quiet hours, cooldown, and that journal text/reason never appears in peer-visible rows or agent state. Keep deployment/live verification distinct from offline tests. No paid provider calls or Maincloud changes are implied by this specification.

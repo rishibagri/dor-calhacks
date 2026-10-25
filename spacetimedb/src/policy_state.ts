@@ -2,7 +2,7 @@
 // Always read in the same transaction as the write the guard protects.
 import type { Identity, Timestamp } from 'spacetimedb';
 import type { InferSchema, ViewCtx } from 'spacetimedb/server';
-import { pauseActive, standingRuleStands, type StandingPresetState, type StandingRuleState } from '@dor/contracts/policy';
+import { DEFAULT_RECIPIENT_DELIVERY, defaultSupportPreferences, pauseActive, standingRuleStands, type StandingPresetState, type StandingRuleState } from '@dor/contracts/policy';
 import type { AreaState, DeliveryGate, DiscoveryParty, PolicySnapshot, PublicationState, StoredSignal, SupportPreferenceState } from '@dor/contracts/policy';
 import type { spacetimedb } from './schema';
 import type { Ctx } from './errors';
@@ -84,10 +84,16 @@ export function findPreferenceRow(db: ReadDb, recipient: Identity, pairId: strin
 }
 
 /** The recipient's current preference consent for a pair (null = none). Sweep-expired rows count as gone. */
-export function loadPreference(db: ReadDb, recipient: Identity, pairId: string): SupportPreferenceState | null {
+export function loadPreference(db: ReadDb, recipient: Identity, pairId: string, nowMs: number | null = null): SupportPreferenceState | null {
+  const pair = db.pair.pair_id.find(pairId);
+  if (!pair || pair.status !== 'accepted' || (!pair.member_a.isEqual(recipient) && !pair.member_b?.isEqual(recipient))) return null;
   const p = findPreferenceRow(db, recipient, pairId);
-  if (!p) return null;
-  const expired = isExpiredMarked(db, 'preference', p.consent_id, p.consent_version);
+  const expired = p && (isExpiredMarked(db, 'preference', p.consent_id, p.consent_version) ||
+    (nowMs !== null && toMs(p.expires_at) <= nowMs));
+  if (!p || p.revoked_at || expired) {
+    // Support-style settings personalize the agent, not authorize it. The recipient can stop this pair via delivery opt-out.
+    return defaultSupportPreferences(pairId, hex(recipient));
+  }
   return {
     consentId: p.consent_id, recipientId: hex(p.recipient), pairId: p.pair_id, supportModes: p.support_modes,
     availability: p.availability, consentVersion: p.consent_version,
@@ -141,11 +147,11 @@ export function loadDeliveryGate(db: ReadDb, recipient: Identity, pairId: string
   // Every nudge counts toward the per-pair cooldown, including dismissed/suppressed ones (no revoke-and-retry spam).
   for (const n of db.nudge.pair_id.filter(pairId)) last = Math.max(last ?? 0, toMs(n.created_at));
   return {
-    nowMs, lastNudgeAtMs: last, preferences: loadPreference(db, recipient, pairId),
+    nowMs, lastNudgeAtMs: last, preferences: loadPreference(db, recipient, pairId, nowMs),
     pref: row ? {
       optedIn: row.opted_in, quietStartMinute: row.quiet_start_minute ?? null,
       quietEndMinute: row.quiet_end_minute ?? null, utcOffsetMinutes: row.utc_offset_minutes,
-    } : null,
+    } : DEFAULT_RECIPIENT_DELIVERY,
   };
 }
 
@@ -207,6 +213,22 @@ export function loadStandingPreset(db: ReadDb, owner: Identity, pairId: string):
   if (!s.preset || !s.assignment) return null;
   return { allowedCategories: s.preset.allowedCategories, version: s.preset.version, assignmentVersion: s.assignment.assignmentVersion,
     expiresAtMs: s.preset.expiresAtMs, revoked: s.preset.revokedAtMs !== null };
+}
+
+/**
+ * Whether a rule would still authorize an automatic approval for its own categories, by the same `standingRuleStands`
+ * check the reducers use: unrevoked, not sweep-expired, current notice, the pair still accepted with the same
+ * recipient, and the preset/assignment versions the owner was shown. Views are clockless (`nowMs` null), so an expiry
+ * that the sweep hasn't marked yet still reads as active here; reducers check the clock themselves.
+ */
+export function standingRuleActive(db: ReadDb, r: StandingRow): boolean {
+  const p = db.pair.pair_id.find(r.pair_id);
+  if (!p || p.status !== 'accepted' || !p.member_b) return false;
+  const counterpart = p.member_a.isEqual(r.owner) ? p.member_b : p.member_b.isEqual(r.owner) ? p.member_a : undefined;
+  if (!counterpart) return false;
+  return standingRuleStands(toStandingState(db, r), loadStandingPreset(db, r.owner, r.pair_id), {
+    ownerId: hex(r.owner), recipientId: hex(counterpart), pairId: r.pair_id, categories: r.categories,
+  }, null) === null;
 }
 
 /**

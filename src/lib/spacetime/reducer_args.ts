@@ -1,13 +1,14 @@
 /**
- * Builds generated-reducer argument objects (camelCase keys, SDK Timestamp).
- * If `spacetime generate` represents an enum/Timestamp differently, this is
- * the single adapter file to adjust (see README.md).
+ * Builds generated-reducer argument objects (camelCase keys). Every time argument the module declares is a
+ * `t.string()` it parses itself (guards.parseFuture), so times go out as ISO strings, never SDK Timestamps: a
+ * Timestamp in a string field serializes to something the module cannot parse ("must be an ISO timestamp").
+ * `__tests__/reducer-args.test.ts` checks each builder against the generated bindings' field types.
+ * If `spacetime generate` represents an enum/Timestamp differently, this is the single adapter file to adjust.
  */
-import { Timestamp } from 'spacetimedb';
-import { DISCOVERY_AUDIENCES, DISCOVERY_NOTICE_VERSION } from '@dor/contracts/policy';
+import { ACTIVITY_CATEGORY, DISCOVERY_AUDIENCES, DISCOVERY_NOTICE_VERSION, SHARING_CATEGORIES } from '@dor/contracts/policy';
 import type { SharedStatePort } from '@/lib/backend/ports';
 
-type Input<K extends 'setRelationshipPreset' | 'assignRelationshipPreset' | 'approveSignal' | 'setSupportPreferences' | 'setNudgeDelivery' | 'publishDiscoveryProfile'> = Parameters<
+type Input<K extends 'setRelationshipPreset' | 'assignRelationshipPreset' | 'approveSignal' | 'setSupportPreferences' | 'setNudgeDelivery' | 'publishDiscoveryProfile' | 'setStandingConsent' | 'approveSignalStanding'> = Parameters<
   SharedStatePort[K]
 >[0];
 
@@ -17,19 +18,28 @@ function date(iso: string): Date {
   return d;
 }
 
-function ts(iso: string): Timestamp {
-  return Timestamp.fromDate(date(iso));
+/** Validated, normalized ISO string for a module `t.string()` time argument. */
+function iso(value: string): string {
+  return date(value).toISOString();
 }
 
 export const reducerArgs = {
   registerAccount: (displayName: string) => ({ displayName }),
   acceptPairInvite: (inviteToken: string) => ({ inviteToken }),
   unlinkPair: (pairId: string) => ({ pairId }),
+  // The module stores the C7 activity permission as one more preset category (D039); it is added here only from the
+  // explicit flag, and the core list may hold C3 categories only (D049).
   setRelationshipPreset: (i: Input<'setRelationshipPreset'>) => ({
     presetKind: i.presetKind,
-    allowedCategories: i.allowedCategories,
+    allowedCategories: [
+      ...i.allowedCategories.map((c) => {
+        if (!(SHARING_CATEGORIES as readonly string[]).includes(c)) throw new Error('invalid: not a core sharing category');
+        return c;
+      }),
+      ...(i.activityInterestAllowed ? [ACTIVITY_CATEGORY] : []),
+    ],
     expectedVersion: i.expectedVersion,
-    expiresAt: ts(i.expiresAt),
+    expiresAt: iso(i.expiresAt),
   }),
   assignRelationshipPreset: (i: Input<'assignRelationshipPreset'>) => ({
     pairId: i.pairId,
@@ -39,7 +49,7 @@ export const reducerArgs = {
   approveSignal: (i: Input<'approveSignal'>) => ({ ...i }),
   revokeSignal: (signalId: string) => ({ signalId }),
   dismissNudge: (nudgeId: string) => ({ nudgeId }),
-  snoozeNudge: (nudgeId: string, until: string) => ({ nudgeId, until: ts(until) }),
+  snoozeNudge: (nudgeId: string, until: string) => ({ nudgeId, until: iso(until) }),
   // expires_at is a string arg on this reducer (parsed server-side), not a Timestamp.
   setSupportPreferences: (i: Input<'setSupportPreferences'>) => ({
     pairId: i.pairId,
@@ -59,6 +69,12 @@ export const reducerArgs = {
   }),
   pauseRecipient: (pairId: string, expiresAt: string, expectedVersion: number) => ({ pairId, expiresAt, expectedVersion }),
   resumeRecipient: (pairId: string, expectedVersion: number) => ({ pairId, expectedVersion }),
+  setStandingConsent: (i: Input<'setStandingConsent'>) => ({ ...i, categories: [...i.categories], expiresAt: iso(i.expiresAt) }),
+  revokeStandingConsent: (pairId: string) => ({ pairId }),
+  approveSignalStanding: (i: Input<'approveSignalStanding'>) => ({
+    pairId: i.pairId, supportMode: i.supportMode ?? undefined, availability: i.availability ?? undefined,
+    clientRequestId: i.clientRequestId, ruleVersion: i.ruleVersion,
+  }),
   // C8: audience and notice version are fixed by the contract, never user-chosen.
   publishDiscoveryProfile: (i: Input<'publishDiscoveryProfile'>) => ({
     displayName: i.displayName,

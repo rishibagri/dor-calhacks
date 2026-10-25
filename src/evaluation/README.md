@@ -18,6 +18,10 @@ Read root AGENTS.md, PRD.md, PROJECT_KNOWLEDGE.md, contracts/README.md and your 
 | `events.ts` | DS-R3 over the D039 server projections. `eligibleEvents` narrows `catalogue_events` rows (in person, viewer's own active coarse area by Cyber's area rule, fetched ≤48 h like the server's intent rule, upcoming ≥30 min, ≤14 days; a duplicated ID withholds every copy). `rankEventCompanions` takes companions only from `event_companions` (mutual, no kind) joined to strictly adapted `discovery_cards`, plus the viewer's own `my_event_intents`; it ranks with `rankNearby` event mode and reports every withheld row. Another person's interested/going is never an input or output | CS, AI |
 | `fixtures/event-listings.json` | v2: synthetic `catalogue_events` (14 rows, each non-eligible row labeled), `my_event_intents`, `discovery_cards` and `event_companions` rows with expected companions and withheld rows | DS evaluation |
 | `fixtures/nearby-candidates.json`, `fixtures/nearby-cases.json` | 15 synthetic candidates, 4 viewers and 15 labeled nearby/event cases (6 positive, 9 no-action) written before any run | DS evaluation |
+| `fixtures/berkeley-newcomers.json` | D045 demo personas (17 synthetic people around Berkeley campus/downtown, one in `sf-mission`), 9 labeled discovery cases (4 positive, 5 no-action) and 7 paired new-vs-reconnect cases that reference `decision-cases.json` by ID. `transition` is device-local and never output | DS evaluation |
+| `fixtures/berkeley-luma.synthetic.json` | Hand-written dataset in the documented `tortuga/luma-scraper` shape, including rows the normalizer must drop. No Actor was run | DS evaluation |
+| `transition.ts` | Transition evaluation: a server stand-in built on Cyber's real guards → `rankDiscoveryCards` (as CS calls it) / `rankEventCompanions`, plus the paired comparison with the decision loop. `--write` / `--check` maintain `results/transition.md` | DS, CS |
+| `source-replay.ts` | Catalogue dataset (raw Actor output or `ingest-catalogue.ts --fetch` output) → CS `normalizeCatalogue` → the `catalogue_events` view rule → `eligibleEvents`. Prints ids, topics and reason codes only, and labels SYNTHETIC unless provenance says otherwise. `--dataset`, `--write` | DS, CS |
 | `fixtures/decision-cases.json` | Core 1 labels + Core 2 paired scenarios for the owner-only decision loop (v2.2, D040 + D041 + D042 + core3-audit): 55 synthetic cases, 19 of them referencing AI's `src/agents/fixtures/reflection.synthetic.json` by ID (all 10 reflection cases, no copied data), (support/avoid/uncertain) across general-vs-specific, explicit refusal, ambiguous timing, skipped question, changed answer, prompt injection, private party, no candidate, and the audit cases (unnamed connections, duplicate names, D041 pauses, nickname exclusions), each with an expected `no_action` / `needs_clarification` / `ready_for_preview` (README design vocabulary, not a contract) and forbidden-disclosure labels (`unapproved_recipient`, `private_activity`, `location`, `excuse`, `relationship_tension`, `timing_detail`), written before any run; plus a 4-story noninterference set | DS evaluation, CS, AI |
 | `decision-loop.ts` | Replays a case through the composition CS's `DecisionLoop` renders: `initialLoopState` → `failClosedWithoutAssessment` (D042: a candidate with no assessment → `no_action: assessment_missing`) → owner taps; recipients `withoutPaused` → `applyUnnamedExclusionGuard` → `assessedRecipients` → `decide` (evaluation-only consumer of CS + AI helpers), collects owner-facing copy, recipient-visible copy and offered/previewed people, and scores outcome, appropriate silence, missed suggestions, unsafe suggestions, excluded people surfaced and forbidden disclosures separately; `resolveCases` fills AI-fixture references; `observable()` for noninterference (preview + nudge schedule) | DS evaluation |
 | `decision-baselines.ts` | Core 3 deterministic comparison systems over the same cases: `loop_without_assessment` (CS's loop with the assessment dropped and no D042 guard, the pre-D040 path; historical comparison) and `preview_on_candidate` (DS `matching.ts` `buildPreview` as a "support match is enough" strawman); `d040_loop` is the current pipeline | DS evaluation |
@@ -38,6 +42,21 @@ Activity pipeline: `matchSignal` (or the coordinator's compatible ACK) → agree
 Report: `npm run build && node src/evaluation/report.ts --write` regenerates `results/latest.md` (deterministic, synthetic, no provider).
 
 Core 4: `node src/evaluation/core4.ts --write` regenerates `results/core4.md`; `core4.test.ts` fails if it is stale, and each privacy check has a negative control that must make it fail.
+
+D044 automatic nudges (DS consumer check, `__tests__/standing-consent.test.ts`): no decision-loop, assessment or quiz output carries a standing rule; rule-granting fields in an assessment or candidate are rejected and never preview; quiz drafts can't satisfy `guardStandingRule`; and for every ready preview in `decision-cases.json`, a revoked, replaced, expired, paused-then-resumed or preset-changed rule no longer stands (`standingRuleStands`). Only the shared `@dor/contracts` guards and the pure models run; reducers, sweep and worker behavior are Cyber's module tests. Core 1–4 numbers above assume manual per-item approval (D044 is off by default).
+
+Transition (D045, `__tests__/transition.test.ts`): 9 discovery and 7 paired cases, plus checks on:
+- D046 transition-tag rules;
+- pair coupling, with a positive control;
+- noninterference, by varying every private story and adding D041 pauses;
+- the reverse direction: discovery never adds a reconnect recipient;
+- framing: no loneliness or pressure copy;
+- projection-bug rejection;
+- stale and cancelled events;
+- exact normalizer drops;
+- a privacy scan of every `results/*.md`: no story text, transition, display name or guest data. The two exceptions are `core4.md`'s quote of the README example and the rater sheets, which show synthetic entries to raters by design.
+
+Real data: once an approved Actor run is saved, run `node src/evaluation/source-replay.ts --dataset <file> --write` and `node src/evaluation/transition.ts --dataset <file>`. Event-mode labels apply to the synthetic dataset only, because source IDs differ.
 
 ## Teammate ratings (Core 3)
 Two teammates rate the decision-loop outcomes independently. Neither may be the DS annotator who wrote the labels.

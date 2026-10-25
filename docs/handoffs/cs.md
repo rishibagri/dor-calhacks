@@ -1,5 +1,35 @@
 # CS handoff — 2026-10-24T22:00Z, role/cs-app (Core 1/2/4)
 
+## D044 frontend + Apify configuration hardening — `codex/d044-apify-readme`
+
+**Status:** implemented; verification in progress; not deployed or live-verified. No Maincloud mutation, deploy, or paid provider/Apify call was made.
+
+**D044 interface/files:** `StandingConsentSettings` on Connections reads the caller-filtered `my_standing_consents`, selects one accepted pair explicitly, permits only categories already allowed by that pair's active preset, requires expiry within policy limits, and supports revocation. `ShareReview` calls `approve_signal_standing` only after the owner decision loop resolved a named pair and the current rule covers the entire enum-only payload. It passes only the pair, allowed enums, idempotency key, and rule version. On failure it falls back to manual preview. No journal text is automatically shared. Recipient opt-in, pause, quiet hours, expiry and server rechecks remain backend gates.
+
+**Apify:** the server adapter now rejects unreviewed Actor/source combinations and missing/unpinned Actor builds; cache/provenance includes the build. Config doctor and `.env.example` call out the required build. The public-event Actor path remains unverified until an owner-approved, capped run and Cyber's D028/source review; do not claim it is live.
+
+**Docs:** README is a concise entry point; expanded product/phase/role/sponsor details moved to `INSTRUCTIONS.md`. `PROJECT_KNOWLEDGE.md` remains the current evidence ledger.
+
+**Review/next:** Rishi withdrew the additional human privacy-review request. Use automated checks as the review gate for this change; existing D044 reducer enforcement remains in force. PR #60 is open for owner merge. Separately approve any paid Apify fetch before running it.
+
+---
+
+# Relationship books handoff — CS + Cyber (D049)
+
+**Status:** implemented and offline-verified; pending PR review. Not browser- or live-verified. No provider, Apify, Maincloud or deployment calls.
+
+**CS UI and local ports:** accepted connections show an expandable relationship book. The user may select a local JPEG/PNG/WebP image (≤1.5 MB), optionally caption it, manually log calls, link one of their own introductions, and record local feedback on received nudges. `VaultPort` additions are local-only: `save/list/deleteRelationshipPhoto` and `save/list/deleteBookInteraction`. Existing caller-filtered `my_nudges` rows are reflected into the local book; the book does not add server fields or publish entries.
+
+**Cyber vault API:** `src/vault/book-types.ts`, `LocalVault`, and `VaultStore` use pair-scoped encrypted records with strict field/MIME/size validation; IndexedDB v1 migrates by adding the two stores. `nudge_received` upserts by pair/source/kind and preserves first-seen id/time while allowing a local outcome. Vault lock drops decrypted component state. D049 documents the boundary.
+
+**D044 behavior:** unchanged. No standing rule is enabled automatically. No per-nudge sender review is skipped unless the owner explicitly enabled a current, expiring named-pair rule covering the candidate; recipient opt-in/preferences, pauses, expiry, quiet hours, cooldown and server rechecks remain required. Journal text is never automatically shared.
+
+**Evidence:** merged latest main `fb5dfa4`; `npm run typecheck` passed; `node --test src/vault/__tests__/vault.test.ts` passed 20/20; `npm run check` passed (contracts 131/131); `npm run build:app` passed; `git diff --check` passed. These are offline checks only.
+
+**Next:** Sumedh: review D049 encrypted record bounds and pair scoping. CS: complete app build and open PR. Team: browser test add/remove photo, lock/unlock and account switch; confirm photos never appear in network requests. No raw private content in shared state or logs.
+
+---
+
 README core-first direction applied. Discover/Events preserved but hidden by default (`NEXT_PUBLIC_DOR_EXTENSIONS`). Journal now runs a private decision loop before any preview: see `docs/features/PRIVATE_DECISION_LOOP.md` for the journey, rules, tests and seams (AI assessment mapping, Cyber durable pause, DS paired scenarios). Offline only. Next CS: Core 3 live configuration (module publish, auth issuer/audience, worker identity, two-account + denied third account), then pause controls once the Cyber contract lands.
 
 ---
@@ -164,5 +194,16 @@ Status: **partial live verification** against real Clerk dev + local SpacetimeDB
 - Built [CS] on branch `role/cs-pause-controls` (stacked on #34): D041 pause/resume controls, owner pause list, paused recipients never offered.
 
 **Verified DONE by trace:** C2 preset set/assign; decision loop (2-question cap, skip/space ⇒ no action, never auto-chosen, invalid assessment fails closed); ShareReview → `approve_signal` arg shape matches reducer; revoke; recipient opt-in default off + consent; template-only nudge copy; journal clears on lock/pagehide/account switch; extensions hidden by default; no optimistic fallback when unconfigured; all client reducers auth-gated, admin owner-gated, worker reducers worker-gated; bindings complete and identical client/worker.
+
+## D050 default-on automatic nudges handoff — 2026-10-25T05:45Z
+
+- **Branch:** `role/cs-automatic-nudges` @ `deb3f25`; PR [#68](https://github.com/rishibagri/dor-calhacks/pull/68) is open against `main`. Separate from books PR #63.
+- **Behavior:** accepted pairs use default-on in-app nudges under the explicitly assigned preset. No per-nudge sender approval or D044 standing-consent setup. One unique on-device name match submits the enum-only candidate automatically; ambiguous identity asks the owner. Paired agents can decline to nudge. Recipient per-pair opt-out, sender pause, preset/category, signal validity, configured quiet-hours, cooldown and commit-time checks remain authoritative.
+- **Private safety:** risk and names stay on the writer's device. Interpersonal conflict suppresses the whole reflection flow. Serious distress clears candidate/names and shows a U.S. 988 phone/text/chat card immediately; no friends/family are contacted. A local high-recall keyword fallback is not a diagnosis and can show the card for quoted/negated words. Country localization remains open.
+- **Contracts/interfaces:** D050 updates C1 `PrivateAssessment` (`risk`, `mentionedNames`), generated schema, C3/F3/worker default behavior and D050 flow specs. D044 backend stays for compatibility. `worker_support_preferences` synthesizes standard support styles for accepted pairs; explicit preferences still personalize, recipient opt-out is stored separately.
+- **Verification:** `npm run check:all`, `npm run ai:check` (including 53 integration cases), `npm run bindings:check`, `npm run build:app -- --webpack`, `node src/evaluation/transition.ts --check`, and `git diff --check` pass. Existing a3 opaque-ID todo remains. Offline only; not deployed or live-verified.
+- **Next:** @Rishi review and merge the PR. @Adam, verify the worker's standard-style fallback and ensure private names/risk never enter paired prompts. @Sumedh, verify reducer/view compatibility for default-on delivery before merge; this does not block opening the PR. Do not publish to Maincloud or call paid providers from this branch.
+
+**Latest-main sync:** merged `origin/main` @ `1de1bed` into this branch @ `785cc41` with no conflicts; PR #68 is mergeable. Re-ran `npm ci`, `npm run check:all`, `npm run ai:check` (53 integration cases), `npm run bindings:check`, `npm run build:app -- --webpack`, `node src/evaluation/transition.ts --check` and `git diff --check`: all pass; existing a3 semantic-ID TODO remains. `npm ci` reports 3 dependency advisories (1 moderate, 2 high); not triaged in this change. No deployment or paid API calls.
 
 **Not run:** worker/Droid (paid), Claude/Cartesia, browser sign-in + vault + ShareReview UI, revoke-during-generation, provider failure paths. Smoke users left in Clerk dev (A `user_3L9bVlb6RL6irokscBtvb4NoqFm`, B `user_3L9bVuc2RtFCIaWE6oyl1dmbA94`, C `user_3L9bVu5Rt3NCnJpqDVYaSqNeKHd`).

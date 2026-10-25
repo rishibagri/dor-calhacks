@@ -18,14 +18,14 @@ function openerText(p: IntroductionProposalView): string {
 
 /**
  * The viewer's own AI suggestions, shown only to them with fixed copy (no model-written text). A suggestion is
- * not a request: nothing is sent until the viewer taps Send.
+ * not a request: nothing is sent until the viewer taps Send. "Suggest someone" (D048) asks the worker for at most
+ * one suggestion among the people the viewer can already see; it contacts nobody.
  */
 export function IntroductionSuggestions() {
   const shared = useLiveShared();
   const proposals = shared.myIntroductionProposals();
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  if (proposals.length === 0) return null;
 
   const act = async (id: string, fn: () => Promise<void>, done: string) => {
     setBusy(id);
@@ -34,6 +34,9 @@ export function IntroductionSuggestions() {
     setMessage(err ?? done);
   };
 
+  const askForSuggestion = () => void act('ask', () => orThrow(shared.requestIntroductionSuggestion(newIntroductionRequestId())),
+    'Asked. If someone here shares your interests, a suggestion appears in this card. Nobody is contacted.');
+
   return (
     <Card>
       <CardHeader>
@@ -41,6 +44,9 @@ export function IntroductionSuggestions() {
         <CardDescription>Only you see these. Nobody is contacted unless you choose to send a request.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        {proposals.length === 0 && (
+          <Button size="sm" variant="outline" disabled={busy === 'ask'} onClick={askForSuggestion}>Suggest someone for me</Button>
+        )}
         <ul className="space-y-3">
           {proposals.map((p) => (
             <li key={p.proposalId} className="space-y-2 rounded-lg border p-3">

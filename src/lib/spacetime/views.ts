@@ -1,21 +1,25 @@
 import type { DisclosureReceipt, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
 import type {
-  ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView,
+  Unreadable, IntroductionSuggestionRequestView, ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView, StandingConsentView,
 } from '@/lib/backend/ports';
-import { findTable, type LooseConnection, type LooseRow, type LooseTable } from './bindings';
+import type { LooseConnection, LooseRow, LooseTable } from './bindings';
+import { findTable } from './names.ts';
 import {
   mapAccount, mapAssignment, mapInvite, mapNudge, mapNudgeDelivery, mapPair, mapRecipientPause, mapPreset, mapReceipt, mapRows,
   mapActivityApproval, mapCatalogueEvent, mapCatalogueStatus, mapCompanion, mapDiscoveryCard, mapEventIntent, mapIntroduction,
-  mapIntroductionProposal, mapPlan, unreadableRow, mapMyDiscovery, mapSignal, mapSupportPreferences,
-} from './mappers';
+  mapIntroductionProposal, mapSuggestionRequest, mapPlan, unreadableRow, mapMyDiscovery, mapSignal, mapSupportPreferences, mapStandingConsent,
+} from './mappers.ts';
 
 /** Caller-filtered views (module defines them; all base tables are private). */
 export const VIEW_NAMES = [
   'my_account', 'my_pairs', 'my_invites', 'my_presets', 'my_preset_assignments', 'my_nudges', 'my_receipts',
-  'my_signals', 'my_support_preferences', 'my_nudge_delivery', 'my_recipient_pauses',
+  'my_signals', 'my_support_preferences', 'my_nudge_delivery', 'my_recipient_pauses', 'my_standing_consents',
   'my_discovery_profile', 'discovery_cards', 'my_introductions', 'my_introduction_proposals',
+  'my_introduction_suggestion_request',
   'catalogue_events', 'catalogue_status', 'my_event_intents', 'event_companions', 'my_activity_approvals', 'my_plans',
 ] as const;
+
+export type ViewName = (typeof VIEW_NAMES)[number];
 
 export interface ViewData {
   readonly account: { displayName: string } | null;
@@ -29,64 +33,84 @@ export interface ViewData {
   readonly supportPreferences: SupportPreferencesView[];
   readonly nudgeDelivery: NudgeDeliveryView[];
   readonly pauses: RecipientPause[];
+  readonly standingConsents: StandingConsentView[];
   readonly discoveryProfile: MyDiscoveryView | null;
   readonly discoveryCards: DiscoveryCardRow[];
   readonly introductions: IntroductionView[];
   readonly proposals: IntroductionProposalView[];
+  readonly suggestionRequest: IntroductionSuggestionRequestView | null;
   readonly catalogue: CatalogueEventView[];
   readonly catalogueStatus: CatalogueStatusView[];
   readonly eventIntents: EventIntentRow[];
   readonly companions: EventCompanionRow[];
   readonly activityApprovals: ActivityApprovalRow[];
   readonly plans: PlanView[];
-  readonly unreadable: { signals: UnreadableRow[]; supportPreferences: UnreadableRow[]; nudgeDelivery: UnreadableRow[] };
+  readonly unreadable: Unreadable;
 }
 
 export const EMPTY_VIEWS: ViewData = {
-  account: null, pairs: [], invites: [], presets: [], assignments: [], nudges: [], receipts: [], signals: [], supportPreferences: [], nudgeDelivery: [], pauses: [],
-  discoveryProfile: null, discoveryCards: [], introductions: [], proposals: [],
+  account: null, pairs: [], invites: [], presets: [], assignments: [], nudges: [], receipts: [], signals: [], supportPreferences: [], nudgeDelivery: [], pauses: [], standingConsents: [],
+  discoveryProfile: null, discoveryCards: [], introductions: [], proposals: [], suggestionRequest: null,
   catalogue: [], catalogueStatus: [], eventIntents: [], companions: [], activityApprovals: [], plans: [],
-  unreadable: { signals: [], supportPreferences: [], nudgeDelivery: [] },
+  unreadable: { signals: [], supportPreferences: [], nudgeDelivery: [], presets: [], counts: {} },
 };
 
 export function viewTables(conn: LooseConnection): LooseTable[] {
   return VIEW_NAMES.flatMap((n) => findTable(conn, n) ?? []);
 }
 
-/** Rows the mapper refused, identified only by their own primary key and pair (both the caller's own data). */
-function rejectedRows<T>(rows: Iterable<LooseRow>, mapper: (r: LooseRow) => T | null, idKey: string): UnreadableRow[] {
-  return [...rows].filter((r) => mapper(r) === null).map((r) => unreadableRow(r, idKey));
-}
-
 export function readViews(conn: LooseConnection): ViewData {
-  const rows = (name: (typeof VIEW_NAMES)[number]) => findTable(conn, name)?.iter() ?? [];
-  const accountRow = [...rows('my_account')][0];
+  const rows = (name: ViewName) => [...(findTable(conn, name)?.iter() ?? [])];
+  // Every refused row is counted per view (names and counts only, never row contents), so a row that fails
+  // validation shows up as a diagnostic instead of silently disappearing.
+  const counts: Partial<Record<ViewName, number>> = {};
+  const rejected: Partial<Record<ViewName, LooseRow[]>> = {};
+  const take = <T>(name: ViewName, mapper: (r: LooseRow) => T | null): T[] => {
+    const out: T[] = [];
+    for (const r of rows(name)) {
+      const m = mapper(r);
+      if (m) out.push(m);
+      else (rejected[name] ??= []).push(r);
+    }
+    if (rejected[name]) counts[name] = rejected[name].length;
+    return out;
+  };
+  /** Rows the mapper refused, identified only by their own primary key and pair (both the caller's own data). */
+  const refused = (name: ViewName, idKey: string): UnreadableRow[] => (rejected[name] ?? []).map((r) => unreadableRow(r, idKey));
+  const account = take('my_account', mapAccount)[0] ?? null;
+  const data = {
+    account,
+    pairs: take('my_pairs', mapPair),
+    invites: take('my_invites', mapInvite),
+    presets: take('my_presets', mapPreset),
+    assignments: take('my_preset_assignments', mapAssignment),
+    nudges: take('my_nudges', mapNudge),
+    receipts: take('my_receipts', mapReceipt),
+    signals: take('my_signals', mapSignal),
+    proposals: take('my_introduction_proposals', mapIntroductionProposal),
+    suggestionRequest: take('my_introduction_suggestion_request', mapSuggestionRequest)[0] ?? null,
+    catalogue: take('catalogue_events', mapCatalogueEvent),
+    catalogueStatus: take('catalogue_status', mapCatalogueStatus),
+    eventIntents: take('my_event_intents', mapEventIntent),
+    companions: take('event_companions', mapCompanion),
+    activityApprovals: take('my_activity_approvals', mapActivityApproval),
+    plans: take('my_plans', mapPlan),
+    supportPreferences: take('my_support_preferences', mapSupportPreferences),
+    nudgeDelivery: take('my_nudge_delivery', mapNudgeDelivery),
+    pauses: take('my_recipient_pauses', mapRecipientPause),
+    standingConsents: take('my_standing_consents', mapStandingConsent),
+    discoveryProfile: take('my_discovery_profile', mapMyDiscovery)[0] ?? null,
+    discoveryCards: take('discovery_cards', mapDiscoveryCard),
+    introductions: take('my_introductions', mapIntroduction),
+  };
   return {
-    account: accountRow ? mapAccount(accountRow) : null,
-    pairs: mapRows(rows('my_pairs'), mapPair),
-    invites: mapRows(rows('my_invites'), mapInvite),
-    presets: mapRows(rows('my_presets'), mapPreset),
-    assignments: mapRows(rows('my_preset_assignments'), mapAssignment),
-    nudges: mapRows(rows('my_nudges'), mapNudge),
-    receipts: mapRows(rows('my_receipts'), mapReceipt),
-    signals: mapRows(rows('my_signals'), mapSignal),
-    proposals: mapRows(rows('my_introduction_proposals'), mapIntroductionProposal),
-    catalogue: mapRows(rows('catalogue_events'), mapCatalogueEvent),
-    catalogueStatus: mapRows(rows('catalogue_status'), mapCatalogueStatus),
-    eventIntents: mapRows(rows('my_event_intents'), mapEventIntent),
-    companions: mapRows(rows('event_companions'), mapCompanion),
-    activityApprovals: mapRows(rows('my_activity_approvals'), mapActivityApproval),
-    plans: mapRows(rows('my_plans'), mapPlan),
+    ...data,
     unreadable: {
-      signals: rejectedRows(rows('my_signals'), mapSignal, 'signal_id'),
-      supportPreferences: rejectedRows(rows('my_support_preferences'), mapSupportPreferences, 'consent_id'),
-      nudgeDelivery: rejectedRows(rows('my_nudge_delivery'), mapNudgeDelivery, 'delivery_id'),
+      signals: refused('my_signals', 'signal_id'),
+      supportPreferences: refused('my_support_preferences', 'consent_id'),
+      nudgeDelivery: refused('my_nudge_delivery', 'delivery_id'),
+      presets: refused('my_presets', 'policy_id'),
+      counts,
     },
-    supportPreferences: mapRows(rows('my_support_preferences'), mapSupportPreferences),
-    nudgeDelivery: mapRows(rows('my_nudge_delivery'), mapNudgeDelivery),
-    pauses: mapRows(rows('my_recipient_pauses'), mapRecipientPause),
-    discoveryProfile: mapRows(rows('my_discovery_profile'), mapMyDiscovery)[0] ?? null,
-    discoveryCards: mapRows(rows('discovery_cards'), mapDiscoveryCard),
-    introductions: mapRows(rows('my_introductions'), mapIntroduction),
   };
 }

@@ -1,6 +1,6 @@
 # Shared execution and handoffs — revised R phases
 
-[README](../README.md) is the detailed master plan. [CS](roles/cs.md), [Nimisha](roles/ds.md), [Adam](roles/ai.md) and [Sumedh](roles/cyber.md) each have concrete R0–R6 artifacts/checks/consumers. R IDs supersede P scheduling; preserve P history. The original 36-hour deadline remains. Assign the actual remaining time before resuming; do not assume another full sprint.
+[INSTRUCTIONS](../INSTRUCTIONS.md) is the detailed product and implementation guide. [CS](roles/cs.md), [Nimisha](roles/ds.md), [Adam](roles/ai.md) and [Sumedh](roles/cyber.md) each have concrete R0–R6 artifacts/checks/consumers. R IDs supersede P scheduling; preserve P history. The original 36-hour deadline remains. Assign the actual remaining time before resuming; do not assume another full sprint.
 
 ## Critical paths
 

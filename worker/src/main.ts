@@ -5,9 +5,11 @@ import { SpacetimeWorkerConnection, type LooseBuilder } from './spacetime/connec
 import { spacetimeWorkerPorts } from './spacetime/adapters.js';
 import { SignalWatcher } from './watcher.js';
 import { PlanWatcher, runPlanJob } from './plans.js';
+import { IntroductionRequestWatcher, runIntroductionRequest } from './introductions.js';
 import { WorkerLoop } from './loop.js';
-import { droidEnv, type DroidTransport } from './droid-proposer.js';
+import { droidEnv, noModelTransport, type DroidTransport } from './droid-proposer.js';
 import { DroidSdkTransport, type CreateSdkSession } from './droid-sdk.js';
+import { errorCode, fatalFields } from './log-fields.js';
 
 /**
  * Worker process: one SpacetimeDB connection as the allow-listed worker identity, the bounded coordinator over
@@ -17,13 +19,14 @@ import { DroidSdkTransport, type CreateSdkSession } from './droid-sdk.js';
  *
  * Env: DOR_WORKER_AUTH_TOKEN, DOR_SPACETIME_URI, DOR_SPACETIME_MODULE (default dor),
  * DOR_SPACETIME_WORKER_TOKEN, PORT (default 8787), DOR_WORKER_SWEEP_MS (fallback sweep, default 15000),
- * DOR_WORKER_MAX_OFFLINE_MS (default 120000),
- * DOR_DROID_MODEL / _PATH / _TIMEOUT_MS / _CONCURRENCY / _TRANSPORT (sdk default, cli). FACTORY_API_KEY for the
- * SDK transport and for droid on a deployed host.
+ * DOR_WORKER_MAX_OFFLINE_MS (default 120000), DOR_WORKER_INTRODUCTIONS (D048 suggestion requests: deterministic
+ * default, zero model calls; agent lets Droid pick among 2–3 candidates; off),
+ * DOR_DROID_MODEL / _PATH / _TIMEOUT_MS / _CONCURRENCY / _TRANSPORT (sdk default, cli, off = no model calls at all:
+ * fixed templates and deterministic choices only). FACTORY_API_KEY for the SDK transport and for droid on a deployed host.
  */
 function required(name: string): string {
   const value = process.env[name];
-  if (!value) throw new Error(`missing ${name}`);
+  if (!value) throw new Error(`not_configured: missing ${name}`);
   return value;
 }
 const numberEnv = (name: string, fallback: number) => {
@@ -39,6 +42,7 @@ const log = (event: string, data: Record<string, string | number> = {}) =>
  * start rather than silently changing transport, cost and latency.
  */
 async function droidTransport(): Promise<DroidTransport | undefined> {
+  if (process.env.DOR_DROID_TRANSPORT === 'off') return noModelTransport;
   if (process.env.DOR_DROID_TRANSPORT === 'cli') return undefined;
   if (!process.env.FACTORY_API_KEY) throw new Error('not_configured: FACTORY_API_KEY (or set DOR_DROID_TRANSPORT=cli)');
   const specifier = '@factory/droid-sdk/node';
@@ -56,10 +60,15 @@ async function droidTransport(): Promise<DroidTransport | undefined> {
   });
 }
 
+/** Unknown values fall back to the zero-call default rather than silently enabling paid calls. */
+function introductionMode(value: string | undefined): 'off' | 'deterministic' | 'agent' {
+  return value === 'off' || value === 'agent' ? value : 'deterministic';
+}
+
 async function main(): Promise<void> {
   const generated = (await loadBindings()) as unknown as { DbConnection?: { builder(): LooseBuilder } };
   if (typeof generated.DbConnection?.builder !== 'function') {
-    throw new Error('worker bindings not generated: see worker/src/module_bindings/index.ts');
+    throw new Error('not_configured: worker bindings not generated (see worker/src/module_bindings/index.ts)');
   }
   const connection = await SpacetimeWorkerConnection.connect({
     uri: required('DOR_SPACETIME_URI'), database: process.env.DOR_SPACETIME_MODULE ?? 'dor',
@@ -68,7 +77,7 @@ async function main(): Promise<void> {
   log('connected', { identityPrefix: connection.identityHex.slice(0, 8) });
 
   const transport = await droidTransport();
-  log('droid_transport', { kind: transport ? 'sdk' : 'cli' });
+  log('droid_transport', { kind: transport === noModelTransport ? 'off' : transport ? 'sdk' : 'cli' });
   const worker = createLiveWorker({
     authToken: required('DOR_WORKER_AUTH_TOKEN'), ...spacetimeWorkerPorts(connection),
     droid: {
@@ -81,20 +90,31 @@ async function main(): Promise<void> {
   const watcher = new SignalWatcher(connection, {
     run: job => worker.runJob(job),
     onOutcome: outcomes => { for (const o of outcomes) log('outcome', { outcome: o.outcome, rounds: o.rounds, decidedBy: o.decidedBy }); },
-    onError: error => log('job_error', { code: error instanceof Error ? error.message.split(':')[0]!.slice(0, 40) : 'unknown' }),
+    onError: error => log('job_error', { code: errorCode(error) }),
   });
   // Shared plans (D039) run only when the bindings carry worker_plan_candidates + commit_plan_proposal.
   const clock = { now: () => new Date() };
   const plans = connection.planCandidates ? new PlanWatcher(connection, {
     run: basis => runPlanJob(basis, { source: connection, runner: worker.runner, clock }),
     onOutcome: o => log('plan_outcome', { outcome: o.outcome, rounds: o.rounds, modelCalls: o.modelCalls, decidedBy: o.decidedBy }),
-    onError: error => log('plan_error', { code: error instanceof Error ? error.message.split(':')[0]!.slice(0, 40) : 'unknown' }),
+    onError: error => log('plan_error', { code: errorCode(error) }),
   }) : null;
   log('plans', { enabled: plans ? 1 : 0 });
+  // Viewer-initiated introduction suggestions (D048) run only when the bindings carry the request view and reducers.
+  const introMode = introductionMode(process.env.DOR_WORKER_INTRODUCTIONS);
+  const intros = introMode !== 'off' && connection.introductionRequests ? new IntroductionRequestWatcher(connection, {
+    clock,
+    run: req => runIntroductionRequest(req, { source: connection, runner: worker.runner, clock, deterministicOnly: introMode === 'deterministic' }),
+    onOutcome: o => log('intro_outcome', { outcome: o.outcome, shortlisted: o.shortlisted, eligible: o.eligible, rounds: o.rounds,
+      modelCalls: o.modelCalls, decidedBy: o.decidedBy }),
+    onLapsed: () => log('intro_lapsed'),
+    onError: error => log('intro_error', { code: errorCode(error) }),
+  }) : null;
+  log('introductions', { enabled: intros ? 1 : 0, mode: intros ? introMode : 'off' });
   // Event-driven: new worker-view rows trigger a sweep at once; the interval is only a safety net. Nothing runs
   // while the connection is down, and a lost connection that will not come back exits so the supervisor restarts.
   const loop = new WorkerLoop(connection, {
-    sweeps: [() => watcher.sweep(), ...(plans ? [() => plans.sweep()] : [])],
+    sweeps: [() => watcher.sweep(), ...(plans ? [() => plans.sweep()] : []), ...(intros ? [() => intros.sweep()] : [])],
     fallbackIntervalMs: numberEnv('DOR_WORKER_SWEEP_MS', 15_000),
     maxOfflineMs: numberEnv('DOR_WORKER_MAX_OFFLINE_MS', 120_000),
     onFatal: () => shutdown(1),
@@ -126,6 +146,6 @@ async function main(): Promise<void> {
 }
 
 main().catch(error => {
-  log('fatal', { code: error instanceof Error ? error.message.slice(0, 80) : 'unknown' });
+  log('fatal', fatalFields(error));
   process.exit(1);
 });

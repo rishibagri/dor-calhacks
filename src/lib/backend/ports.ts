@@ -24,6 +24,7 @@ import type {
   Availability,
   PrivateReflection,
 } from '@dor/contracts';
+import type { BookInteraction, NewBookInteraction, NewRelationshipBookPhoto, RelationshipBookPhoto } from '@/vault/book-types';
 
 export type { AgentAck, ApprovedSignal, DisclosureReceipt, LocalConnectionProfile, Nudge };
 
@@ -124,6 +125,17 @@ export interface IntroductionView {
   expiresAt: string | null;
 }
 
+/**
+ * The viewer's own latest "Suggest someone" request (`my_introduction_suggestion_request`, D048): `open` while the
+ * worker may still answer (before expiresAt), `done` once it ran. Status only: never why, or who was considered.
+ */
+export interface IntroductionSuggestionRequestView {
+  requestId: string;
+  status: 'open' | 'done';
+  createdAt: string;
+  expiresAt: string;
+}
+
 /** The viewer's own AI introduction suggestion (`my_introduction_proposals`). A suggestion, never a request. */
 export interface IntroductionProposalView {
   proposalId: string;
@@ -139,6 +151,18 @@ export interface IntroductionProposalView {
  * silently dropped (a dropped row would hide an active approval or show an opted-in setting as off).
  */
 export interface UnreadableRow { id: string | null; pairId: string | null }
+
+/**
+ * Privacy-safe diagnostics for rows that failed validation. Row lists exist where the UI offers a safe action;
+ * `counts` covers every subscribed view by name, with no row contents (D049).
+ */
+export interface Unreadable {
+  signals: UnreadableRow[];
+  supportPreferences: UnreadableRow[];
+  nudgeDelivery: UnreadableRow[];
+  presets: UnreadableRow[];
+  counts: Partial<Record<string, number>>;
+}
 
 /** One `catalogue_events` row: public, source-backed, normalized server-side (D039). Never joined to a person. */
 export interface CatalogueEventView {
@@ -213,6 +237,16 @@ export interface RecipientPause {
   createdAt: string;
 }
 
+/** Caller-owned D044 rule. The view exposes no recipient identity beyond its accepted pair. */
+export interface StandingConsentView {
+  pairId: string;
+  categories: SharingCategory[];
+  version: number;
+  expiresAt: string;
+  active: boolean;
+  createdAt: string;
+}
+
 export type ReducerResult = { ok: true } | { ok: false; code: ReducerErrorCode; message: string };
 
 /** Mirrors API.md error codes; reducers throw SenderError with one of these prefixes. */
@@ -243,6 +277,8 @@ export interface SharedStatePort {
   setRelationshipPreset(input: {
     presetKind: RelationshipPresetKind;
     allowedCategories: SharingCategory[];
+    /** C7 activity permission (D049). Omitted keeps the preset's current value; false removes it. */
+    activityInterestAllowed?: boolean;
     expectedVersion: number;
     expiresAt: string;
   }): Promise<ReducerResult>; // set_relationship_preset
@@ -279,6 +315,15 @@ export interface SharedStatePort {
   /** Owner-only, reason-free pause of one counterpart; expectedVersion 0 = first pause (D041). */
   pauseRecipient(pairId: string, expiresAt: string, expectedVersion: number): Promise<ReducerResult>; // pause_recipient
   resumeRecipient(pairId: string, expectedVersion: number): Promise<ReducerResult>; // resume_recipient
+  /** D044: owner explicitly authorizes future enum-only signals for one accepted pair. */
+  setStandingConsent(input: {
+    pairId: string; categories: SharingCategory[]; expiresAt: string; expectedVersion: number;
+    expectedPolicyVersion: number; expectedAssignmentVersion: number; noticeVersion: number;
+  }): Promise<ReducerResult>; // set_standing_consent
+  revokeStandingConsent(pairId: string): Promise<ReducerResult>; // revoke_standing_consent
+  approveSignalStanding(input: {
+    pairId: string; supportMode?: SupportMode; availability?: Availability; clientRequestId: string; ruleVersion: number;
+  }): Promise<ReducerResult>; // approve_signal_standing
   /** C8 (flag-gated server-side). The exact preview the owner confirmed; expectedRevision 0 = first publish. */
   publishDiscoveryProfile(input: {
     displayName: string;
@@ -300,11 +345,22 @@ export interface SharedStatePort {
   /** C8 event intent; expectedVersion 0 = first. Expires with the event. */
   publishEventIntent(eventId: string, kind: 'interested' | 'going', expectedVersion: number): Promise<ReducerResult>; // publish_event_intent
   revokeEventIntent(eventId: string): Promise<ReducerResult>; // revoke_event_intent
+  /** C7 item consent; needs a preset with activityInterestAllowed for this pair. Never a C3 signal. */
+  approveActivityInterest(input: {
+    pairId: string;
+    topics: string[];
+    expectedPolicyVersion: number;
+    expectedAssignmentVersion: number;
+    consentVersion: number;
+    clientRequestId: string;
+  }): Promise<ReducerResult>; // approve_activity_interest
   revokeActivityInterest(approvalId: string): Promise<ReducerResult>; // revoke_activity_interest
   /** Own accept/decline of the CURRENT plan revision. */
   respondPlan(planId: string, revision: number, accept: boolean): Promise<ReducerResult>; // respond_plan
   cancelPlan(planId: string): Promise<ReducerResult>; // cancel_plan
   dismissIntroductionProposal(proposalId: string): Promise<ReducerResult>; // dismiss_introduction_proposal
+  /** D048: ask the worker for at most one suggestion now. Grants nothing; nobody is contacted. Fresh id per tap. */
+  requestIntroductionSuggestion(clientRequestId: string): Promise<ReducerResult>; // request_introduction_suggestion
   reportDiscoveryUser(target: { kind: 'card' | 'introduction'; ref: string }, reason: ReportReason): Promise<ReducerResult>; // report_discovery_user
 
   // caller-filtered views
@@ -319,10 +375,12 @@ export interface SharedStatePort {
   mySupportPreferences(): SupportPreferencesView[]; // my_support_preferences
   myNudgeDelivery(): NudgeDeliveryView[]; // my_nudge_delivery
   myRecipientPauses(): RecipientPause[]; // my_recipient_pauses (owner-only)
+  myStandingConsents(): StandingConsentView[]; // my_standing_consents (owner-only)
   myDiscoveryProfile(): MyDiscoveryView | null; // my_discovery_profile
   discoveryCards(): DiscoveryCardRow[]; // discovery_cards (≤ DISCOVERY_CARD_LIMIT, caller-filtered)
   myIntroductions(): IntroductionView[]; // my_introductions
   myIntroductionProposals(): IntroductionProposalView[]; // my_introduction_proposals
+  myIntroductionSuggestionRequest(): IntroductionSuggestionRequestView | null; // my_introduction_suggestion_request
   catalogueEvents(): CatalogueEventView[]; // catalogue_events
   catalogueStatus(): CatalogueStatusView[]; // catalogue_status
   myEventIntents(): EventIntentRow[]; // my_event_intents
@@ -330,7 +388,7 @@ export interface SharedStatePort {
   myActivityApprovals(): ActivityApprovalRow[]; // my_activity_approvals
   myPlans(): PlanView[]; // my_plans
   /** Rows present in a view but unreadable; see UnreadableRow. */
-  unreadable(): { signals: UnreadableRow[]; supportPreferences: UnreadableRow[]; nudgeDelivery: UnreadableRow[] };
+  unreadable(): Unreadable;
 
   subscribe(listener: () => void): () => void;
 }
@@ -360,6 +418,7 @@ export interface JournalEntrySummary {
   localId: string;
   createdAt: string;
 }
+
 /** 'unknown' until refresh() has read local metadata; 'absent' = no vault on this device yet. */
 export type VaultState = 'unknown' | 'absent' | 'locked' | 'unlocked';
 /** Constant, content-free error codes (Error.message === code). `wrong_secret` covers passphrase AND recovery code. */
@@ -397,6 +456,12 @@ export interface VaultPort {
   loadProfile(): Promise<LocalConnectionProfile | null>;
   saveQuizExtras(extras: LocalQuizExtras): Promise<void>;
   loadQuizExtras(): Promise<LocalQuizExtras | null>;
+  saveRelationshipPhoto(photo: NewRelationshipBookPhoto): Promise<void>;
+  listRelationshipPhotos(pairId: string): Promise<RelationshipBookPhoto[]>;
+  deleteRelationshipPhoto(pairId: string, photoId: string): Promise<void>;
+  saveBookInteraction(interaction: NewBookInteraction): Promise<void>;
+  listBookInteractions(pairId: string): Promise<BookInteraction[]>;
+  deleteBookInteraction(pairId: string, interactionId: string): Promise<void>;
 }
 
 /** Transient provider reflection via authenticated Next.js route (AI owns). */
