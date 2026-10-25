@@ -1,9 +1,10 @@
 /**
- * Builds generated-reducer argument objects (camelCase keys, SDK Timestamp).
- * If `spacetime generate` represents an enum/Timestamp differently, this is
- * the single adapter file to adjust (see README.md).
+ * Builds generated-reducer argument objects (camelCase keys). Every time argument the module declares is a
+ * `t.string()` it parses itself (guards.parseFuture), so times go out as ISO strings, never SDK Timestamps: a
+ * Timestamp in a string field serializes to something the module cannot parse ("must be an ISO timestamp").
+ * `__tests__/reducer-args.test.ts` checks each builder against the generated bindings' field types.
+ * If `spacetime generate` represents an enum/Timestamp differently, this is the single adapter file to adjust.
  */
-import { Timestamp } from 'spacetimedb';
 import { DISCOVERY_AUDIENCES, DISCOVERY_NOTICE_VERSION } from '@dor/contracts/policy';
 import type { SharedStatePort } from '@/lib/backend/ports';
 
@@ -17,8 +18,9 @@ function date(iso: string): Date {
   return d;
 }
 
-function ts(iso: string): Timestamp {
-  return Timestamp.fromDate(date(iso));
+/** Validated, normalized ISO string for a module `t.string()` time argument. */
+function iso(value: string): string {
+  return date(value).toISOString();
 }
 
 export const reducerArgs = {
@@ -29,7 +31,7 @@ export const reducerArgs = {
     presetKind: i.presetKind,
     allowedCategories: i.allowedCategories,
     expectedVersion: i.expectedVersion,
-    expiresAt: ts(i.expiresAt),
+    expiresAt: iso(i.expiresAt),
   }),
   assignRelationshipPreset: (i: Input<'assignRelationshipPreset'>) => ({
     pairId: i.pairId,
@@ -39,7 +41,7 @@ export const reducerArgs = {
   approveSignal: (i: Input<'approveSignal'>) => ({ ...i }),
   revokeSignal: (signalId: string) => ({ signalId }),
   dismissNudge: (nudgeId: string) => ({ nudgeId }),
-  snoozeNudge: (nudgeId: string, until: string) => ({ nudgeId, until: ts(until) }),
+  snoozeNudge: (nudgeId: string, until: string) => ({ nudgeId, until: iso(until) }),
   // expires_at is a string arg on this reducer (parsed server-side), not a Timestamp.
   setSupportPreferences: (i: Input<'setSupportPreferences'>) => ({
     pairId: i.pairId,
