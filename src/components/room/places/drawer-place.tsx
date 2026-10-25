@@ -1,5 +1,6 @@
 'use client';
 
+import { PlaceList } from '../place-list';
 import { ActivePauses } from '@/components/feature/active-pauses';
 import { ApprovedSignals } from '@/components/feature/approved-signals';
 import { DiscoveryStatus } from '@/components/feature/discovery-status';
@@ -25,7 +26,7 @@ function hasDiscoveryFootprint(shared: ReturnType<typeof useLiveShared>): boolea
     shared.myActivityApprovals().length > 0;
 }
 
-export default function PrivacyPage() {
+export function DrawerPlace() {
   const vault = useVault();
   const shared = useLiveShared();
   const receipts = shared.myReceipts();
@@ -33,9 +34,10 @@ export default function PrivacyPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Privacy</h1>
+        <h2 className="place-title">Privacy</h2>
         <p className="max-w-[65ch] text-sm text-muted-foreground">What is kept, what is shared, and a record of every time it was.</p>
       </header>
+      <PlaceList />
       <Alert>
         <AlertTitle>What this means</AlertTitle>
         <AlertDescription>

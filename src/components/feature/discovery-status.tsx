@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { RoomLink as Link } from '@/components/room/room-link';
 import { useState } from 'react';
 import { useLiveShared } from '@/components/shell/use-live';
 import { Button } from '@/components/ui/button';

@@ -1,11 +1,9 @@
 'use client';
 
-import Link from 'next/link';
+import { RoomLink as Link, navigateRoom } from '../room-link';
 import { useState } from 'react';
 import { useLiveShared } from '@/components/shell/use-live';
 import { IntegrationStatus } from '@/components/shell/integration-status';
-import { DiscoveryArea } from '@/components/feature/discovery-area';
-import { DiscoveryProfile } from '@/components/feature/discovery-profile';
 import { IntroductionSuggestions } from '@/components/feature/introduction-suggestions';
 import { introductionActions, orThrow, toControlRows } from '@/components/feature/introduction-actions';
 import { discoverStage, newIntroductionRequestId, nextPageCursor, shortlistFor } from '@/components/feature/discover-model';
@@ -15,9 +13,8 @@ import { DiscoveryResults } from '@/features/discovery/discovery-results';
 import { IntroductionControls } from '@/features/privacy/introduction-controls';
 import { runAction } from '@/features/privacy/introduction-model';
 import { DiscoveryGate } from '@/components/feature/discovery-gate';
-import { readPref, sessionStore } from '@/components/feature/transition-model';
 
-export default function DiscoverPage() {
+export function SillPlace() {
   const shared = useLiveShared();
   const me = shared.myDiscoveryProfile();
   const now = new Date();
@@ -49,7 +46,7 @@ export default function DiscoverPage() {
     setMessage(err ?? 'Blocked. You will not see each other here again.');
   };
 
-  const handleEmptyAction = () => document.getElementById('discovery-profile')?.scrollIntoView({ behavior: 'smooth' });
+  const handleEmptyAction = () => navigateRoom('pinboard');
 
   const safetyControls = (
     <IntroductionControls introductions={toControlRows(shared.myIntroductions())} discoverable={isDiscoverable} actions={introductionActions(shared)} />
@@ -59,7 +56,7 @@ export default function DiscoverPage() {
     <DiscoveryGate title="Discover" controls={safetyControls}>
     <div className="mx-auto max-w-3xl space-y-8">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Discover</h1>
+        <h2 className="place-title">Discover</h2>
         <p className="max-w-[65ch] text-sm text-muted-foreground">
           Meet people nearby who also chose to be found. Everything here is opt-in, ends on its own, and nobody can contact
           you unless you accept their request.
@@ -72,8 +69,16 @@ export default function DiscoverPage() {
         </p>
       ) : (
         <>
-          <DiscoveryProfile me={me} isLive={stage === 'ready' || stage === 'needs_area'} />
-          {stage !== 'needs_profile' && <DiscoveryArea me={me} isAreaLive={stage === 'ready'} initialAreaKey={readPref(sessionStore()).areaKey} />}
+          {stage === 'needs_profile' && (
+            <p className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+              Postcards appear here once your <Link className="underline" href="/?at=pinboard">pinboard</Link> is visible nearby.
+            </p>
+          )}
+          {stage === 'needs_area' && (
+            <p className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+              Choose where you&apos;ve landed in the <Link className="underline" href="/onboarding">moving boxes</Link> to see people nearby.
+            </p>
+          )}
           {message && <p role="status" className="text-sm text-muted-foreground">{message}</p>}
           {stage === 'ready' && <>
             <IntroductionSuggestions />

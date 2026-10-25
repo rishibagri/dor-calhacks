@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { RoomLink as Link } from '../room-link';
 import { useState } from 'react';
 import { NUDGE_TEMPLATE_COPY } from '@dor/contracts';
 import type { ReducerResult } from '@/lib/backend/ports';
@@ -14,7 +14,7 @@ const COPY = NUDGE_TEMPLATE_COPY;
 const SNOOZE_MS = 24 * 60 * 60 * 1000;
 const ENTER = 'motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200';
 
-export default function NudgesPage() {
+export function TrayPlace() {
   const shared = useLiveShared();
   const [result, setResult] = useState<ReducerResult | null>(null);
   const nudges = shared.myNudges();
@@ -25,7 +25,7 @@ export default function NudgesPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Nudges</h1>
+        <h2 className="place-title">Nudges</h2>
         <p className="max-w-[65ch] text-sm text-muted-foreground">
           Gentle suggestions, only when someone has chosen to share a signal with you. There is no pressure to act on any of them.
         </p>

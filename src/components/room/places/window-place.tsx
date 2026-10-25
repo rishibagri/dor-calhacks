@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { RoomLink as Link } from '../room-link';
 import { useLiveShared } from '@/components/shell/use-live';
 import { IntegrationStatus } from '@/components/shell/integration-status';
 import { EventCard } from '@/components/feature/event-card';
@@ -12,7 +12,7 @@ import { isDiscoverySynthetic } from '@/lib/config';
 import { DiscoveryGate } from '@/components/feature/discovery-gate';
 import { areaLabel } from '@/lib/discovery/config';
 
-export default function EventsPage() {
+export function WindowPlace() {
   const shared = useLiveShared();
   const me = shared.myDiscoveryProfile();
   const now = new Date();
@@ -32,7 +32,7 @@ export default function EventsPage() {
     <DiscoveryGate title="Events" controls={<PlansList />}>
     <div className="mx-auto max-w-3xl space-y-8">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Events</h1>
+        <h2 className="place-title">Events</h2>
         <p className="max-w-[65ch] text-sm text-muted-foreground">
           Public local events from a listed source. Mark the ones you would go to and see who else nearby marked them.
           Dor never RSVPs, buys tickets or contacts organizers.

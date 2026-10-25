@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { RoomLink as Link } from '../room-link';
 import { useEffect, useState } from 'react';
 import type { PrivateAssessment, SignalCandidate } from '@dor/contracts';
 import { SavedJournals } from '@/components/feature/saved-journals';
@@ -35,13 +35,13 @@ function JournalWorkspace({ vault }: { vault: VaultPort }) {
   );
 }
 
-export default function JournalPage() {
+export function NotebookPlace() {
   const vault = useVault();
   const userId = useBackendUserId();
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <header className="space-y-1">
-        <h1 className="text-balance text-2xl font-semibold tracking-tight">Journal</h1>
+        <h2 className="place-title">Journal</h2>
         <p className="text-muted-foreground">A private place to think out loud.</p>
       </header>
       {!userId ? <p>Sign in to open your account’s local journal.</p> : <>

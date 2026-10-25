@@ -14,14 +14,14 @@ const STEPS = [
   'Each of you assigns a preset to the other. Until you do, nothing can be shared.',
 ];
 
-export default function ConnectionsPage() {
+export function ShelfPlace() {
   const shared = useLiveShared();
   const me = shared.myDiscoveryProfile();
   const isDiscoverable = Boolean(me?.published && !me.withdrawn && !me.expired);
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <header className="space-y-3">
-        <h1 className="text-2xl font-semibold tracking-tight text-balance">Connections</h1>
+        <h2 className="place-title">Connections</h2>
         <p className="max-w-[65ch] text-sm text-muted-foreground">
           Presets are per relationship type, not per person. You assign a confirmed preset to each named connection;
           assigning never shares anything automatically.

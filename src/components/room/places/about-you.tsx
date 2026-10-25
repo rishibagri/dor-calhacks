@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { RoomLink as Link } from '../room-link';
 import { useState } from 'react';
 import { useVault } from '@/lib/backend';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -32,7 +32,7 @@ const reviewOptions = [
 ];
 
 // Keyed on lock state so a vault lock unmounts the form and drops in-memory answers.
-export default function OnboardingPage() {
+export function AboutYou() {
   const vault = useVault();
   return <OnboardingForm key={vault.locked ? 'locked' : 'open'} />;
 }
@@ -61,7 +61,7 @@ function OnboardingForm() {
     <div className="mx-auto max-w-2xl space-y-6">
       <header className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-balance text-2xl font-semibold tracking-tight">How do you connect?</h1>
+          <h2 className="place-title">How do you connect?</h2>
           <p className="max-w-prose text-muted-foreground">
             A few gentle questions. All optional, and you can leave any blank.
           </p>
