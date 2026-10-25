@@ -1,15 +1,18 @@
 <!-- dor demo banner: injected by scripts/deploy-demo.sh into the hosted copy only (frontend/ is untouched).
      Always visible: this site is sample data with no backend. Probes the live app and links to it when it is up. -->
 <style>
-  #dor-demo-banner { position: fixed; z-index: 2147483647; left: 50%; transform: translateX(-50%);
-    top: max(8px, env(safe-area-inset-top)); max-width: calc(100vw - 24px);
+  /* The design tool's own "Made with Claude Design" badge is hidden in the hosted demo. */
+  #__claude_design_branding { display: none !important; }
+  /* Bottom-left corner, clear of the phone and the side columns; the details open upward. */
+  #dor-demo-banner { position: fixed; z-index: 2147483647; display: flex; flex-direction: column-reverse; align-items: flex-start;
+    left: max(16px, env(safe-area-inset-left)); bottom: max(16px, env(safe-area-inset-bottom)); max-width: min(340px, calc(100vw - 32px));
     font: 500 13px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1b1a17; }
   #dor-demo-banner button { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
     padding: 6px 12px; border-radius: 999px; background: rgba(251, 244, 228, 0.94); border: 1px solid #d9cfb8;
     box-shadow: 0 2px 10px rgba(27, 26, 23, 0.12); white-space: nowrap; }
   #dor-demo-banner button:focus-visible { outline: 2px solid #2f5c91; outline-offset: 2px; }
   #dor-demo-banner .dot { width: 7px; height: 7px; border-radius: 50%; background: #8a5a00; }
-  #dor-demo-banner .more { display: none; margin-top: 6px; padding: 10px 12px; border-radius: 12px; white-space: normal;
+  #dor-demo-banner .more { display: none; margin-bottom: 6px; padding: 10px 12px; border-radius: 12px; white-space: normal;
     background: rgba(251, 244, 228, 0.97); border: 1px solid #d9cfb8; box-shadow: 0 4px 16px rgba(27, 26, 23, 0.14); }
   #dor-demo-banner.open .more { display: block; }
   #dor-demo-banner a { color: #2f5c91; font-weight: 600; }
