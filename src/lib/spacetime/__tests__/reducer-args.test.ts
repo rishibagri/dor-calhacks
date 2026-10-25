@@ -7,6 +7,9 @@ import snoozeNudge from '../module_bindings/snooze_nudge_reducer.ts';
 import setSupportPreferences from '../module_bindings/set_support_preferences_reducer.ts';
 import pauseRecipient from '../module_bindings/pause_recipient_reducer.ts';
 import publishDiscoveryProfile from '../module_bindings/publish_discovery_profile_reducer.ts';
+import setStandingConsent from '../module_bindings/set_standing_consent_reducer.ts';
+import revokeStandingConsent from '../module_bindings/revoke_standing_consent_reducer.ts';
+import approveSignalStanding from '../module_bindings/approve_signal_standing_reducer.ts';
 
 type Binding = Record<string, { algebraicType: { tag: string } }>;
 const LATER = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -46,6 +49,16 @@ test('reducer args: the other builders that carry a time or a version match thei
   assertMatches('pause_recipient', pauseRecipient as unknown as Binding, reducerArgs.pauseRecipient('pair-1', LATER, 0));
   assertMatches('publish_discovery_profile', publishDiscoveryProfile as unknown as Binding,
     reducerArgs.publishDiscoveryProfile({ displayName: 'Maya', interestTags: ['climbing'], expiresAt: LATER, expectedRevision: 0 }));
+});
+
+test('D044 reducer args match generated bindings and omit no optional payload fields', () => {
+  const set = reducerArgs.setStandingConsent({ pairId: 'pair-1', categories: ['support_preference'], expiresAt: LATER,
+    expectedVersion: 0, expectedPolicyVersion: 2, expectedAssignmentVersion: 3, noticeVersion: 1 });
+  assertMatches('set_standing_consent', setStandingConsent as unknown as Binding, set);
+  assert.equal(Date.parse(set.expiresAt), Date.parse(LATER));
+  assertMatches('revoke_standing_consent', revokeStandingConsent as unknown as Binding, reducerArgs.revokeStandingConsent('pair-1'));
+  assertMatches('approve_signal_standing', approveSignalStanding as unknown as Binding,
+    reducerArgs.approveSignalStanding({ pairId: 'pair-1', supportMode: 'encouraging_note', clientRequestId: 'req-1', ruleVersion: 4 }));
 });
 
 test('reducer args: an unparseable time is refused before any call', () => {

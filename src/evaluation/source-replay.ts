@@ -72,7 +72,7 @@ export function replayCatalogue(data: unknown, nowMs: number): CatalogueReplay {
   for (const [k, v] of Object.entries(data)) if (!k.startsWith('_') && Array.isArray(v)) raw[k] = v;
   const source = (isObj(data._provenance) && data._provenance.source === 'meetup' ? 'meetup' : 'luma') as SourceKind;
   // Token and Actor are placeholders: normalization never fetches. Region, areas and caps are CS's fixed config.
-  const cfg = loadDiscoveryConfig({ APIFY_API_TOKEN: 'offline-replay-no-token', APIFY_SOURCE: source,
+  const cfg = loadDiscoveryConfig({ APIFY_API_TOKEN: 'offline-replay-no-token', APIFY_ACTOR_BUILD: 'offline-replay', APIFY_SOURCE: source,
     APIFY_ACTOR_ID: source === 'luma' ? 'tortuga/luma-scraper' : 'filip_cicvarek/meetup-scraper', APIFY_TOPICS: Object.keys(raw).join(','),
     APIFY_MAX_ITEMS: '50' });
   if (!cfg.ok) throw new Error(`dataset topics fail CS's discovery config: ${cfg.reason}`);

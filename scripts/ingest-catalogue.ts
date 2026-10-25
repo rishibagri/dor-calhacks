@@ -5,7 +5,7 @@
  *   node scripts/ingest-catalogue.ts --fetch                  # call Apify (costs credits), print report
  *   ... [--commit <database>] [--force]                       # also upsert via `spacetime call` as the ingester
  *
- * Env for --fetch: APIFY_API_TOKEN, APIFY_ACTOR_ID (+ optional APIFY_ACTOR_BUILD, APIFY_SOURCE=luma|meetup,
+ * Env for --fetch: APIFY_API_TOKEN, APIFY_ACTOR_ID, APIFY_ACTOR_BUILD (required pinned build), APIFY_SOURCE=luma|meetup,
  * APIFY_MAX_ITEMS<=50, APIFY_TOPICS, APIFY_WINDOW_DAYS, APIFY_TIMEOUT_MS). Region, caps and the request body come from
  * src/server/discovery/config.ts (fixed, never device-derived; guarded by D028). The token goes in a header only.
  * Without --fetch or --fixture the script is a dry run and makes no network call. See docs/features/APIFY_SOURCE.md.

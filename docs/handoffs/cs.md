@@ -1,5 +1,19 @@
 # CS handoff — 2026-10-24T22:00Z, role/cs-app (Core 1/2/4)
 
+## D044 frontend + Apify configuration hardening — `codex/d044-apify-readme`
+
+**Status:** implemented; verification in progress; not deployed or live-verified. No Maincloud mutation, deploy, or paid provider/Apify call was made.
+
+**D044 interface/files:** `StandingConsentSettings` on Connections reads the caller-filtered `my_standing_consents`, selects one accepted pair explicitly, permits only categories already allowed by that pair's active preset, requires expiry within policy limits, and supports revocation. `ShareReview` calls `approve_signal_standing` only after the owner decision loop resolved a named pair and the current rule covers the entire enum-only payload. It passes only the pair, allowed enums, idempotency key, and rule version. On failure it falls back to manual preview. No journal text is automatically shared. Recipient opt-in, pause, quiet hours, expiry and server rechecks remain backend gates.
+
+**Apify:** the server adapter now rejects unreviewed Actor/source combinations and missing/unpinned Actor builds; cache/provenance includes the build. Config doctor and `.env.example` call out the required build. The public-event Actor path remains unverified until an owner-approved, capped run and Cyber's D028/source review; do not claim it is live.
+
+**Docs:** README is a concise entry point; expanded product/phase/role/sponsor details moved to `INSTRUCTIONS.md`. `PROJECT_KNOWLEDGE.md` remains the current evidence ledger.
+
+**Review/next:** Rishi withdrew the additional human privacy-review request. Use automated checks as the review gate for this change; existing D044 reducer enforcement remains in force. PR #60 is open for owner merge. Separately approve any paid Apify fetch before running it.
+
+---
+
 README core-first direction applied. Discover/Events preserved but hidden by default (`NEXT_PUBLIC_DOR_EXTENSIONS`). Journal now runs a private decision loop before any preview: see `docs/features/PRIVATE_DECISION_LOOP.md` for the journey, rules, tests and seams (AI assessment mapping, Cyber durable pause, DS paired scenarios). Offline only. Next CS: Core 3 live configuration (module publish, auth issuer/audience, worker identity, two-account + denied third account), then pause controls once the Cyber contract lands.
 
 ---

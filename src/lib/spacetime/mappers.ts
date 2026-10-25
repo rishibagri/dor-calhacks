@@ -13,8 +13,9 @@ import type { ApprovedSignal, DisclosureReceipt, RecipientPresetAssignment, Rela
 import { NUDGE_TEMPLATE_IDS } from '@dor/contracts/policy';
 import { MAX_EVENT_TITLE, MAX_EVENT_TOPICS, MAX_INTEREST_TAGS, MAX_PUBLIC_NAME, validRecipientDelivery, validSupportPreferences } from '@dor/contracts/policy';
 import type {
-  ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView,
+  ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView, StandingConsentView,
 } from '@/lib/backend/ports';
+import { SHARING_CATEGORIES } from '@dor/contracts';
 import { toCamel, type LooseRow } from './bindings';
 
 type Mapper<T> = (row: LooseRow) => T | null;
@@ -175,6 +176,16 @@ export const mapRecipientPause: Mapper<RecipientPause> = (row) => {
   if (!pairId || version === null || version < 1 || !expiresAt || !createdAt || typeof active !== 'boolean') return null;
   if (Number.isNaN(Date.parse(expiresAt))) return null;
   return { pairId, version, expiresAt, active, createdAt };
+};
+
+export const mapStandingConsent: Mapper<StandingConsentView> = (row) => {
+  const pairId = str(row, 'pair_id'), expiresAt = str(row, 'expires_at'), createdAt = str(row, 'created_at');
+  const version = num(row, 'version'), categories = strings(row, 'categories', SHARING_CATEGORIES.length);
+  const active = get(row, 'active');
+  if (!pairId || !expiresAt || Number.isNaN(Date.parse(expiresAt)) || !createdAt || version === null || !categories || typeof active !== 'boolean' ||
+    categories.length === 0 || new Set(categories).size !== categories.length ||
+    !categories.every((c) => (SHARING_CATEGORIES as readonly string[]).includes(c))) return null;
+  return { pairId, categories: categories as StandingConsentView['categories'], version, expiresAt, active, createdAt };
 };
 
 export const mapNudgeDelivery: Mapper<NudgeDeliveryView> = (row) => {

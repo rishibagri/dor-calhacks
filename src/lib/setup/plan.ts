@@ -158,7 +158,8 @@ export function checkEnv(env: SetupEnv, mode: { worker: boolean; extensions: boo
   if (val(env, 'NEXT_PUBLIC_DOR_DISCOVERY') === 'off') add('warn', 'NEXT_PUBLIC_DOR_DISCOVERY', 'Discover/Events UI is hidden; the transition-first journey needs it');
   if (mode.extensions) {
     need('APIFY_API_TOKEN', 'catalogue ingestion', 'warn');
-    need('APIFY_TASK_ID', 'reviewed Apify task holding the regional source', 'warn');
+    need('APIFY_ACTOR_ID', 'reviewed Apify Actor used by the fixed server-side catalogue adapter', 'warn');
+    need('APIFY_ACTOR_BUILD', 'pinned Apify Actor build', 'warn');
   }
   return out;
 }

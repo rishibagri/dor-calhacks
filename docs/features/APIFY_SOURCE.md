@@ -35,18 +35,18 @@ Caveats: low usage on the Luma Actors; Luma has no Berkeley city page, so we fet
 Not run. Estimated cost of the following is under $0.05 (24 items, 2 topics). Owner approval required, then:
 
 ```
-APIFY_API_TOKEN=... APIFY_ACTOR_ID=tortuga/luma-scraper APIFY_SOURCE=luma \
+APIFY_API_TOKEN=... APIFY_ACTOR_ID=tortuga/luma-scraper APIFY_ACTOR_BUILD=REPLACE_WITH_REVIEWED_BUILD_ID APIFY_SOURCE=luma \
 APIFY_MAX_ITEMS=24 APIFY_TOPICS=board-games,live-music APIFY_WINDOW_DAYS=14 \
 node --experimental-strip-types scripts/ingest-catalogue.ts --fetch
 ```
 
-Add `--commit <database>` only after reviewing the printed report (default prints the normalized events and commits nothing). For Meetup use `APIFY_ACTOR_ID=filip_cicvarek/meetup-scraper APIFY_SOURCE=meetup`.
+Replace `REPLACE_WITH_REVIEWED_BUILD_ID` with the exact build ID/tag checked in the Actor's Apify page; the adapter rejects a missing build and never follows `latest`. Add `--commit <database>` only after reviewing the printed report (default prints the normalized events and commits nothing). For Meetup use `APIFY_ACTOR_ID=filip_cicvarek/meetup-scraper APIFY_SOURCE=meetup` and independently pin its reviewed build. The command above is documentation only; no Actor run or spend is authorized by this document.
 
 ## Adapter (src/server/discovery)
 
-- `config.ts`: fixed config from env; fails closed (missing token or Actor, `maxItems` > 50, timeout > 120 s, unknown topic). One retry maximum.
+- `config.ts`: fixed config from env; fails closed (missing token, Actor, pinned build, unreviewed Actor/source pair, `maxItems` > 50, timeout > 120 s, unknown topic). One retry maximum.
 - `apify.ts`: `fetchCatalogue(config, token, fetchImpl)`; no user data in the signature; each request passes `guardPublicCatalogueQuery`; AbortSignal timeout; results truncated to the cap even if the Actor over-delivers; token only in the Authorization header.
 - `normalize.ts`: reads an allowlist of public fields only; drops hosts/guests/organizers/descriptions; instruction-like or markup titles rejected, control characters stripped; local times converted to UTC via IANA zone; area from venue coordinates; `safeCatalogueUrl` on a per-source host allowlist; dedupe by stable source id (fallback hash of url+start).
-- `cache.ts`: in-memory, keyed by source/actor/region/window/topics/cap, 6 h TTL, concurrent callers share one in-flight request.
-- `index.ts`: `loadCatalogue(env)` = config, cache, fetch, normalize, provenance (source host, actor, fetchedAt).
+- `cache.ts`: in-memory, keyed by source/actor/pinned build/region/window/topics/cap, 6 h TTL, concurrent callers share one in-flight request.
+- `index.ts`: `loadCatalogue(env)` = config, cache, fetch, normalize, provenance (source host, actor, pinned build, fetchedAt).
 - `server-only` is not installed; the folder is only imported by `scripts/ingest-catalogue.ts` and must not be imported from client components. The CLI also keeps a 6 h file stamp and lock in `.cache/catalogue`, so separate processes do not re-fetch.
