@@ -1,0 +1,16 @@
+# BuildKit reads this for deploy/worker/Dockerfile. Allowlist: only what the worker image needs.
+*
+!package.json
+!package-lock.json
+!contracts/package.json
+!contracts/tsconfig.json
+!contracts/src
+!spacetimedb/package.json
+!src/agents/package.json
+!src/agents/tsconfig.json
+!src/agents/src
+!worker
+worker/node_modules
+worker/dist
+**/.env*
+**/*.log

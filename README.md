@@ -9,9 +9,10 @@ Starting college, moving, beginning a job or graduating can disrupt a person's s
 ## Product and privacy
 
 - Nearby discovery uses one-time approximate location and opted-in public profile fields. Journal data and private quiz answers do not enter discovery.
+- Each accepted relationship can have a private book for owner-selected device photos, call logs and interaction feedback; it uses the encrypted local vault, not Apify or AI sharing.
 - Apify collects a generic, developer-configured public event catalogue. It never receives journal text, private quiz answers, relationship IDs, personal attendance intent or device-derived location.
-- Existing-connection nudges retain recipient opt-in, quiet hours, pauses and server rechecks. D044 allows automatic approval only for one named pair, selected categories and an explicit expiring rule. Manual review remains the default; journal text is never auto-shared.
-- Product, architecture and role phases: [INSTRUCTIONS.md](INSTRUCTIONS.md). Normative boundaries: [contracts/README.md](contracts/README.md), [D044 specification](docs/features/AUTOMATIC_NUDGES.md), [Apify source guide](docs/features/APIFY_SOURCE.md).
+- Existing-connection nudges retain recipient opt-in, quiet hours, pauses and server rechecks. D044 skips per-nudge review only for a named pair covered by the owner's active expiring rule; journal text is never auto-shared.
+- Product, architecture and role phases: [INSTRUCTIONS.md](INSTRUCTIONS.md). Normative boundaries: [contracts/README.md](contracts/README.md), [D044 specification](docs/features/AUTOMATIC_NUDGES.md), [relationship books](docs/features/RELATIONSHIP_BOOKS.md), [Apify source guide](docs/features/APIFY_SOURCE.md).
 
 ## Current status
 

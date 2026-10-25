@@ -76,6 +76,15 @@ export interface DroidTransport {
   close(): Promise<void>;
 }
 
+/**
+ * Explicit no-model mode (`DOR_DROID_TRANSPORT=off`): every call fails at once with `not_configured`, before any
+ * process, network or provider work, so each agent takes its fixed-template / deterministic fallback.
+ */
+export const noModelTransport: DroidTransport = {
+  call: async () => { throw new ProviderError('factory', 'not_configured'); },
+  close: async () => {},
+};
+
 export interface DroidRunOptions {
   /** Aggregate job deadline (epoch ms) covering slot wait and the call. */
   deadlineAt?: number;

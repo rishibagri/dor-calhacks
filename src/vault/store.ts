@@ -5,8 +5,8 @@
 import type { Bytes, Sealed, WrapPurpose } from './crypto.ts';
 
 export const DB_NAME = 'dor-vault';
-const DB_VERSION = 1;
-export const RECORD_STORES = ['journal', 'reflection', 'profile', 'quizExtras'] as const;
+const DB_VERSION = 2;
+export const RECORD_STORES = ['journal', 'reflection', 'profile', 'quizExtras', 'relationshipPhoto', 'bookInteraction'] as const;
 export type RecordStore = (typeof RECORD_STORES)[number];
 
 /** Single plaintext metadata row. Contains salts, KDF parameters and wrapped (encrypted) DEKs only. */
