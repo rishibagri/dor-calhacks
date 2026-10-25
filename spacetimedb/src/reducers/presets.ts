@@ -62,7 +62,11 @@ export const assign_relationship_preset = spacetimedb.reducer(
       });
       return;
     }
+    const previous = findPreset(ctx, cur.preset_kind);
     ctx.db.preset_assignment.assignment_id.update({ ...cur, preset_kind: kind, assignment_version: cur.assignment_version + 1 });
-    suppressPairWork(ctx, args.pair_id, ctx.sender); // reassignment invalidates prior permissions
+    // Only a narrowing reassignment stops pending work; moving to an equal or broader preset keeps it running.
+    if (!previous || previous.allowed_categories.some(c => !preset.allowed_categories.includes(c))) {
+      suppressPairWork(ctx, args.pair_id, ctx.sender);
+    }
   }
 );

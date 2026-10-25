@@ -423,7 +423,7 @@ describe('strangers never reach private state through discovery or introductions
     const w = trio();
     ask(w, w.alice, w.bob);
     ask(w, w.carol, w.bob);
-    w.h.withReducerTx(w.admin, ctx => mod.set_discovery_config(ctx, { key: 'enabled', values: [] }));
+    w.h.withReducerTx(w.admin, ctx => mod.set_discovery_config(ctx, { key: 'enabled', values: ['false'] }));
     expect(() => ask(w, w.alice, w.carol)).toThrow('unavailable: disabled');
     const [fromAlice, fromCarol] = rows(w).map(r => r.intro_id);
     expect(() => respond(w, w.bob, fromAlice!, true)).toThrow('unavailable: disabled');

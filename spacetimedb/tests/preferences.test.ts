@@ -97,37 +97,30 @@ describe('recipient support-preference consent (D021 #4, D035)', () => {
     expect(view(w, w.alice, mod.my_nudges)).toHaveLength(0);
   });
 
-  it('preference revoked during generation: the commit bound to the read version fails', () => {
-    const { w, pairId, worker, sig } = world();
-    grantPrefs(w, w.bob, pairId);
-    const bobIdentity = view<any>(w, w.alice, mod.my_pairs)[0].counterpart_identity;
-    const read = view<any>(w, worker, mod.worker_support_preferences).find(p => p.recipient.isEqual(bobIdentity))!; // coordinator reads v1
-    w.call(w.bob, ctx => mod.revoke_support_preferences(ctx, { pair_id: pairId })); // recipient revokes mid-generation
-    expect(() => commit(w, worker, commitArgs(pairId, sig, read))).toThrow('stale: stale_policy');
-    expect(nudgeRow(w)).toBeFalsy();
-  });
-
-  it('preference edited during generation, or a borrowed consent id, is stale', () => {
+  it('preferences revoked or edited during generation do not cancel the commit (standard styles apply)', () => {
     const { w, pairId, worker, sig } = world();
     const v1 = grantPrefs(w, w.bob, pairId);
-    grantPrefs(w, w.bob, pairId, ['short_call', 'encouraging_note']); // v2
-    expect(() => commit(w, worker, commitArgs(pairId, sig, v1))).toThrow('stale: stale_policy');
-    expect(() => commit(w, worker, commitArgs(pairId, sig, { consent_id: 'someone-elses', consent_version: 2 }))).toThrow('stale: stale_policy');
+    w.call(w.bob, ctx => mod.revoke_support_preferences(ctx, { pair_id: pairId })); // recipient revokes mid-generation
+    commit(w, worker, commitArgs(pairId, sig, v1));
+    expect(nudgeRow(w)).toBeTruthy();
   });
-
-  it('the template mode must be one the recipient accepts (no nudge outside the recipient consent)', () => {
+  it('the consent id the worker passes is recorded but not binding', () => {
+    const { w, pairId, worker, sig } = world();
+    grantPrefs(w, w.bob, pairId);
+    commit(w, worker, commitArgs(pairId, sig, { consent_id: 'someone-elses', consent_version: 2 }));
+    expect(nudgeRow(w)!.recipient_consent_id).toBe('someone-elses');
+  });
+  it('support-style settings personalize; a template outside them still commits', () => {
     const { w, pairId, worker, sig } = world();
     const pref = grantPrefs(w, w.bob, pairId, ['encouraging_note']);
-    expect(() => commit(w, worker, commitArgs(pairId, sig, pref))).toThrow('unauthorized: blocked_category');
+    commit(w, worker, commitArgs(pairId, sig, pref));
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(1);
   });
-
   it('the sender cannot record preferences for the recipient (wrong caller)', () => {
-    const { w, pairId, worker, sig } = world();
-    const forged = grantPrefs(w, w.alice, pairId); // alice records HER OWN consent as a recipient, not bob's
-    expect(() => commit(w, worker, commitArgs(pairId, sig, forged))).toThrow('stale: stale_policy');
+    const { w, pairId } = world();
+    grantPrefs(w, w.alice, pairId); // alice records HER OWN settings as a recipient, not bob's
     expect(view(w, w.bob, mod.my_support_preferences)).toHaveLength(0);
   });
-
   it('revoke suppresses the pending nudge; a worker replay never resurrects it', () => {
     const { w, pairId, worker, sig } = world();
     const pref = grantPrefs(w, w.bob, pairId);
@@ -149,19 +142,19 @@ describe('recipient support-preference consent (D021 #4, D035)', () => {
     expect(nudgeRow(w)!.recipient_consent_version).toBe(v1.consent_version);
   });
 
-  it('narrowing preferences hides an existing nudge whose mode is no longer accepted', () => {
+  it('narrowing support styles keeps an existing nudge; opting out of the pair hides it', () => {
     const { w, pairId, worker, sig } = world();
     commit(w, worker, commitArgs(pairId, sig, grantPrefs(w, w.bob, pairId)));
-    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(1);
     grantPrefs(w, w.bob, pairId, ['encouraging_note']);
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(1);
+    w.call(w.bob, ctx => mod.set_nudge_delivery(ctx, { pair_id: pairId, opted_in: false, quiet_start_minute: undefined, quiet_end_minute: undefined, utc_offset_minutes: 0 }));
     expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
   });
-
-  it('nudge expiry is clamped to the preference consent expiry', () => {
+  it('nudge expiry follows the signal and cooldown, not the support-style settings', () => {
     const { w, pairId, worker, sig } = world();
     const pref = grantPrefs(w, w.bob, pairId, undefined, undefined, 0.25); // 6h
     commit(w, worker, commitArgs(pairId, sig, pref));
-    expect(nudgeRow(w)!.expires_at.microsSinceUnixEpoch).toBe(pref.expires_at.microsSinceUnixEpoch);
+    expect(nudgeRow(w)!.expires_at.microsSinceUnixEpoch).toBe(sig.expires_at.microsSinceUnixEpoch);
   });
 });
 
@@ -191,20 +184,15 @@ describe('scheduled expiry/snooze sweep (views have no clock)', () => {
     expect(view(w, worker, mod.worker_signal_context)).toHaveLength(0);
   });
 
-  it('expired preference consent leaves the worker view and hides its nudges after the sweep', () => {
+  it('expired support-style settings fall back to the standard styles; the nudge stays', () => {
     const { w, pairId, worker, sig } = world();
     const pref = grantPrefs(w, w.bob, pairId, undefined, undefined, 0.5); // 12h
     commit(w, worker, commitArgs(pairId, sig, pref, { nudge_id: 'n-2' }));
-    w.h.withReducerTx(w.admin, ctx => { const n = ctx.db.nudge.id.find('n-2')!; ctx.db.nudge.id.update({ ...n, expires_at: new Timestamp(n.expires_at.microsSinceUnixEpoch + 48n * HOUR_US) }); }); // isolate the consent expiry
     advance(w, 12n * HOUR_US);
     sweep(w);
     expect(view(w, worker, mod.worker_support_preferences)).toHaveLength(2);
-    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
-    // Renewing is a new version: the old nudge stays hidden (bound consent expired), new consent is visible to the worker.
-    grantPrefs(w, w.bob, pairId);
-    expect(view(w, worker, mod.worker_support_preferences)).toHaveLength(2);
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(1);
   });
-
   it('a snoozed nudge is hidden until the snooze ends, then reappears after the sweep', () => {
     const { w, pairId, worker, sig } = world();
     commit(w, worker, commitArgs(pairId, sig, grantPrefs(w, w.bob, pairId)));

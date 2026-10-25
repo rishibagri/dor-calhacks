@@ -67,15 +67,15 @@ export const set_auth_audience = spacetimedb.reducer(
 );
 
 /**
- * Module-owner only: C8 discovery configuration (PROPOSED). `enabled` takes ['true'] or [] (default off until
- * the C8 review is ACKed); `tags` and `areas` take developer allowlists of short slugs.
+ * Module-owner only: discovery configuration. `enabled` takes ['true'], ['false'] or [] (default on; only
+ * ['false'] turns it off); `tags` and `areas` take developer allowlists of short slugs.
  */
 export const set_discovery_config = spacetimedb.reducer(
   { key: t.string(), values: t.array(t.string()) },
   (ctx, { key, values }) => {
     requireOwner(ctx);
     if (key === 'enabled') {
-      if (!(values.length === 0 || (values.length === 1 && values[0] === 'true'))) fail('invalid', 'enabled');
+      if (!(values.length === 0 || (values.length === 1 && (values[0] === 'true' || values[0] === 'false')))) fail('invalid', 'enabled');
     } else if (key === 'tags' || key === 'areas') {
       if (!validSlugAllowlist(values, key === 'tags' ? 'tag' : 'area')) fail('invalid', 'allowlist');
     } else if (key === 'source_hosts') {

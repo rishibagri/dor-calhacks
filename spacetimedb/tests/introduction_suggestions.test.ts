@@ -82,7 +82,7 @@ describe('request_introduction_suggestion', () => {
     participate(w, w.alice, ['hiking']);
     w.call(w.alice, ctx => mod.withdraw_discovery_profile(ctx, {}));
     expect(() => ask(w, w.alice)).toThrow('withdrawn');
-    w.h.withReducerTx(w.admin, ctx => mod.set_discovery_config(ctx, { key: 'enabled', values: [] }));
+    w.h.withReducerTx(w.admin, ctx => mod.set_discovery_config(ctx, { key: 'enabled', values: ['false'] }));
     expect(() => ask(w, w.bob)).toThrow('unavailable: disabled');
   });
 

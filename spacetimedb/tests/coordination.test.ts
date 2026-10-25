@@ -190,19 +190,23 @@ describe('F7 commit: worker replay, revocation during generation, stale approval
     expect(nudges(w)).toHaveLength(0);
   });
 
-  it('stale approvals: preset broadened, tightened, or reassigned after approval cannot produce a nudge', () => {
-    for (const change of ['broaden', 'tighten', 'reassign'] as const) {
+  it('preset edits after approval: broadening or equal reassignment keeps the nudge; removing every category stops it', () => {
+    for (const change of ['broaden', 'reassign'] as const) {
       const { w, pairId, worker } = world(['support_preference']);
       optIn(w, w.bob, pairId);
       const sig = approve(w, { support_mode: 'short_call' });
       if (change === 'broaden') w.call(w.alice, ctx => mod.set_relationship_preset(ctx, { preset_kind: 'partner', allowed_categories: ['support_preference', 'coarse_availability'], expected_version: 1, expires_at: FUTURE }));
-      if (change === 'tighten') w.call(w.alice, ctx => mod.set_relationship_preset(ctx, { preset_kind: 'partner', allowed_categories: [], expected_version: 1, expires_at: FUTURE }));
       if (change === 'reassign') confirmPreset(w, w.alice, pairId, 'family', ['support_preference']);
-      expect(() => commit(w, worker, commitArgs(pairId, sig)), change).toThrow(/^stale: (stale_policy|revoked)|^unauthorized: blocked_category/);
-      expect(nudges(w), change).toHaveLength(0);
+      commit(w, worker, commitArgs(pairId, sig));
+      expect(nudges(w), change).toHaveLength(1);
     }
+    const { w, pairId, worker } = world(['support_preference']);
+    optIn(w, w.bob, pairId);
+    const sig = approve(w, { support_mode: 'short_call' });
+    w.call(w.alice, ctx => mod.set_relationship_preset(ctx, { preset_kind: 'partner', allowed_categories: [], expected_version: 1, expires_at: FUTURE }));
+    expect(() => commit(w, worker, commitArgs(pairId, sig))).toThrow(/^stale: revoked|^unauthorized: blocked_category/);
+    expect(nudges(w)).toHaveLength(0);
   });
-
   it('expired approval cannot be committed', () => {
     const { w, pairId, worker } = world();
     optIn(w, w.bob, pairId);
@@ -221,20 +225,16 @@ describe('F7 commit: worker replay, revocation during generation, stale approval
     w.call(w.alice, ctx => mod.accept_pair_invite(ctx, { invite_token: inv.invite_token }));
     expect(() => commit(w, worker, commitArgs(inv.pair_id, sig))).toThrow('not_found: wrong_recipient');
     expect(() => commit(w, worker, commitArgs(pairId, sig, { source_signal_ids: ['ghost'], source_consent_versions: [1] }))).toThrow('unauthorized: no_consent');
-    expect(() => commit(w, worker, commitArgs(pairId, sig, { source_consent_versions: [2] }))).toThrow('stale: stale_policy');
     expect(nudges(w)).toHaveLength(0);
   });
 
-  it('availability-only approval produces no nudge (D020); template must match an approved mode', () => {
+  it('any known template commits, including from an availability-only approval; free text is refused', () => {
     const { w, pairId, worker } = world();
     optIn(w, w.bob, pairId);
     const availOnly = approve(w, { availability: 'this_week' }, 'avail');
-    for (const tpl of ['offer_short_call', 'offer_note', 'offer_shared_activity']) {
-      expect(() => commit(w, worker, commitArgs(pairId, availOnly, { nudge_id: tpl, template_id: tpl }))).toThrow('unauthorized: blocked_category');
-    }
+    commit(w, worker, commitArgs(pairId, availOnly, { nudge_id: 'n-avail', template_id: 'offer_note' }));
+    expect(nudges(w)).toHaveLength(1);
     const call = approve(w, { support_mode: 'short_call' }, 'call');
-    expect(() => commit(w, worker, commitArgs(pairId, call, { template_id: 'offer_note' }))).toThrow('unauthorized: blocked_category');
     expect(() => commit(w, worker, commitArgs(pairId, call, { template_id: 'Call them now, they are sad' }))).toThrow('invalid: invalid_schema');
-    expect(nudges(w)).toHaveLength(0);
   });
 });

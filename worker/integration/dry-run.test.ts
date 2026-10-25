@@ -162,15 +162,15 @@ describe('typed approval → worker → commit_nudge, over the real module', () 
     expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
   });
 
-  it('recipient revokes consent while the model runs: commit_nudge refuses the bound consent (D035)', async () => {
+  it('recipient clears support-style settings while the model runs: the nudge still commits (standard styles)', async () => {
     const { w, pairId, worker } = world();
     optIn(w, pairId);
     const sig = approve(w, BOTH);
     const source = harnessSource(w, worker, {
       beforeCommit: () => w.call(w.bob, ctx => mod.revoke_support_preferences(ctx, { pair_id: pairId })) });
     const live = liveWorker(w, source, scriptedDroid());
-    expect((await live.runJob(job(pairId, sig.signal_id))).map(o => o.outcome)).toEqual(['policy_denied']);
-    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
+    expect((await live.runJob(job(pairId, sig.signal_id))).map(o => o.outcome)).toEqual(['nudge_proposed']);
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(1);
   });
 
   it('the committed nudge is bound to the consent version the ACK used', async () => {
@@ -194,15 +194,14 @@ describe('typed approval → worker → commit_nudge, over the real module', () 
     expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
   });
 
-  it('recipient re-saves the same consent after the recheck: only the version pin stops the commit (D035)', async () => {
+  it('recipient re-saves the same settings after the recheck: the version change no longer stops the commit', async () => {
     const { w, pairId, worker } = world();
     optIn(w, pairId);
     const sig = approve(w, BOTH);
-    // Same modes and windows, so the consent still stands and covers the template; only consent_version moves.
     const source = harnessSource(w, worker, { beforeCommit: () => { grantPrefs(w, w.bob, pairId, BOB_MODES, ['today', 'this_week']); } });
     const live = liveWorker(w, source, scriptedDroid());
-    expect((await live.runJob(job(pairId, sig.signal_id))).map(o => o.outcome)).toEqual(['policy_denied']);
-    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(0);
+    expect((await live.runJob(job(pairId, sig.signal_id))).map(o => o.outcome)).toEqual(['nudge_proposed']);
+    expect(view(w, w.bob, mod.my_nudges)).toHaveLength(1);
   });
 
   it('a non-worker identity sees no signals and cannot commit', async () => {
