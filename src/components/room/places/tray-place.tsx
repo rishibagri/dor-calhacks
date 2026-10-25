@@ -8,6 +8,7 @@ import { useLiveShared } from '@/components/shell/use-live';
 import { ResultNotice } from '@/components/shell/result-notice';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { NudgeRequests } from '@/components/network/nudge-requests';
 
 // Recipient copy comes from the contract so it is identical to what the owner previewed (FLOWS F3/F7).
 const COPY = NUDGE_TEMPLATE_COPY;
@@ -31,6 +32,7 @@ export function TrayPlace() {
         </p>
       </header>
       <ResultNotice result={result} />
+      <NudgeRequests />
       {nudges.length === 0 && (
         <div className={`rounded-lg border border-dashed p-8 text-center ${ENTER}`}>
           <p className="font-medium">Nothing waiting for you</p>

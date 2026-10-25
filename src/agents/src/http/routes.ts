@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { PrivateReflection, PrivateReflectionPort, VoicePort } from '@dor/contracts';
 import { ProviderError, httpStatusFor } from '../errors.js';
 import { MAX_SELECTED_TEXT_CHARS } from '../reflection/claude.js';
+import { OpenerRequestSchema, type OpenerPort } from '../network/opener.js';
 
 /** Who is calling, as established by the app's session layer (Clerk). `configured: false` never means anonymous access. */
 export interface RouteSession {
@@ -80,6 +81,20 @@ export async function handleReflectionRequest(request: Request, deps: { session:
   const call = () => deps.reflection.reflect(selectedText, clientRequestId);
   try {
     return json(200, await (deps.inFlight ? deps.inFlight.run([deps.session.userId!, clientRequestId, selectedText], call) : call()));
+  } catch (error) {
+    return providerFailure(error);
+  }
+}
+
+/** POST /api/network/opener. Card + own profile → a draft first message the owner edits and sends themselves. */
+export async function handleOpenerRequest(request: Request,
+  deps: { session: RouteSession; opener: OpenerPort; limiter?: RateLimiter }): Promise<Response> {
+  const gate = admit(deps.session, deps.limiter);
+  if (gate) return gate;
+  const parsed = OpenerRequestSchema.safeParse(await readJson(request));
+  if (!parsed.success) return failure(422, 'invalid', 'Invalid opener request');
+  try {
+    return json(200, await deps.opener.draft(parsed.data));
   } catch (error) {
     return providerFailure(error);
   }

@@ -13,6 +13,7 @@ import { DiscoveryResults } from '@/features/discovery/discovery-results';
 import { IntroductionControls } from '@/features/privacy/introduction-controls';
 import { runAction } from '@/features/privacy/introduction-model';
 import { DiscoveryGate } from '@/components/feature/discovery-gate';
+import { FriendsNearby } from '@/components/network/friends-nearby';
 
 export function SillPlace() {
   const shared = useLiveShared();
@@ -63,6 +64,7 @@ export function SillPlace() {
         </p>
       </header>
       <IntegrationStatus />
+      <FriendsNearby />
       {stage === 'disabled' ? (
         <p className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
           Discovery isn't switched on for this area yet. Nothing is shown and nothing can be published.

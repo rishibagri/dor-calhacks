@@ -2,6 +2,9 @@ import type { DisclosureReceipt, RecipientPresetAssignment, RelationshipPreset }
 import type {
   Unreadable, IntroductionSuggestionRequestView, ActivityApprovalRow, CatalogueEventView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView, StandingConsentView,
 } from '@/lib/backend/ports';
+import type { NetworkData } from '../network/types.ts';
+import { EMPTY_NETWORK } from '../network/types.ts';
+import { mapAll, mapConnectionProfile, mapFofCard, mapNudgeRequest, mapProfileDetail } from '../network/mappers.ts';
 import type { LooseConnection, LooseRow, LooseTable } from './bindings';
 import { findTable } from './names.ts';
 import {
@@ -17,6 +20,7 @@ export const VIEW_NAMES = [
   'my_discovery_profile', 'discovery_cards', 'my_introductions', 'my_introduction_proposals',
   'my_introduction_suggestion_request',
   'catalogue_events', 'catalogue_status', 'my_event_intents', 'event_companions', 'my_activity_approvals', 'my_plans',
+  'my_profile_detail', 'fof_cards', 'my_nudge_requests', 'my_connection_profiles',
 ] as const;
 
 export type ViewName = (typeof VIEW_NAMES)[number];
@@ -45,13 +49,14 @@ export interface ViewData {
   readonly companions: EventCompanionRow[];
   readonly activityApprovals: ActivityApprovalRow[];
   readonly plans: PlanView[];
+  readonly network: NetworkData;
   readonly unreadable: Unreadable;
 }
 
 export const EMPTY_VIEWS: ViewData = {
   account: null, pairs: [], invites: [], presets: [], assignments: [], nudges: [], receipts: [], signals: [], supportPreferences: [], nudgeDelivery: [], pauses: [], standingConsents: [],
   discoveryProfile: null, discoveryCards: [], introductions: [], proposals: [], suggestionRequest: null,
-  catalogue: [], catalogueStatus: [], eventIntents: [], companions: [], activityApprovals: [], plans: [],
+  catalogue: [], catalogueStatus: [], eventIntents: [], companions: [], activityApprovals: [], plans: [], network: EMPTY_NETWORK,
   unreadable: { signals: [], supportPreferences: [], nudgeDelivery: [], presets: [], counts: {} },
 };
 
@@ -105,6 +110,12 @@ export function readViews(conn: LooseConnection): ViewData {
   };
   return {
     ...data,
+    network: {
+      profile: mapAll(rows('my_profile_detail'), mapProfileDetail)[0] ?? null,
+      fofCards: mapAll(rows('fof_cards'), mapFofCard),
+      requests: mapAll(rows('my_nudge_requests'), mapNudgeRequest),
+      connections: mapAll(rows('my_connection_profiles'), mapConnectionProfile),
+    },
     unreadable: {
       signals: refused('my_signals', 'signal_id'),
       supportPreferences: refused('my_support_preferences', 'consent_id'),

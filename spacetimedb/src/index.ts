@@ -17,5 +17,7 @@ export * from './reducers/events';
 export * from './reducers/pause';
 export * from './reducers/standing';
 export * from './reducers/suggestions';
+export * from './reducers/network';
+export * from './network_views';
 export * from './views';
 export default spacetimedb;

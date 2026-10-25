@@ -10,6 +10,7 @@
  * Authorization is enforced inside SpacetimeDB reducers/views, never by these
  * client interfaces; a client-side "ok" is not permission.
  */
+import type { ConnectionProfile, FofCard, NudgeRequestView, ProfileDetail } from '@/lib/network/types';
 import type {
   AgentAck,
   ApprovedSignal,
@@ -362,6 +363,12 @@ export interface SharedStatePort {
   /** D048: ask the worker for at most one suggestion now. Grants nothing; nobody is contacted. Fresh id per tap. */
   requestIntroductionSuggestion(clientRequestId: string): Promise<ReducerResult>; // request_introduction_suggestion
   reportDiscoveryUser(target: { kind: 'card' | 'introduction'; ref: string }, reason: ReportReason): Promise<ReducerResult>; // report_discovery_user
+  /** Network (D045): own profile details; replaces the whole row. */
+  setProfileDetail(detail: ProfileDetail): Promise<ReducerResult>; // set_profile_detail
+  /** Nudge someone a friend knows nearby (a fof_cards candidate). */
+  sendNudgeRequest(candidateRef: string, message: string): Promise<ReducerResult>; // send_nudge_request
+  respondNudgeRequest(requestId: string, accept: boolean): Promise<ReducerResult>; // respond_nudge_request
+  cancelNudgeRequest(requestId: string): Promise<ReducerResult>; // cancel_nudge_request
 
   // caller-filtered views
   myAccount(): { displayName: string } | null; // my_account
@@ -387,6 +394,10 @@ export interface SharedStatePort {
   eventCompanions(): EventCompanionRow[]; // event_companions
   myActivityApprovals(): ActivityApprovalRow[]; // my_activity_approvals
   myPlans(): PlanView[]; // my_plans
+  myProfileDetail(): ProfileDetail | null; // my_profile_detail
+  fofCards(): FofCard[]; // fof_cards (friends of friends in the caller's area)
+  myNudgeRequests(): NudgeRequestView[]; // my_nudge_requests
+  myConnectionProfiles(): ConnectionProfile[]; // my_connection_profiles (linked people's full details)
   /** Rows present in a view but unreadable; see UnreadableRow. */
   unreadable(): Unreadable;
 

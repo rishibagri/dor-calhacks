@@ -7,6 +7,7 @@ import { introductionActions, toControlRows } from '@/components/feature/introdu
 import { useLiveShared } from '@/components/shell/use-live';
 import { IntroductionControls } from '@/features/privacy/introduction-controls';
 import { IntegrationStatus } from '@/components/shell/integration-status';
+import { ConnectionProfiles } from '@/components/network/connection-profiles';
 
 const STEPS = [
   'One of you creates an invite and sends the token.',
@@ -32,6 +33,7 @@ export function ShelfPlace() {
         </ol>
       </header>
       <IntegrationStatus />
+      <ConnectionProfiles />
       <IntroductionControls introductions={toControlRows(shared.myIntroductions())} discoverable={isDiscoverable} actions={introductionActions(shared)} />
       <AccountInvites />
       <PairsList />

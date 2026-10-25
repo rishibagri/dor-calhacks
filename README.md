@@ -19,6 +19,7 @@ Starting college, moving, beginning a job or graduating can disrupt a person's s
 - **D050:** implemented on this branch and offline-verified; PR pending, not live-verified. Accepted pairs use default-on in-app nudges under their assigned preset, with recipient per-pair opt-out, pause, configured quiet hours and cooldown. Private conflict suppresses nudges; serious-distress terms show a local U.S. 988 resource card and never contact a connection. D044 backend remains for compatibility.
 - **Apify:** server-only Actor adapter, bounded normalization/cache and fixture path exist. Live retrieval is still unverified. `--fetch` spends credits and needs configured credentials and source review.
 - **Discovery:** UI and guarded state paths are implemented; live candidate/event density and full newcomer journey still require verification.
+- **Friend-of-friend connections (D045, CS branch):** bounded 2–3-hop matching through dor's accepted links, gated by both users' active public discovery profile and coarse-area participation. Cards use opaque publication references and show no candidate identity until an invitation is accepted. Requests remain user-initiated; the local sill preview uses fictional Berkeley data and disables actions. Offline-verified only; Cyber/DS/AI review and live DB verification remain open.
 
 See [PROJECT_KNOWLEDGE.md](PROJECT_KNOWLEDGE.md) for the evidence ledger. Implemented, deployed and live-verified are tracked separately.
 

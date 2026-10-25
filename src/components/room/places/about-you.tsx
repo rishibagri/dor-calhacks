@@ -51,7 +51,7 @@ function OnboardingForm() {
     try {
       await vault.saveProfile(parsed.data);
       await vault.saveQuizExtras(buildQuizExtras(a));
-      setMessage('Saved to your local vault.');
+      setMessage('Saved to your private local vault.');
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Could not save profile.');
     }
@@ -69,10 +69,10 @@ function OnboardingForm() {
         <Button asChild variant="ghost" className="shrink-0"><Link href="/journal">Skip</Link></Button>
       </header>
       <Alert className="border-primary/40">
-        <AlertTitle>Answers never grant sharing</AlertTitle>
+        <AlertTitle>Your answers stay yours</AlertTitle>
         <AlertDescription className="text-pretty">
-          This quiz is optional and only suggests draft settings. Skipping or answering shares nothing; you
-          confirm presets and approve each signal separately. Answers describe preferences, not a personality type.
+          Your answers and activity choices are saved in your private local vault. They are not shown to connections
+          or used as public interests. Add anything you want others to see separately in your profile.
         </AlertDescription>
       </Alert>
       <div className="space-y-2" role="group" aria-label="Quiz progress">
@@ -85,7 +85,7 @@ function OnboardingForm() {
       <Card>
         <CardHeader>
           <CardTitle>Eight optional questions</CardTitle>
-          <CardDescription>Leave any blank. Answers stay in this tab&apos;s memory unless saved to the local vault.</CardDescription>
+          <CardDescription>Leave any blank. Answers are saved only to your private local vault.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <Question legend="1. After a long day, what helps?" hint="Choosing space adds no support suggestion to your drafts. You can always choose space again when you journal.">

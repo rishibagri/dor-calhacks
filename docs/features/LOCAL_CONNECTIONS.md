@@ -1,6 +1,17 @@
 # Nearby people and event-based connections
 
-Status: **user-approved product scope; proposed implementation boundary, not a live feature.** R0–R6 in README supersede the old phase schedule. C8 is proposed; current C3 and D028 runtime constraints remain unchanged until a reviewed schema/guard change lands.
+Status: **D045 friend-of-friend path implemented on `role/cs-room`, offline-verified, and awaiting cross-role review; not live-verified.** R0–R6 in README supersede the old phase schedule. C8 is proposed; current C3 and D028 runtime constraints remain unchanged until a reviewed schema/guard change lands.
+
+## D045 current implementation
+- `set_profile_detail` stores only user-authored profile fields; quiz answers are rejected and the legacy answers column is kept empty. Profile views also redact legacy answer values.
+- Nearby cards are derived from accepted dor pair/introduction links at two or three hops. A card is eligible only when discovery is enabled and both people have an active, opted-in C8 publication plus an active coarse-area participation, and the visibility guard permits the pair.
+- The card exposes the publication's opaque ID, the caller's mutual friend, hop count, mutual count, and overlapping published interest tags. It does not expose candidate identity or area. Terminal invitation states collapse to `closed`; block state is not returned as an oracle.
+- A request is a deliberate user action. Its candidate reference is resolved server-side to a currently eligible person; acceptance rechecks current visibility and blocks before creating an accepted pair. Declines and cancellations do not identify the other person's action in the caller's nearby card.
+- An optional Claude opener draft receives only the mutual-friend display name, hop count, mutual count, and shared public tags. It receives no journal, private quiz answers, profile fields, candidate ID, or area. The sender reviews and sends the in-app request.
+- The development-only sill fixture is enabled only with `NEXT_PUBLIC_DOR_NETWORK_DEMO=1`; every card is fictional and actions are disabled.
+- Tests cover private-answer rejection/redaction, C8 publication and area gates, blocked links, opaque references, acceptance rechecks, decline/cancel presentation, opener minimization, mapper redaction, and synthetic fixtures.
+
+**Review required before merge:** Cyber should review publication/area authorization, identifier and relationship privacy; DS should review profile/tag matching semantics and no-action states; AI should review the minimal opener input and prompt. All evidence is offline. No hosted SpacetimeDB publish, live account test, provider call, or deployment has been performed for this path.
 
 ## Confirmed choices
 - One-time approximate location. No continuous GPS or passive tracking.

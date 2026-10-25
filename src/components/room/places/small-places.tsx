@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { navigateRoom } from '../room-link';
 import { placeById, type PlaceId } from '../layout';
 import { AboutYou } from './about-you';
+import { ProfileDetailForm } from '@/components/network/profile-detail-form';
 
 function PlaceHeader({ title, note }: { title: string; note: string }) {
   return (
@@ -87,6 +88,7 @@ export function DeskPlace() {
 const BOXES = [
   { id: 'landed', label: 'Where you’ve landed' },
   { id: 'about', label: 'About you' },
+  { id: 'profile', label: 'Your details' },
   { id: 'home', label: 'From home' },
 ] as const;
 type BoxId = (typeof BOXES)[number]['id'];
@@ -99,7 +101,7 @@ export function BoxesPlace() {
   return (
     <div className="space-y-6">
       <PlaceHeader title="Moving boxes" note="Open them in any order, or skip them. Nothing in a box is shared until you choose to share it." />
-      <div role="tablist" aria-label="Moving boxes" className="grid grid-cols-3 gap-2">
+      <div role="tablist" aria-label="Moving boxes" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {BOXES.map((b) => (
           <button key={b.id} type="button" role="tab" aria-selected={open === b.id} aria-controls={`box-${b.id}`} onClick={() => setOpen(b.id)}
             className={cn('box-tab', open === b.id && 'box-tab-open')}>
@@ -114,6 +116,7 @@ export function BoxesPlace() {
             : <DiscoveryArea me={me} isAreaLive={stage === 'ready'} initialAreaKey={readPref(sessionStore()).areaKey} />
         )}
         {open === 'about' && <AboutYou />}
+        {open === 'profile' && <ProfileDetailForm />}
         {open === 'home' && <AccountInvites />}
       </div>
     </div>
