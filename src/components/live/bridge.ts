@@ -11,6 +11,7 @@ import { NUDGE_TEMPLATE_COPY, DEFAULT_RECIPIENT_DELIVERY, type PrivateAssessment
 import type { PairView, ReducerResult, SharedStatePort, ReflectionPort } from '@/lib/backend/ports';
 import { reasonLive, type LiveContext, type LivePerson, type ModelReasoning } from '@/reasoning/runtime/live';
 import { applyMemoryUpdate, memoryForModel, readMemory, saveMemory, type MemoryItem, type MemoryStore } from '@/reasoning/runtime/memory';
+import { fallbackPicks, rankCandidates, type SuggestionItem, type SuggestionPick } from '@/reasoning/runtime/suggestions';
 import { ACTION_SUPPORT_MODES, ACTION_SURFACE, type CandidateAction } from '@/reasoning/core/vocabulary';
 import type { ReasoningDecision } from '@/reasoning/core/types';
 import { prepareShare, requestIdFor, shareRecipients, describeNotReady, type ApprovalDraft } from '@/components/feature/share-review-model';
@@ -81,7 +82,9 @@ function memoryStore(owner: string | null): MemoryStore {
     write: (v) => { try { localStorage.setItem(key, v); } catch { /* storage blocked: memory lasts this session */ } },
   };
 }
-const PLACE_WHY: Record<CataloguePlaceView['kind'], string> = { food: 'well reviewed · food', coffee: 'well reviewed · coffee', dessert: 'well reviewed · dessert', study: 'good for studying' };
+const PLACE_WHY: Record<CataloguePlaceView['kind'], string> = { food: 'well reviewed · food', coffee: 'well reviewed · coffee', dessert: 'well reviewed · dessert', study: 'good for studying',
+  bar: 'well reviewed · drinks', park: 'outdoors nearby', books: 'bookstore nearby', museum: 'museum nearby', fitness: 'move with others', music: 'live music nearby',
+  art: 'art nearby', games: 'games nearby' };
 const FLYER_SLOTS = [{ l: 14, t: 118, rot: -5, pin: '#F2A7B8' }, { l: 246, t: 196, rot: 4, pin: '#A8DCC4' },
   { l: 26, t: 356, rot: -2, pin: '#C3B1E1' }, { l: 236, t: 392, rot: 3, pin: '#F6D77A' }];
 
@@ -404,6 +407,10 @@ export class LiveBridge {
   private cards: SillCard[] = [];
   private events: CatalogueEventView[] = [];
   private places: CataloguePlaceView[] = [];
+  /** D057 "for you" picks over the catalogue, refreshed when interests or the catalogue change. Memory only. */
+  private picks: SuggestionPick[] = [];
+  private picksKey = '';
+  private picksBusy = false;
   private env: Envelope | null = null;
   private seenEnv = new Set<string>();
   private pinsSeeded = false;
@@ -752,19 +759,32 @@ export class LiveBridge {
     // Places (D051 proposal): the viewer's area first, then rating weighted by how many people reviewed it. No model.
     const score = (p: CataloguePlaceView) => p.rating * Math.log10(10 + p.reviewCount);
     const allPlaces = shared.cataloguePlaces().filter((p) => !myArea || p.areaKey === myArea).sort((a, b) => score(b) - score(a));
-    // Four flyers: two events and two places when both exist, otherwise whichever there is.
-    const nPlaces = Math.min(allPlaces.length, Math.max(2, 4 - allEvents.length));
-    this.places = allPlaces.slice(0, nPlaces);
-    this.events = allEvents.slice(0, 4 - this.places.length);
+    // D057: when "for you" picks exist they choose the four flyers, in pick order; otherwise two events and two places.
+    this.maybeSuggest(me, myArea, now);
+    const pickWhy = new Map(this.picks.map((p) => [p.id, p.why]));
+    const pickedEvents = shared.catalogueEvents().filter((e) => pickWhy.has(e.eventId) && Date.parse(e.startsAt) > now.getTime());
+    const pickedPlaces = shared.cataloguePlaces().filter((p) => pickWhy.has(`p:${p.placeId}`));
+    if (pickedEvents.length + pickedPlaces.length > 0) {
+      const order = (id: string) => this.picks.findIndex((p) => p.id === id);
+      const chosen = [...pickedEvents.map((e) => ({ id: e.eventId, e })), ...pickedPlaces.map((pl) => ({ id: `p:${pl.placeId}`, pl }))]
+        .sort((a, b) => order(a.id) - order(b.id)).slice(0, 4);
+      this.events = chosen.flatMap((c) => ('e' in c && c.e ? [c.e] : []));
+      this.places = chosen.flatMap((c) => ('pl' in c && c.pl ? [c.pl] : []));
+    } else {
+      const nPlaces = Math.min(allPlaces.length, Math.max(2, 4 - allEvents.length));
+      this.places = allPlaces.slice(0, nPlaces);
+      this.events = allEvents.slice(0, 4 - this.places.length);
+    }
     const placeFly = this.places.map((p, n) => ({ id: `p:${p.placeId}`, title: p.name, day: `★ ${p.rating.toFixed(1)} · ${p.reviewCount.toLocaleString()} reviews`,
-      time: p.label || tagLabel(p.kind), area: areaLabel(p.areaKey) ?? 'Nearby', src: 'Google Maps', why: PLACE_WHY[p.kind],
+      time: p.label || tagLabel(p.kind), area: areaLabel(p.areaKey) ?? 'Nearby', src: 'Google Maps', why: pickWhy.get(`p:${p.placeId}`) ?? PLACE_WHY[p.kind],
       ...FLYER_SLOTS[this.events.length + n], sample: false }));
     const FLY = [...this.events.map((e, n) => {
       const at = new Date(e.startsAt), pos = FLYER_SLOTS[n];
       const host = e.sourceUrl ? new URL(e.sourceUrl).hostname.replace(/^www\./, '') : 'source';
       return { id: e.eventId, title: e.title, day: at.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
         time: at.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }), area: areaLabel(e.areaKey) ?? 'Nearby',
-        src: /lu\.?ma/.test(host) ? 'Luma' : host === 'source' ? 'Google' : host, why: e.topics.length ? e.topics.map(tagLabel).join(' · ') : 'nearby', ...pos, sample: false };
+        src: /lu\.?ma/.test(host) ? 'Luma' : host === 'source' ? 'Google' : host,
+        why: pickWhy.get(e.eventId) ?? (e.topics.length ? e.topics.map(tagLabel).join(' · ') : 'nearby'), ...pos, sample: false };
     }), ...placeFly];
     const sharedEvents = Object.fromEntries(shared.myEventIntents().filter((x) => isIntentActive(x, now.getTime())).map((x) => [x.eventId, true]));
     Object.assign(i, { PEOPLE, BOXSLOT, SINCE, HIST: {}, PHOTOS: {}, HOME: [], CARDS, FLY, PLANS: [] });
@@ -825,6 +845,40 @@ export class LiveBridge {
       i.toast('Something slid under the door.');
       setTimeout(() => i.anim('envWorld', [{ transform: 'translate(0,60px) rotate(-7deg)', opacity: 0 }, { transform: 'rotate(-7deg)', opacity: 1 }], { duration: 900, easing: i.EZ.pop }), 30);
     }
+  }
+
+  /**
+   * D057: ask for "for you" picks when the person's interests or the catalogue change. The device pre-ranks public
+   * catalogue items against their published interests and device-only memory; /api/suggestions picks with reasons; on
+   * failure the deterministic ranking is used. Picks live in memory only.
+   */
+  private maybeSuggest(me: { interestTags: readonly string[] } | null, areaKey: string | null, now: Date) {
+    if (this.picksBusy || !this.deps?.signedIn) return;
+    const details = new Map(this.shared.catalogueDetails().map((d) => [d.itemId, d]));
+    const items: SuggestionItem[] = [
+      ...this.shared.catalogueEvents().map((e): SuggestionItem => ({ id: e.eventId, kind: 'event', title: e.title, tags: [...e.topics],
+        keywords: details.get(e.eventId)?.keywords ?? [], summary: details.get(e.eventId)?.summary ?? '', areaKey: e.areaKey, startsAt: e.startsAt,
+        rating: null, reviews: null, label: details.get(e.eventId)?.venue ?? '' })),
+      ...this.shared.cataloguePlaces().map((p): SuggestionItem => ({ id: `p:${p.placeId}`, kind: 'place', title: p.name, tags: [p.kind],
+        keywords: details.get(p.placeId)?.keywords ?? [], summary: details.get(p.placeId)?.summary ?? '', areaKey: p.areaKey, startsAt: null,
+        rating: p.rating, reviews: p.reviewCount, label: p.label })),
+    ];
+    if (items.length === 0) return;
+    const interests = [...(me?.interestTags ?? []), ...this.pinnedTags()].filter((t, n, a) => a.indexOf(t) === n);
+    const memory = readMemory(memoryStore(this.ownerHex()), now).filter((m) => m.kind !== 'feeling').map((m) => m.text).slice(0, 12);
+    const ctx = { interests, memory, areaKey, now: now.toISOString() };
+    const ranked = rankCandidates(items, ctx);
+    const key = `${interests.join(',')}|${memory.length}|${ranked.slice(0, 25).map((r) => r.id).join(',')}`;
+    if (key === this.picksKey) return;
+    this.picksKey = key;
+    this.picksBusy = true;
+    void fetch('/api/suggestions', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ interests, memory, areaLabel: areaLabel(areaKey), localTime: now.toString().slice(0, 33),
+        items: ranked.map((r) => ({ ...r, title: r.title.slice(0, 200), summary: r.summary.slice(0, 300), label: r.label.slice(0, 80) })) }) })
+      .then(async (res) => (res.ok ? ((await res.json()) as { picks: SuggestionPick[] }).picks : null))
+      .catch(() => null)
+      .then((picks) => { this.picks = picks && picks.length ? picks : fallbackPicks(ranked, ctx); })
+      .finally(() => { this.picksBusy = false; this.sync(); });
   }
 
   /** When the newest catalogue feed last succeeded (catalogue_status), so the window never claims freshness it lacks. */

@@ -27,7 +27,11 @@ export const AREA_QUERY: Record<string, { near: string; city: string }> = {
   'sf-mission': { near: 'Mission District', city: 'San Francisco, CA' },
   'sf-soma': { near: 'SoMa', city: 'San Francisco, CA' },
 };
-export const PLACE_QUERY: Record<PlaceKind, string> = { food: 'restaurants', coffee: 'coffee shops', dessert: 'dessert', study: 'cafes to study' };
+export const PLACE_QUERY: Record<PlaceKind, string> = {
+  food: 'restaurants', coffee: 'coffee shops', dessert: 'dessert', study: 'cafes to study', bar: 'bars', park: 'parks',
+  books: 'bookstores', museum: 'museums', fitness: 'climbing gyms and yoga studios', music: 'live music venues', art: 'art galleries',
+  games: 'board game cafes and arcades',
+};
 /** Places below this are not suggested: a few glowing reviews are not a signal. */
 export const PLACE_MIN_REVIEWS = 30;
 export const PLACE_MIN_RATING_TENTHS = 40;
@@ -37,6 +41,12 @@ export interface PlaceArgs {
   area_key: string; source_url: string | null; fetched_at: string;
 }
 export type Rejected = { index: number; reason: string };
+/** D057 matching text for an upserted item (same scrape). Cleaned again by guardCatalogueDetail in the module. */
+export interface DetailArgs {
+  item_id: string; item_kind: 'event' | 'place'; summary: string; keywords: string[]; price_label: string; venue: string; fetched_at: string;
+}
+const strList = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+const short = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '');
 
 const obj = (v: unknown): Record<string, unknown> => (typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : {});
 const hashId = (prefix: string, ...parts: string[]) => `${prefix}:${createHash('sha256').update(parts.join('\u0000')).digest('hex').slice(0, 24)}`;
@@ -65,7 +75,7 @@ export function placesInput(kind: PlaceKind, areaKey: string, max: number): Reco
 
 /** Raw Google Maps items → place upserts. Area from coordinates against the launch areas; nothing else is read. */
 export function normalizePlaces(items: readonly unknown[], kind: PlaceKind, ctx: { areaKeys: readonly string[]; fetchedAtMs: number; nowMs: number }) {
-  const upserts: PlaceArgs[] = [], rejected: Rejected[] = [], seen = new Set<string>();
+  const upserts: PlaceArgs[] = [], rejected: Rejected[] = [], seen = new Set<string>(), details: DetailArgs[] = [];
   items.forEach((raw, index) => {
     const i = obj(raw), loc = obj(i.location);
     const drop = (reason: string) => { rejected.push({ index, reason }); };
@@ -87,8 +97,12 @@ export function normalizePlaces(items: readonly unknown[], kind: PlaceKind, ctx:
     if (!g.ok) return drop(g.reason);
     seen.add(id);
     upserts.push({ ...args, name: g.place.name, label: g.place.label, source_url: g.place.sourceUrl });
+    const cats = [...new Set([i.categoryName, ...strList(i.categories)].filter((x): x is string => typeof x === 'string'))];
+    details.push({ item_id: id, item_kind: 'place', fetched_at: args.fetched_at, venue: g.place.name, price_label: short(i.price, 20),
+      summary: short([cats.slice(0, 4).join(', '), typeof i.neighborhood === 'string' ? `in ${i.neighborhood}` : '', short(i.description, 200)].filter(Boolean).join(' · '), 280),
+      keywords: [kind, ...cats] });
   });
-  return { upserts, rejected };
+  return { upserts, rejected, details };
 }
 
 // ---------- events (Google's events panel) ----------
@@ -141,7 +155,7 @@ export function parseWhen(when: unknown, nowMs: number): number | null {
 /** Raw Google Events dataset (pages with an `events` array) → event upserts for one query topic. */
 export function normalizeGoogleEvents(pages: readonly unknown[], topic: string,
   ctx: { tags: readonly string[]; areaKeys: readonly string[]; hosts: readonly string[]; fetchedAtMs: number; nowMs: number; windowDays: number }) {
-  const upserts: UpsertArgs[] = [], rejected: Rejected[] = [], seen = new Set<string>();
+  const upserts: UpsertArgs[] = [], rejected: Rejected[] = [], seen = new Set<string>(), details: DetailArgs[] = [];
   let index = -1;
   for (const page of pages) {
     const events = obj(page).events;
@@ -165,7 +179,10 @@ export function normalizeGoogleEvents(pages: readonly unknown[], topic: string,
       if (!g.ok) { drop(g.reason); continue; }
       seen.add(id);
       upserts.push({ ...args, title: g.event.title, source_url: g.event.sourceUrl });
+      details.push({ item_id: id, item_kind: 'event', fetched_at: args.fetched_at, venue: short(obj(e.venue).name, 60) || short(venue, 60),
+        price_label: Array.isArray(e.ticket_info) && e.ticket_info.length ? 'tickets' : '',
+        summary: short(e.description, 280), keywords: [topic, ...topic.split('-')] });
     }
   }
-  return { upserts, rejected };
+  return { upserts, rejected, details };
 }

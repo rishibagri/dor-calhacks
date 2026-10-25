@@ -35,6 +35,7 @@ import {
 
 // Import all reducer arg schemas
 import AcceptPairInviteReducer from "./accept_pair_invite_reducer";
+import AdminPurgeAccountReducer from "./admin_purge_account_reducer";
 import ApproveActivityInterestReducer from "./approve_activity_interest_reducer";
 import ApproveSignalReducer from "./approve_signal_reducer";
 import ApproveSignalStandingReducer from "./approve_signal_standing_reducer";
@@ -86,6 +87,7 @@ import SetSupportPreferencesReducer from "./set_support_preferences_reducer";
 import SetWorkerIdentityReducer from "./set_worker_identity_reducer";
 import SnoozeNudgeReducer from "./snooze_nudge_reducer";
 import UnlinkPairReducer from "./unlink_pair_reducer";
+import UpsertCatalogueDetailReducer from "./upsert_catalogue_detail_reducer";
 import UpsertCatalogueEventReducer from "./upsert_catalogue_event_reducer";
 import UpsertCataloguePlaceReducer from "./upsert_catalogue_place_reducer";
 import WithdrawDiscoveryProfileReducer from "./withdraw_discovery_profile_reducer";
@@ -93,6 +95,7 @@ import WithdrawDiscoveryProfileReducer from "./withdraw_discovery_profile_reduce
 // Import all procedure arg schemas
 
 // Import all table schema definitions
+import CatalogueDetailsRow from "./catalogue_details_table";
 import CatalogueEventsRow from "./catalogue_events_table";
 import CataloguePlacesRow from "./catalogue_places_table";
 import CatalogueStatusRow from "./catalogue_status_table";
@@ -144,6 +147,13 @@ import WorkerSupportPreferencesRow from "./worker_support_preferences_table";
 
 /** The schema information for all tables in this module. This is defined the same was as the tables would have been defined in the server. */
 const tablesSchema = __schema({
+  catalogueDetails: __table({
+    name: 'catalogue_details',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, CatalogueDetailsRow),
   catalogueEvents: __table({
     name: 'catalogue_events',
     indexes: [
@@ -471,6 +481,7 @@ const tablesSchema = __schema({
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
   __reducerSchema("accept_pair_invite", AcceptPairInviteReducer),
+  __reducerSchema("admin_purge_account", AdminPurgeAccountReducer),
   __reducerSchema("approve_activity_interest", ApproveActivityInterestReducer),
   __reducerSchema("approve_signal", ApproveSignalReducer),
   __reducerSchema("approve_signal_standing", ApproveSignalStandingReducer),
@@ -522,6 +533,7 @@ const reducersSchema = __reducers(
   __reducerSchema("set_worker_identity", SetWorkerIdentityReducer),
   __reducerSchema("snooze_nudge", SnoozeNudgeReducer),
   __reducerSchema("unlink_pair", UnlinkPairReducer),
+  __reducerSchema("upsert_catalogue_detail", UpsertCatalogueDetailReducer),
   __reducerSchema("upsert_catalogue_event", UpsertCatalogueEventReducer),
   __reducerSchema("upsert_catalogue_place", UpsertCataloguePlaceReducer),
   __reducerSchema("withdraw_discovery_profile", WithdrawDiscoveryProfileReducer),
@@ -533,6 +545,8 @@ const proceduresSchema = __procedures(
 
 type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "tables"> & {
   tables: typeof tablesSchema.schemaType.tables & {
+    /** @deprecated Use `catalogueDetails` instead. This alias will be removed in the next major version. */
+    readonly "catalogue_details": Omit<typeof tablesSchema.schemaType.tables["catalogueDetails"], "accessorName"> & { readonly accessorName: "catalogue_details" };
     /** @deprecated Use `catalogueEvents` instead. This alias will be removed in the next major version. */
     readonly "catalogue_events": Omit<typeof tablesSchema.schemaType.tables["catalogueEvents"], "accessorName"> & { readonly accessorName: "catalogue_events" };
     /** @deprecated Use `cataloguePlaces` instead. This alias will be removed in the next major version. */
@@ -643,6 +657,7 @@ const REMOTE_MODULE = {
 >;
 
 const tableAccessorAliases = {
+  "catalogue_details": "catalogueDetails",
   "catalogue_events": "catalogueEvents",
   "catalogue_places": "cataloguePlaces",
   "catalogue_status": "catalogueStatus",
@@ -709,6 +724,8 @@ function __withTableAccessorAliases<T extends object>(target: T, freeze = false)
 
 type __DbViewBase = __DbConnectionImpl<typeof REMOTE_MODULE>["db"];
 export type DbView = __DbViewBase & {
+  /** @deprecated Use `catalogueDetails` instead. This alias will be removed in the next major version. */
+  readonly "catalogue_details": __DbViewBase["catalogueDetails"];
   /** @deprecated Use `catalogueEvents` instead. This alias will be removed in the next major version. */
   readonly "catalogue_events": __DbViewBase["catalogueEvents"];
   /** @deprecated Use `cataloguePlaces` instead. This alias will be removed in the next major version. */
@@ -805,6 +822,8 @@ export type DbView = __DbViewBase & {
 
 type __TablesBase = __QueryBuilder<typeof tablesSchema.schemaType>;
 export type Tables = __TablesBase & {
+  /** @deprecated Use `catalogueDetails` instead. This alias will be removed in the next major version. */
+  readonly "catalogue_details": __TablesBase["catalogueDetails"];
   /** @deprecated Use `catalogueEvents` instead. This alias will be removed in the next major version. */
   readonly "catalogue_events": __TablesBase["catalogueEvents"];
   /** @deprecated Use `cataloguePlaces` instead. This alias will be removed in the next major version. */

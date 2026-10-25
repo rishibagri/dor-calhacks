@@ -1,5 +1,5 @@
 import { t } from 'spacetimedb/server';
-import { ScheduleAt } from 'spacetimedb';
+import { ScheduleAt, type Identity } from 'spacetimedb';
 import { validHostAllowlist, validSlugAllowlist } from '@dor/contracts/policy';
 import { spacetimedb } from '../schema';
 import { fail, type Ctx } from '../errors';
@@ -65,6 +65,50 @@ export const set_observer_identity = spacetimedb.reducer(
     } else {
       ctx.db.observer_identity.identity.delete(observer);
     }
+  }
+);
+
+// D057 test-account cleanup: every table that can hold a user's rows (config, catalogue and scheduler tables excluded).
+const USER_TABLES = ['account', 'pair', 'pair_member', 'invite', 'relationship_preset', 'preset_assignment', 'approved_signal', 'nudge',
+  'nudge_delivery', 'support_preference', 'discovery_publication', 'area_participation', 'discovery_page', 'discovery_block', 'introduction',
+  'introduction_proposal', 'introduction_suggestion_request', 'discovery_report', 'rate_window', 'event_intent', 'activity_approval',
+  'shared_plan', 'recipient_pause', 'standing_consent', 'standing_approval', 'observer_identity', 'reasoning_decision', 'disclosure_receipt',
+  'profile_detail', 'nudge_request', 'signal_hook'] as const;
+
+/**
+ * Module-owner only (D057, demo reset): permanently delete one identity's rows from every user table, plus everything
+ * scoped to pairs, signals or introductions it took part in (so the other member's side of those pairs goes too).
+ * Refuses the module owner and allow-listed workers. Irreversible: run only on test accounts after a dry-run list.
+ */
+export const admin_purge_account = spacetimedb.reducer(
+  { target: t.identity() },
+  (ctx, { target }) => {
+    requireOwner(ctx);
+    if (ctx.db.module_owner.key.find('owner')?.owner.isEqual(target)) fail('invalid', 'cannot purge the module owner');
+    if (ctx.db.worker_identity.identity.find(target)) fail('invalid', 'cannot purge a worker identity');
+    const db = ctx.db as unknown as Record<string, { iter(): Iterable<Record<string, unknown>>; delete(row: unknown): boolean }>;
+    const targetHex = target.toHexString();
+    // Row values may not share the Identity class instance, so compare by hex string.
+    const isTarget = (v: unknown): boolean => Array.isArray(v) ? v.some(isTarget)
+      : typeof (v as { toHexString?: unknown } | null)?.toHexString === 'function' && (v as Identity).toHexString() === targetHex;
+    const pairs = new Set([...ctx.db.pair.iter()].filter(p => p.member_a.isEqual(target) || (p.member_b?.isEqual(target) ?? false)).map(p => p.pair_id));
+    const signals = new Set([...ctx.db.approved_signal.iter()].filter(s => s.sender_id.isEqual(target) || s.recipient_id.isEqual(target) || pairs.has(s.pair_id))
+      .map(s => s.signal_id));
+    const intros = new Set([...ctx.db.introduction.iter()].filter(x => x.sender.isEqual(target) || x.recipient.isEqual(target)).map(x => x.intro_id));
+    const linked = (row: Record<string, unknown>): boolean =>
+      Object.values(row).some(isTarget) ||
+      (typeof row.pair_id === 'string' && pairs.has(row.pair_id)) ||
+      (typeof row.signal_id === 'string' && signals.has(row.signal_id)) ||
+      (typeof row.intro_id === 'string' && intros.has(row.intro_id)) ||
+      (typeof row.basis_ref === 'string' && (pairs.has(row.basis_ref) || intros.has(row.basis_ref))) ||
+      (Array.isArray(row.source_signal_ids) && row.source_signal_ids.some(id => typeof id === 'string' && signals.has(id)));
+    const counts: Record<string, number> = {};
+    for (const name of USER_TABLES) {
+      const table = db[name];
+      if (!table) continue;
+      for (const row of [...table.iter()]) if (linked(row) && table.delete(row)) counts[name] = (counts[name] ?? 0) + 1;
+    }
+    console.log(`admin_purge_account: ${JSON.stringify(counts)}`); // counts only, no identities or content
   }
 );
 

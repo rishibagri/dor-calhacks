@@ -184,7 +184,7 @@ export interface CatalogueEventView {
 export interface CataloguePlaceView {
   placeId: string;
   name: string;
-  kind: 'food' | 'coffee' | 'dessert' | 'study';
+  kind: import('@dor/contracts').PlaceKind;
   /** The source's category text, display only. */
   label: string;
   /** Average rating, one decimal (4.6). */
@@ -193,6 +193,16 @@ export interface CataloguePlaceView {
   areaKey: string;
   sourceUrl: string | null;
   fetchedAt: string;
+}
+
+/** D057 matching text for one catalogue event or place (`catalogue_details`). Public, untrusted source data. */
+export interface CatalogueDetailView {
+  itemId: string;
+  itemKind: 'event' | 'place';
+  summary: string;
+  keywords: string[];
+  priceLabel: string;
+  venue: string;
 }
 
 /** Ingestion health for one configured feed (`catalogue_status`). Operational metadata only. */
@@ -414,6 +424,7 @@ export interface SharedStatePort {
   myIntroductionSuggestionRequest(): IntroductionSuggestionRequestView | null; // my_introduction_suggestion_request
   catalogueEvents(): CatalogueEventView[]; // catalogue_events
   cataloguePlaces(): CataloguePlaceView[]; // catalogue_places (D051 proposal)
+  catalogueDetails(): CatalogueDetailView[]; // catalogue_details (D057)
   catalogueStatus(): CatalogueStatusView[]; // catalogue_status
   myEventIntents(): EventIntentRow[]; // my_event_intents
   eventCompanions(): EventCompanionRow[]; // event_companions

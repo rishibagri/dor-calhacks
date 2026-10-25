@@ -3,7 +3,7 @@
 import { t } from 'spacetimedb/server';
 import { Timestamp, type Identity } from 'spacetimedb';
 import {
-  applyPlanAction, eventErrorCode, guardActivityApproval, guardCatalogueEvent, guardCataloguePlace, guardEventIntent, guardPlanTiming,
+  applyPlanAction, eventErrorCode, guardActivityApproval, guardCatalogueDetail, guardCatalogueEvent, guardCataloguePlace, guardEventIntent, guardPlanTiming,
   intentStands, revisePlan, validClientRequestId, type EventDenyReason, type PlanRefusal,
 } from '@dor/contracts/policy';
 import { spacetimedb } from '../schema';
@@ -91,6 +91,25 @@ export const upsert_catalogue_place = spacetimedb.reducer(
     };
     if (cur) ctx.db.catalogue_place.place_id.update(row);
     else ctx.db.catalogue_place.insert(row);
+  }
+);
+
+/** D057: matching text for an event or place already in the catalogue (same ingester rule and default-deny cleaning). */
+export const upsert_catalogue_detail = spacetimedb.reducer(
+  { item_id: t.string(), item_kind: t.string(), summary: t.string(), keywords: t.array(t.string()), price_label: t.string(),
+    venue: t.string(), fetched_at: t.string() },
+  (ctx, a) => {
+    requireIngester(ctx);
+    const g = guardCatalogueDetail({ itemId: a.item_id, itemKind: a.item_kind, summary: a.summary, keywords: a.keywords,
+      priceLabel: a.price_label, venue: a.venue, fetchedAtMs: parseIso(a.fetched_at) }, toMs(ctx.timestamp));
+    if (!g.ok) fail('invalid', g.reason);
+    const d = g.detail;
+    const exists = d.itemKind === 'event' ? ctx.db.catalogue_event.event_id.find(d.itemId) : ctx.db.catalogue_place.place_id.find(d.itemId);
+    if (!exists) fail('not_found', 'catalogue item');
+    const row = { item_id: d.itemId, item_kind: d.itemKind, summary: d.summary, keywords: d.keywords, price_label: d.priceLabel,
+      venue: d.venue, fetched_at: ts(d.fetchedAtMs) };
+    if (ctx.db.catalogue_detail.item_id.find(d.itemId)) ctx.db.catalogue_detail.item_id.update(row);
+    else ctx.db.catalogue_detail.insert(row);
   }
 );
 

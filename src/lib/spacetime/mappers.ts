@@ -9,11 +9,12 @@ import {
   RecipientPresetAssignmentSchema,
   RelationshipPresetSchema,
 } from '@dor/contracts';
+import { PLACE_KINDS as CONTRACT_PLACE_KINDS } from '@dor/contracts';
 import type { ApprovedSignal, DisclosureReceipt, RecipientPresetAssignment, RelationshipPreset } from '@dor/contracts';
 import { ACTIVITY_CATEGORY, NUDGE_TEMPLATE_IDS } from '@dor/contracts/policy';
 import { MAX_EVENT_TITLE, MAX_EVENT_TOPICS, MAX_INTEREST_TAGS, MAX_PUBLIC_NAME, validRecipientDelivery, validSupportPreferences } from '@dor/contracts/policy';
 import type {
-  IntroductionSuggestionRequestView, ActivityApprovalRow, CatalogueEventView, CataloguePlaceView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView, StandingConsentView,
+  IntroductionSuggestionRequestView, ActivityApprovalRow, CatalogueDetailView, CatalogueEventView, CataloguePlaceView, CatalogueStatusView, DiscoveryCardRow, EventCompanionRow, EventIntentRow, IntroductionProposalView, PlanStatus, PlanView, IntroductionView, UnreadableRow, InviteView, MyDiscoveryView, NudgeDeliveryView, PairView, RecipientNudgeView, RecipientPause, SignalView, SupportPreferencesView, StandingConsentView,
 } from '@/lib/backend/ports';
 import { SHARING_CATEGORIES } from '@dor/contracts';
 import type { LooseRow } from './bindings';
@@ -287,7 +288,13 @@ export const mapCatalogueEvent: Mapper<CatalogueEventView> = (row) => {
   return { eventId, title, startsAt, endsAt: str(row, 'ends_at'), topics, format, areaKey: str(row, 'area_key'), sourceUrl: str(row, 'source_url'), fetchedAt };
 };
 
-const PLACE_KINDS: readonly CataloguePlaceView['kind'][] = ['food', 'coffee', 'dessert', 'study'];
+const PLACE_KINDS: readonly CataloguePlaceView['kind'][] = CONTRACT_PLACE_KINDS;
+
+export const mapCatalogueDetail: Mapper<CatalogueDetailView> = (row) => {
+  const itemId = str(row, 'item_id'), itemKind = str(row, 'item_kind'), keywords = strings(row, 'keywords', 12);
+  if (!itemId || (itemKind !== 'event' && itemKind !== 'place') || !keywords) return null;
+  return { itemId, itemKind, summary: (str(row, 'summary') ?? '').slice(0, 280), keywords, priceLabel: str(row, 'price_label') ?? '', venue: str(row, 'venue') ?? '' };
+};
 export const mapCataloguePlace: Mapper<CataloguePlaceView> = (row) => {
   const placeId = str(row, 'place_id'), name = str(row, 'name'), label = str(row, 'label') ?? '', areaKey = str(row, 'area_key');
   const fetchedAt = str(row, 'fetched_at'), tenths = num(row, 'rating_tenths'), reviewCount = num(row, 'review_count');
