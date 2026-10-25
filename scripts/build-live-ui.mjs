@@ -26,7 +26,7 @@ function edit(label, from, to) {
 // 1. Phone screen only: no bezel, no reviewer column, no fake status bar, no design-tool badge.
 edit('page wrapper',
   'min-height:100vh;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:40px;padding:24px;box-sizing:border-box;background:#EFE8CF;',
-  'height:100dvh;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0;box-sizing:border-box;background:#FAF7F0;');
+  'height:100dvh;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0;box-sizing:border-box;background:transparent;');
 edit('bezel',
   'width:410px;height:864px;transform:scale({{ zoom }});transform-origin:0 0;border-radius:62px;background:#1B1A17;padding:10px;box-sizing:border-box;box-shadow:0 30px 80px rgba(27,26,23,.28)',
   'width:390px;height:844px;transform:scale({{ zoom }});transform-origin:0 0;padding:0;box-sizing:border-box');
@@ -40,8 +40,11 @@ edit('reviewer column',
   '<div style="width:300px;max-width:100%;display:flex;flex-direction:column;gap:18px">',
   '<div style="display:none">');
 edit('frame size', 'frameW:Math.round(410*s.zoom), frameH:Math.round(864*s.zoom)', 'frameW:Math.round(390*s.zoom), frameH:Math.round(844*s.zoom)');
-edit('fit', 'Math.min(1, (window.innerHeight-48)/864, (window.innerWidth-32)/410)', 'Math.min(window.innerHeight/844, window.innerWidth/390)');
-html = html.replace('</head>', '<style>#__claude_design_branding{display:none!important}html,body{margin:0;overscroll-behavior:none}</style>\n</head>');
+// Fill the phone: the design's top 50px (hidden status bar) and bottom ~30px (home-indicator padding) hold nothing,
+// so up to 60 design px of height may be cropped (centred) before the sides show any background.
+edit('fit', 'Math.min(1, (window.innerHeight-48)/864, (window.innerWidth-32)/410)', 'Math.min(window.innerHeight/784, window.innerWidth/390)');
+// Any side margin left on a short viewport (browser toolbars) is painted the drawing's wall colour, so it reads as wall.
+html = html.replace('</head>', '<style>#__claude_design_branding{display:none!important}html,body{margin:0;overscroll-behavior:none;background:#F2F0EA!important}</style>\n</head>');
 
 // 2. Bridge hook: the parent page (same origin) adopts the component instance before anything else runs.
 edit('bridge hook', '  componentDidMount(){\n',
