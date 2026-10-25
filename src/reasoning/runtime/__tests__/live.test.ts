@@ -67,33 +67,36 @@ test('sensitive topics reported by the model drop that person (D056: dropped, no
   assert.deepEqual(r.actions, []);
 });
 
-test('D056 good exam + earlier goal: several friends nudged at once, each with a talking point; never asks', async () => {
+test('D056/D058 good exam + earlier goal: several friends nudged at once, each with a generic starter id; never asks', async () => {
   const people = [
     { ref: 'p-sam', mentionedAs: null, excluded: false, paused: false, presetRevoked: false },
     { ref: 'p-maya', mentionedAs: null, excluded: false, paused: false, presetRevoked: false },
     { ref: 'p-lee', mentionedAs: null, excluded: false, paused: true, presetRevoked: false },
   ];
   const c = ctx({ people, memoryIds: ['m1'], assessment: { intent: 'wants_connection', risk: 'none', mentionedNames: [], excludedNames: [], preferredNames: [] } });
-  const hook = 'Ask how the exam went, she did well';
   const r = await reasonLive(c, async () => ({
     ...model([
-      proposal({ action: 'CELEBRATE', supportMode: 'encouraging_note', targetRef: 'p-sam', evidence: ['entry:text', 'memory:m1', 'person:p-sam'], talkingPoint: hook }),
-      proposal({ rank: 2, action: 'DIRECT_CHECK_IN', supportMode: 'short_call', targetRef: 'p-maya', evidence: ['entry:text', 'memory:m1', 'person:p-maya'], talkingPoint: 'What has kept you so busy?' }),
+      proposal({ action: 'CELEBRATE', supportMode: 'encouraging_note', targetRef: 'p-sam', evidence: ['entry:text', 'memory:m1', 'person:p-sam'], talkingPoint: 'ask_new' }),
+      proposal({ rank: 2, action: 'DIRECT_CHECK_IN', supportMode: 'short_call', targetRef: 'p-maya', evidence: ['entry:text', 'memory:m1', 'person:p-maya'], talkingPoint: 'Ask how the exam went, she did well' }),
       proposal({ rank: 3, action: 'CELEBRATE', supportMode: 'encouraging_note', targetRef: 'p-lee', evidence: ['entry:text', 'person:p-lee'] }),
     ], { eventKind: 'major_good_news', topic: 'exam' }),
     memory: { add: [{ kind: 'event', text: 'did well on an exam', ref: null, ttlDays: 3 }], expire: ['m1'] },
   }));
   assert.equal(r.decision.mode, 'act');
-  assert.deepEqual(r.actions.map(a => [a.decision.targetRef, a.talkingPoint]), [['p-sam', hook], ['p-maya', 'What has kept you so busy?']]);
+  assert.deepEqual(r.actions.map(a => [a.decision.targetRef, a.talkingPoint]), [['p-sam', 'ask_new'], ['p-maya', null]]); // free text from the entry is dropped
   assert.ok(r.actions.every(a => a.decision.mode === 'act'), 'paused Lee is never nudged');
   assert.deepEqual(r.memory?.expire, ['m1']);
 });
 
-test('talking points are cleaned: no links, clipped', async () => {
+test('D058 talking points are ids from the fixed generic list only; any text is dropped', async () => {
   const { cleanTalkingPoint } = await import('../live.ts');
+  const { TALKING_POINT_IDS, talkingPointText } = await import('@dor/contracts/policy');
+  for (const id of TALKING_POINT_IDS) assert.equal(cleanTalkingPoint(id), id);
+  assert.equal(cleanTalkingPoint('Ask how the exam went'), null);
   assert.equal(cleanTalkingPoint('see https://x.example'), null);
-  assert.equal(cleanTalkingPoint('  ask   about it '), 'ask about it');
-  assert.equal(cleanTalkingPoint('x'.repeat(200))?.length, 140);
+  assert.equal(cleanTalkingPoint(null), null);
+  assert.equal(talkingPointText('coffee'), 'Suggest grabbing coffee or a meal.');
+  assert.equal(talkingPointText('Ask how the exam went'), null); // an old free-text row never displays
 });
 
 test('model failure or garbage falls back to the conservative proposer; hard stops never reach the model', async () => {

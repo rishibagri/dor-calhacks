@@ -7,6 +7,7 @@ import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { auth } from '@clerk/nextjs/server';
 import { z } from 'zod';
 import { RateLimiter } from '@dor/agents';
+import { TALKING_POINT_IDS, type TalkingPointId } from '@dor/contracts/policy';
 import { REASONING_SYSTEM_PROMPT } from '@/reasoning/runtime/prompt';
 import { EVENT_KINDS } from '@/reasoning/runtime/live';
 import { MEMORY_KINDS } from '@/reasoning/runtime/memory';
@@ -48,7 +49,7 @@ const ModelSchema = z.object({
     revealValue: z.enum(LEVELS), confidence: z.enum(LEVELS), timing: z.enum(['now', 'after_delay', 'not_now']),
     delayMinutes: z.number().int().nullable(), reassessMinutes: z.number().int().nullable(),
     reassessCondition: z.enum(REASSESS_CONDITIONS).nullable(), rationale: z.array(z.enum(REASON_CODES)), evidence: z.array(z.string()),
-    talkingPoint: z.string().nullable(),
+    talkingPoint: z.enum(TALKING_POINT_IDS as [TalkingPointId, ...TalkingPointId[]]).nullable(),
   })),
   memory: z.object({
     add: z.array(z.object({ kind: z.enum(MEMORY_KINDS), text: z.string(), ref: z.string().nullable(), ttlDays: z.number().int() })),

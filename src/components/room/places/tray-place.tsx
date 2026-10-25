@@ -3,6 +3,7 @@
 import { RoomLink as Link } from '../room-link';
 import { useState } from 'react';
 import { NUDGE_TEMPLATE_COPY } from '@dor/contracts';
+import { talkingPointText } from '@dor/contracts/policy';
 import type { ReducerResult } from '@/lib/backend/ports';
 import { useLiveShared } from '@/components/shell/use-live';
 import { ResultNotice } from '@/components/shell/result-notice';
@@ -48,7 +49,7 @@ export function TrayPlace() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base font-medium leading-snug text-balance">{COPY[n.templateId]}</CardTitle>
-                {n.hook && <p className="text-sm text-muted-foreground">{n.hook}</p>}
+                {talkingPointText(n.hook) && <p className="text-sm text-muted-foreground">{talkingPointText(n.hook)}</p>}
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" className="active:scale-[0.97] motion-safe:transition-transform"

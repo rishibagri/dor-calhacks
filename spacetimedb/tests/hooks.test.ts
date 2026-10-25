@@ -31,12 +31,12 @@ const hook = (x: ReturnType<typeof world>, req: string, text: string) =>
   x.w.call(x.w.alice, ctx => mod.attach_signal_hook(ctx, { client_request_id: req, hook: text }));
 
 describe('attach_signal_hook', () => {
-  it('the recipient sees the talking point on the nudge', () => {
+  it('the recipient sees the chosen generic talking point id on the nudge (D058)', () => {
     const x = world();
     const sig = approve(x);
-    hook(x, 'req-1', '  Ask how her  exam went ');
+    hook(x, 'req-1', 'coffee');
     commit(x, sig);
-    expect(view<any>(x.w, x.w.bob, mod.my_nudges)[0].hook).toBe('Ask how her exam went');
+    expect(view<any>(x.w, x.w.bob, mod.my_nudges)[0].hook).toBe('coffee');
   });
 
   it('no hook means none on the nudge', () => {
@@ -45,12 +45,12 @@ describe('attach_signal_hook', () => {
     expect(view<any>(x.w, x.w.bob, mod.my_nudges)[0].hook).toBeUndefined();
   });
 
-  it('only the signal owner can attach, and the text is validated', () => {
+  it('only the signal owner can attach, and only listed ids are accepted: never free text from the journal (D058)', () => {
     const x = world();
     approve(x);
-    expect(() => x.w.call(x.w.bob, ctx => mod.attach_signal_hook(ctx, { client_request_id: 'req-1', hook: 'hi' }))).toThrow('not_found');
-    expect(() => hook(x, 'req-1', '')).toThrow('hook empty');
-    expect(() => hook(x, 'req-1', 'x'.repeat(141))).toThrow('hook too long');
-    expect(() => hook(x, 'req-1', 'see https://evil.example')).toThrow('hook has a link');
+    expect(() => x.w.call(x.w.bob, ctx => mod.attach_signal_hook(ctx, { client_request_id: 'req-1', hook: 'say_hi' }))).toThrow('not_found');
+    for (const bad of ['', 'Ask how her exam went', 'see https://evil.example', 'COFFEE', 'coffee ']) {
+      expect(() => hook(x, 'req-1', bad)).toThrow('hook not on the talking-point list');
+    }
   });
 });
