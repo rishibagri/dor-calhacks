@@ -4,7 +4,7 @@
  * A `shareable` preview is necessary, never sufficient: approve_signal re-runs guardApproval on authoritative rows.
  */
 import {
-  DISCLOSURE_CONSENT_VERSION, payloadRevision, previewDisclosure,
+  DISCLOSURE_CONSENT_VERSION, evaluateDisclosure, payloadRevision, previewDisclosure,
   type DisclosurePreview, type RecipientPresetAssignment, type RelationshipPreset, type SignalCandidate, type SharingCategory,
 } from '@dor/contracts';
 import type { PairView, SharedStatePort, StandingConsentView } from '@/lib/backend/ports';
@@ -84,12 +84,35 @@ export function prepareShare(input: PrepareShareInput, recipientName: string): P
     candidate: input.candidate, ownerId: input.ownerHex, recipientId: input.pair.counterpartIdentityHex ?? '',
     pairId: input.pair.pairId, pairStatus: input.pair.status, preset, assignment, now: input.now,
   }, recipientName);
-  if (preview.kind !== 'shareable' || !preset || !assignment || !input.pair.counterpartIdentityHex) {
-    return { kind: 'not_ready', preview: preview.kind === 'shareable' ? { kind: 'denied', reason: 'no_consent' } : preview };
+  if (preview.kind !== 'shareable' || !input.pair.counterpartIdentityHex) {
+    return { kind: 'not_ready', preview: preview.kind === 'shareable' ? { kind: 'denied', reason: 'wrong_recipient' } : preview };
+  }
+  // D050 default policy: an accepted pair needs no manually assigned preset.
+  // Derive versions from the same effective policy used by the server guard, not
+  // from possibly missing, expired or mismatched client-side preset rows.
+  const effective = evaluateDisclosure({
+    candidate: input.candidate,
+    ownerId: input.ownerHex,
+    recipientId: input.pair.counterpartIdentityHex,
+    pairId: input.pair.pairId,
+    pairStatus: input.pair.status,
+    preset: preset && {
+      policyId: preset.policyId, ownerId: preset.ownerId, allowedCategories: preset.allowedCategories,
+      version: preset.version, expiresAtMs: Date.parse(preset.expiresAt),
+      revokedAtMs: preset.revokedAt === null ? null : Date.parse(preset.revokedAt),
+    },
+    assignment: assignment && {
+      ownerId: assignment.ownerId, recipientId: assignment.recipientId, pairId: assignment.pairId,
+      presetId: assignment.presetId, assignmentVersion: assignment.assignmentVersion,
+    },
+    nowMs: input.now.getTime(),
+  });
+  if (effective.kind !== 'shareable') {
+    return { kind: 'not_ready', preview: { kind: 'denied', reason: 'no_consent' } };
   }
   const versions = {
-    recipientPolicyVersion: preset.version,
-    presetAssignmentVersion: assignment.assignmentVersion,
+    recipientPolicyVersion: effective.preset.version,
+    presetAssignmentVersion: effective.assignment.assignmentVersion,
     consentVersion: DISCLOSURE_CONSENT_VERSION,
   };
   const approval: ApprovalDraft = {
