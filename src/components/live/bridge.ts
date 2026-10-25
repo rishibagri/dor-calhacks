@@ -516,7 +516,7 @@ export class LiveBridge {
     this.pending = null;
     this.last = null;
     this.asks = [];
-    this.live = { ...this.live, nbAsk: '', nbAsking: false, thinking: false };
+    this.live = { ...this.live, nbAsk: '', nbAsking: false, thinking: false, support: false };
     i.setState((st: any) => ({ nbMode: 'idle', nbText: '', nbEditing: false, nbSecs: 0, margin: null, nudge: null, wordsKey: st.wordsKey + 1 }));
     if (!quiet) i.toast('Cleared. Nothing was saved or sent.');
   }
