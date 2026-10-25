@@ -1,7 +1,18 @@
 # dor — current project knowledge
 
 ## Reset baseline and priority
-Latest fetched main for this task: **cb73d30** (2026-10-24). The earlier d7285eb reset baseline and README snapshots are historical. Detailed product/phase instructions now live in INSTRUCTIONS.md; README.md is a concise entry point. No teammate branch was reset.
+Latest fetched main for this task: **0324af0** (2026-10-25; PRs #80–#83). The earlier d7285eb/cb73d30 reset baselines and README snapshots are historical. Detailed product/phase instructions now live in INSTRUCTIONS.md; README.md is the public project guide. No teammate branch was reset.
+
+## Post-PR #83 checkpoint
+
+- **Apify:** the README records a live-verified ingestion of Luma events, Google Maps places, and Google Events, with 170 places and 51 events in Maincloud. Refresh remains manual and spends provider credits.
+- **Notebook:** the live room's typed reflection and a real follow-up response were verified. Cartesia powers speech input/read-aloud; test microphone capture and spoken playback on the actual judging device.
+- **Reasoning and nudges:** the merged work adds generic talking points (D058), reasoning-led delivery timing without a per-pair cooldown (D059), and the Backstage activity/status view (D060). Nudges remain in-app; no personal message is sent as the user.
+- **Discovery:** event/place sources are available, but the complete opted-in, two-person introduction journey still needs end-to-end verification. Keep sample users and any scripted visualization clearly labeled.
+- **Demo:** `doratcalhacks.site` is the sample-data design tour; `live.doratcalhacks.site` is available while the live session is running. These are separate surfaces.
+- **Sponsor documentation:** Cartesia, Anthropic, Factory, SpacetimeDB, Apify, Meta, and Figma contributions are described in README. Figma was used to plan page purposes, components, styling, palette and art direction, then through Cloud MCP; after credits ran out, frontend implementation continued in Claude Design.
+
+This checkpoint updates project documentation only. It does not claim that every provider path, voice device, or newcomer flow has been independently reverified in this checkout.
 
 Product: AI helping people connect with people. Three experiences: existing partner/friend/family relationships; nearby opted-in public profiles; same-local-event connections. User confirmed **one-time approximate location** and **public opt-in profiles visible before invitation acceptance**. Quiz remains 6–8 questions/skippable; all four personalization dimensions; explicit sharing confirmation. Discovery publication is separate from pair presets. Journaling is optional for finding people/events.
 
